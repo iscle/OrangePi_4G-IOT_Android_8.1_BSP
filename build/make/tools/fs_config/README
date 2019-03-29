@@ -1,0 +1,183 @@
+ _____  _____  _____  _____  __  __  _____
+/  _  \/   __\/  _  \|  _  \/  \/  \/   __\
+|  _  <|   __||  _  ||  |  ||  \/  ||   __|
+\__|\_/\_____/\__|__/|_____/\__ \__/\_____/
+
+Generating the android_filesystem_config.h:
+
+To generate the android_filesystem_config.h file, one can choose from
+one of two methods. The first method, is to declare
+TARGET_ANDROID_FILESYSTEM_CONFIG_H in the device BoardConfig.mk file. This
+variable can only have one item in it, and it is used directly as the
+android_filesystem_config.h header when building
+fs_config_generate_$(TARGET_DEVICE) which is used to generate fs_config_files
+and fs_config_dirs target executable.
+
+The limitation with this, is that it can only be set once, thus if the device
+has a make hierarchy, then each device needs its own file, and cannot share
+from a common source or that common source needs to include everything from
+both devices.
+
+The other way is to set TARGET_FS_CONFIG_GEN, which can be a list of
+intermediate fs configuration files. It is a build error on any one
+these conditions:
+ * Specify TARGET_FS_CONFIG_GEN and TARGET_ANDROID_FILESYSTEM_CONFIG_H
+ * Specify TARGET_FS_CONFIG_GEN and provide
+   $(TARGET_DEVICE_DIR)/android_filesystem_config.h
+
+The parsing of the config file follows the Python ConfigParser specification,
+with the sections and fields as defined below. There are two types of sections,
+both sections require all options to be specified. The first section type is
+the "caps" section.
+
+The "caps" section follows the following syntax:
+
+[path]
+mode: Octal file mode
+user: AID_<user>
+group: AID_<group>
+caps: cap*
+
+Where:
+
+[path]
+  The filesystem path to configure. A path ending in / is considered a dir,
+  else its a file.
+
+mode:
+  A valid octal file mode of at least 3 digits. If 3 is specified, it is
+  prefixed with a 0, else mode is used as is.
+
+user:
+  Either the C define for a valid AID or the friendly name. For instance both
+  AID_RADIO and radio are acceptable. Note custom AIDs can be defined in the
+  AID section documented below.
+
+group:
+  Same as user.
+
+caps:
+  The name as declared in
+  system/core/include/private/android_filesystem_capability.h without the
+  leading CAP_. Mixed case is allowed. Caps can also be the raw:
+   * binary (0b0101)
+   * octal (0455)
+   * int (42)
+   * hex (0xFF)
+  For multiple caps, just separate by whitespace.
+
+It is an error to specify multiple sections with the same [path] in different
+files. Note that the same file may contain sections that override the previous
+section in Python versions <= 3.2. In Python 3.2 it's set to strict mode.
+
+
+The next section type is the "AID" section, for specifying OEM specific AIDS.
+
+The AID section follows the following syntax:
+
+[AID_<name>]
+value: <number>
+
+Where:
+
+[AID_<name>]
+  The <name> can contain characters in the set uppercase, numbers
+  and underscores.
+
+value:
+  A valid C style number string. Hex, octal, binary and decimal are supported.
+  See "caps" above for more details on number formatting.
+
+It is an error to specify multiple sections with the same [AID_<name>]. With
+the same constraints as [path] described above. It is also an error to specify
+multiple sections with the same value option. It is also an error to specify a
+value that is outside of the inclusive OEM ranges:
+ * AID_OEM_RESERVED_START(2900) - AID_OEM_RESERVED_END(2999)
+ * AID_OEM_RESERVED_2_START(5000) - AID_OEM_RESERVED_2_END(5999)
+
+as defined by system/core/include/private/android_filesystem_config.h.
+
+Ordering within the TARGET_FS_CONFIG_GEN files is not relevant. The paths for files are sorted
+like so within their respective array definition:
+ * specified path before prefix match
+ ** ie foo before f*
+ * lexicographical less than before other
+ ** ie boo before foo
+
+Given these paths:
+
+paths=['ac', 'a', 'acd', 'an', 'a*', 'aa', 'ac*']
+
+The sort order would be:
+paths=['a', 'aa', 'ac', 'acd', 'an', 'ac*', 'a*']
+
+Thus the fs_config tools will match on specified paths before attempting prefix, and match on the
+longest matching prefix.
+
+The declared AIDS are sorted in ascending numerical order based on the option "value". The string
+representation of value is preserved. Both choices were made for maximum readability of the generated
+file and to line up files. Sync lines are placed with the source file as comments in the generated
+header file.
+
+For OEMs wishing to use the define AIDs in their native code, one can access the generated header
+file like so:
+  1. In your C code just #include "generated_oem_aid.h" and start using the declared identifiers.
+  2. In your Makefile add this static library like so: LOCAL_STATIC_LIBRARIES := liboemaids
+
+Unit Tests:
+
+From within the fs_config directory, unit tests can be executed like so:
+$ python -m unittest test_fs_config_generator.Tests
+.............
+----------------------------------------------------------------------
+Ran 13 tests in 0.004s
+
+OK
+
+One could also use nose if they would like:
+$ nose2
+
+To add new tests, simply add a test_<xxx> method to the test class. It will automatically
+get picked up and added to the test suite.
+
+Using the android_filesystem_config.h:
+
+The tool fs_config_generate is built as a dependency to fs_config_dirs and
+fs_config_files host targets, and #includes the above supplied or generated
+android_filesystem_config.h file, and can be instructed to generate the binary
+data that lands in the device target locations /system/etc/fs_config_dirs and
+/system/etc/fs_config_files and in the host's ${OUT} locations
+${OUT}/target/product/<device>/system/etc/fs_config_dirs and
+${OUT}/target/product/<device>/system/etc/fs_config_files. The binary files
+are interpreted by the libcutils fs_conf() function, along with the built-in
+defaults, to serve as overrides to complete the results. The Target files are
+used by filesystem and adb tools to ensure that the file and directory
+properties are preserved during runtime operations. The host files in the
+${OUT} directory are used in the final stages when building the filesystem
+images to set the file and directory properties.
+
+For systems with separate partition images, such as vendor or oem,
+fs_config_generate can be instructed to filter the specific file references
+to land in each partition's etc/fs_config_dirs or etc/fs_config_files
+locations. The filter can be instructed to blacklist a partition's data by
+providing the comma separated minus sign prefixed partition names. The filter
+can be instructed to whitelist partition data by providing the partition name.
+
+For example:
+- For system.img, but not vendor, oem or odm file references:
+      -P -vendor,-oem,-odm
+  This makes sure the results only contain content associated with the
+  system, and not vendor, oem or odm, blacklisting their content.
+- For vendor.img file references: -P vendor
+- For oem.img file references: -P oem
+- For odm.img file references: -P odm
+
+fs_config_generate --help reports:
+
+Generate binary content for fs_config_dirs (-D) and fs_config_files (-F)
+from device-specific android_filesystem_config.h override. Filter based
+on a comma separated partition list (-P) whitelist or prefixed by a
+minus blacklist. Partitions are identified as path references to
+<partition>/ or system/<partition>
+
+Usage: fs_config_generate -D|-F [-P list] [-o output-file]

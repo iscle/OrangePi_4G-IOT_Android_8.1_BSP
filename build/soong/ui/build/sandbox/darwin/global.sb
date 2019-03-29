@@ -1,0 +1,40 @@
+(version 1)
+
+; TODO: (deny default)
+(allow default (with report))
+
+; Import apple-defined rules for bsd daemons
+(import "bsd.sb")
+
+; Allow reading of any file
+(allow file-read*)
+
+; Allow writing to $OUT_DIR and $DIST_DIR
+(allow file-write*
+    (subpath (param "OUT_DIR"))
+    (subpath (param "DIST_DIR")))
+
+; Java attempts to write usage data to ~/.oracle_jre_usage, just ignore
+(deny file-write* (with no-log)
+    (subpath (string-append (param "HOME") "/.oracle_jre_usage")))
+
+; Allow writes to user-specific temp folders (Java stores hsperfdata there)
+(allow file-write*
+  (subpath "/private/var/folders"))
+
+; Allow writing to the terminal
+(allow file-write-data
+    (subpath "/dev/tty"))
+
+; Java
+(allow mach-lookup
+    (global-name "com.apple.SystemConfiguration.configd") ; Java
+    (global-name "com.apple.CoreServices.coreservicesd")  ; xcodebuild in Soong
+    (global-name "com.apple.FSEvents")                    ; xcodebuild in Soong
+    (global-name "com.apple.lsd.mapdb")                   ; xcodebuild in Soong
+    (global-name-regex #"^com\.apple\.distributed_notifications") ; xcodebuild in Soong
+)
+
+; Allow executing any file
+(allow process-exec*)
+(allow process-fork)
