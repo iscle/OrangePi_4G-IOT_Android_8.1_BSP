@@ -1,0 +1,118 @@
+syntax = "proto2";
+
+package abi_dump;
+
+message BasicTypeAbi {
+  // The type's name. for eg : a record field's type.
+  optional string name = 1;
+  // Optional since templated types will not have this information.
+  optional uint64 size = 2 [default = 0];
+  optional uint32 alignment = 3 [default = 0];
+}
+
+enum AccessSpecifier {
+  public_access = 1;
+  private_access = 2;
+  protected_access = 3;
+}
+
+message BasicNamedAndTypedDecl {
+  optional BasicTypeAbi type_abi = 1;
+  // The TypedDecl's name.
+  optional string name = 2;
+  optional AccessSpecifier access = 3;
+  optional string linker_set_key = 4;
+}
+
+message FunctionDecl {
+  optional BasicNamedAndTypedDecl basic_abi = 1;
+  // Mangled name.
+  optional string mangled_function_name = 2;
+  optional string source_file = 3;
+  repeated ParamDecl parameters = 4;
+  optional TemplateInfo template_info = 5;
+}
+
+message ParamDecl {
+  optional BasicNamedAndTypedDecl basic_abi = 1;
+  optional bool default_arg = 2;
+}
+
+message RecordFieldDecl {
+  // For future additions.
+  optional BasicNamedAndTypedDecl basic_abi = 1;
+}
+
+message EnumFieldDecl {
+  optional BasicNamedAndTypedDecl basic_abi = 1;
+  optional int64 enum_field_value = 2; // assumption: fits int64
+}
+
+message TemplateInfo {
+  repeated TemplateElement elements = 1;
+}
+
+message TemplateElement {
+  optional BasicTemplateElementAbi basic_abi = 1;
+  message BasicTemplateElementAbi {
+    optional BasicTypeAbi type_abi = 1;
+    optional string name = 2;
+    optional string linker_set_key = 3;
+  }
+}
+
+message CXXBaseSpecifier {
+  optional BasicNamedAndTypedDecl basic_abi = 1;
+  optional bool is_virtual = 2;
+}
+
+message VTableComponent {
+  enum Kind {
+    VCallOffset = 0;
+    VBaseOffset = 1;
+    OffsetToTop = 2;
+    RTTI = 3;
+    FunctionPointer = 4;
+    CompleteDtorPointer = 5;
+    DeletingDtorPointer = 6;
+    UnusedFunctionPointer = 7;
+  }
+  optional Kind kind = 1;
+  optional string mangled_component_name = 2 [default = ""];
+  // Maintain backwards compatibility. Builds don't break while updating
+  // reference dumps. TODO: b/63081517
+  optional uint64 value = 3 [default = 0];
+  optional int64 component_value = 4 [default = 0];
+}
+
+message VTableLayout {
+  repeated VTableComponent vtable_components = 1;
+}
+
+message RecordDecl {
+  optional BasicNamedAndTypedDecl basic_abi = 1;
+  repeated RecordFieldDecl fields = 2;
+  repeated CXXBaseSpecifier base_specifiers = 3;
+  optional string source_file = 4;
+  optional TemplateInfo template_info = 5;
+  optional string mangled_record_name = 6;
+  optional VTableLayout vtable_layout = 7;
+}
+
+message EnumDecl {
+  optional BasicNamedAndTypedDecl basic_abi = 1;
+  repeated EnumFieldDecl enum_fields = 2;
+  optional string source_file = 3;
+}
+
+message GlobalVarDecl {
+  optional BasicNamedAndTypedDecl basic_abi = 1;
+  optional string source_file = 2;
+}
+
+message TranslationUnit {
+  repeated RecordDecl records = 1;
+  repeated FunctionDecl functions = 2;
+  repeated EnumDecl enums = 3;
+  repeated GlobalVarDecl global_vars = 4;
+}
