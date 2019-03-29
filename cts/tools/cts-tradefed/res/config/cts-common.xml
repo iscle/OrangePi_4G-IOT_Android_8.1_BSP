@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright (C) 2017 The Android Open Source Project
+
+     Licensed under the Apache License, Version 2.0 (the "License");
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License.
+-->
+<configuration description="Common configuration for cts and cts-reference-aosp">
+
+    <include name="everything" />
+    <include name="cts-preconditions" />
+    <include name="cts-system-checkers" />
+    <include name="cts-known-failures" />
+
+    <option name="test-tag" value="cts" />
+
+    <option name="enable-root" value="false" />
+    <!-- retain 200MB of host log -->
+    <option name="max-log-size" value="200" />
+    <!--  retain 200MB of logcat -->
+    <option name="max-tmp-logcat-file" value="209715200" />
+
+    <target_preparer class="com.android.tradefed.targetprep.RunCommandTargetPreparer">
+        <option name="run-command" value="settings put global package_verifier_enable 0" />
+        <option name="teardown-command" value="settings put global package_verifier_enable 1"/>
+    </target_preparer>
+
+    <target_preparer class="com.android.compatibility.common.tradefed.targetprep.PropertyCheck">
+        <option name="property-name" value="ro.build.type" />
+        <option name="expected-value" value="user"/> <!-- Device should have user build -->
+        <option name="throw-error" value="false"/> <!-- Only print warning if not user build -->
+    </target_preparer>
+
+    <target_preparer class="com.android.compatibility.common.tradefed.targetprep.PropertyCheck">
+        <option name="property-name" value="ro.product.locale" />
+        <option name="expected-value" value="en-US"/> <!-- Device locale should be US English -->
+        <option name="throw-error" value="false"/> <!-- Only print warning if not en-US -->
+    </target_preparer>
+    <template-include name="reporters" default="basic-reporters" />
+
+    <!-- Include additional test metadata output. -->
+    <template-include name="metadata-reporters" default="empty" />
+
+</configuration>

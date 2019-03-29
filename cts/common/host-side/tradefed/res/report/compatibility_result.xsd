@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ * Copyright (C) 2015 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ -->
+
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="http://compatibility.android.com/compatibility_result/1.15"
+           xmlns="http://compatibility.android.com/compatibility_result/1.15"
+           elementFormDefault="qualified">
+
+  <xs:element name="Result">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Summary" type="summaryType"/>
+        <xs:element name="Module" type="moduleType" minOccurs="1" maxOccurs="unbounded"/>
+      </xs:sequence>
+      <xs:attribute name="start" type="xs:string"/>
+      <xs:attribute name="end" type="xs:string"/>
+      <xs:attribute name="plan" type="xs:string"/>
+      <xs:attribute name="suite_name" type="xs:string"/>
+      <xs:attribute name="suite_version" type="xs:string"/>
+    </xs:complexType>
+  </xs:element>
+
+  <xs:complexType name="summaryType">
+    <xs:attribute name="failed" type="xs:integer"/>
+    <xs:attribute name="pass" type="xs:integer"/>
+  </xs:complexType>
+
+  <xs:complexType name="moduleType">
+    <xs:sequence>
+      <xs:element name="Test" type="testType" minOccurs="1" maxOccurs="unbounded" />
+    </xs:sequence>
+    <xs:attribute name="name" type="xs:string" use="required"/>
+    <xs:attribute name="abi" type="xs:string"/>
+  </xs:complexType>
+
+  <xs:simpleType name="unitType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="none"/>
+      <xs:enumeration value="ms"/>
+      <xs:enumeration value="fps"/>
+      <xs:enumeration value="ops"/>
+      <xs:enumeration value="kbps"/>
+      <xs:enumeration value="mbps"/>
+      <xs:enumeration value="byte"/>
+      <xs:enumeration value="count"/>
+      <xs:enumeration value="score"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="scoreTypeType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="higher-better"/>
+      <xs:enumeration value="lower-better"/>
+      <xs:enumeration value="neutral"/>
+      <xs:enumeration value="warning"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:complexType name="testType">
+    <xs:sequence>
+      <xs:element name="Failure" minOccurs="0" maxOccurs="1">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="StackTrace" type="xs:string" minOccurs="0" maxOccurs="1"/>
+          </xs:sequence>
+          <xs:attribute name="message" type="xs:string"/>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="Summary" minOccurs="0" maxOccurs="1">
+        <xs:complexType>
+          <xs:simpleContent>
+            <xs:extension base="xs:decimal">
+              <xs:attribute name="message" type="xs:string" use="required" />
+              <xs:attribute name="scoreType" type="scoreTypeType" use="required" />
+              <xs:attribute name="unit" type="unitType" use="required" />
+              <xs:attribute name="target" type="xs:decimal" />
+            </xs:extension>
+          </xs:simpleContent>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="Details" minOccurs="0" maxOccurs="1">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="ValueArray" minOccurs="0" maxOccurs="unbounded">
+              <xs:complexType>
+                <xs:sequence>
+                  <xs:element name="Value" type="xs:decimal" minOccurs="0" maxOccurs="unbounded" />
+                </xs:sequence>
+                <xs:attribute name="source" type="xs:string" use="required" />
+                <xs:attribute name="message" type="xs:string" use="required" />
+                <xs:attribute name="scoreType" type="scoreTypeType" use="required" />
+                <xs:attribute name="unit" type="unitType" use="required" />
+              </xs:complexType>
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+    <xs:attribute name="name" type="xs:string" use="required"/>
+    <xs:attribute name="result" type="resultType" use="required"/>
+    <xs:attribute name="start" type="xs:string"/>
+    <xs:attribute name="end" type="xs:string"/>
+  </xs:complexType>
+
+  <xs:simpleType name="resultType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="pass"/>
+      <xs:enumeration value="fail"/>
+    </xs:restriction>
+  </xs:simpleType>
+</xs:schema>

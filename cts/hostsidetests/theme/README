@@ -1,0 +1,119 @@
+* Copyright (C) 2015 The Android Open Source Project
+*
+* Licensed under the Apache License, Version 2.0 (the "License");
+* you may not use this file except in compliance with the License.
+* You may obtain a copy of the License at
+*
+*      http://www.apache.org/licenses/LICENSE-2.0
+*
+* Unless required by applicable law or agreed to in writing, software
+* distributed under the License is distributed on an "AS IS" BASIS,
+* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+* See the License for the specific language governing permissions and
+* limitations under the License.
+
+
+INTRODUCTION
+
+The Android theme tests ensure that the Holo and Material themes have not been
+modified. They consist of API-specific sets of reference images representing
+specific themes and widgets that must be identical across devices. To pass the
+theme tests, a device must be able to generate images that are identical to the
+reference images.
+
+NOTE: Reference images should only be updated by the CTS test maintainers. Any
+      modifications to the reference images will invalidate the test results.
+
+
+INSTRUCTIONS
+
+I. Generating reference images (CTS maintainers only)
+
+Reference images are typically only generated for new API revisions. To
+generate a new set of reference images from an emulator, do the following:
+
+  1. Ensure the Android SDK is installed locally. Either a public or internal
+     distribution is fine. From the console, set the ANDROID_SDK_ROOT env var:
+
+     export ANDROID_SDK_ROOT = /path/to/sdk
+
+  2. Obtain an x86_64 emulator image from the build server by using the script
+     available internally at go/emu-dev. This script will install the image in
+     your SDK.
+
+  3. Use the SDK's AVD Manager tool to create a single virtual device using the
+     emulator image from step 2. The exact configuration doesn't really matter;
+     you can use Nexus 5 as a template. Name the emulator "theme_emulator".
+
+  4. From the console, set up your build environment for x86_64 and build CTS:
+
+     lunch sdk_x86_64-eng && make cts -j32
+
+  5. Use the reference image script to generate the reference images. The script
+     will automatically start the emulator in the required configurations and
+     install the resulting reference images in assets/<platform>/<dpi>.zip,
+     overwriting any existing images.
+
+     ./cts/hostsidetests/theme/generate_images.py theme_emulator
+
+You can also generate reference images using a real device. To generate a new set
+of reference images from a real device, do the following:
+
+  1. Connect the device. Verify the device is connected:
+
+     adb devices
+
+  2. Use the reference image script to generate the reference images:
+
+     ./cts/hostsidetests/theme/generate_images.py
+
+A complete collection of reference images for a given API revision must include
+a set for each possible DPI bucket (tvdpi, xxhdpi, etc.) that may be tested.
+
+For a list of devices and their DPI buckets, see Device Metrics:
+
+    https://design.google.com/devices/
+
+
+II. Building theme tests
+
+1. If you have not already built the CTS tests, run an initial make:
+
+   make cts -j32
+
+2. Subsequent changes to the theme tests, including changes to the reference
+   images, may be built using mmm:
+
+   mmm cts/hostsidetests/theme -j32
+
+
+III. Running theme tests
+
+To obtain reliable results, theme tests should be run against the device's
+native density; however, many of the tests will also work in a scaled density.
+If you don't possess a device for a given density and would still like to run
+tests for that density, you can manually force scaling via:
+
+  adb shell wm density <dpi>
+
+As of API 24, the results will NOT be 100% reliable due to scaling artifacts.
+To reset the device to its native density, run:
+
+  adb shell wm density reset
+
+Once the device is in the desired state, do the following:
+
+  1. Connect the device that you wish to test. Confirm that is is connected with:
+
+     adb devices
+
+  2. Run the theme tests using cts-tradefed:
+
+     cts-tradefed run singleCommand cts-dev --module CtsThemeHostTestCases \
+         --test android.theme.cts.ThemeHostTest
+
+  3. Wait for the tests to complete. This should take less than five minutes.
+
+If any test failures are encountered, diff PNGs will be generated and collected
+in the "diffs" directory of the CTS results indicated by "Test Result:" in the
+test output.

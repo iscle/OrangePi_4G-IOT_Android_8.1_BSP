@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+ * Copyright (C) 2007 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ -->
+
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="android.os.cts">
+
+    <permission android:name="android.os.cts.permission.TEST_GRANTED"
+        android:protectionLevel="normal"
+            android:label="@string/permlab_testGranted"
+            android:description="@string/permdesc_testGranted">
+        <meta-data android:name="android.os.cts.string" android:value="foo" />
+        <meta-data android:name="android.os.cts.boolean" android:value="true" />
+        <meta-data android:name="android.os.cts.integer" android:value="100" />
+        <meta-data android:name="android.os.cts.color" android:value="#ff000000" />
+        <meta-data android:name="android.os.cts.float" android:value="100.1" />
+        <meta-data android:name="android.os.cts.reference" android:resource="@xml/metadata" />
+    </permission>
+
+    <uses-permission android:name="android.permission.DISABLE_KEYGUARD" />
+    <uses-permission android:name="android.permission.KILL_BACKGROUND_PROCESSES" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.SEND_SMS" />
+    <uses-permission android:name="android.permission.RECEIVE_SMS" />
+    <uses-permission android:name="android.permission.READ_SMS"/>
+    <uses-permission android:name="android.permission.WRITE_SMS"/>
+    <uses-permission android:name="android.permission.CALL_PHONE" />
+    <uses-permission android:name="android.permission.MOUNT_UNMOUNT_FILESYSTEMS" />
+    <uses-permission android:name="android.permission.DEVICE_POWER" />
+    <uses-permission android:name="android.os.cts.permission.TEST_GRANTED" />
+
+    <application>
+        <activity android:name="android.os.cts.LaunchpadActivity"
+                  android:configChanges="keyboardHidden|orientation|screenSize"
+                  android:multiprocess="true">
+        </activity>
+
+        <activity android:name="android.os.cts.AliasActivityStub">
+            <meta-data android:name="android.os.alias"
+                android:resource="@xml/alias" />
+        </activity>
+
+        <activity android:name="android.os.cts.CountDownTimerTestStub"
+            android:label="CountDownTimerTestStub">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.FRAMEWORK_INSTRUMENTATION_TEST" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name="android.os.cts.ParcelFileDescriptorPeer$Red"
+            android:process=":red"
+            android:exported="true" />
+        <service
+            android:name="android.os.cts.ParcelFileDescriptorPeer$Blue"
+            android:process=":blue"
+            android:exported="true" />
+        <service
+            android:name="android.os.cts.CrossProcessExceptionService"
+            android:process=":green"
+            android:exported="true" />
+        <service
+            android:name="android.os.cts.SharedMemoryService"
+            android:process=":sharedmem"
+            android:exported="false" />
+
+        <service android:name="android.os.cts.LocalService">
+            <intent-filter>
+                <action android:name="android.os.cts.activity.SERVICE_LOCAL" />
+            </intent-filter>
+            <meta-data android:name="android.os.cts.string" android:value="foo" />
+            <meta-data android:name="android.os.cts.boolean" android:value="true" />
+            <meta-data android:name="android.os.cts.integer" android:value="100" />
+            <meta-data android:name="android.os.cts.color" android:value="#ff000000" />
+            <meta-data android:name="android.os.cts.float" android:value="100.1" />
+            <meta-data android:name="android.os.cts.reference" android:resource="@xml/metadata" />
+        </service>
+
+        <service android:name="android.os.cts.LocalGrantedService"
+             android:permission="android.os.cts.permission.TEST_GRANTED">
+            <intent-filter>
+                <action android:name="android.os.cts.activity.SERVICE_LOCAL_GRANTED" />
+            </intent-filter>
+        </service>
+
+        <service android:name="android.os.cts.LocalDeniedService"
+               android:permission="android.os.cts.permission.TEST_DENIED">
+            <intent-filter>
+                <action android:name="android.os.cts.activity.SERVICE_LOCAL_DENIED" />
+            </intent-filter>
+        </service>
+
+
+        <service android:name="android.os.cts.EmptyService"
+            android:process=":remote">
+            <intent-filter>
+                <action
+                    android:name="android.os.cts.IEmptyService" />
+                <action
+                    android:name="android.os.REMOTESERVICE" />
+            </intent-filter>
+        </service>
+
+        <service android:name="android.os.cts.CtsRemoteService"
+            android:process=":remote">
+            <intent-filter>
+                <action
+                    android:name="android.os.cts.ISecondary" />
+                <action
+                    android:name="android.os.REMOTESERVICE" />
+            </intent-filter>
+        </service>
+
+        <service android:name="android.os.cts.SeccompTest$IsolatedService"
+                android:isolatedProcess="true">
+        </service>
+
+        <service android:name="android.os.cts.MessengerService"
+                android:process=":messengerService">
+        </service>
+
+        <uses-library android:name="android.test.runner" />
+    </application>
+
+    <instrumentation android:name="android.support.test.runner.AndroidJUnitRunner"
+                     android:targetPackage="android.os.cts"
+                     android:label="CTS tests of android.os">
+        <meta-data android:name="listener"
+            android:value="com.android.cts.runner.CtsTestRunListener" />
+    </instrumentation>
+
+</manifest>

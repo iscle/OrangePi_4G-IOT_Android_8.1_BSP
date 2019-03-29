@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright (C) 2015 The Android Open Source Project
+
+     Licensed under the Apache License, Version 2.0 (the "License");
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License.
+-->
+<configuration description="CTS precondition configs">
+
+    <include name="cts-device-files" />
+
+    <option name="plan" value="cts-preconditions" />
+
+    <target_preparer class="com.android.compatibility.common.tradefed.targetprep.DynamicConfigPusher">
+        <option name="target" value="host" />
+        <option name="config-filename" value="cts"/>
+    </target_preparer>
+
+    <target_preparer class="com.android.compatibility.common.tradefed.targetprep.StayAwakePreparer" />
+
+    <!-- Disable "Android Beta Program" -->
+    <target_preparer class="com.android.compatibility.common.tradefed.targetprep.PackageDisabler" >
+        <option name="package" value="com.android.yadayada"/>
+    </target_preparer>
+
+    <target_preparer class="com.android.compatibility.common.tradefed.targetprep.SettingsPreparer">
+        <option name="device-setting" value="verifier_verify_adb_installs"/>
+        <option name="setting-type" value="global"/>
+        <option name="set-value" value="0"/>
+    </target_preparer>
+
+    <target_preparer class="com.android.compatibility.common.tradefed.targetprep.ApkPreconditionCheck">
+        <option name="apk" value="CtsPreconditions.apk"/>
+        <option name="package" value="com.android.preconditions.cts"/>
+    </target_preparer>
+
+    <target_preparer class="com.android.compatibility.common.tradefed.targetprep.WifiCheck" />
+
+    <target_preparer class="com.android.tradefed.targetprep.RunCommandTargetPreparer">
+        <option name="run-command" value="rm -rf /sdcard/device-info-files" />
+        <option name="run-command" value="rm -rf /sdcard/report-log-files" />
+    </target_preparer>
+
+    <target_preparer class="com.android.compatibility.common.tradefed.targetprep.DeviceInfoCollector">
+        <option name="apk" value="CtsDeviceInfo.apk"/>
+        <option name="package" value="com.android.compatibility.common.deviceinfo"/>
+        <option name="src-dir" value="/sdcard/device-info-files/"/>
+        <option name="dest-dir" value="device-info-files/"/>
+        <option name="temp-dir" value="temp-device-info-files/"/>
+        <option name="throw-error" value="false"/>
+    </target_preparer>
+
+    <!-- The following values are used in cts/common/device-side/util/DeviceReportLog.java,
+    cts/common/host-side/util/MetricsReportLog.java and tools/tradefed-host/util/ReportLogUtil.java.
+    Any change in these values must also be translated to the stated files.
+    -->
+    <target_preparer class="com.android.compatibility.common.tradefed.targetprep.ReportLogCollector">
+        <option name="src-dir" value="/sdcard/report-log-files/"/>
+        <option name="dest-dir" value="report-log-files/"/>
+        <option name="temp-dir" value="temp-report-logs/"/>
+    </target_preparer>
+</configuration>

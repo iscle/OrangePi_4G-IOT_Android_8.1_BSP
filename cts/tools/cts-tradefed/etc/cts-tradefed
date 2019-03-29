@@ -1,0 +1,133 @@
+#!/bin/bash
+
+# Copyright (C) 2015 The Android Open Source Project
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# launcher script for cts-tradefed harness
+# can be used from an Android build environment, or a standalone cts zip
+
+checkFile() {
+    if [ ! -f "$1" ]; then
+        echo "Unable to locate $1"
+        exit
+    fi;
+}
+
+checkPath() {
+    if ! type -P $1 &> /dev/null; then
+        echo "Unable to find $1 in path."
+        exit
+    fi;
+}
+
+checkPath aapt
+checkPath adb
+checkPath java
+
+# check java version
+if [ "${EXPERIMENTAL_USE_OPENJDK9}" == "" ]; then
+    JAVA_VERSION=$(java -version 2>&1 | head -n 2 | grep '[ "]1\.[678][\. "$$]')
+    if [ "${JAVA_VERSION}" == "" ]; then
+        echo "Wrong java version. 1.6, 1.7 or 1.8 is required."
+        exit
+    fi
+else
+    JAVA_VERSION=$(java -version 2>&1 | head -n 2 | grep '^java .* "9.*')
+    if [ "${JAVA_VERSION}" == "" ]; then
+        echo "Wrong java version. Version 9 is required."
+        exit
+    fi
+fi
+
+# check debug flag and set up remote debugging
+if [ -n "${TF_DEBUG}" ]; then
+  if [ -z "${TF_DEBUG_PORT}" ]; then
+    TF_DEBUG_PORT=10088
+  fi
+  RDBG_FLAG=-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=${TF_DEBUG_PORT}
+fi
+
+# get OS
+HOST=`uname`
+if [ "$HOST" == "Linux" ]; then
+    OS="linux-x86"
+elif [ "$HOST" == "Darwin" ]; then
+    OS="darwin-x86"
+else
+    echo "Unrecognized OS"
+    exit
+fi
+
+# check if in Android build env
+if [ ! -z "${ANDROID_BUILD_TOP}" ]; then
+    if [ ! -z "${ANDROID_HOST_OUT}" ]; then
+      CTS_ROOT=${ANDROID_HOST_OUT}/cts
+    else
+      CTS_ROOT=${ANDROID_BUILD_TOP}/${OUT_DIR:-out}/host/${OS}/cts
+    fi
+    if [ ! -d ${CTS_ROOT} ]; then
+        echo "Could not find $CTS_ROOT in Android build environment. Try 'make cts'"
+        exit
+    fi;
+fi;
+
+if [ -z ${CTS_ROOT} ]; then
+    # assume we're in an extracted cts install
+    CTS_ROOT="$(dirname $(readlink -e $0))/../.."
+fi;
+
+JAR_DIR=${CTS_ROOT}/android-cts/tools
+JARS="tradefed
+  hosttestlib
+  compatibility-host-util
+  compatibility-host-util-tests
+  cts-tradefed
+  cts-tradefed-tests
+  compatibility-common-util-tests
+  compatibility-tradefed-tests
+  host-libprotobuf-java-full"
+
+for JAR in $JARS; do
+    checkFile ${JAR_DIR}/${JAR}.jar
+    JAR_PATH=${JAR_PATH}:${JAR_DIR}/${JAR}.jar
+done
+
+OPTIONAL_JARS="
+  google-tradefed
+  google-tradefed-tests
+  google-tf-prod-tests"
+
+for JAR in $OPTIONAL_JARS; do
+    if [ -f "${JAR_DIR}/${JAR}.jar" ]; then
+        JAR_PATH=${JAR_PATH}:${JAR_DIR}/${JAR}.jar
+    fi;
+done
+
+# load any shared libraries for host-side executables
+LIB_DIR=${CTS_ROOT}/android-cts/lib
+if [ "$HOST" == "Linux" ]; then
+    LD_LIBRARY_PATH=${LIB_DIR}:${LIB_DIR}64:${LD_LIBRARY_PATH}
+    export LD_LIBRARY_PATH
+elif [ "$HOST" == "Darwin" ]; then
+    DYLD_LIBRARY_PATH=${LIB_DIR}:${LIB_DIR}64:${DYLD_LIBRARY_PATH}
+    export DYLD_LIBRARY_PATH
+fi
+
+# include any host-side test jars
+for j in ${CTS_ROOT}/android-cts/testcases/*.jar; do
+    JAR_PATH=${JAR_PATH}:$j
+done
+
+java $RDBG_FLAG -Xmx4g -XX:+HeapDumpOnOutOfMemoryError -cp ${JAR_PATH} -DCTS_ROOT=${CTS_ROOT} com.android.compatibility.common.tradefed.command.CompatibilityConsole "$@"
+

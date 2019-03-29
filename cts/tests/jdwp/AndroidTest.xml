@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright (C) 2016 The Android Open Source Project
+
+     Licensed under the Apache License, Version 2.0 (the "License");
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License.
+-->
+<configuration description="Config for CTS JDWP test cases">
+    <option name="config-descriptor:metadata" key="component" value="art" />
+    <target_preparer class="com.android.tradefed.targetprep.RunCommandTargetPreparer">
+        <option name="run-command" value="mkdir -p /data/local/tmp/ctsjdwp/java.io.tmpdir" />
+        <option name="run-command" value="mkdir -p /data/local/tmp/ctsjdwp/user.home" />
+        <option name="teardown-command" value="rm -rf /data/local/tmp/ctsjdwp" />
+    </target_preparer>
+    <target_preparer class="com.android.compatibility.common.tradefed.targetprep.FilePusher">
+        <option name="cleanup" value="true" />
+        <option name="push" value="cts-dalvik-device-test-runner.jar->/data/local/tmp/ctsjdwp/cts-dalvik-device-test-runner.jar" />
+        <option name="push" value="CtsJdwpTestCases.jar->/data/local/tmp/ctsjdwp/CtsJdwpTestCases.jar" />
+    </target_preparer>
+    <test class="com.android.compatibility.testtype.DalvikTest" >
+        <option name="run-name" value="CtsJdwpTestCases" />
+        <option name="classpath" value="/data/local/tmp/ctsjdwp/cts-dalvik-device-test-runner.jar" />
+        <option name="classpath" value="/data/local/tmp/ctsjdwp/CtsJdwpTestCases.jar" />
+        <option name="dalvik-arg" value="-Xcompiler-option" />
+        <option name="dalvik-arg" value="--debuggable" />
+        <option name="dalvik-arg" value="-Xusejit:true" />
+        <option name="dalvik-arg" value="-Djpda.settings.verbose=false" />
+        <option name="dalvik-arg" value="-Djpda.settings.timeout=10000" />
+        <option name="dalvik-arg" value="-Djpda.settings.waitingTime=10000" />
+        <option name="dalvik-arg" value="-Djpda.settings.debuggeeJavaPath='dalvikvm|#ABI#| -XXlib:libart.so -Xcompiler-option --debuggable -Xusejit:true'" />
+        <option name="known-failures" value="/expectations/jdwp-known-failures.txt" />
+        <option name="runtime-hint" value="16m" />
+
+        <!-- Temporary work around to avoid running android.test.AndroidTestCase. -->
+        <!-- TODO(64541592) - remove once AndroidTestCase is not statically included. -->
+        <option name="exclude-filter" value="android.test.AndroidTestCase" />
+    </test>
+</configuration>

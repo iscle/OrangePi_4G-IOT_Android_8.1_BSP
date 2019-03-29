@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright (C) 2016 The Android Open Source Project
+
+     Licensed under the Apache License, Version 2.0 (the "License");
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License.
+-->
+
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.android.cts.ephemeralapp2"
+    android:targetSandboxVersion="2">
+    <uses-sdk
+        android:minSdkVersion="24" />
+
+    <!-- TEST: exists only for testing ephemeral app1 can't see this app -->
+    <application
+        android:label="@string/app_name">
+        <uses-library android:name="android.test.runner" />
+        <activity
+          android:name=".EphemeralActivity"
+          android:theme="@android:style/Theme.NoDisplay">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="cts.google.com" />
+                <data android:path="/other" />
+            </intent-filter>
+            <intent-filter android:priority="0">
+                <action android:name="com.android.cts.ephemeraltest.QUERY" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter android:priority="0">
+                <action android:name="com.android.cts.ephemeraltest.START_EPHEMERAL" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!-- This should still not be visible to other Instant Apps -->
+        <activity
+            android:name=".ExposedActivity"
+            android:visibleToInstantApps="true"
+            android:theme="@android:style/Theme.NoDisplay" />
+
+        <!-- This should still not be visible to other Instant Apps -->
+        <provider
+            android:name=".EphemeralProvider"
+            android:authorities="com.android.cts.ephemeralapp2.provider"
+            android:exported="true">
+            <intent-filter android:priority="0">
+                <action android:name="com.android.cts.ephemeraltest.QUERY" />
+            </intent-filter>
+        </provider>
+    </application>
+
+    <instrumentation
+        android:name="android.support.test.runner.AndroidJUnitRunner"
+        android:targetPackage="com.android.cts.ephemeralapp2" />
+</manifest>

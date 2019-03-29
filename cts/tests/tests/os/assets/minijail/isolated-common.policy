@@ -1,0 +1,145 @@
+# Minijail Seccomp Policy for isolated_app processes.
+# This architecture-agnostic policy is appended to every architecture-specific
+# policy.
+
+brk: 1
+capget: 1
+capset: return EPERM
+chdir: return EPERM
+
+# clock_gettime: clk_id=={CLOCK_BOOTTIME,CLOCK_MONOTONIC,CLOCK_MONOTONIC_COARSE,CLOCK_PROCESS_CPUTIME_ID,CLOCK_REALTIME,CLOCK_REALTIME_COARSE}
+clock_gettime: arg0 == 0 || arg0 == 1 || arg0 == 2 || arg0 == 5 || arg0 == 6 || arg0 == 7
+
+clone: 1
+close: 1
+dup: 1
+dup3: 1
+epoll_create1: 1
+epoll_ctl: 1
+epoll_pwait: 1
+execve: return EPERM
+exit: 1
+exit_group: 1
+faccessat: return EPERM
+fallocate: return EPERM
+fchdir: return EPERM
+fchmodat: return EPERM
+fchmod: return EPERM
+fchownat: return EPERM
+fchown: return EPERM
+
+# fnctl: restrict cmd
+fcntl: arg1 == F_GETFL || arg1 == F_GETFD || arg1 == F_SETFD || arg1 == F_SETLK || arg1 == F_SETLKW || arg1 == F_GETLK || arg1 == F_DUPFD
+
+fdatasync: 1
+flock: 1
+fstat: 1
+fsync: 1
+ftruncate: 1
+
+# futex: TODO(rsesek): Restrict op (arg1) to {FUTEX_WAIT,FUTEX_WAKE,FUTEX_REQUEUE,FUTEX_CMP_REQUEUE,
+#                      FUTEX_WAKE_OP,FUTEX_WAIT_BITSET,FUTEX_WAKE_BITSET} with only these flags allowed:
+#                      (FUTEX_PRIVATE_FLAG | FUTEX_CLOCK_REALTIME). Unclear how to express this in minijail.
+futex: 1
+
+getcwd: return EPERM
+getegid: 1
+geteuid: 1
+getgid: 1
+getgroups: 1
+getpid: 1
+getppid: 1
+getpriority: 1
+
+# getrandom: flags==0 || flags & GRND_NONBLOCK
+getrandom: arg2 == 0 || arg2 & 1
+
+getresgid: 1
+getresuid: 1
+getsid: 1
+gettid: 1
+gettimeofday: 1
+getuid: 1
+ioctl: 1
+
+# kill: pid==getpid()
+kill: arg0 == $
+
+linkat: return EPERM
+lookup_dcookie: return EPERM
+lseek: 1
+
+# madvise: advice==MADV_DONTNEED
+madvise: arg2 == 4; return EPERM
+
+memfd_create: return EPERM
+mkdirat: return EPERM
+mknodat: return EPERM
+mlock: 1
+
+# mprotect: prot in {PROT_READ|PROT_WRITE|PROT_EXEC}
+mprotect: arg2 in 0x7
+
+mremap: 1
+msync: 1
+munlock: 1
+munmap: 1
+nanosleep: 1
+openat: 1
+pipe2: 1
+ppoll: 1
+
+# prctl: PR_SET_VMA=0x53564d41, PR_SET_TIMERSLACK_PID={41,43,127} depending on kernel version
+prctl: arg0 == PR_GET_NAME || arg0 == PR_SET_NAME || arg0 == PR_GET_DUMPABLE || arg0 == PR_SET_DUMPABLE || arg0 == PR_SET_PTRACER || arg0 == 0x53564d41 || arg0 == 41 || arg0 == 43 || arg0 == 127
+
+pread64: 1
+pselect6: 1
+ptrace: 1
+pwrite64: 1
+read: 1
+readlinkat: return EPERM
+readv: 1
+renameat: return EPERM
+renameat2: return EPERM
+restart_syscall: 1
+rt_sigaction: 1
+rt_sigprocmask: 1
+rt_sigreturn: 1
+rt_sigtimedwait: 1
+
+# rt_tgsigqueueinfo: tgid==getpid()
+rt_tgsigqueueinfo: arg0 == $
+
+sched_getparam: 1
+sched_getscheduler: 1
+sched_setscheduler: 1
+sched_yield: 1
+seccomp: return EPERM
+setfsgid: return EPERM
+setfsuid: return EPERM
+setgid: return EPERM
+setgroups: return EPERM
+setpriority: 1
+setregid: return EPERM
+setresgid: return EPERM
+setresuid: return EPERM
+setreuid: return EPERM
+set_robust_list: return EPERM
+set_tid_address: 1
+setuid: return EPERM
+sigaltstack: 1
+statfs: return EPERM
+symlinkat: return EPERM
+
+# tgkill: tgid==getpid()
+tgkill: arg0 == $
+
+truncate: return EPERM
+umask: return EPERM
+uname: 1
+unlinkat: return EPERM
+utimensat: return EPERM
+wait4: 1
+waitid: 1
+write: 1
+writev: 1
