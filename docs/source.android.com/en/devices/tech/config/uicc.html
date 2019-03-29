@@ -1,0 +1,354 @@
+<html devsite>
+  <head>
+    <title>UICC Carrier Privileges</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>Android 5.1 introduced a mechanism to grant special privileges for APIs
+relevant to the Universal Integrated Circuit Card (UICC) owner’s apps. The
+Android platform loads certificates stored on a UICC and grants permission to
+apps signed by these certificates to make calls to a handful of special APIs.
+</p>
+<p>Android 7.0 extends this feature to support other storage sources, such as
+Access File Rule (ARF), for UICC carrier privilege rules, dramatically
+increasing the number of carriers that can use the APIs. For an API reference,
+see <a href="#carrierconfigmanager">CarrierConfigManager</a>; for instructions,
+see <a href="/devices/tech/config/carrier.html">Carrier
+Configuration</a>.</p>
+
+<p>Since carriers have full control of the UICC, this mechanism provides a
+secure and flexible way to manage apps from the Mobile Network Operator (MNO)
+hosted on generic application distribution channels (such as Google Play) while
+retaining special privileges on devices and without the need to sign apps with
+the per-device platform certificate or pre-install as a system app.</p>
+
+<h2 id=rules_on_uicc>Rules on UICC</h2>
+
+<p>Storage on the UICC is compatible with the
+<a href="http://www.globalplatform.org/specificationsdevice.asp">GlobalPlatform
+Secure Element Access Control specification</a>. The application identifier
+(AID) on card is <code>A00000015141434C00</code>, and the standard GET DATA
+command is used to fetch rules stored on the card. You may update these rules
+via card over-the-air (OTA) update.</p>
+
+<h3 id=data_hierarchy>Data hierarchy</h3>
+<p>UICC rules use the following data hierarchy (the two-character letter and
+number combination in parentheses is the object tag). Each rule is a REF-AR-DO
+(E2) and consists of a concatenation of a REF-DO and an AR-DO:</p>
+
+<ul>
+  <li>REF-DO (E1) contains a DeviceAppID-REF-DO or a concatenation of a
+  DeviceAppID-REF-DO and a PKG-REF-DO.
+  <ul>
+  <li>DeviceAppID-REF-DO (C1) stores the SHA-1 (20 bytes) or SHA-256 (32 bytes)
+  signature of the certificate.
+  <li>PKG-REF-DO (CA) is the full package name string defined in manifest, ASCII
+  encoded, max length 127 bytes.
+  </ul></li>
+  <li>AR-DO (E3) is extended to include PERM-AR-DO (DB), which is an 8-byte bit
+  mask representing 64 separate permissions.</li>
+</ul>
+
+<p>If PKG-REF-DO is not present, any app signed by the certificate is granted
+access; otherwise both certificate and package name need to match.</p>
+
+<h3 id=rule_example>Rule example</h3>
+<p>The application name is <code>com.google.android.apps.myapp</code> and the
+SHA-1 certificate in hex string is:</p>
+<pre class="devsite-click-to-copy">
+AB:CD:92:CB:B1:56:B2:80:FA:4E:14:29:A6:EC:EE:B6:E5:C1:BF:E4
+</pre>
+
+<p>The rule on UICC in hex string is:</p>
+<pre class="devsite-click-to-copy">
+E243 &lt;= 43 is value length in hex
+  E135
+    C114 ABCD92CBB156B280FA4E1429A6ECEEB6E5C1BFE4
+    CA1D 636F6D2E676F6F676C652E616E64726F69642E617070732E6D79617070
+  E30A
+    DB08 0000000000000001
+</pre>
+
+<h2 id=arf>Access Rule File (ARF) support</h2>
+<p>Android 7.0 adds support for reading carrier privilege rules from the Access
+Rule File (ARF).</p>
+<p>The Android platform first attempts to select the Access Rule Applet (ARA)
+application identifier (AID) <code>A00000015141434C00</code>. If it doesn't find
+the AID on the Universal Integrated Circuit Card (UICC), it falls back to ARF by
+selecting PKCS15 AID <code>A000000063504B43532D3135</code>. Android then reads
+Access Control Rules File (ACRF) at <code>0x4300</code> and looks for entries
+with AID <code>FFFFFFFFFFFF</code>. Entries with different AIDs are ignored, so
+rules for other use cases can co-exist.</p>
+<p>Example ACRF content in hex string:</p>
+<pre class="devsite-click-to-copy">
+30 10 A0 08 04 06 FF FF FF FF FF FF 30 04 04 02 43 10
+</pre>
+
+<p>Example Access Control Conditions File (ACCF) content:</p>
+<pre class="devsite-click-to-copy">
+30 16 04 14 61 ED 37 7E 85 D3 86 A8 DF EE 6B 86 4B D8 5B 0B FA A5 AF 81
+</pre>
+
+<p>In above example, <code>0x4310</code> is the address for ACCF, which contains
+the certificate hash
+<code>61:ED:37:7E:85:D3:86:A8:DF:EE:6B:86:4B:D8:5B:0B:FA:A5:AF:81</code>. Apps
+signed by this certificate are granted carrier privileges.</p>
+
+<h2 id=enabled_apis>Enabled APIs</h2>
+
+<p>Android supports the following APIs.</p>
+
+<h3 id=telephonymanager>TelephonyManager</h3>
+
+<ul>
+<li>API to allow the carrier application to ask UICC for a challenge/response:
+<a href="https://developer.android.com/reference/android/telephony/TelephonyManager.html#getIccAuthentication(int,%20int,%20java.lang.String)"><code>getIccAuthentication</code></a>.
+</li>
+
+<li>API to check whether calling application has been granted carrier
+privileges:
+<a href="http://developer.android.com/reference/android/telephony/TelephonyManager.html#hasCarrierPrivileges()"><code>hasCarrierPrivileges</code></a>.
+</li>
+
+<li>APIs to override brand and number:
+<ul>
+  <li><code>setOperatorBrandOverride</code></li>
+  <li><code>setLine1NumberForDisplay</code></li>
+  <li><code>setVoiceMailNumber</code></li>
+</ul></li>
+
+<li>APIs for direct UICC communication:
+<ul>
+  <li><code>iccOpenLogicalChannel</code></li>
+  <li><code>iccCloseLogicalChannel</code></li>
+  <li><code>iccExchangeSimIO</code></li>
+  <li><code>iccTransmitApduLogicalChannel</code></li>
+  <li><code>iccTransmitApduBasicChannel</code></li>
+  <li><code>sendEnvelopeWithStatus</code></li>
+</ul></li>
+
+<li>API to set device mode to global:
+<code>setPreferredNetworkTypeToGlobal</code>.</li>
+</ul>
+
+<h3 id=smsmanager>SmsManager</h3>
+
+<p>API to allow caller to create new incoming SMS messages:
+<code>injectSmsPdu</code>.</p>
+
+<h3 id=carrierconfigmanager>CarrierConfigManager</h3>
+
+<p>API to notify configuration changed:
+<code>notifyConfigChangedForSubId</code>. For instructions, see
+<a href="/devices/tech/config/carrier.html">Carrier Configuration</a>.
+</p>
+
+<h3 id=carriermessagingservice>CarrierMessagingService</h3>
+
+<p>Service that receives calls from the system when new SMS and MMS are sent
+or received. To extend this class, declare the service in your manifest file
+with the <code>android.Manifest.permission#BIND_CARRIER_MESSAGING_SERVICE</code>
+permission and include an intent filter with the <code>#SERVICE_INTERFACE</code>
+action. APIs include:</p>
+<ul>
+  <li><code>onFilterSms</code></li>
+  <li><code>onSendTextSms</code></li>
+  <li><code>onSendDataSms</code></li>
+  <li><code>onSendMultipartTextSms</code></li>
+  <li><code>onSendMms</code></li>
+  <li><code>onDownloadMms</code></li>
+</ul>
+
+<h3 id=telephonyprovider>TelephonyProvider</h3>
+
+<p>Content provider APIs to allow modifications (insert, delete, update, query)
+to the telephony database. Values fields are defined at
+<a href="https://developer.android.com/reference/android/provider/Telephony.Carriers.html"><code>Telephony.Carriers</code></a>;
+for more details, refer to
+<a href="https://developer.android.com/reference/android/provider/Telephony.html">Telephony</a>
+API reference on developer.android.com.</p>
+
+<h2 id=android_platform>Android platform</h2>
+
+<p>On a detected UICC, the platform will construct internal UICC objects that
+include carrier privilege rules as part of the UICC.
+<a href="https://android.googlesource.com/platform/frameworks/opt/telephony/+/master/src/java/com/android/internal/telephony/uicc/UiccCarrierPrivilegeRules.java"><code>UiccCarrierPrivilegeRules.java</code></a>
+loads rules, parses them from the UICC card, and caches them in memory. When
+a privilege check is needed, <code>UiccCarrierPrivilegeRules</code> compares the
+caller certificate with its own rules one by one. If the UICC is removed, rules
+are destroyed along with the UICC object.</p>
+
+<h2 id=validation>Validation</h2>
+<p>The Android 7.0 CTS includes tests for carrier APIs in
+<code>CtsCarrierApiTestCases.apk</code>. Because this feature depends on
+certificates on the UICC, you must prepare the UICC to pass these tests.</p>
+
+<h3 id=prepare_uicc>Preparing the UICC</h3>
+<p>By default, <code>CtsCarrierApiTestCases.apk</code> is signed by Android
+developer key, with hash value
+<code>61:ED:37:7E:85:D3:86:A8:DF:EE:6B:86:4B:D8:5B:0B:FA:A5:AF:81</code>. The
+tests also print out the expected certificate hash if certificates on UICC
+mismatch.</p>
+<p>Example output:</p>
+<pre class="devsite-click-to-copy">
+junit.framework.AssertionFailedError: This test requires a SIM card with carrier privilege rule on it.
+Cert hash: 61ed377e85d386a8dfee6b864bd85b0bfaa5af81
+</pre>
+
+<p>In order to validate the implementation via CTS using
+<code>CtsCarrierApiTestCases.apk</code>, you must have a developer UICC with
+the correct UICC rules or ARF support. You may ask the SIM card vendor
+of your choice to prepare a developer UICC with the right ARF as described in
+this section and use that UICC to run the tests. The UICC does not require
+active cellular service to pass CTS tests.</p>
+
+<h3 id=run_tests>Running tests</h3>
+<p>For convenience, the Android 7.0 CTS supports a device token that restricts
+tests to run only on devices configured with same token. Carrier API CTS tests
+support the device token <code>sim-card-with-certs</code>. For example, the
+following device token restricts carrier API tests to run only on device
+<code>abcd1234</code>:</p>
+<pre class="devsite-terminal devsite-click-to-copy">
+cts-tradefed run cts  --device-token abcd1234:sim-card-with-certs
+</pre>
+
+<p>When running a test without using a device token, the test runs on all
+devices.</p>
+
+<h2 id=faq>FAQ</h2>
+
+<p><strong>How can certificates be updated on the UICC?</strong></p>
+
+<p><em>A: Use existing card OTA update mechanism.</em></p>
+
+<p><strong>Can it co-exist with other rules?</strong></p>
+
+<p><em>A: It’s fine to have other security rules on the UICC under same AID; the
+platform will filter them out automatically.</em></p>
+
+<p><strong>What happens when the UICC is removed for an app that relies on the
+certificates on it?</strong></p>
+
+<p><em>A: The app will lose its privileges because the rules associated with the
+UICC are destroyed on UICC removal.</em></p>
+
+<p><strong>Is there a limit on the number of certificates on the UICC?</strong>
+</p>
+
+<p><em>A: The platform doesn’t limit the number of certificates; but because the
+check is linear, too many rules may incur a latency for check.</em></p>
+
+<p><strong>Is there a limit to number of APIs we can support via this method?
+</strong></p>
+
+<p><em>A: No, but we limit the scope of APIs to carrier related.</em></p>
+
+<p><strong>Are there some APIs prohibited from using this method? If so, how do
+you enforce them? (i.e. Will you have tests to validate which APIs are supported
+via this method?)</strong></p>
+
+<p><em>A: See the "API Behavioral Compatibility" section of the
+<a href="/compatibility/cdd.html">Android Compatibility Definition
+Document (CDD)</a>. We have some CTS tests to make sure the permission model of
+the APIs is not changed.</em></p>
+
+<p><strong>How does this work with the multi-SIM feature?</strong></p>
+
+<p><em>A: The default SIM that gets set by the user will be used.</em></p>
+
+<p><strong>Does this in any way interact or overlap with other SE access
+technologies, e.g. SEEK?</strong></p>
+<p><em>A: As an example, SEEK uses the same AID as on the UICC. So the rules
+co-exist and are filtered by either SEEK or UiccCarrierPrivileges.</em></p>
+
+<p><strong>When is it a good time to check carrier privileges?</strong></p>
+<p><em>A: After the SIM state loaded broadcast.</em></p>
+
+<p><strong>Can OEMs disable part of carrier APIs?</strong></p>
+
+<p><em>A: No. We believe current APIs are the minimal set, and we plan to use
+the bit mask for finer granularity control in the future.</em></p>
+
+<p><strong>Does setOperatorBrandOverride override ALL other forms of operator
+name strings? For example, SE13, UICC SPN, network based NITZ, etc.?</strong>
+</p>
+
+<p><em>A: Refer to the SPN entry in
+<a href="http://developer.android.com/reference/android/telephony/TelephonyManager.html">TelephonyManager</a>
+</em></p>
+
+<p><strong>What does the injectSmsPdu method call do?</strong></p>
+
+<p><em>A: This facilitates SMS backup/restore in the cloud. The injectSmsPdu
+call enables the restore function.</em></p>
+
+<p><strong>For SMS filtering, is the onFilterSms call based on SMS UDH port
+filtering? Or would carrier apps have access to ALL incoming SMS?</strong></p>
+
+<p><em>A: Carriers have access to all SMS data.</em></p>
+
+<p><strong>Since the extension of DeviceAppID-REF-DO to support 32 bytes appears
+incompatible with the current GP spec (which allows 0 or 20 bytes only) why are
+you introducing this change? Do you not consider SHA-1 to be good enough to
+avoid collisions? Have you proposed this change to GP already, as this could
+be backwards incompatible with existing ARA-M/ARF?</strong></p>
+
+<p><em>A: For providing future-proof security this extension introduces SHA-256
+for DeviceAppID-REF-DO in addition to SHA-1 which is currently the only option
+in the GP SEAC standard. It is highly recommended to use SHA-256.</em></p>
+
+<p><strong>If DeviceAppID is 0 (empty), would you really apply the rule to all
+device applications not covered by a specific rule?</strong></p>
+
+<p><em>A: Carrier apis require deviceappid-ref-do be non-empty. Being empty is
+intended for test purpose and is not recommended for operational deployments.
+</em></p>
+
+<p><strong>According to your spec, PKG-REF-DO used just by itself, without
+DeviceAppID-REF-DO, should not be accepted. But it is still described in Table
+6-4 as extending the definition of REF-DO. Is this on purpose? What will be the
+behavior of the code when only a PKG-REF-DO is used in a REF-DO?</strong></p>
+
+<p><em>A: The option of having PKG-REF-DO as a single value item in REF-DO was
+removed in the latest version. PKG-REF-DO should only occur in combination with
+DeviceAppID-REF-DO.</em></p>
+
+<p><strong>We assume we can grant access to all carrier-based permissions or
+have a finer-grained control. What will define the mapping between the bit mask
+and the actual permissions then? One permission per class? One permission per
+method specifically? Will 64 separate permissions be enough in the long run?
+</strong></p>
+
+<p><em>A: This is reserved for the future, and we welcome suggestions.</em></p>
+
+<p><strong>Can you further define the DeviceAppID for Android specifically?
+Since this is the SHA-1 (20 bytes) hash value of the Publisher certificate used
+to signed the given app, shouldn't the name reflect that purpose? (The name
+could be confusing to many readers as the rule will be applicable then to all
+apps signed with that same Publisher certificate.)</strong></p>
+
+<p><em>A: The deviceAppID storing certificates is already supported by the
+existing spec. We tried to minimize spec changes to lower barrier for adoption.
+For details, see <a href="#rules_on_uicc">Rules on UICC</a>.</em></p>
+
+  </body>
+</html>

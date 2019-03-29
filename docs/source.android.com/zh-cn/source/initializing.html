@@ -1,0 +1,364 @@
+<html devsite><head>
+    <title>搭建编译环境</title>
+    <meta name="project_path" value="/_project.yaml"/>
+    <meta name="book_path" value="/_book.yaml"/>
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+<p>本部分介绍了如何设置本地工作环境来编译 Android 源文件。您需要使用 Linux 或 Mac OS。目前不支持在 Windows 环境下进行编译。</p>
+<p>要简要了解代码审核和代码更新的整个过程，请参阅<a href="life-of-a-patch.html">补丁程序的生命周期</a>。</p>
+<h2 id="choosing-a-branch">选择分支</h2>
+<p>针对编译环境的某些要求是由您打算编译的源代码的版本决定的。要查看您可以选择的分支的完整列表，请参阅<a href="build-numbers.html">版本号</a>。您还可以选择下载并编译最新的源代码（称为 <code>master</code>）。如果您选择这么做，请在初始化存储库时直接忽略分支规范。</p>
+<p>选择分支后，请按照下面的相应说明来设置编译环境。</p>
+<h2 id="setting-up-a-linux-build-environment">设置 Linux 编译环境</h2>
+<p>以下说明适用于所有分支（包括 <code>master</code>）。</p>
+<p>我们会定期在最近推出的一些 Ubuntu LTS (14.04) 版本中对 Android 编译过程进行内部测试，但大多数 Ubuntu 分发版本都应该有所需的编译工具。欢迎向我们报告在其他分发版本中的测试结果（无论结果是成功还是失败）。</p>
+<p>如果是 Gingerbread (2.3.x) 及更高版本（包括 <code>master</code> 分支），需要使用 64 位环境。如果是较低的版本，则可以在 32 位系统中进行编译。</p>
+<p class="note"><strong>注意</strong>：要查看完整的硬件和软件要求列表，请参阅相关<a href="requirements.html">要求</a>。然后，请按照下方适用于 Ubuntu 和 Mac OS 的详细说明进行操作。</p>
+
+<h3 id="installing-the-jdk">安装 JDK</h3>
+<p><a href="https://android.googlesource.com/">Android 开放源代码项目 (AOSP)</a> 中 Android 的 <code>master</code> 分支需要使用 Java 8。在 Ubuntu 中则需要使用 <a href="http://openjdk.java.net/install/">OpenJDK</a>。</p>
+<p>对于较低的版本，请参阅 <a href="requirements.html#jdk">JDK 要求</a>。</p>
+
+<h4 id="for-ubuntu-15-04">如果 Ubuntu &gt;= 15.04</h4>
+<p>请运行以下命令：</p>
+<pre>
+$ sudo apt-get update
+$ sudo apt-get install openjdk-8-jdk
+</pre>
+
+<h4 id="for-ubuntu-14-04">如果是 Ubuntu LTS 14.04</h4>
+<p>目前没有适用于 Ubuntu 14.04 的受支持 OpenJDK 8 程序包。<strong>Ubuntu 15.04 OpenJDK 8</strong> 程序包能够在 Ubuntu 14.04 中成功使用。<em>我们发现，按照以下说明操作时，更高的程序包版本（例如适合 15.10、16.04 的版本）在 Ubuntu 14.04 中无法正常工作。</em></p>
+<ol>
+<li>
+<p>从 <a href="http://archive.ubuntu.com/ubuntu/pool/universe/o/openjdk-8/">archive.ubuntu.com</a> 下载适合 64 位架构的 <code>.deb</code> 程序包：</p>
+<ul>
+<li><a href="http://archive.ubuntu.com/ubuntu/pool/universe/o/openjdk-8/openjdk-8-jre-headless_8u45-b14-1_amd64.deb">openjdk-8-jre-headless_8u45-b14-1_amd64.deb</a>
+（SHA256：<code>0f5aba8db39088283b51e00054813063173a4d8809f70033976f83e214ab56c0</code>）</li>
+<li><a href="http://archive.ubuntu.com/ubuntu/pool/universe/o/openjdk-8/openjdk-8-jre_8u45-b14-1_amd64.deb">openjdk-8-jre_8u45-b14-1_amd64.deb</a>
+（SHA256：<code>9ef76c4562d39432b69baf6c18f199707c5c56a5b4566847df908b7d74e15849</code>）</li>
+<li><a href="http://archive.ubuntu.com/ubuntu/pool/universe/o/openjdk-8/openjdk-8-jdk_8u45-b14-1_amd64.deb">openjdk-8-jdk_8u45-b14-1_amd64.deb</a>
+（SHA256：<code>6e47215cf6205aa829e6a0a64985075bd29d1f428a4006a80c9db371c2fc3c4c</code>）</li>
+</ul>
+</li>
+<li>
+<p>（可选）对照随以上每个程序包列出的 SHA256 字符串，确认已下载文件的校验和。</p>
+<p>例如，使用 <code>sha256sum</code> 工具：</p>
+<pre>
+$ sha256sum {downloaded.deb file}
+</pre>
+</li>
+<li>
+<p>安装程序包：</p>
+<pre>
+$ sudo apt-get update
+</pre>
+<p>为下载的每个 .deb 文件运行 <code>dpkg</code>。运行过程中可能会因缺少依赖项而出现错误：</p>
+<pre>
+$ sudo dpkg -i {downloaded.deb file}
+</pre>
+<p>解决缺少依赖项的问题：</p>
+<pre>
+$ sudo apt-get -f install
+</pre>
+</li>
+</ol>
+
+<h4 id="default-java-version">更新默认的 Java 版本 - 可选</h4>
+
+<p>（可选）对于以上 Ubuntu 版本，您可以通过运行以下命令来更新默认的 Java 版本：</p>
+<pre>
+$ sudo update-alternatives --config java
+$ sudo update-alternatives --config javac
+</pre>
+
+<p>在编译过程中，如果您遇到 Java 版本错误，请按照<a href="building.html#wrong-java-version">错误的 Java 版本</a>部分中的说明设置其路径。</p>
+
+<h3 id="installing-required-packages-ubuntu-1404">安装所需的程序包 (Ubuntu 14.04)</h3>
+
+<p>您将需要 64 位版本的 Ubuntu。建议您使用 Ubuntu 14.04。</p>
+
+<pre>
+$ sudo apt-get install git-core gnupg flex bison gperf build-essential \
+  zip curl zlib1g-dev gcc-multilib g++-multilib libc6-dev-i386 \
+  lib32ncurses5-dev x11proto-core-dev libx11-dev lib32z-dev ccache \
+  libgl1-mesa-dev libxml2-utils xsltproc unzip
+</pre>
+
+<p class="note"><strong>注意</strong>：要使用 SELinux 工具进行政策分析，您还需要安装 <code>python-networkx</code> 程序包。</p>
+
+<p class="note"><strong>注意</strong>：如果您使用 LDAP 并且希望运行 ART 主机测试，则还需要安装 <code>libnss-sss:i386</code> 程序包。</p>
+
+<h3 id="installing-required-packages-ubuntu-1204">安装所需的程序包 (Ubuntu 12.04)</h3>
+
+<p>您可以使用 Ubuntu 12.04 来编译较低版本的 Android。master 或最近推出的一些版本不支持 Ubuntu 12.04。</p>
+
+<pre>
+$ sudo apt-get install git gnupg flex bison gperf build-essential \
+  zip curl libc6-dev libncurses5-dev:i386 x11proto-core-dev \
+  libx11-dev:i386 libreadline6-dev:i386 libgl1-mesa-glx:i386 \
+  libgl1-mesa-dev g++-multilib mingw32 tofrodos \
+  python-markdown libxml2-utils xsltproc zlib1g-dev:i386
+$ sudo ln -s /usr/lib/i386-linux-gnu/mesa/libGL.so.1 /usr/lib/i386-linux-gnu/libGL.so
+</pre>
+
+<h3 id="installing-required-packages-ubuntu-1004-1110">安装所需的程序包 (Ubuntu 10.04 - 11.10)</h3>
+<p>不再支持在 Ubuntu 10.04-11.10 中进行编译，但它们仍可用来编译较低版本的 AOSP。</p>
+
+<pre>
+$ sudo apt-get install git gnupg flex bison gperf build-essential \
+  zip curl zlib1g-dev libc6-dev lib32ncurses5-dev ia32-libs \
+  x11proto-core-dev libx11-dev lib32readline5-dev lib32z-dev \
+  libgl1-mesa-dev g++-multilib mingw32 tofrodos python-markdown \
+  libxml2-utils xsltproc
+</pre>
+
+<p>在 Ubuntu 10.10 中，请运行以下命令：</p>
+
+<pre>
+$ sudo ln -s /usr/lib32/mesa/libGL.so.1 /usr/lib32/mesa/libGL.so
+</pre>
+
+<p>在 Ubuntu 11.10 中，请运行以下命令：</p>
+
+<pre>
+$ sudo apt-get install libx11-dev:i386
+</pre>
+
+<h3 id="configuring-usb-access">配置 USB 使用权限</h3>
+
+<p>在 GNU/Linux 系统中，尤其是在 Ubuntu 系统中，默认情况下普通用户无法直接使用 USB 设备。您需要对系统进行配置以允许使用此类设备。</p>
+<p>建议您以 root 用户的身份在 <code>/etc/udev/rules.d/51-android.rules</code> 下创建一个文件。</p>
+
+<p>为此，请运行以下命令来下载本网站附带的 <a href="51-android.txt">51-android.txt</a> 文件，对其进行修改以包含您的用户名，然后将其放到正确位置：</p>
+
+<pre>
+$ wget -S -O - http://source.android.com/source/51-android.txt | sed "s/&lt;username&gt;/$USER/" | sudo tee &gt;/dev/null /etc/udev/rules.d/51-android.rules; sudo udevadm control --reload-rules
+</pre>
+
+<p>这些新规则会在下次插入设备时生效。因此，您可能需要先拔下设备，然后再将其插到计算机上。</p>
+
+<h3 id="using-a-separate-output-directory">使用单独的输出目录</h3>
+
+<p>默认情况下，每次编译的输出都会存储在相应源代码树的 <code>out/</code> 子目录下。</p>
+
+<p>在一些拥有多个存储设备的计算机上，如果将源文件和输出存储在单独的存储卷中，编译速度会更快。若要进一步提高编译速度，可以将输出存储在已针对速度（而非崩溃稳定性）进行优化的文件系统中，这是因为在文件系统损坏时可以重新生成所有文件。</p>
+
+<p>要进行这项设置，请导出 <code>OUT_DIR_COMMON_BASE</code> 变量，使其指向将存储输出目录的位置。</p>
+
+<pre>
+$ export OUT_DIR_COMMON_BASE=&lt;path-to-your-out-directory&gt;
+</pre>
+
+<p>对于每个单独的源代码树，其输出目录都将以其存放目录命名。</p>
+
+<p>例如，如果您有源代码树 <code>/source/master1</code> 和 <code>/source/master2</code>，并且 <code>OUT_DIR_COMMON_BASE</code> 设为了 <code>/output</code>，那么输出目录将为 <code>/output/master1</code> 和 <code>/output/master2</code>。</p>
+
+<p>在这种情况下，切勿将多个源代码树存储在具有相同名称的目录下，否则会导致输出目录共享终止，并且会出现不可预知的结果。</p>
+
+<p>只有 Jelly Bean (4.1) 及更高版本（包括 <code>master</code> 分支）支持这种做法。</p>
+
+<h2 id="setting-up-a-mac-os-x-build-environment">设置 Mac OS 编译环境</h2>
+
+<p>在默认安装过程中，Mac OS 会在一个保留大小写但不区分大小写的文件系统中运行。Git 并不支持此类文件系统，而且此类文件系统会导致某些 Git 命令（例如 <code>git status</code>）的行为出现异常。因此，我们建议您始终在区分大小写的文件系统中对 AOSP 源文件进行操作。使用下文中介绍的磁盘映像可以非常轻松地做到这一点。</p>
+
+<p>有了适当的文件系统，在新型 Mac OS 环境中编译 <code>master</code> 分支就会变得非常简单。要编译较低版本的分支，则需要一些额外的工具和 SDK。</p>
+
+<h3 id="creating-a-case-sensitive-disk-image">创建区分大小写的磁盘映像</h3>
+
+<p>您可以使用磁盘映像在现有的 Mac OS 环境中创建区分大小写的文件系统。要创建磁盘映像，请启动磁盘工具，然后选择“新建映像”。完成编译至少需要 25GB 空间；更大的空间能够更好地满足未来的需求。使用稀疏映像有助于节省空间，而且以后可以随着需求的增加进行扩展。请务必选择“Case sensitive, Journaled”存储卷格式。</p>
+
+<p>您也可以通过 shell 使用以下命令创建磁盘映像：</p>
+<pre>
+# hdiutil create -type SPARSE -fs 'Case-sensitive Journaled HFS+' -size 40g ~/android.dmg
+</pre>
+
+<p>这将创建一个 <code>.dmg</code>（也可能是 <code>.dmg.sparseimage</code>）文件，该文件在装载后可用作具有 Android 开发所需格式的存储卷。</p>
+
+<p>如果您以后需要更大的存储卷，还可以使用以下命令来调整稀疏映像的大小：</p>
+
+<pre>
+# hdiutil resize -size &lt;new-size-you-want&gt;g ~/android.dmg.sparseimage
+</pre>
+
+<p>对于存储在主目录下的名为 <code>android.dmg</code> 的磁盘映像，您可以向 <code>~/.bash_profile</code> 中添加辅助函数：</p>
+
+<ul>
+<li>要在执行 <code>mountAndroid</code> 时装载磁盘映像，请运行以下命令：<p></p>
+
+<pre>
+# mount the android file image
+function mountAndroid { hdiutil attach ~/android.dmg -mountpoint /Volumes/android; }
+</pre>
+
+<p class="note"><strong>注意</strong>：如果系统创建的是 <code>.dmg.sparseimage</code> 文件，请将 <code>~/android.dmg</code> 替换成 <code>~/android.dmg.sparseimage</code>。</p>
+</li>
+
+<li>
+<p>要在执行 <code>umountAndroid</code> 时卸载磁盘映像，请运行以下命令：</p>
+<pre>
+# unmount the android file image
+function umountAndroid() { hdiutil detach /Volumes/android; }
+</pre>
+</li>
+</ul>
+
+<p>装载 <code>android</code> 存储卷后，您将在其中开展所有工作。您可以像对待外接式存储盘一样将其弹出（卸载）。</p>
+
+<h3 id="installing-the-mac-jdk">安装 JDK</h3>
+
+<p>要查看在开发各种 Android 版本时要使用的 Java 版本，请参阅相关<a href="requirements.html">要求</a>。</p>
+
+<h4 id="installing-required-packages">安装所需的程序包</h4>
+
+<ol>
+<li>
+<p>使用以下命令安装 Xcode 命令行工具：</p><pre>
+$ xcode-select --install
+</pre>
+
+<p>对于较低版本的 Mac OS（10.8 或更低版本），您需要通过 <a href="http://developer.apple.com/">Apple 开发者网站</a>安装 Xcode。如果您尚未注册成为 Apple 开发者，则需要创建一个 Apple ID 才能下载。</p>
+</li>
+
+<li>
+<p>通过 <a href="http://www.macports.org/install.php">macports.org</a> 安装 MacPorts。</p>
+
+<p class="note"><strong>注意</strong>：请确保在路径中 <code>/opt/local/bin</code> 显示在 <code>/usr/bin</code> <strong>之前</strong>。否则，请将以下内容添加到 <code>~/.bash_profile</code> 文件中：</p>
+
+<pre>
+<code>export PATH=/opt/local/bin:$PATH</code>
+</pre>
+
+<p class="note"><strong>注意</strong>：如果主目录中没有 <code>.bash_profile</code> 文件，请创建一个。</p>
+</li>
+
+<li>
+<p>通过 MacPorts 获取 Make、Git 和 GPG 程序包：</p>
+
+<pre>
+$ POSIXLY_CORRECT=1 sudo port install gmake libsdl git gnupg
+</pre>
+
+<p>如果您使用 Mac OS X v10.4，还需要安装 bison：</p>
+<pre>
+$ POSIXLY_CORRECT=1 sudo port install bison
+</pre>
+</li>
+</ol>
+
+<h4 id="reverting-from-make-382">将 make 3.82 还原到较低版本</h4>
+
+<p>在 Android 4.0.x (Ice Cream Sandwich) 及更低版本中，gmake 3.82 中存在一个会导致 Android 无法编译的错误。您可以按照以下步骤使用 MacPorts 来安装 3.81 版：</p>
+
+<ol>
+<li>
+<p>修改 <code>/opt/local/etc/macports/sources.conf</code>，在 rsync 行上方添加下面这行内容：</p>
+<pre>
+file:///Users/Shared/dports
+</pre>
+
+<p>然后创建该目录：</p>
+<pre>
+$ mkdir /Users/Shared/dports
+</pre>
+</li>
+
+<li>
+<p>在新的 <code>dports</code> 目录下，运行以下命令：</p>
+<pre>
+$ svn co --revision 50980 http://svn.macports.org/repository/macports/trunk/dports/devel/gmake/ devel/gmake/
+</pre>
+</li>
+
+<li>
+<p>为新的本地存储库创建一个端口索引：</p>
+
+<pre>
+$ portindex /Users/Shared/dports
+</pre>
+</li>
+
+<li>
+<p>使用以下命令安装旧版 gmake：</p>
+<pre>
+$ sudo port install gmake @3.81
+</pre>
+</li>
+</ol>
+
+<h4 id="setting-a-file-descriptor-limit">设置文件描述符数量上限</h4>
+
+<p>在 Mac OS 中，可同时打开的文件描述符的默认数量上限太低，在高度并行的编译流程中，可能会超出此上限。</p>
+
+<p>要提高此上限，请将下列行添加到 <code>~/.bash_profile</code> 中：</p>
+<pre>
+# set the number of open files to be 1024
+ulimit -S -n 1024
+</pre>
+
+<h2 id="optimizing-a-build-environment">优化编译环境（可选）</h2>
+
+<h3 id="setting-up-ccache">设置 ccache</h3>
+
+<p>您可以视需要指示编译过程使用 ccache 编译工具，ccache 是适用于 C 和 C++ 的编译器缓存，有助于提高编译速度。这对于编译服务器和其他高容量生产环境来说尤其有用。ccache 可用作用于加快重新编译速度的编译器缓存。如果您经常使用 <code>make clean</code>，或者经常在不同的编译产品之间切换，则非常适合使用 ccache。</p>
+
+<p class="note"><strong>注意</strong>：如果您是在执行增量编译（例如个人开发者而非编译服务器），ccache 可能会让您为缓存未命中埋单，从而减慢您的编译速度。</p>
+
+<p>要使用 ccache，请在源代码树的根目录下执行以下命令：</p>
+
+<pre>
+$ export USE_CCACHE=1
+$ export CCACHE_DIR=/&lt;path_of_your_choice&gt;/.ccache
+$ prebuilts/misc/linux-x86/ccache/ccache -M 50G
+</pre>
+
+<p>建议的缓存大小为 50G 到 100G。</p>
+
+<p>请将以下内容添加到 <code>.bashrc</code>（或等同文件）中：</p>
+
+<pre>
+export USE_CCACHE=1
+</pre>
+
+<p>默认情况下，缓存将存储在 <code>~/.ccache</code> 下。如果主目录位于 NFS 或一些其他的非本地文件系统中，您还需要在 <code>.bashrc</code> 文件中指定目录。</p>
+
+<p>在 Mac OS 中，您应将 <code>linux-x86</code> 替换成 <code>darwin-x86</code>：</p>
+
+<pre>
+prebuilts/misc/darwin-x86/ccache/ccache -M 50G
+</pre>
+
+<p>在编译 Ice Cream Sandwich (4.0.x) 或更低版本时，ccache 位于其他位置：</p>
+
+<pre>
+prebuilt/linux-x86/ccache/ccache -M 50G
+</pre>
+
+<p>该设置会存储在 CCACHE_DIR 中，并且为永久设置。</p>
+
+<p>在 Linux 中，您可以运行以下命令来观看使用 ccache 时的情况：</p>
+
+<pre>
+$ watch -n1 -d prebuilts/misc/linux-x86/ccache/ccache -s
+</pre>
+
+<h2 id="next-download-the-source">下一篇：下载源代码</h2>
+
+<p>编译环境已准备就绪！接下来您就可以<a href="downloading.html">下载源代码</a>了。</p>
+
+</body></html>

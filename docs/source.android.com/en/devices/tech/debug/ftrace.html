@@ -1,0 +1,360 @@
+<html devsite>
+  <head>
+    <title>Using ftrace</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+<p>ftrace is a debugging tool for understanding what is going on inside the
+Linux kernel. The following sections detail basic ftrace functionality, ftrace
+usage with atrace (which captures kernel events), and dynamic ftrace.</p>
+
+<p>For details on advanced ftrace functionality that is not available from
+systrace, refer to the ftrace documentation at
+<a href="https://www.kernel.org/doc/Documentation/trace/ftrace.txt"><code>&lt;kernel
+tree&gt;/Documentation/trace/ftrace.txt</code></a>.</p>
+
+<h2 id="atrace">Capturing kernel events with atrace</h2>
+<p>atrace (<code>frameworks/native/cmds/atrace</code>) uses ftrace to capture
+kernel events. In turn, systrace.py (or run_systrace.py in later versions of
+<a href="https://github.com/catapult-project/catapult">Catapult</a>) uses adb
+to run atrace on the device. atrace does the following:</p>
+<ul>
+<li>Sets up user-mode tracing by setting a property
+(<code>debug.atrace.tags.enableflags</code>).</li>
+<li>Enables the desired ftrace functionality by writing to the appropriate
+ftrace sysfs nodes. However, as ftrace supports more features, you might set
+some sysfs nodes yourself then use atrace. </li>
+</ul>
+
+<p>With the exception of boot-time tracing, rely on using atrace to set the
+property to the appropriate value. The property is a bitmask and there's no good
+way to determine the correct values other than looking at the appropriate header
+(which could change between Android releases).</p>
+
+<h2 id="enabling_events">Enabling ftrace events</h2>
+
+<p>The ftrace sysfs nodes are in <code>/d/tracing</code> and trace events are
+divided into categories in <code>/d/tracing/events</code>.
+
+<p>To enable events on a per-category basis, use:
+<pre class="devsite-terminal devsite-click-to-copy">
+echo 1 &gt; /d/tracing/events/irq/enable
+</pre>
+
+<p>To enable events on per-event basis, use:
+<pre class="devsite-terminal devsite-click-to-copy">
+echo 1 &gt; /d/tracing/events/sched/sched_wakeup/enable
+</pre>
+
+<p>If extra events have been enabled by writing to sysfs nodes, they will
+<strong>not</strong> be reset by atrace. A common pattern
+for Qualcomm device bringup is to enable <code>kgsl</code> (GPU) and
+<code>mdss</code> (display pipeline) tracepoints and then use atrace or
+<a href="/devices/tech/debug/systrace.html">systrace</a>:</p>
+
+<pre class="devsite-click-to-copy">
+<code class="devsite-terminal">adb shell "echo 1 &gt; /d/tracing/events/mdss/enable"</code>
+<code class="devsite-terminal">adb shell "echo 1 &gt; /d/tracing/events/kgsl/enable"</code>
+<code class="devsite-terminal">./systrace.py sched freq idle am wm gfx view binder_driver irq workq ss sync -t 10 -b 96000 -o full_trace.html</code>
+</pre>
+
+<p>You can also use ftrace without atrace or systrace, which is
+useful when you want kernel-only traces (or if you've taken the time to write
+the user-mode tracing property by hand). To run just ftrace:</p>
+
+<ol>
+<li>Set the buffer size to a value large enough for your trace:
+<pre class="devsite-terminal devsite-click-to-copy">
+echo 96000 &gt; /d/tracing/buffer_size_kb
+</pre>
+</li>
+<li>Enable tracing:
+<pre class="devsite-terminal devsite-click-to-copy">
+echo 1 &gt; /d/tracing/tracing_on
+</pre>
+</li>
+<li>Run your test, then disable tracing:
+<pre class="devsite-terminal devsite-click-to-copy">
+echo 0 &gt; /d/tracing/tracing_on
+</pre>
+</li>
+<li>Dump the trace:
+<pre class="devsite-terminal devsite-click-to-copy">
+cat /d/tracing/trace &gt; /data/local/tmp/trace_output
+</pre>
+</li>
+</ol>
+
+<p>The trace_output gives the trace in text form. To visualize it using
+Catapult, get the
+<a href="https://github.com/catapult-project/catapult/tree/master/">Catapult
+repository</a> from Github and run trace2html:</p>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+catapult/tracing/bin/trace2html ~/path/to/trace_file
+</pre>
+
+<p>By default, this writes <code>trace_file.html</code> in the same
+directory.</p>
+
+<h2 id="correlate">Correlating events</h2>
+<p>It is often useful to look at the Catapult visualization and the ftrace
+log simultaneously; for example, some ftrace events (especially vendor-specific
+ones) are not visualized by Catapult. However, Catapult's timestamps are
+relative either to the first event in the trace or to a specific timestamp
+dumped by atrace, while the raw ftrace timestamps are based on a particular
+absolute clock source in the Linux kernel.</p>
+
+<p>To find a given ftrace event from a Catapult event:</p>
+
+<ol>
+<li>Open the raw ftrace log. Traces in recent versions of systrace are
+compressed by default:
+<ul>
+<li>If you captured your systrace with <code>--no-compress</code>, this is in
+the html file in the section beginning with BEGIN TRACE.</li>
+<li>If not, run html2trace from the
+<a href="https://github.com/catapult-project/catapult/tree/master/">Catapult
+tree</a> (<code>tracing/bin/html2trace</code>) to uncompress the trace.</li>
+</ul>
+</li>
+<li>Find the relative timestamp in the Catapult visualization.</li>
+
+<li>Find a line at the beginning of the trace containing
+<code>tracing_mark_sync</code>. It should look something like this:
+<pre class="devsite-click-to-copy">
+&lt;5134&gt;-5134  (-----) [003] ...1    68.104349: tracing_mark_write: trace_event_clock_sync: parent_ts=68.104286
+</pre>
+
+<br>If this line does not exist (or if you used ftrace without atrace), then
+timings will be relative from the first event in the ftrace log.
+<ol style="list-style-type: lower-alpha">
+<li>Add the relative timestamp (in milliseconds) to the value in
+<code>parent_ts</code> (in seconds).</li>
+<li>Search for the new timestamp.</li>
+</ol>
+</li>
+</ol>
+<p>These steps should put you at (or at least very close to) the event.</p>
+
+<h2 id="dftrace">Using dynamic ftrace</h2>
+<p>When systrace and standard ftrace are insufficient, there is one last
+recourse available: <em>dynamic ftrace</em>. Dynamic ftrace involves rewriting
+of kernel code after boot, and as a result it is not available in production
+kernels for security reasons. However, every single difficult performance bug in
+2015 and 2016 was ultimately root-caused using dynamic ftrace. It is especially
+powerful for debugging uninterruptible sleeps because you can get a stack trace
+in the kernel every time you hit the function triggering uninterruptible sleep.
+You can also debug sections with interrupts and preemptions disabled, which can
+be very useful for proving issues.</p>
+
+<p>To turn on dynamic ftrace, edit your kernel's defconfig:</p>
+
+<ol>
+<li>Remove CONFIG_STRICT_MEMORY_RWX (if it's present). If you're on 3.18 or
+newer and arm64, it's not there.</li>
+<li>Add the following: CONFIG_DYNAMIC_FTRACE=y, CONFIG_FUNCTION_TRACER=y,
+CONFIG_IRQSOFF_TRACER=y, CONFIG_FUNCTION_PROFILER=y, and CONFIG_PREEMPT_TRACER=y
+</li>
+<li>Rebuild and boot the new kernel.</li>
+<li>Run the following to check for available tracers:
+<pre class="devsite-terminal devsite-click-to-copy">
+cat /d/tracing/available_tracers
+</pre>
+</li>
+<li>Confirm the command returns <code>function</code>, <code>irqsoff</code>,
+<code>preemptoff</code>, and <code>preemptirqsoff</code>.</li>
+<li>Run the following to ensure dynamic ftrace is working:
+<pre class="devsite-terminal devsite-click-to-copy">
+cat /d/tracing/available_filter_functions | grep &lt;a function you care about&gt;
+</pre>
+</li>
+</ol>
+
+<p>After completing these steps, you have dynamic ftrace, the function profiler,
+the irqsoff profiler, and the preemptoff profiler available. We <strong>strongly
+recommend</strong> reading ftrace documentation on these topics before using
+them as they are powerful but complex. irqsoff and preemptoff are primarily
+useful for confirming that drivers may be leaving interrupts or preemption
+turned off for too long.</p>
+<p>The function profiler is the best option for performance issues and is often
+used to find out where a function is being called.</p>
+
+<section class="expandable">
+<h4 class="showalways">Show Issue: HDR photo + rotating viewfinder</h4>
+
+<p>In this issue, using a Pixel XL to take an HDR+ photo then immediately
+rotating the viewfinder caused jank every time. We used the function profiler to
+debug the issue in less than one hour. To follow along with the example,
+<a href="perf_traces.zip">download the zip file</a> of traces (which also
+includes other traces referred to in this section), unzip the file, and open the
+trace_30898724.html file in your browser.</p>
+
+<p>The trace shows several threads in the cameraserver process blocked in
+uninterruptible sleep on <code>ion_client_destroy</code>. That's an expensive
+function, but it should be called very infrequently because ion clients should
+encompass many allocations. Initially, the blame fell on the Hexagon code in
+Halide, which was indeed one of the culprits (it created a new client for every
+ion allocation and destroyed that client when the allocation was freed, which
+was way too expensive). Moving to a single ion client for all Hexagon
+allocations improved the situation, but the jank wasn't fixed.</p>
+<p>At this point we need to know who is calling <code>ion_client_destroy</code>,
+so it's time to use the function profiler:</p>
+<p></p>
+<ol>
+<li>As functions are sometimes renamed by the compiler, confirm
+<code>ion_client_destroy</code> is there by using:
+<pre class="devsite-terminal devsite-click-to-copy">
+cat /d/tracing/available_filter_functions | grep ion_client_destroy
+</pre>
+</li>
+<li>After confirming it is there, use it as the ftrace filter:
+<pre class="devsite-terminal devsite-click-to-copy">
+echo ion_client_destroy &gt; /d/tracing/set_ftrace_filter
+</pre>
+</li>
+<li>Turn on the function profiler:
+<pre class="devsite-terminal devsite-click-to-copy">
+echo function &gt; /d/tracing/current_tracer
+</pre>
+</li>
+<li>Turn on stack traces whenever a filter function is called:
+<pre class="devsite-terminal devsite-click-to-copy">
+echo func_stack_trace &gt; /d/tracing/trace_options
+</pre>
+</li>
+<li>Increase the buffer size:
+<pre class="devsite-terminal devsite-click-to-copy">
+echo 64000 &gt; /d/tracing/buffer_size_kb
+</pre>
+</li>
+<li>Turn on tracing:
+<pre class="devsite-terminal devsite-click-to-copy">
+echo 1 &gt; /d/tracing/trace_on
+</pre>
+</li>
+<li>Run the test and get the trace:
+<pre class="devsite-terminal devsite-click-to-copy">
+cat /d/tracing/trace &gt; /data/local/tmp/trace
+</pre>
+</li>
+<li>View the trace to see lots and lots of stack traces:
+<pre class="devsite-click-to-copy">
+    cameraserver-643   [003] ...1    94.192991: ion_client_destroy &lt;-ion_release
+    cameraserver-643   [003] ...1    94.192997: &lt;stack trace&gt;
+ =&gt; ftrace_ops_no_ops
+ =&gt; ftrace_graph_call
+ =&gt; ion_client_destroy
+ =&gt; ion_release
+ =&gt; __fput
+ =&gt; ____fput
+ =&gt; task_work_run
+ =&gt; do_notify_resume
+ =&gt; work_pending
+ </pre>
+</li>
+ </ol>
+
+<p>Based on inspection of the ion driver, we can see that
+<code>ion_client_destroy</code> is being spammed by a userspace function closing
+an fd to <code>/dev/ion</code>, not a random kernel driver. By searching the
+Android codebase for <code>\"/dev/ion\"</code>, we find several vendor drivers
+doing the same thing as the Hexagon driver and opening/closing
+<code>/dev/ion</code> (creating and destroying a new ion client) every time they
+need a new ion allocation. Changing those to
+<a href="https://android.googlesource.com/platform/hardware/qcom/camera/+/8f7984018b6643f430c229725a58d3c6bb04acab">use
+a single ion client</a> for the lifetime of the process fixed the bug.</p>
+</section>
+<hr>
+
+<p>If the data from function profiler isn't specific enough, you can combine
+ftrace tracepoints with the function profiler. ftrace events can be enabled in
+exactly the same way as usual, and they will be interleaved with your trace.
+This is great if there's an occasional long uninterruptible sleep in a specific
+function you want to debug: set the ftrace filter to the function you want,
+enable tracepoints, take a trace. You can parse the resulting trace with
+<code>trace2html</code>, find the event you want, then get nearby stack traces
+in the raw trace.</p>
+
+<h2 id="lock_stat">Using lockstat</h2>
+<p>Sometimes, ftrace isn't enough and you really need to debug what appears to
+be kernel lock contention. There is one more kernel option worth trying:
+<code>CONFIG_LOCK_STAT</code>. This is a last resort as it is extremely
+difficult to get working on Android devices because it inflates the size of the
+kernel beyond what most devices can handle.</p>
+<p>However, lockstat uses the debug
+locking infrastructure, which is useful for many other applications. Everyone
+working on device bringup should figure out some way to get that option working
+on every device because there <strong>will</strong> be a time when you think
+"If only I could turn on <code>LOCK_STAT</code>, I could confirm or refute this
+as the problem in five minutes instead of five days."</p>
+
+<section class="expandable">
+<h4 class="showalways">Show Issue: Stall in SCHED_FIFO when cores at max load
+with non-SCHED_FIFO</h4>
+
+<p>In this issue, the SCHED_FIFO thread stalled when all cores were at maximum
+load with non-SCHED_FIFO threads. We had traces showing significant lock
+contention on an fd in VR apps, but we couldn't easily identify the fd in use.
+To follow along with the example, <a href="perf_traces.zip">download the zip
+file</a> of traces (which also includes other traces referred to in this
+section), unzip the file, and open the trace_30905547.html file in your browser.
+</p>
+
+<p>We hypothesized that ftrace itself was the source of lock contention, when a
+low priority thread would start writing to the ftrace pipe and then get
+preempted before it could release the lock. This is a worst-case scenario that
+was exacerbated by a mixture of extremely low-priority threads writing to the
+ftrace marker along with some higher priority threads spinning on CPUs to
+simulate a completely loaded device.</p>
+<p>As we couldn't use ftrace to debug, we got <code>LOCK_STAT</code> working
+then turned off all other tracing from the app. The results showed the lock
+contention was actually from ftrace because none of the contention showed up in
+the lock trace when ftrace was not running.</p>
+</section>
+<hr>
+
+<p>If you can boot a kernel with the config option, lock tracing is similar to
+ftrace:</p>
+<ol>
+<li>Enable tracing:
+<pre class="devsite-terminal devsite-click-to-copy">
+echo 1 &gt; /proc/sys/kernel/lock_stat
+</pre>
+</li>
+<li>Run your test.</li>
+<li>Disable tracing:
+<pre class="devsite-terminal devsite-click-to-copy">
+echo 0 &gt; /proc/sys/kernel/lock_stat
+</pre>
+</li>
+<li>Dump your trace:
+<pre class="devsite-terminal devsite-click-to-copy">
+cat /proc/lock_stat &gt; /data/local/tmp/lock_stat
+</pre>
+</li>
+</ol>
+
+<p>For help interpreting the resulting output, refer to lockstat documentation
+at <a href="https://www.kernel.org/doc/Documentation/locking/lockstat.txt"><code>&lt;kernel&gt;/Documentation/locking/lockstat.txt</code></a>.</p>
+
+</body>
+</html>

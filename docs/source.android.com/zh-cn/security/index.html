@@ -1,0 +1,108 @@
+<html devsite><head>
+    <title>安全</title>
+    <meta name="project_path" value="/_project.yaml"/>
+    <meta name="book_path" value="/_book.yaml"/>
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+<p>Android 采用了业界领先的安全功能，并与开发者和设备实现人员密切合作，以确保 Android 平台和生态系统的安全。要打造一个由基于 Android 平台以及围绕 Android 平台开发且由云服务提供支持的应用和设备组成的强大生态系统，稳定可靠的安全模型至关重要。为此，在整个开发生命周期内，Android 都遵循了严格的安全计划。
+</p>
+<p>
+<strong>Android 是一款开放的系统</strong>。Android 应用使用通过 Android 平台提供的先进硬件和软件以及本地数据和收到的数据，为消费者带来创新和价值。为了实现这一价值，Android 平台提供了一个应用环境，该环境可以保护用户、数据、应用、设备和网络的机密性、完整性与可用性。
+</p>
+<p>保障开放平台的安全需要强大的安全架构和严格的安全程序。Android 采用了一个多层安全模型，该模型非常灵活，能够在支持开放平台的同时保护平台的所有用户。如需关于报告安全问题以及关于更新流程的信息，请参阅<a href="/security/overview/updates-resources.html">安全更新和资源</a>。
+</p>
+<p>
+<strong>Android 适合开发者使用</strong>。Android 中设计了多种旨在减轻开发者负担的安全控制机制。精通安全技术的开发者可以轻松使用并依赖灵活的安全控制机制。不太熟悉安全技术的开发者则由默认的安全机制提供保护。
+</p>
+<p>除了提供一个稳定的平台来供开发者开发应用之外，Android 还以多种方式为开发者提供其他支持。Android 安全团队会检查应用中是否存在潜在漏洞，并会提出关于如何解决这些问题的建议。对于带有 Google Play 的设备，Play 服务会为关键软件库（例如，用于保障应用通信安全的 OpenSSL）提供安全更新。Android 安全团队发布了一款用于测试 SSL 的工具 (<a href="https://github.com/google/nogotofail">Nogotofail</a>)，该工具可以协助开发者发现潜在的安全问题，无论他们是在使用什么平台进行开发。
+</p>
+<p>如需面向 Android 应用开发者的更多信息，请访问 <a href="https://developer.android.com/training/best-security.html">developer.android.com</a>。
+</p>
+<p>
+<strong>Android 适合用户使用</strong>。用户可以查看每个应用请求的权限，并可以对这些权限加以控制。这种设计考虑到了攻击者可能会尝试进行一些常见的攻击，例如，诱使设备用户安装恶意软件的社会工程攻击，以及对 Android 上的第三方应用的攻击。Android 能够降低受到这些攻击的可能性，并能够大大限制攻击成功时造成的影响。在设备到达用户手中后，Android 的安全性将会不断提升：Android 会与<a href="/security/overview/acknowledgements.html">合作伙伴和公众</a>密切合作，为还在继续接收安全更新的所有 Android 设备提供补丁程序。
+</p>
+<p>如需面向最终用户的更多信息，请访问 <a href="https://support.google.com/nexus/answer/6172890">Nexus 帮助中心</a>、<a href="https://support.google.com/pixelphone/answer/6172890">Pixel 帮助中心</a>或设备制造商的帮助中心。
+</p>
+<p>本文档概述了 Android 安全计划的目标，介绍了 Android 安全架构方面的基础知识，并解答了对系统架构师和安全分析人员来说最相关的问题。本文档重点介绍 Android 核心平台的安全功能，而不是讨论具体应用特有的安全问题，例如，与浏览器或短信应用相关的问题。
+</p>
+
+<h2 id="background">背景</h2>
+<p>Android 提供了一个适用于移动设备的开放源代码平台和应用环境。
+</p>
+<p>以下各个部分和页面介绍了 Android 平台的安全功能。<em></em>图 1 总结了 Android 软件堆栈各个层的安全组件和注意事项。每个组件都假定下面的组件均已采取适当的安全措施。除了作为 Root 代码运行的少量 Android 操作系统代码外，Linux 内核上方的所有代码都受应用沙盒的限制。
+</p>
+
+<p><img alt="图 1：Android 软件堆栈" src="images/android_software_stack.png"/></p>
+<p class="img-caption">
+<strong>图 1</strong>. Android 软件堆栈。
+</p>
+<p>Android 平台的主要构造块包括：</p>
+<ul>
+  <li><strong>设备硬件</strong>：Android 能够在多种硬件配置中运行，其中包括智能手机、平板电脑、手表、汽车、智能电视、OTT 游戏盒和机顶盒。Android 独立于处理器，但它确实利用了一些针对硬件的安全功能，例如 ARM eXecute-Never。</li>
+  <li><strong>Android 操作系统</strong>：核心操作系统是在 Linux 内核之上构建的。所有设备资源（例如，摄像头功能、GPS 数据、蓝牙功能、电话功能、网络连接等）都通过该操作系统访问。</li>
+  <li><strong>Android 应用运行时</strong>：Android 应用通常都是使用 Java 编程语言编写的，并在 Android 运行时 (ART) 中运行。不过，仍有许多应用（包括核心 Android 服务和应用）是本机应用或包含本机库。ART 和本机应用在相同的安全环境中运行（包含在应用沙盒内）。应用在文件系统中有一个专用部分，它们可以在其中写入私密数据，包括数据库和原始文件。</li>
+</ul>
+<p>Android 应用扩展了 Android 核心操作系统。应用有两个主要来源：</p>
+<ul>
+  <li><strong>预先安装的应用</strong>：Android 包括一套预先安装的应用，其中包括电话、电子邮件、日历、网络浏览器和通讯录应用。这些应用不仅能够用作用户应用，而且能够提供可供其他应用访问的关键设备功能。预先安装的应用可能是开放源代码 Android 平台的一部分，也可能是由具体设备的制造商开发的。</li>
+  <li><strong>用户安装的应用</strong>：Android 提供了一个支持任何第三方应用的开放式开发环境。Google Play 为用户提供了数十万款应用。</li>
+</ul>
+
+<h2 id="google-security-services">Google 安全服务</h2>
+<p>Google 提供了一套基于云的服务，用户可通过 <a href="https://www.android.com/gms/">Google 移动服务</a>将这些服务安装到兼容的 Android 设备上。虽然这些服务不是 Android 开放源代码项目的一部分，但它们包含在许多 Android 设备中。如需关于其中部分服务的更多信息，请参阅 Android 安全团队发布的 <a href="/security/reports/Google_Android_Security_2015_Report_Final.pdf">2015 年年度回顾报告</a>。
+</p>
+<p>Google 的主要安全服务包括：</p>
+<ul>
+  <li><strong>Google Play</strong>：Google Play 是一系列服务的总称。借助这些服务，用户可以通过自己的 Android 设备或网络发现、安装和购买应用。Google Play 可让开发者轻松覆盖 Android 用户和潜在客户。此外，Google Play 还提供社区审核、应用<a href="https://developer.android.com/guide/publishing/licensing.html">许可验证</a>、应用安全扫描以及其他安全服务。</li>
+  <li><strong>Android 更新</strong>：Android 更新服务可为某些 Android 设备提供新功能和安全更新，其中包括通过网络或无线下载 (OTA) 方式提供的更新。</li>
+  <li><strong>应用服务</strong>：可让 Android 应用使用云功能的框架，例如应用数据和设置<a href="https://developer.android.com/guide/topics/data/backup.html">备份</a>功能，以及用于推送消息的云端至设备消息传递功能 (<a href="https://developers.google.com/cloud-messaging/">C2DM</a>)。</li>
+  <li><strong>验证应用</strong>：在用户安装有害应用时发出警告或自动阻止安装；持续扫描设备上的应用，并在发现<a href="https://support.google.com/accounts/answer/2812853">有害应用</a>时发出警告或将其移除。
+  </li>
+  <li><strong>SafetyNet</strong>：一款旨在保护隐私的入侵检测系统，能够帮助 Google 跟踪和降低已知的安全威胁，并能够发现新的安全威胁。</li>
+  <li><strong>SafetyNet Attestation</strong>：用于确定设备是否与 CTS 兼容的第三方 API。<a href="http://developer.android.com/training/safetynet/index.html">Attestation</a> 还可以协助识别与应用服务器通信的 Android 应用。</li>
+  <li><strong>Android 设备管理器</strong>：既是一款<a href="https://www.google.com/android/devicemanager">网络应用</a>，也是一款 <a href="https://play.google.com/store/apps/details?id=com.google.android.apps.adm">Android 应用</a>，用于寻找丢失的设备或被盗的设备。</li>
+</ul>
+
+<h2 id="security-program-overview">安全计划概述</h2>
+<p>Android 安全计划的关键组成部分包括：</p>
+<ul>
+  <li><strong>设计审核</strong>：Android 安全流程在开发生命周期的早期便开始了，并会在这一阶段创建大量的可配置安全模型和设计。平台的每项主要功能都会由工程和安全资源进行审核，并且适当的安全控制机制会被集成到系统架构中。</li>
+  <li><strong>渗透测试和代码审核</strong>：在平台开发期间，Android 创建的组件和开放源代码组件都要接受严格的安全审核。这些审核由 Android 安全团队、Google 的信息安全工程团队和独立的安全顾问进行。这些审核的目标是在主要版本发布之前找出存在的缺陷和可能的漏洞，并模拟将由外部安全专家在平台发布时进行的各种类型的分析。</li>
+  <li><strong>开放源代码和社区审核</strong>：Android 开放源代码项目允许任何感兴趣者对其进行广泛的安全审核。Android 还使用已经过重要外部安全审核的开放源代码技术，例如 Linux 内核。Google Play 面向用户和公司开设了一个论坛，以便直接向用户提供与具体应用相关的信息。</li>
+  <li><strong>事件响应</strong>：即使采取了所有这些预防措施，平台发布后也仍可能会出现安全问题，为此，Android 项目制定了一个全面的安全响应流程。Android 安全团队有全职成员负责监控用于讨论潜在漏洞的 Android 专用安全社区和一般安全社区，并且他们会查看提交到 Android 错误数据库中的<a href="/security/overview/updates-resources.html#android_security_bug_lifecycle">安全错误</a>。发现确实存在的问题后，Android 团队会启动响应流程，以便快速修复漏洞，确保将所有 Android 用户面临的潜在风险降至最低。这些云支持的响应可能包括更新 Android 平台（无线下载更新）、从 Google Play 中移除应用，以及从现场设备中移除应用。</li>
+  <li><strong>每月安全更新</strong>：Android 安全团队会为 Google Nexus 设备和所有设备制造合作伙伴提供<a href="/security/bulletin/index.html">每月更新</a>。</li>
+</ul>
+
+<h2 id="platform-security-architecture">平台安全架构</h2>
+<p>通过将传统的操作系统安全控制机制扩展到以下用途，Android 致力于成为最安全、最实用的移动平台操作系统：</p>
+<ul>
+  <li>保护应用和用户数据</li>
+  <li>保护系统资源（包括网络）</li>
+  <li>将应用同系统、其他应用和用户隔离开来</li>
+</ul>
+<p>为了实现这些目标，Android 提供了以下关键安全功能：</p>
+<ul>
+  <li>通过 Linux 内核在操作系统级别提供的强大安全功能</li>
+  <li>针对所有应用的强制性应用沙盒</li>
+  <li>安全的进程间通信</li>
+  <li>应用签名</li>
+  <li>应用定义的权限和用户授予的权限</li>
+</ul>
+
+</body></html>

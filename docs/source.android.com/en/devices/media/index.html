@@ -1,0 +1,136 @@
+<html devsite>
+  <head>
+    <title>Media</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<img style="float: right; margin: 0px 15px 15px 15px;"
+src="images/ape_fwk_hal_media.png" alt="Android Media HAL icon"/>
+
+<p>Android includes Stagefright, a media playback engine at the native level
+that has built-in software-based codecs for popular media formats.</p>
+
+<p>Stagefright audio and video playback features include integration with
+OpenMAX codecs, session management, time-synchronized rendering, transport
+control, and DRM.</p>
+
+<p>Stagefright also supports integration with custom hardware codecs provided by
+you. To set a hardware path to encode and decode media, you must implement a
+hardware-based codec as an OpenMax IL (Integration Layer) component.</p>
+
+<p class="note"><strong>Note:</strong> Stagefright updates can occur through the
+Android <a href="/security/bulletin/index.html">monthly security
+update</a> process and as part of an Android OS release.</p>
+
+<h2 id="architecture">Architecture</h2>
+<p>Media applications interact with the Android native multimedia framework
+according to the following architecture.</p>
+<img src="/devices/media/images/ape_fwk_media.png" alt="Android media architecture"
+id="figure1" /><p class="img-caption"><strong>Figure 1.</strong> Media
+architecture</p>
+
+<dl>
+<dt>Application Framework</dt>
+<dd>At the application framework level is application code that utilizes
+<a href="http://developer.android.com/reference/android/media/package-summary.html">android.media</a>
+APIs to interact with the multimedia hardware.</dd>
+
+<dt>Binder IPC</dt>
+<dd>The Binder IPC proxies facilitate communication over process boundaries.
+They are located in the <code>frameworks/av/media/libmedia</code> directory and
+begin with the letter "I".</dd>
+
+<dt>Native Multimedia Framework</dt>
+<dd>At the native level, Android provides a multimedia framework that utilizes
+the Stagefright engine for audio and video recording and playback. Stagefright
+comes with a default list of supported software codecs and you can implement
+your own hardware codec by using the OpenMax integration layer standard. For
+more implementation details, see the MediaPlayer and Stagefright components
+located in <code>frameworks/av/media</code>.</dd>
+
+<dt>OpenMAX Integration Layer (IL)</dt>
+<dd>The OpenMAX IL provides a standardized way for Stagefright to recognize and
+use custom hardware-based multimedia codecs called components. You must provide
+an OpenMAX plugin in the form of a shared library named
+<code>libstagefrighthw.so</code>. This plugin links Stagefright with your custom
+codec components, which must be implemented according to the OpenMAX IL
+component standard.</dd>
+</dl>
+
+<h2 id="codecs">Implementing custom codecs</h2>
+<p>Stagefright comes with built-in software codecs for common media formats, but
+you can also add your own custom hardware codecs as OpenMAX components. To do
+this, you must create the OMX components and an OMX plugin that hooks together
+your custom codecs with the Stagefright framework. For example components, see
+the <code>hardware/ti/omap4xxx/domx/</code>; for an example plugin for the
+Galaxy Nexus, see <code>hardware/ti/omap4xx/libstagefrighthw</code>.</p>
+
+<p>To add your own codecs:</p>
+<ol>
+<li>Create your components according to the OpenMAX IL component standard. The
+component interface is located in the
+<code>frameworks/native/include/media/OpenMAX/OMX_Component.h</code> file. To
+learn more about the OpenMAX IL specification, refer to the
+<a href="http://www.khronos.org/openmax/">OpenMAX website</a>.</li>
+<li>Create a OpenMAX plugin that links your components with the Stagefright
+service. For the interfaces to create the plugin, see
+<code>frameworks/native/include/media/hardware/OMXPluginBase.h</code> and
+<code>HardwareAPI.h</code> header files.</li>
+<li>Build your plugin as a shared library with the name
+<code>libstagefrighthw.so</code> in your product Makefile. For example:
+<br>
+<pre class="devsite-click-to-copy">
+LOCAL_MODULE := libstagefrighthw
+</pre>
+<p>In your device's Makefile, ensure you declare the module as a product
+package:</p>
+<pre class="devsite-click-to-copy">
+PRODUCT_PACKAGES += \
+  libstagefrighthw \
+  ...
+</pre>
+</li>
+</ol>
+
+<h2 id="expose">Exposing codecs to the framework</h2>
+<p>The Stagefright service parses the <code>system/etc/media_codecs.xml</code>
+and <code>system/etc/media_profiles.xml</code> to expose the supported codecs
+and profiles on the device to app developers via the
+<code>android.media.MediaCodecList</code> and
+<code>android.media.CamcorderProfile</code> classes. You must create both files
+in the <code>device/&lt;company&gt;/&lt;device&gt;/</code> directory
+and copy this over to the system image's <code>system/etc</code> directory in
+your device's Makefile. For example:</p>
+<pre class="devsite-click-to-copy">
+PRODUCT_COPY_FILES += \
+  device/samsung/tuna/media_profiles.xml:system/etc/media_profiles.xml \
+  device/samsung/tuna/media_codecs.xml:system/etc/media_codecs.xml \
+</pre>
+
+<p>For complete examples, seee <code>device/samsung/tuna/media_codecs.xml</code>
+and <code>device/samsung/tuna/media_profiles.xml</code> .</p>
+
+<p class="note"><strong>Note:</strong> As of Android 4.1, the
+<code>&lt;Quirk&gt;</code> element for media codecs is no longer supported.</p>
+
+  </body>
+</html>

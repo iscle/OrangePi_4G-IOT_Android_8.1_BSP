@@ -1,0 +1,190 @@
+<html devsite>
+  <head>
+    <title>Kernel Configuration</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>Use the following configuration settings as a base for an Android kernel
+configuration. Settings are organized into <code>android-base</code> and
+<code>android-recommended</code> .cfg files:
+
+<ul>
+<li><code>android-base</code>. These options enable core Android features and
+should be enabled by all devices.</li>
+
+<li><code>android-recommended</code>. These options enable advanced Android
+features and are optional for devices.</li>
+</ul>
+
+<p>Both the android-base.cfg and android-recommended.cfg files are located in
+the android-common kernel repo at
+<a href="https://android.googlesource.com/kernel/common/">https://android.googlesource.com/kernel/common/</a>.
+<p>In version 4.8 of the upstream Linux kernel, a new location (kernel/configs)
+was designated for kernel configuration fragments. The android base and
+recommended config fragments are located in that directory for branches based on
+4.8 or later. For kernel branches based on releases prior to 4.8, the config
+fragments are located in the android/ directory.</p>
+
+<p>For details on controls already undertaken to strengthen the kernel on your
+devices, see <a href="/security/overview/kernel-security.html">System
+and Kernel Security</a>. For details on required settings, see the
+<a href="/compatibility/cdd.html">Android Compatibility Definition
+Document (CDD)</a>.</p>
+
+<h2 id="generating">Generating kernel config</h2>
+<p>For devices that have a minimalist defconfig, you can use the following to
+enable options:</p>
+
+<pre class="devsite-click-to-copy">
+ARCH=<em>arch</em> scripts/kconfig/merge_config.sh <em>path</em>/<em>device</em>_defconfig android/configs/android-base.cfg android/configs/android-recommended.cfg
+</pre>
+
+<p>This generates a .config file you can use to save a new defconfig or
+compile a new kernel with Android features enabled.</p>
+
+<h2 id="usb">Enabling USB host mode options</h2>
+
+<p>For USB host mode audio, enable the following options:</p>
+<pre class="devsite-click-to-copy">
+CONFIG_SND_USB=y
+CONFIG_SND_USB_AUDIO=y
+# CONFIG_USB_AUDIO is for a peripheral mode (gadget) driver
+</pre>
+
+<p>For USB host mode MIDI, enable the following option:</p>
+<pre class="devsite-click-to-copy">
+CONFIG_SND_USB_MIDI=y
+</pre>
+
+<h2 id="Seccomp-BPF-TSYNC">Seccomp-BPF with TSYNC</h2>
+<p>Seccomp-BPF is a kernel security technology that enables the creation of
+sandboxes to restrict the system calls a process is allowed to make. The TSYNC
+feature enables the use of Seccomp-BPF from multithreaded programs. This ability
+is limited to architectures that have seccomp support upstream: ARM, ARM64, x86,
+and x86_64.</p>
+
+<h3 id="backport-ARM-32">Backporting for Kernel 3.10 for ARM-32, X86, X86_64</h3>
+
+<p>Ensure that <code>CONFIG_SECCOMP_FILTER=y</code> is enabled in the Kconfig
+(verified as of the Android 5.0 CTS), then cherry-pick the following changes
+from the AOSP kernel/common:android-3.10 repository: <a href="https://android.
+googlesource.com/kernel/common/+log/9499cd23f9d05ba159
+fac6d55dc35a7f49f9ce76..a9ba4285aa5722a3b4d84888e78ba8adc0046b28">9499cd23f9d05ba159fac6d55dc35a7f49f9ce76..a9ba4285aa5722a3b4d84888e78ba8adc0046b28</a>
+</p>
+
+<ul>
+<li><a href="https://android.googlesource.com/kernel/common/+/a03a2426ea9f1d9dada33cf4a824f63e8f916c9d">a03
+a242 arch: Introduce smp_load_acquire(), smp_store_release()</a> by Peter
+Zijlstra</li>
+<li><a href="https://android.googlesource.com/kernel/common/+/987a0f1102321853565c4bfecde6a5a58ac6db11">987a0f
+1 introduce for_each_thread() to replace the buggy while_each_thread()</a> by
+ Oleg Nesterov</li>
+ <li><a href="https://android.googlesource.com/kernel/common/+/2a30a4386e4a7e1283157c4cf4cfcc0306b22ac8">2a30a43
+seccomp: create internal mode-setting function</a> by Kees Cook</li>
+<li><a href="https://android.googlesource.com/kernel/common/+
+/b8a9cff6dbe9cfddbb4d17e2dea496e523544687">b8a9cff
+seccomp: extract check/assign mode helpers</a> by Kees Cook</li>
+<li><a href="https://android.googlesource.com/kernel/common/+/8908dde5a7fdca974374b0dbe6dfb10f69df7216">8908dde
+seccomp: split mode setting routines</a> by Kees Cook</li>
+<li><a href="https://android.googlesource.com/kernel/common/+/e985fd474debedb269fba27006eda50d0b6f07ef">e985fd4  seccomp: add
+"seccomp" syscall</a> by Kees Cook</li>
+<li><a href="https://android.googlesource.com/kernel/common/+/9d0ff
+694bc22fb458acb763811a677696c60725b">9d0ff69
+sched: move no_new_privs into new atomic flags</a> by Kees Cook</li>
+<li><a href="https://android.googlesource.com/kernel/common/+/b6a12bf4dd762236c7f637b19cfe10a268304b9b">b6a12bf
+seccomp: split filter prep from check and apply</a> by Kees Cook</li>
+<li><a href="https://android.googlesource.com/kernel/common/+/61b6b882a0abfeb627d25a069cfa1d232b84c8eb">61b6b88
+seccomp: introduce writer locking</a> by Kees Cook</li>
+<li><a href="https://android.googlesource.com/kernel/common/+/c852ef778224ecf5fe995d74ad96087038778bca">c852ef7
+seccomp: allow mode setting across threads</a> by Kees Cook</li>
+<li><a href="https://android.googlesource.com/kernel/common/+/f14a5db2398afed8f416d244e6da6b23940997c6">f14a5db
+seccomp: implement SECCOMP_FILTER_FLAG_TSYNC</a> by Kees Cook</li>
+<li><a href="https://android.googlesource.com/kernel/common/+/9ac860041db
+860a59bfd6ac82b31d6b6f76ebb52">9ac8600
+seccomp: Replace BUG(!spin_is_locked()) with assert_spin_lock</a> by Guenter
+Roeck</li>
+<li><a href="https://android.googlesource.com/kernel/common/+/900e9fd0d5d15c596cacfb89ce007c933cea6e1c">900e9fd
+seccomp: fix syscall numbers for x86 and x86_64</a> by Lee Campbell</li>
+<li><a href="https://android.googlesource.com/kernel/common/+/a9ba4285aa5722a3b4d84888e78ba8adc0046b28">a9ba428
+ARM: add seccomp syscall</a> by Kees Cook</li>
+</ul>
+
+<h3 id="backport-ARM-64">Backporting for Kernel 3.10 for ARM-64</h3>
+<p>Ensure <code>CONFIG_SECCOMP_FILTER=y</code> is enabled in the Kconfig
+(verified as of the Android 5.0 CTS), then cherry-pick the following changes
+from the AOSP kernel/common:android-3.10 repository:</p>
+<ul>
+<li><a href="https://android.googlesource.com/kernel/common/+/cfc7e99e9e3900056028a7d90072e9ea0d886f8d">cfc7e99e9
+arm64: Add __NR_* definitions for compat syscalls</a> by JP Abgrall</li>
+<li><a href="https://android.googlesource.com/kernel/common/+/bf11863d45eb3dac0d0cf1f818ded11ade6e28d3">bf11863
+arm64: Add audit support</a> by AKASHI Takahiro</li>
+<li><a href="https://android.googlesource.com/kernel/common/+/3
+e21c0bb663a23436e0eb3f61860d4fedc233bab">3e21c0b
+arm64: audit: Add audit hook in syscall_trace_enter/exit()</a> by JP Abgrall</li>
+<li><a href="https://android.googlesource.com/kernel
+/common/+/9499cd23f9d05ba159fac6d55dc35a7f49f9ce76">9499cd2
+syscall_get_arch: remove useless function arguments</a> by Eric Paris</li>
+<li><a href="https://android.googlesource.com/kernel/common/+/2a30a4386e4a7e1283157c4cf4cfcc0306b22ac8">2a30a43
+seccomp: create internal mode-setting function</a> by Kees Cook</li>
+<li><a href="https://android.googlesource.com/kernel/common/+/b8a9cff6dbe9cfddbb4d17e2dea496e523544687">b8a9
+cff  seccomp: extract check/assign mode helpers</a> by Kees Cook</li>
+<li><a href="https://android.googlesource.com/kernel/common/+/8908dde5a7fdca974374b0dbe6dfb10f69df7216">8908dde
+seccomp: split mode setting routines</a> by Kees Cook</li>
+<li><a href="https://android.googlesource.com/kernel/common/+/e985fd474debedb269fba27006eda50d0b6f07ef">e985fd4
+seccomp: add "seccomp" syscall</a> by Kees Cook</li>
+<li><a href="https://android.googlesource.com/kernel/common/+/9d0ff694bc22fb458acb763811a677696c60725b">9d0ff69
+sched: move no_new_privs into new atomic flags</a> by Kees Cook</li>
+<li><a href="https://android.googlesource.com/kernel/common/+/b6a12bf4dd762236c7f637b19cfe10a268304b9b">b6a12bf
+seccomp: split filter prep from check and apply</a> by Kees Cook</li>
+<li><a href="https://android.googlesource.com/kernel/common/+/61b6b882a0abfeb627d25a069cfa1d232b84c8eb">61b6b88
+seccomp: introduce writer locking</a> by Kees Cook</li>
+<li><a href="https://android.googlesource.com/kernel/common/+/c852ef778224ecf5fe995d74ad96087038778bca">c852ef7
+seccomp: allow mode setting across threads</a> by Kees Cook</li>
+<li><a href="https://android.googlesource.com/kernel/common/+/f14a5db2398afed8f416d244e6da6b23940997c6">f14a5db
+seccomp: implement SECCOMP_FILTER_FLAG_TSYNC</a> by Kees Cook</li>
+<li><a href="https://android.googlesource.com/kernel/common/+/9ac860041db860a59bfd6ac82b31d6b6f76ebb52">9ac8600
+seccomp: Replace BUG(!spin_is_locked()) with assert_spin_lock</a> by Guenter
+Roeck</li>
+<li><a href="https://android.googlesource.com/kernel/common/+/900e9fd0d5d15c596cacfb89ce007c933cea6e1c">900e9fd
+seccomp: fix syscall numbers for x86 and x86_64</a> by Lee Campbell</li>
+<li><a href="https://android.googlesource.com/kernel/common/+/a9ba4285aa5722a3b4d84888e78ba8adc0046b28">a9ba428
+ARM: add seccomp syscall</a> by Kees Cook</li>
+<li><a href="https://android.googlesource.com/kernel/common/+/41900903483eb96602dd72e719a798c208118aad">4190090
+ARM: 8087/1: ptrace: reload syscall number after secure_computing() check</a> by
+Will Deacon</li>
+<li><a href="https://android.googlesource.com/kernel/common/+/abbfed9ed1a78701ef3db74f5287958feb897035">abbfed9
+arm64: ptrace: add PTRACE_SET_SYSCALL</a> by AKASHI Takahiro</li>
+<li><a href="https://android.googlesource.com/kernel/common/+/feb28436457d33fef9f264635291432df4b74122">feb2843
+arm64: ptrace: allow tracer to skip a system call</a> by AKASHI Takahiro</li>
+<li><a href="https://android.googlesource.com/kernel/common/+/dab10731da65a0deba46402ca9fadf6974676cc8">dab1073
+asm-generic: add generic seccomp.h for secure computing mode 1</a> by AKASHI
+Takahiro</li>
+<li><a href="https://android.googlesource.com/kernel/common/+/4f12b53f28a751406a27ef7501a22f9e32a9c30b">4f1
+2b53  add seccomp syscall for compat task</a> by AKASHI Takahiro</li>
+<li><a href="https://android.googlesource.com/kernel/common/+/77227239d20ac6381fb1aee7b7cc902f0d14cd85">7722723
+arm64: add SIGSYS siginfo for compat task</a> by AKASHI Takahiro</li>
+<li><a href="https://android.googlesource.com/kernel/common/+/210957c2bb3b4d111963bb296e2c42beb8721929">210957c
+arm64: add seccomp support</a> by AKASHI Takahiro</li>
+</ul>
+
+  </body>
+</html>

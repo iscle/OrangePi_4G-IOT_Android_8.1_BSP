@@ -1,0 +1,90 @@
+<html devsite>
+  <head>
+    <title>EGLSurfaces and OpenGL ES</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>OpenGL ES defines an API for rendering graphics.  It does not define a windowing
+system.  To allow GLES to work on a variety of platforms, it is designed to be
+combined with a library that knows how to create and access windows through the
+operating system.  The library used for Android is called EGL.  If you want to
+draw textured polygons, you use GLES calls; if you want to put your rendering on
+the screen, you use EGL calls.</p>
+
+<p>Before you can do anything with GLES, you need to create a GL context.  In EGL,
+this means creating an EGLContext and an EGLSurface.  GLES operations apply to
+the current context, which is accessed through thread-local storage rather than
+passed around as an argument.  This means you have to be careful about which
+thread your rendering code executes on, and which context is current on that
+thread.</p>
+
+ <h2 id=egl_surface>EGLSurfaces</h2>
+
+<p>The EGLSurface can be an off-screen buffer allocated by EGL (called a "pbuffer")
+or a window allocated by the operating system.  EGL window surfaces are created
+with the <code>eglCreateWindowSurface()</code> call.  It takes a "window object" as an
+argument, which on Android can be a SurfaceView, a SurfaceTexture, a
+SurfaceHolder, or a Surface -- all of which have a BufferQueue underneath.  When
+you make this call, EGL creates a new EGLSurface object, and connects it to the
+producer interface of the window object's BufferQueue.  From that point onward,
+rendering to that EGLSurface results in a buffer being dequeued, rendered into,
+and queued for use by the consumer.  (The term "window" is indicative of the
+expected use, but bear in mind the output might not be destined to appear
+on the display.)</p>
+
+<p>EGL does not provide lock/unlock calls.  Instead, you issue drawing commands and
+then call <code>eglSwapBuffers()</code> to submit the current frame.  The
+method name comes from the traditional swap of front and back buffers, but the actual
+implementation may be very different.</p>
+
+<p>Only one EGLSurface can be associated with a Surface at a time -- you can have
+only one producer connected to a BufferQueue -- but if you destroy the
+EGLSurface it will disconnect from the BufferQueue and allow something else to
+connect.</p>
+
+<p>A given thread can switch between multiple EGLSurfaces by changing what's
+"current."  An EGLSurface must be current on only one thread at a time.</p>
+
+<p>The most common mistake when thinking about EGLSurface is assuming that it is
+just another aspect of Surface (like SurfaceHolder).  It's a related but
+independent concept.  You can draw on an EGLSurface that isn't backed by a
+Surface, and you can use a Surface without EGL.  EGLSurface just gives GLES a
+place to draw.</p>
+
+<h2 id="anativewindow">ANativeWindow</h2>
+
+<p>The public Surface class is implemented in the Java programming language.  The
+equivalent in C/C++ is the ANativeWindow class, semi-exposed by the <a
+href="https://developer.android.com/ndk/index.html">Android NDK</a>.  You
+can get the ANativeWindow from a Surface with the <code>ANativeWindow_fromSurface()</code>
+call.  Just like its Java-language cousin, you can lock it, render in software,
+and unlock-and-post.</p>
+
+<p>To create an EGL window surface from native code, you pass an instance of
+EGLNativeWindowType to <code>eglCreateWindowSurface()</code>.  EGLNativeWindowType is just
+a synonym for ANativeWindow, so you can freely cast one to the other.</p>
+
+<p>The fact that the basic "native window" type just wraps the producer side of a
+BufferQueue should not come as a surprise.</p>
+
+  </body>
+</html>

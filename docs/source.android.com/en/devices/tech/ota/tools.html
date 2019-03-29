@@ -1,0 +1,117 @@
+<html devsite>
+  <head>
+    <title>OTA Package Tools</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>The <a
+  href="https://android.googlesource.com/platform/build/+/master/tools/releasetools/ota_from_target_files">ota_from_target_files</a>
+tool provided in <code>build/tools/releasetools</code> can build two types of
+package: <i>full </i> and <i>incremental</i>. The tool takes the
+<i>target-files</i> .zip file produced by the Android build system as
+input.</p>
+
+<h2 id="full-updates">Full updates</h2>
+<p>A <i>full</i> update is one where the entire final state of the device
+(system, boot, and recovery partitions) is contained in the package. As long
+as the device is capable of receiving the package and booting the recovery
+system, the package can install the desired build regardless of the current
+state of the device.</p>
+<p>Example: Using the release tools to build a full update for the
+hypothetical <b>tardis</b> device:</p>
+
+<pre class="devsite-click-to-copy">
+# first, build the target-files .zip
+<code class="devsite-terminal">. build/envsetup.sh &amp;&amp; lunch tardis-eng</code>
+<code class="devsite-terminal">mkdir dist_output</code>
+<code class="devsite-terminal">make dist DIST_DIR=dist_output</code>
+</pre>
+
+<p>The target-files .zip contains everything needed to construct OTA packages.
+</p>
+
+<pre class="devsite-click-to-copy">
+<code class="devsite-terminal">./build/tools/releasetools/ota_from_target_files dist_output/tardis-target_files.zip ota_update.zip</code>
+</pre>
+
+<p>The ota_update.zip is now ready to be sent to test devices (everything is
+signed with the test key). For user devices, generate and use your own private
+keys as detailed in <a href="/devices/tech/ota/sign_builds.html">Signing builds
+  for release</a>.
+
+<h2 id="incremental-updates">Incremental updates</h2>
+<p>An <i>incremental</i> update contains a set of binary patches to be applied
+to the data already on the device. This can result in considerably smaller
+update packages:</p>
+<ul>
+<li>Files that have not changed don't need to be included.</li>
+<li>Files that have changed are often very similar to their previous versions,
+so the package need only contain an encoding of the differences between the
+two files.</li></ul>
+<p>You can install the incremental update package only on a device that has
+the old or source build used when constructing the package. To build an
+incremental update, you need the target_files .zip from the previous build
+(the one you want to update <i>from</i>) as well as the target_files .zip from
+the new build.</p>
+
+<pre class="devsite-click-to-copy">
+<code class="devsite-terminal">./build/tools/releasetools/ota_from_target_files -i PREVIOUS-tardis-target_files.zip dist_output/tardis-target_files.zip incremental_ota_update.zip # make incremental from the older version</code>
+</pre>
+
+<p>This build is very similar to the previous build, and the incremental
+update package is much smaller than the corresponding full update (about 1 MB
+instead of 60 MB).</p>
+<p class="note"><strong>Note:</strong> To generate a
+<a href="/devices/tech/ota/block.html">block-based OTA</a>
+for subsequent updates, pass the <code>--block</code> option to
+<code>ota_from_target_files</code>.</p>
+<p>Distribute an incremental package only to devices running exactly the same
+previous build used as the incremental package's starting point. Attempting to
+install the incremental package on a device with some other build results in
+the recovery error icon. Rebooting the device at this point returns the user
+to the old system; the package verifies the previous state of all the files it
+updates before touching them, so the device should not be left in a half
+upgraded state if this occurs.</p>
+
+<h2 id="update-packages">Update packages</h2>
+<p>An update package (<code>ota_update.zip</code>,
+<code>incremental_ota_update.zip</code>) is a .zip file that contains the
+executable binary <code>META-INF/com/google/android/update-binary</code>. After
+verifying the signature on the package, recovery extracts this binary to
+<code>/tmp</code> and runs it, passing the following arguments:</p>
+<ul>
+<li><b>Update binary API version number</b>. If the arguments passed to the
+update binary change, this number is incremented.</li>
+<li><b>File descriptor of the <i>command pipe</i></b>. The update program can
+use this pipe to send commands back to the recovery binary (mostly for UI
+changes such as indicating progress to the user).</li>
+<li><b>Filename of the update package .zip file</b>.</li>
+</ul>
+<p>A recovery package can use any statically-linked binary as the update
+binary. The OTA package construction tools use the updater program (source in
+<code>bootable/recovery/updater</code>), which provides a simple scripting
+language that can do many installation tasks. You can substitute any other
+binary running on the device.</p>
+<p>For details on the updater binary, edify syntax, and builtin functions, see
+<a href="/devices/tech/ota/inside_packages.html">Inside OTA Packages</a>.
+  </body>
+</html>

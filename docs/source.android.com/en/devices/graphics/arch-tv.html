@@ -1,0 +1,148 @@
+<html devsite>
+  <head>
+    <title>TextureView</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+
+<p>The TextureView class introduced in Android 4.0 and is the most complex of
+the View objects discussed here, combining a View with a SurfaceTexture.</p>
+
+<h2 id=render_gles>Rendering with GLES</h2>
+<p>Recall that the SurfaceTexture is a "GL consumer", consuming buffers of graphics
+data and making them available as textures.  TextureView wraps a SurfaceTexture,
+taking over the responsibility of responding to the callbacks and acquiring new
+buffers.  The arrival of new buffers causes TextureView to issue a View
+invalidate request.  When asked to draw, the TextureView uses the contents of
+the most recently received buffer as its data source, rendering wherever and
+however the View state indicates it should.</p>
+
+<p>You can render on a TextureView with GLES just as you would SurfaceView.  Just
+pass the SurfaceTexture to the EGL window creation call.  However, doing so
+exposes a potential problem.</p>
+
+<p>In most of what we've looked at, the BufferQueues have passed buffers between
+different processes.  When rendering to a TextureView with GLES, both producer
+and consumer are in the same process, and they might even be handled on a single
+thread.  Suppose we submit several buffers in quick succession from the UI
+thread.  The EGL buffer swap call will need to dequeue a buffer from the
+BufferQueue, and it will stall until one is available.  There won't be any
+available until the consumer acquires one for rendering, but that also happens
+on the UI thread… so we're stuck.</p>
+
+<p>The solution is to have BufferQueue ensure there is always a buffer
+available to be dequeued, so the buffer swap never stalls.  One way to guarantee
+this is to have BufferQueue discard the contents of the previously-queued buffer
+when a new buffer is queued, and to place restrictions on minimum buffer counts
+and maximum acquired buffer counts.  (If your queue has three buffers, and all
+three buffers are acquired by the consumer, then there's nothing to dequeue and
+the buffer swap call must hang or fail.  So we need to prevent the consumer from
+acquiring more than two buffers at once.)  Dropping buffers is usually
+undesirable, so it's only enabled in specific situations, such as when the
+producer and consumer are in the same process.</p>
+
+<h2 id=surface_or_texture>SurfaceView or TextureView?</h2>
+SurfaceView and TextureView fill similar roles, but have very different
+implementations.  To decide which is best requires an understanding of the
+trade-offs.</p>
+
+<p>Because TextureView is a proper citizen of the View hierarchy, it behaves like
+any other View, and can overlap or be overlapped by other elements.  You can
+perform arbitrary transformations and retrieve the contents as a bitmap with
+simple API calls.</p>
+
+<p>The main strike against TextureView is the performance of the composition step.
+With SurfaceView, the content is written to a separate layer that SurfaceFlinger
+composites, ideally with an overlay.  With TextureView, the View composition is
+always performed with GLES, and updates to its contents may cause other View
+elements to redraw as well (e.g. if they're positioned on top of the
+TextureView).  After the View rendering completes, the app UI layer must then be
+composited with other layers by SurfaceFlinger, so you're effectively
+compositing every visible pixel twice.  For a full-screen video player, or any
+other application that is effectively just UI elements layered on top of video,
+SurfaceView offers much better performance.</p>
+
+<p>As noted earlier, DRM-protected video can be presented only on an overlay plane.
+ Video players that support protected content must be implemented with
+SurfaceView.</p>
+
+<h2 id=grafika>Case Study: Grafika's Play Video (TextureView)</h2>
+
+<p>Grafika includes a pair of video players, one implemented with TextureView, the
+other with SurfaceView.  The video decoding portion, which just sends frames
+from MediaCodec to a Surface, is the same for both.  The most interesting
+differences between the implementations are the steps required to present the
+correct aspect ratio.</p>
+
+<p>While SurfaceView requires a custom implementation of FrameLayout, resizing
+SurfaceTexture is a simple matter of configuring a transformation matrix with
+<code>TextureView#setTransform()</code>.  For the former, you're sending new
+window position and size values to SurfaceFlinger through WindowManager; for
+the latter, you're just rendering it differently.</p>
+
+<p>Otherwise, both implementations follow the same pattern.  Once the Surface has
+been created, playback is enabled.  When "play" is hit, a video decoding thread
+is started, with the Surface as the output target.  After that, the app code
+doesn't have to do anything -- composition and display will either be handled by
+SurfaceFlinger (for the SurfaceView) or by TextureView.</p>
+
+<h2 id=decode>Case Study: Grafika's Double Decode</h2>
+
+<p>This activity demonstrates manipulation of the SurfaceTexture inside a
+TextureView.</p>
+
+<p>The basic structure of this activity is a pair of TextureViews that show two
+different videos playing side-by-side.  To simulate the needs of a
+videoconferencing app, we want to keep the MediaCodec decoders alive when the
+activity is paused and resumed for an orientation change.  The trick is that you
+can't change the Surface that a MediaCodec decoder uses without fully
+reconfiguring it, which is a fairly expensive operation; so we want to keep the
+Surface alive.  The Surface is just a handle to the producer interface in the
+SurfaceTexture's BufferQueue, and the SurfaceTexture is managed by the
+TextureView;, so we also need to keep the SurfaceTexture alive.  So how do we deal
+with the TextureView getting torn down?</p>
+
+<p>It just so happens TextureView provides a <code>setSurfaceTexture()</code> call
+that does exactly what we want.  We obtain references to the SurfaceTextures
+from the TextureViews and save them in a static field.  When the activity is
+shut down, we return "false" from the <code>onSurfaceTextureDestroyed()</code>
+callback to prevent destruction of the SurfaceTexture.  When the activity is
+restarted, we stuff the old SurfaceTexture into the new TextureView.  The
+TextureView class takes care of creating and destroying the EGL contexts.</p>
+
+<p>Each video decoder is driven from a separate thread.  At first glance it might
+seem like we need EGL contexts local to each thread; but remember the buffers
+with decoded output are actually being sent from mediaserver to our
+BufferQueue consumers (the SurfaceTextures).  The TextureViews take care of the
+rendering for us, and they execute on the UI thread.</p>
+
+<p>Implementing this activity with SurfaceView would be a bit harder.  We can't
+just create a pair of SurfaceViews and direct the output to them, because the
+Surfaces would be destroyed during an orientation change.  Besides, that would
+add two layers, and limitations on the number of available overlays strongly
+motivate us to keep the number of layers to a minimum.  Instead, we'd want to
+create a pair of SurfaceTextures to receive the output from the video decoders,
+and then perform the rendering in the app, using GLES to render two textured
+quads onto the SurfaceView's Surface.</p>
+
+  </body>
+</html>

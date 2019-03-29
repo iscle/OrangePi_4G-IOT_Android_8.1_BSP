@@ -1,0 +1,109 @@
+<html devsite><head>
+    <title>代码流水线、分支和版本</title>
+    <meta name="project_path" value="/_project.yaml"/>
+    <meta name="book_path" value="/_book.yaml"/>
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+<p>
+Android 开放源代码项目 (AOSP) 维护着一个全面的软件堆栈，原始设备制造商 (OEM) 和其他设备实现者可移植并在自己的硬件上运行该堆栈。为了维持 Android 项目的质量，Google 分派了全职工程师、产品经理、界面设计师、质量保证测试人员以及更多相关人员（将新型设备推向市场所需的所有其他角色）来负责相关工作。
+</p>
+
+<p>
+相应地，我们还维护着多个“代码流水线”，以便明确区分当前稳定版 Android 与不稳定的实验性版本。我们将 Android 代码流水线的开放源代码管理和维护工作纳入到了更大的产品开发周期中。
+</p>
+
+<p>
+下图从概念层面显示了 AOSP 如何管理代码和版本。我们将它们称为“代码流水线”而不是“分支”，只是因为在任何特定时刻，特定“代码流水线”都可能有多个分支。例如，当某个版本定型时，它可能会（也可能不会）根据当前需要变为新的分支。
+</p>
+<ol>
+  <li>
+	<p>在任何特定时刻，Android 平台都有一个当前最新版本。该版本通常作为树中的一个分支。
+	</p>
+  </li>
+  <li>
+	<p>设备制造商和贡献者会以当前最新版本为基础来修复错误、发布新设备、试验新功能等。
+	</p>
+  </li>
+  <li>
+	<p>与此同时，Google 会根据产品的需求和目标，在内部开发下一版 Android 平台和框架。开发下一版 Android 时，我们会与设备合作伙伴协作，在旗舰设备上推出新版 Android，旗舰设备的规格经过深思熟虑，旨在推动 Android 朝着我们希望的方向发展。
+	</p>
+  </li>
+  <li>
+	<p>当第“n+1”版准备就绪时，它就会发布到公开源代码树，并成为新的最新版本。
+	</p>
+  </li>
+</ol>
+  <img src="/images/code-lines.png" alt="code-line diagram" id="figure1"/>
+<p class="img-caption">
+  <strong>图 1.</strong> AOSP 代码和版本</p>
+<h2 id="terms-and-caveats">条款和注意事项</h2>
+<ul>
+  <li>
+	<p><em></em>一个版本对应一个正式版 Android 平台，如 1.5、2.1 等等。一般来说，一个平台版本对应于 AndroidManifest.xml 文件 <code>SdkVersion</code> 字段中的版本（如源代码树的 <code>frameworks/base/api</code> 中所定义）。
+	</p>
+  </li>
+  <li>
+	<p><em></em>上游项目是指 Android 堆栈从中提取代码的开放源代码项目。这包括一些著名的项目，如 Linux 内核和 WebKit。随着发展，我们也在引入一些半自主性 Android 项目（如 ART、Android SDK 工具、Bionic 等）作为“上游”项目进行开发。一般情况下，这些项目完全是在公开树中开发的。对于某些上游项目，开发是通过直接为上游项目本身做贡献来完成的。如需了解详情，请参阅<a href="submit-patches.html#upstream-projects">上游项目</a>。在这两种情况下，快照会定期纳入版本中。
+	</p>
+  </li>
+  <li>
+	<p>在任何时候，版本代码流水线（实际上可能由 Git 中的多个真实存在的分支组成）都被视为给定 Android 平台版本的唯一规范源代码。原始设备制造商 (OEM) 和开发设备的其他组织应该仅从版本分支中获取源代码。
+	</p>
+  </li>
+  <li>
+	<p>“实验性”代码流水线是为了收集社区带来的更改，从而在保持稳定性的基础上反复进行改进。
+	</p>
+  </li>
+  <li>
+	<p>被认定为稳定的更改最终会提取到版本分支中。请注意，这仅适用于错误修复、应用改进和不影响平台 API 的其他更改。
+	</p>
+  </li>
+  <li>
+	<p>在必要时，更改将从上游项目（包括 Android“上游”项目）提取到版本分支中。
+	</p>
+  </li>
+  <li>
+	<p>第“n+1”版（即框架和平台 API 的下一个重大版本）将由 Google 在内部开发。如需了解详情，请参阅<a href="#about-private-code-lines">私密代码流水线简介</a>。
+	</p>
+  </li>
+  <li>
+	<p>在必要时，更改将从上游、版本和实验性分支提取到 Google 的私密分支。
+	</p>
+  </li>
+  <li>
+	<p>当下一版本的平台 API 已经稳定并经过全面测试后，Google 会针对下一版平台定型一个版本。（具体来说，这指的是一个新的 <code>SdkVersion</code>。）这个版本也将对应于作为公开版本分支的内部代码流水线和新的当前平台代码流水线。
+	</p>
+  </li>
+  <li>
+	<p>当某个新的平台版本定型时，Google 会同时创建相应的实验性代码流水线。
+	</p>
+  </li>
+</ul>
+
+<h2 id="about-private-code-lines">不公开代码流水线简介</h2>
+<p>上述源代码管理策略谈到了 Google 会维护一个不公开的代码流水线。这样做是为了将注意力集中在 Android 的当前公开版本上。
+</p>
+<p>原始设备制造商 (OEM) 和其他设备制造商自然希望发布搭载最新版 Android 的设备。同样，如非必要，应用开发者也不希望处理更多个平台版本。与此同时，Google 要负责把握 Android 作为平台和产品的战略方向。我们的方法侧重于在少量旗舰设备上推进功能的演化，同时确保与 Android 相关的知识产权得到妥善保护。
+</p>
+<p>如此一来，Google 经常掌握有来自第三方的机密信息。在确保采取适当的保护措施之前，我们必须避免泄露敏感功能。此外，同时存在太多平台版本会给平台带来真正的风险。考虑到这些因素，我们构建了开放源代码项目（包含第三方贡献的内容），以专注于目前公开的稳定版 Android。下一版平台的“深度开发”将会私下进行，直到一切就绪，最终成为正式版本。
+</p>
+<p>我们意识到，许多贡献者不同意这种做法。我们尊重其他人可能有不同的观点；但这是我们认为的最佳方式，我们也选择这种方法来进行实现。
+</p>
+
+</body></html>

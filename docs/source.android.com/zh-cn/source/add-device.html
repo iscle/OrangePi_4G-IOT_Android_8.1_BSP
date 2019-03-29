@@ -1,0 +1,290 @@
+<html devsite><head>
+    <title>添加新设备</title>
+    <meta name="project_path" value="/_project.yaml"/>
+    <meta name="book_path" value="/_book.yaml"/>
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+<p>您可以参考本页中的信息为自己的设备和产品创建 Makefile。请注意，与本部分中的其他页面不同，本页中的内容仅适合在创建全新的设备类型时参考，而且仅适合公司编译和产品团队参考。</p>
+
+<h2 id="build-layers">了解编译层</h2>
+
+<p>编译层次结构包括与设备的物理结构对应的抽象层。下表中介绍了这些层。每个层都与上一层存在一对多的关系。例如，一个架构可以有多个板，一个板可以有多个产品。您可以将指定层中的某个元素定义为同一层中某个元素的特化元素，从而免去复制操作并简化维护工作。</p>
+
+<table>
+ <tbody><tr>
+  <th>层</th>
+  <th>示例</th>
+  <th>说明</th>
+ </tr>
+  <tr>
+    <td>产品</td>
+    <td>myProduct、myProduct_eu、myProduct_eu_fr、j2、sdk</td>
+    <td><p>产品层用于定义所开发的产品的功能规范，例如要编译的模块、支持的语言区域，以及针对各语言区域的配置。也就是说，这是总体产品的名称。产品特定变量在产品定义 Makefile 中进行定义。一个产品可以沿用其他产品的定义，这有助于简化维护工作。一种常用的方法是：先创建一个基础产品，其中包含会应用到所有产品的功能，然后再基于这个基础产品创建产品变体。例如，如果有两个产品只是使用的无线技术不同（分别使用 CDMA 和 GSM），那么您可以让这两个产品沿用未定义无线技术的同一个基础产品的定义。
+</p></td>
+
+  </tr>
+ <tr>
+    <td>板/设备</td>
+    <td>sardine、trout、goldfish</td>
+    <td>设备/板层代表设备上由可塑材料组成的物理层（即设备的工业设计）。例如，在北美销售的设备可能包括 QWERTY 键盘，而在法国销售的设备则可能包括 AZERTY 键盘。该层还用于展现产品的基本架构图。这些架构图包括板上的外围设备及其配置。所使用的名称只不过是代表不同板/设备配置的代码。</td>
+  </tr>
+<tr>
+    <td>架构</td>
+    <td>arm、x86、mips、arm64、x86_64、mips64</td>
+    <td>架构层用于描述板上运行的处理器配置和 ABI（应用二进制接口）。</td>
+  </tr>
+</tbody></table>
+
+<h2 id="build-variants">使用编译类型</h2>
+
+<p>在针对特定产品进行编译时，如果能在最终发布版本的基础上进行细微修改，通常会非常有用。在模块定义中，模块可以通过 <code>LOCAL_MODULE_TAGS</code> 指定标记，这些标记可以是以下一个或多个值：<code>optional</code>（默认）、<code>debug</code>、<code>eng</code>。</p>
+
+<p>如果某个模块没有通过 <code>LOCAL_MODULE_TAGS</code> 指定标记，则其标记默认为 <code>optional</code>。仅当 <code>PRODUCT_PACKAGES</code> 的产品配置需要可选模块时，系统才会安装可选模块。</p><p>以下是当前已定义的编译类型：</p>
+
+<table border="1">
+<tbody><tr>
+    <td>
+        <code>eng<code>
+    </code></code></td>
+    <td>这是默认的编译类型。
+        <ul>
+        <li>安装带有 <code>eng</code> 和/或 <code>debug</code> 标记的模块。
+        </li><li>除了带有标记的模块之外，还会根据产品定义文件安装相应模块。</li>
+        <li><code>ro.secure=0</code>
+        </li><li><code>ro.debuggable=1</code>
+        </li><li><code>ro.kernel.android.checkjni=1</code>
+        </li><li><code>adb</code> 默认处于启用状态。
+    </li></ul></td>
+</tr>
+<tr>
+    <td>
+        <code>user<code>
+    </code></code></td>
+    <td>这是旨在用作最终版本配置步骤的编译类型。
+        <ul>
+        <li>安装带有 <code>user</code> 标记的模块。</li>
+        <li>除了带有标记的模块之外，还会根据产品定义文件安装相应模块。</li>
+        <li><code>ro.secure=1</code> </li>
+        <li><code>ro.debuggable=0</code> </li>
+        <li><code>adb</code> 默认处于停用状态。</li>
+    </ul></td>
+</tr>
+<tr>
+    <td>
+        <code>userdebug<code>
+    </code></code></td>
+    <td>除了以下几点之外，其余均与 <code>user</code> 相同：<ul>
+        <li>还会安装带有 <code>debug</code> 标记的模块。
+        </li><li><code>ro.debuggable=1</code>
+        </li><li><code>adb</code> 默认处于启用状态。
+    </li></ul></td>
+</tr>
+</tbody></table>
+
+<h2 id="use-resource-overlays">利用资源叠加层定制版本</h2>
+
+<p>Android 编译系统会在编译时利用资源叠加层定制产品。资源叠加层用于指定在默认文件之上应用的资源文件。要使用资源叠加层，请修改项目编译文件，将 <code>PRODUCT_PACKAGE_OVERLAYS</code> 设为相对于顶级目录的路径。当编译系统搜索资源时，该路径将成为影子根目录，系统除了在当前根目录中进行搜索外，还会一并在该路径中搜索。</p>
+
+<p><a href="https://android.googlesource.com/platform/frameworks/base/+/master/core/res/res/values/config.xml">frameworks/base/core/res/res/config.xml</a> 文件中包含用户最常自定义的设置。</p>
+
+<p>要在此文件上设置资源叠加层，请将叠加层目录添加到项目编译文件中，如下所示：</p>
+
+<pre>
+PRODUCT_PACKAGE_OVERLAYS := device/<i>device_implementer</i>/<i>device_name</i>/overlay
+</pre>
+
+<p>或</p>
+
+<pre>
+PRODUCT_PACKAGE_OVERLAYS := vendor/<i>vendor_name</i>/overlay
+</pre>
+
+<p>然后，将一个叠加层文件添加到该目录下，例如：</p>
+
+<pre>
+vendor/foobar/overlay/frameworks/base/core/res/res/config.xml
+</pre>
+
+<p>在叠加层 <code>config.xml</code> 文件中找到的所有字符串或字符串数组都将会替换在原始文件中找到的对应字符串或字符串数组。</p>
+
+<h2 id="build-a-product">编译产品</h2>
+
+<p>您可以通过多种方式组织设备的源文件。我们将以 Nexus 6 为例，简要介绍是如何组织其实施文件的，不过您可以按照自己认为合适的方式组织源文件并进行编译。
+</p>
+<p>为 Nexus 6 实施了一个名为 <code>shamu</code> 的主设备配置。根据此设备配置创建了一个产品以及一个产品定义 Makefile，该 Makefile 用于声明关于设备的产品特定信息，例如名称和型号。您可以查看 <code>device/moto/shamu</code> 目录，了解所有相关配置的具体设置方式。
+</p>
+<h3 id="makefiles">编写 Makefile</h3>
+<p>以下步骤介绍了如何采用与设置 Nexus 6 产品线类似的方式设置产品 Makefile：</p>
+<ol>
+  <li>为您的产品创建 <code>device/&lt;company_name&gt;/&lt;device_name&gt;</code> 目录，例如 <code>device/moto/shamu</code>。该目录中将包含您设备的源代码以及编译这些代码所需的 Makefile。
+  </li>
+
+  <li>创建一个用于声明设备所需文件和模块的 <code>device.mk</code> Makefile。有关示例，请参阅 <code>device/moto/shamu/device.mk</code>。
+  </li>
+
+  <li>创建一个产品定义 Makefile，以便基于设备创建具体产品。以下示例 Makefile 来自于 <code>device/moto/shamu/aosp_shamu.mk</code>。请注意，该产品会通过 Makefile 沿用 <code>device/moto/shamu/device.mk</code> 和 <code>vendor/moto/shamu/device-vendor.mk</code> 文件中的内容，同时还会声明产品特定信息，例如名称、品牌和型号。
+
+<pre>
+# Inherit from the common Open Source product configuration
+$(call inherit-product, $(SRC_TARGET_DIR)/product/aosp_base_telephony.mk)
+
+PRODUCT_NAME := aosp_shamu
+PRODUCT_DEVICE := shamu
+PRODUCT_BRAND := Android
+PRODUCT_MODEL := AOSP on Shamu
+PRODUCT_MANUFACTURER := motorola
+PRODUCT_RESTRICT_VENDOR_FILES := true
+
+$(call inherit-product, device/moto/shamu/device.mk)
+$(call inherit-product-if-exists, vendor/moto/shamu/device-vendor.mk)
+
+PRODUCT_NAME := aosp_shamu
+
+PRODUCT_PACKAGES += \
+    Launcher3
+</pre>
+
+    <p>要查看可添加到 Makefile 的其他产品特定变量，请参阅<a href="#prod-def">产品定义变量</a>。
+    </p>
+  </li>
+
+  <li>创建一个指向产品的 Makefile 的 <code>AndroidProducts.mk</code> 文件。在此示例中，仅需要产品定义 Makefile。以下示例来自于 <code>device/moto/shamu/AndroidProducts.mk</code>：<pre>
+#
+# This file should set PRODUCT_MAKEFILES to a list of product makefiles
+# to expose to the build system.  LOCAL_DIR will already be set to
+# the directory containing this file.
+#
+# This file may not rely on the value of any variable other than
+# LOCAL_DIR; do not use any conditionals, and do not look up the
+# value of any variable that isn't set in this file or in a file that
+# it includes.
+#
+
+PRODUCT_MAKEFILES := \
+    $(LOCAL_DIR)/aosp_shamu.mk
+</pre>
+  </li>
+
+  <li>创建一个包含板特定配置的 <code>BoardConfig.mk</code> Makefile。有关示例，请参阅 <code>device/moto/shamu/BoardConfig.mk</code>。
+  </li>
+
+  <li>创建一个 <code>vendorsetup.sh</code> 文件，以便将您的产品（“午餐套餐”）与<a href="#build-variants">版本变体</a>（使用短划线将两者分隔开）一起添加到编译版本中。例如：<pre>
+add_lunch_combo &lt;product_name&gt;-userdebug
+</pre>
+  </li>
+
+  <li>这时，您就可以基于同一设备创建更多产品变体了。
+  </li>
+
+</ol>
+<h3 id="prod-def">设置产品定义变量</h3>
+<p>产品特定变量在产品的 Makefile 中定义。在产品定义文件中维护的变量包括：</p>
+<table>
+  <tbody>
+    <tr>
+      <th>参数</th>
+      <th>说明</th>
+      <th>示例</th>
+    </tr>
+    <tr>
+      <td>PRODUCT_AAPT_CONFIG</td>
+      <td>
+        创建程序包时使用的 <code>aapt</code> 配置</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>PRODUCT_BRAND</td>
+      <td>对软件进行自定义所针对的品牌（如果有），例如运营商</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>PRODUCT_CHARACTERISTICS</td>
+      <td>
+        <code>aapt</code> 特性，用于允许向程序包添加变体特定资源。
+      </td>
+      <td>tablet、nosdcard</td>
+    </tr>
+    <tr>
+      <td>PRODUCT_COPY_FILES</td>
+      <td>字词列表，例如 <code>source_path:destination_path</code>。在编译相应产品时，应将源路径下的文件复制到目标路径。config/Makefile 中定义了针对复制步骤的规则</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>PRODUCT_DEVICE</td>
+      <td>工业设计的名称。这也是板名称，编译系统会使用该名称查找 <code>BoardConfig.mk.</code>
+      </td>
+      <td>
+        <code>tuna</code>
+      </td>
+    </tr>
+    <tr>
+      <td>PRODUCT_LOCALES</td>
+      <td>以空格分隔的列表，用于列出由双字母语言代码和双字母国家/地区代码组成的代码对，以便说明针对用户的一些设置，例如界面语言和时间、日期以及货币格式。PRODUCT_LOCALES 中列出的第一个语言区域会被用作产品的默认语言区域。
+      </td>
+      <td>
+        <code>en_GB de_DE es_ES fr_CA</code>
+      </td>
+    </tr>
+    <tr>
+      <td>PRODUCT_MANUFACTURER</td>
+      <td>制造商的名称</td>
+      <td>
+        <code>acme</code>
+      </td>
+    </tr>
+    <tr>
+      <td>PRODUCT_MODEL</td>
+      <td>最终产品的最终用户可见名称</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>PRODUCT_NAME</td>
+      <td>总体产品的最终用户可见名称，将显示在“设置”&gt;“关于”屏幕中。
+      </td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>PRODUCT_OTA_PUBLIC_KEYS</td>
+      <td>产品的无线下载 (OTA) 公钥列表</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>PRODUCT_PACKAGES</td>
+      <td>列出要安装的 APK 和模块。
+      </td>
+      <td>
+        <code>Calendar Contacts</code>
+      </td>
+    </tr>
+    <tr>
+      <td>PRODUCT_PACKAGE_OVERLAYS</td>
+      <td>指明是使用默认资源还是添加任何产品特定叠加层</td>
+      <td>
+        <code>vendor/acme/overlay</code>
+      </td>
+    </tr>
+    <tr>
+      <td>PRODUCT_PROPERTY_OVERRIDES</td>
+      <td>系统属性分配（采用“key=value”格式）列表</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table>
+
+</body></html>

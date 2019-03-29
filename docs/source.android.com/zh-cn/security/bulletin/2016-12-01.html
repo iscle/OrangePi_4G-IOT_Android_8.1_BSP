@@ -1,0 +1,1950 @@
+<html devsite>
+  <head>
+    <title>Android 安全公告 - 2016 年 12 月</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p><em>发布时间：2016 年 12 月 5 日 | 更新时间：2016 年 12 月 7 日</em></p>
+<p>
+Android 安全公告详细介绍了会影响 Android 设备的安全漏洞。除了公告之外，我们还通过无线下载 (OTA) 方式发布了针对 Google 设备的安全更新。我们还在 <a href="https://developers.google.com/android/nexus/images">Google Developer 网站</a>上发布了 Google 设备固件映像。2016 年 12 月 5 日（或之后）的安全补丁程序级别均已解决所有这些问题。请参阅 <a href="https://support.google.com/pixelphone/answer/4457705#pixel_phones&amp;nexus_devices">Pixel 和 Nexus 更新时间表</a>，了解如何检查设备的安全补丁程序级别。
+</p>
+<p>
+我们的合作伙伴在 2016 年 11 月 7 日（或之前）就已收到本公告中说明的这些问题的相关通知。我们已在 Android 开放源代码项目 (AOSP) 代码库中发布了针对相关问题的源代码补丁程序，并在本公告中提供了相应链接。
+本公告还提供了 AOSP 之外的补丁程序的链接。
+</p>
+<p>
+这些问题中危险性最高的是严重程度为“严重”的设备专属代码中的安全漏洞，此类漏洞可用于通过内核执行任意代码，进而对本地设备造成永久性损害，而用户可能需要通过重写操作系统来修复设备。
+</p>
+<p>
+我们尚未收到用户因这些新报告的问题而遭到主动攻击或这些问题遭到滥用的报告。请参阅 <a href="#mitigations">Android 和 Google 服务缓解措施</a>部分，详细了解 <a href="/security/enhancements/index.html">Android 安全平台防护</a>和服务防护功能（如 <a href="https://developer.android.com/training/safetynet/index.html">SafetyNet</a>）；这些功能可提高 Android 平台的安全性。
+</p>
+<p>
+我们建议所有用户都在自己的设备上接受这些更新。
+</p>
+<h2 id="announcements">公告</h2>
+<ul>
+  <li>本公告有两个安全补丁程序级别字符串，目的是让 Android 合作伙伴能够灵活地、更快速地修复所有 Android 设备上类似的一系列漏洞。如需了解详情，请参阅<a href="#common-questions-and-answers">常见问题和解答</a>：<ul>
+     <li><strong>2016-12-01</strong>：部分安全补丁程序级别字符串。此安全补丁程序级别字符串表明与 2016-12-01（以及之前的所有安全补丁程序级别字符串）相关的所有问题均已得到解决。</li>
+     <li><strong>2016-12-05</strong>：完整的安全补丁程序级别字符串。此安全补丁程序级别字符串表明与 2016-12-01 和 2016-12-05（以及之前的所有安全补丁程序级别字符串）相关的所有问题均已得到解决。</li>
+    </ul>
+  </li>
+  <li>受支持的 Google 设备将收到一项安全补丁程序级别为 2016 年 12 月 5 日的 OTA 更新。</li>
+</ul>
+<h2 id="security-vulnerability-summary">安全漏洞摘要</h2>
+<p>
+下表列出了安全漏洞、对应的 CVE（通用漏洞和风险识别码）、评估得出的严重程度以及是否会影响 Google 设备。<a href="/security/overview/updates-resources.html#severity">严重程度评估</a>的依据是漏洞被利用后可能会对受影响设备造成的影响大小（假设相关平台和服务缓解措施被成功规避或出于开发目的而被停用）。
+</p>
+<h3 id="2016-12-01-summary">2016-12-01 安全补丁程序级别 - 漏洞摘要</h3>
+<p>
+2016-12-01（或之后）的安全补丁程序级别都必须解决下列问题。
+</p>
+<table>
+  <col width="55%">
+  <col width="20%">
+  <col width="13%">
+  <col width="12%">
+  <tr>
+   <th>问题</th>
+   <th>CVE</th>
+   <th>严重程度</th>
+   <th>是否会影响 Google 设备？</th>
+  </tr>
+  <tr>
+   <td>CURL/LIBCURL 中的远程代码执行漏洞</td>
+   <td>CVE-2016-5419、CVE-2016-5420、CVE-2016-5421</td>
+   <td>高</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>libziparchive 中的提权漏洞</td>
+   <td>CVE-2016-6762</td>
+   <td>高</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>Telephony 中的拒绝服务漏洞</td>
+   <td>CVE-2016-6763</td>
+   <td>高</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>Mediaserver 中的拒绝服务漏洞</td>
+   <td>CVE-2016-6766、CVE-2016-6765、CVE-2016-6764、CVE-2016-6767</td>
+   <td>高</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>Framesequence 库中的远程代码执行漏洞</td>
+   <td>CVE-2016-6768</td>
+   <td>高</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>Smart Lock 中的提权漏洞</td>
+   <td>CVE-2016-6769</td>
+   <td>中</td>
+   <td>否*</td>
+  </tr>
+  <tr>
+   <td>Framework API 中的提权漏洞</td>
+   <td>CVE-2016-6770</td>
+   <td>中</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>Telephony 中的提权漏洞</td>
+   <td>CVE-2016-6771</td>
+   <td>中</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>WLAN 中的提权漏洞</td>
+   <td>CVE-2016-6772</td>
+   <td>中</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>Mediaserver 中的信息披露漏洞</td>
+   <td>CVE-2016-6773</td>
+   <td>中</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>软件包管理器中的信息披露漏洞</td>
+   <td>CVE-2016-6774</td>
+   <td>中</td>
+   <td>是</td>
+  </tr>
+</table>
+<p>
+* 搭载 Android 7.0（或更高版本）且已安装所有可用更新的受支持的 Google 设备不受此漏洞的影响。
+</p>
+<h3 id="2016-12-05-summary">2016-12-05 安全补丁程序级别 - 漏洞摘要</h3>
+<p>
+2016-12-05（或之后）的安全补丁程序级别都必须解决 2016-12-01 的所有问题以及下列问题。
+</p>
+<table>
+  <col width="55%">
+  <col width="20%">
+  <col width="13%">
+  <col width="12%">
+  <tr>
+   <th>问题</th>
+   <th>CVE</th>
+   <th>严重程度</th>
+   <th>是否会影响 Google 设备？</th>
+  </tr>
+  <tr>
+   <td>内核内存子系统中的提权漏洞</td>
+   <td>CVE-2016-4794、CVE-2016-5195</td>
+   <td>严重</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>NVIDIA GPU 驱动程序中的提权漏洞</td>
+   <td>CVE-2016-6775、CVE-2016-6776、CVE-2016-6777</td>
+   <td>严重</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>内核中的提权漏洞</td>
+   <td>CVE-2015-8966</td>
+   <td>严重</td>
+   <td>否*</td>
+  </tr>
+  <tr>
+   <td>NVIDIA 视频驱动程序中的提权漏洞</td>
+   <td>CVE-2016-6915、CVE-2016-6916、CVE-2016-6917</td>
+   <td>严重</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>内核 ION 驱动程序中的提权漏洞</td>
+   <td>CVE-2016-9120</td>
+   <td>严重</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>Qualcomm 组件中的漏洞</td>
+   <td>CVE-2016-8411</td>
+   <td>严重</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>内核文件系统中的提权漏洞</td>
+   <td>CVE-2014-4014</td>
+   <td>高</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>内核中的提权漏洞</td>
+   <td>CVE-2015-8967</td>
+   <td>高</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>HTC 声音编解码器驱动程序中的提权漏洞</td>
+   <td>CVE-2016-6778、CVE-2016-6779、CVE-2016-6780</td>
+   <td>高</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>MediaTek 驱动程序中的提权漏洞</td>
+   <td>CVE-2016-6492、CVE-2016-6781、CVE-2016-6782、CVE-2016-6783、CVE-2016-6784、CVE-2016-6785</td>
+   <td>高</td>
+   <td>否*</td>
+  </tr>
+  <tr>
+   <td>Qualcomm 媒体编解码器中的提权漏洞</td>
+   <td>CVE-2016-6761、CVE-2016-6760、CVE-2016-6759、CVE-2016-6758</td>
+   <td>高</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>Qualcomm 相机驱动程序中的提权漏洞</td>
+   <td>CVE-2016-6755</td>
+   <td>高</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>内核效能子系统中的提权漏洞</td>
+   <td>CVE-2016-6786、CVE-2016-6787</td>
+   <td>高</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>MediaTek I2C 驱动程序中的提权漏洞</td>
+   <td>CVE-2016-6788</td>
+   <td>高</td>
+   <td>否*</td>
+  </tr>
+  <tr>
+   <td>NVIDIA libomx 库中的提权漏洞</td>
+   <td>CVE-2016-6789、CVE-2016-6790</td>
+   <td>高</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>Qualcomm 声音驱动程序中的提权漏洞</td>
+   <td>CVE-2016-6791、CVE-2016-8391、CVE-2016-8392</td>
+   <td>高</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>内核安全子系统中的提权漏洞</td>
+   <td>CVE-2015-7872</td>
+   <td>高</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>Synaptics 触摸屏驱动程序中的提权漏洞</td>
+   <td>CVE-2016-8393、CVE-2016-8394</td>
+   <td>高</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>Broadcom WLAN 驱动程序中的提权漏洞</td>
+   <td>CVE-2014-9909、CVE-2014-9910</td>
+   <td>高</td>
+   <td>否*</td>
+  </tr>
+  <tr>
+   <td>MediaTek 视频驱动程序中的信息披露漏洞</td>
+   <td>CVE-2016-8396</td>
+   <td>高</td>
+   <td>否*</td>
+  </tr>
+  <tr>
+   <td>NVIDIA 视频驱动程序中的信息披露漏洞</td>
+   <td>CVE-2016-8397</td>
+   <td>高</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>GPS 中的拒绝服务漏洞</td>
+   <td>CVE-2016-5341</td>
+   <td>高</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>NVIDIA 相机驱动程序中的拒绝服务漏洞</td>
+   <td>CVE-2016-8395</td>
+   <td>高</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>内核网络子系统中的提权漏洞</td>
+   <td>CVE-2016-8399</td>
+   <td>中</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>Qualcomm 组件中的信息披露漏洞</td>
+   <td>CVE-2016-6756、CVE-2016-6757</td>
+   <td>中</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>NVIDIA librm 库中的信息披露漏洞</td>
+   <td>CVE-2016-8400</td>
+   <td>中</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>内核组件中的信息披露漏洞</td>
+   <td>CVE-2016-8401、CVE-2016-8402、CVE-2016-8403、CVE-2016-8404、CVE-2016-8405、CVE-2016-8406、CVE-2016-8407</td>
+   <td>中</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>NVIDIA 视频驱动程序中的信息披露漏洞</td>
+   <td>CVE-2016-8408、CVE-2016-8409</td>
+   <td>中</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>Qualcomm 声音驱动程序中的信息披露漏洞</td>
+   <td>CVE-2016-8410</td>
+   <td>中</td>
+   <td>是</td>
+  </tr>
+</table>
+<p>
+* 搭载 Android 7.0（或更高版本）且已安装所有可用更新的受支持的 Google 设备不受此漏洞的影响。
+</p>
+<h2 id="mitigations">Android 和 Google 服务缓解措施</h2>
+<p>
+本部分总结了 <a href="/security/enhancements/index.html">Android 安全平台</a>和服务防护功能（如 SafetyNet）提供的缓解措施。这些功能可降低 Android 上的安全漏洞被成功利用的可能性。
+</p>
+<ul>
+<li>新版 Android 平台中的增强功能让攻击者更加难以利用 Android 上存在的许多问题。我们建议所有用户都尽可能更新到最新版 Android。</li>
+<li>Android 安全团队会积极利用<a href="http://static.googleusercontent.com/media/source.android.com/en//security/reports/Google_Android_Security_2015_Report_Final.pdf">“验证应用”和 SafetyNet</a> 来监控滥用行为，这些功能会在发现<a href="http://static.googleusercontent.com/media/source.android.com/en//security/reports/Google_Android_Security_PHA_classifications.pdf">可能有害的应用</a>时向用户发出警告。在预装有 <a href="http://www.android.com/gms">Google 移动服务</a>的设备上，“验证应用”在默认情况下处于启用状态。对于安装来自 Google Play 以外的应用的用户来说，这项功能尤为重要。虽然 Google Play 中禁止提供设备 Root 应用，但用户可能会尝试安装 Root 应用，而“验证应用”会在检测到这类应用（无论应用来自何处）时向用户发出警告。另外，“验证应用”会尝试识别并阻止用户安装会利用提权漏洞的已知恶意应用。如果用户已安装此类应用，那么“验证应用”将会通知用户并尝试移除所检测到的应用。</li>
+<li>由于已做了适当更新，因此 Google 环聊和 Messenger 应用不会自动将媒体内容传递给 Mediaserver 这类进程。</li>
+</ul>
+
+<h2 id="acknowledgements">致谢</h2>
+<p>
+非常感谢以下研究人员做出的贡献：</p>
+
+<ul>
+  <li>阿里巴巴移动安全团队的 Baozeng Ding、Chengming Yang、Peng Xiao、Ning You、Yang Dong、Chao Yang、Yi Zhang 和 Yang Song：CVE-2016-6783、CVE-2016-6784、CVE-2016-6785</li>
+  <li><a href="http://c0reteam.org">C0RE 团队</a>的 <a href="mailto:zc1991@mail.ustc.edu.cn">Chi Zhang</a>、Mingjian Zhou (<a href="https://twitter.com/Mingjian_Zhou">@Mingjian_Zhou</a>)、Chiachih Wu (<a href="https://twitter.com/chiachih_wu">@chiachih_wu</a>) 和 Xuxian Jiang：CVE-2016-6789、CVE-2016-6790</li>
+  <li>Christian Seel：CVE-2016-6769</li>
+  <li>Google 的 David Benjamin 和 Kenny Root：CVE-2016-6767</li>
+  <li>腾讯科恩实验室 (<a href="https://twitter.com/keen_lab">@keen_lab</a>) 的 Di Shen (<a href="https://twitter.com/returnsme">@returnsme</a>)：CVE-2016-6776、CVE-2016-6787</li>
+  <li><a href="http://www.ms509.com">MS509Team</a> 的 En He (<a href="https://twitter.com/heeeeen4x">@heeeeen4x</a>)：CVE-2016-6763</li>
+  <li>奇虎 360 科技有限公司 IceSword 实验室的 Gengjia Chen (<a href="https://twitter.com/chengjia4574">@chengjia4574</a>) 和 <a href="http://weibo.com/jfpan">pjf</a>：CVE-2016-6779、CVE-2016-6778、CVE-2016-8401、CVE-2016-8402、CVE-2016-8403、CVE-2016-8409、CVE-2016-8408、CVE-2016-8404</li>
+  <li>奇虎 360 科技有限公司 IceSword 实验室的 Jianqiang Zhao (<a href="https://twitter.com/jianqiangzhao">@jianqiangzhao</a>) 和 <a href="http://weibo.com/jfpan">pjf</a>：CVE-2016-6788、CVE-2016-6781、CVE-2016-6782、CVE-2016-8396</li>
+  <li><a href="http://c0reteam.org">C0RE 团队</a>的 <a href="mailto:zlbzlb815@163.com">Lubo Zhang</a>、<a href="mailto:segfault5514@gmail.com">Tong Lin</a>、<a href="mailto:computernik@gmail.com">Yuan-Tsung Lo</a>、Chiachih Wu (<a href="https://twitter.com/chiachih_wu">@chiachih_wu</a>) 和 Xuxian Jiang：CVE-2016-6791、CVE-2016-8391、CVE-2016-8392</li>
+  <li>Project Zero 的 Mark Brand：CVE-2016-6772</li>
+  <li><a href="https://github.com/michalbednarski">Michał Bednarski</a>：CVE-2016-6770、CVE-2016-6774</li>
+  <li><a href="http://c0reteam.org">C0RE 团队</a>的 Mingjian Zhou (<a href="https://twitter.com/Mingjian_Zhou">@Mingjian_Zhou</a>)、<a href="mailto:zc1991@mail.ustc.edu.cn">Chi Zhang</a>、Chiachih Wu (<a href="https://twitter.com/chiachih_wu">@chiachih_wu</a>) 和 Xuxian Jiang：CVE-2016-6761、CVE-2016-6759、CVE-2016-8400</li>
+  <li><a href="http://c0reteam.org">C0RE 团队</a>的 Mingjian Zhou (<a href="https://twitter.com/Mingjian_Zhou">@Mingjian_Zhou</a>)、Chiachih Wu (<a href="https://twitter.com/chiachih_wu">@chiachih_wu</a>) 和 Xuxian Jiang：CVE-2016-6760</li>
+  <li><a href="http://c0reteam.org">C0RE 团队</a>的 Mingjian Zhou (<a href="https://twitter.com/Mingjian_Zhou">@Mingjian_Zhou</a>)、<a href="mailto:arnow117@gmail.com">Hanxiang Wen</a>、Chiachih Wu (<a href="https://twitter.com/chiachih_wu">@chiachih_wu</a>) 和 Xuxian Jiang：CVE-2016-6759</li>
+  <li>特斯拉汽车公司产品安全团队的 Nathan Crandall (<a href="https://twitter.com/natecray">@natecray</a>)：CVE-2016-6915、CVE-2016-6916、CVE-2016-6917</li>
+  <li>Nightwatch Cybersecurity Research (<a href="https://twitter.com/nightwatchcyber">@nightwatchcyber</a>)：CVE-2016-5341</li>
+  <li>百度 X-Lab 的丁鹏飞、包沉浮和韦韬：CVE-2016-6755、CVE-2016-6756</li>
+  <li>趋势科技的 Peter Pi (<a href="https://twitter.com/heisecode">@heisecode</a>)：CVE-2016-8397、CVE-2016-8405、CVE-2016-8406、CVE-2016-8407</li>
+  <li>腾讯科恩实验室的何淇丹 (<a href="https://twitter.com/flanker_hqd">@flanker_hqd</a>)：CVE-2016-8399、CVE-2016-8395</li>
+  <li>腾讯科恩实验室的何淇丹 (<a href="https://twitter.com/flanker_hqd">@flanker_hqd</a>) 和 Marco Grassi (<a href="https://twitter.com/marcograss">@marcograss</a>)：CVE-2016-6768</li>
+  <li>Richard Shupak：CVE-2016-5341</li>
+  <li>IBM X-Force 研发团队的 Sagi Kedmi：CVE-2016-8393、CVE-2016-8394</li>
+  <li>趋势科技移动威胁研究团队的 Seven Shen (<a href="https://twitter.com/lingtongshen">@lingtongshen</a>)：CVE-2016-6757</li>
+  <li>阿里巴巴的 Weichao Sun (<a href="https://twitter.com/sunblate">@sunblate</a>)：CVE-2016-6773</li>
+  <li><a href="http://c0reteam.org">C0RE 团队</a>的 <a href="mailto:vancouverdou@gmail.com">Wenke Dou</a>、<a href="mailto:zc1991@mail.ustc.edu.cn">Chi Zhang</a>、Chiachih Wu (<a href="https://twitter.com/chiachih_wu">@chiachih_wu</a>) 和 Xuxian Jiang：CVE-2016-6765</li>
+  <li><a href="http://www.trendmicro.com">趋势科技</a><a href="http://blog.trendmicro.com/trendlabs-security-intelligence/category/mobile/">移动威胁响应团队</a>的吴潍浠 (<a href="https://twitter.com/wish_wu">@wish_wu</a>)<a href="http://weibo.com/wishlinux"></a>：CVE-2016-6704</li>
+  <li><a href="http://c0reteam.org">C0RE 团队</a>的 <a href="mailto:computernik@gmail.com">Yuan-Tsung Lo</a>、<a href="mailto:segfault5514@gmail.com">Tong Lin</a>、Chiachih Wu (<a href="https://twitter.com/chiachih_wu">@chiachih_wu</a>) 和 Xuxian Jiang：CVE-2016-6786、CVE-2016-6780、CVE-2016-6775</li>
+  <li><a href="http://c0reteam.org">C0RE 团队</a>的 <a href="mailto:computernik@gmail.com">Yuan-Tsung Lo</a>、<a href="mailto:wisedd@gmail.com">Xiaodong Wang</a>、Chiachih Wu (<a href="https://twitter.com/chiachih_wu">@chiachih_wu</a>) 和 Xuxian Jiang：CVE-2016-6777</li>
+  <li>腾讯安全平台部门的 Yuxiang Li：CVE-2016-6771</li>
+  <li>奇虎 360 科技有限公司成都安全响应中心的金哲：CVE-2016-6764、CVE-2016-6766</li>
+  <li>奇虎 360 科技有限公司成都安全响应中心的 <a href="http://weibo.com/ele7enxxh">Zinuo Han</a>：CVE-2016-6762</li>
+</ul>
+<p>
+此外，还要感谢瓶科技的 MengLuo Gou (<a href="https://twitter.com/idhyt3r">@idhyt3r</a>)、Google 的王勇 (<a href="https://twitter.com/ThomasKing2014">@ThomasKing2014</a>) 和 Zubin Mithra 对本安全公告做出的贡献。
+</p>
+
+<h2 id="2016-12-01-details">2016-12-01 安全补丁程序级别 - 漏洞详情</h2>
+<p>
+我们在下面提供了上述 <a href="#2016-12-01-summary">2016-12-01 安全补丁程序级别 - 漏洞摘要</a>中列出的每个安全漏洞的详细信息。其中包括问题描述、严重程度阐述以及一个包含 CVE、相关参考信息、严重程度、已更新的 Google 设备、已更新的 AOSP 版本（如果适用）及报告日期的表格。在适用的情况下，我们会将 Bug ID 链接到解决问题的公开更改记录（如 AOSP 代码更改列表）。如果某个 Bug 有多条相关的更改记录，我们还通过 Bug ID 后面的数字链接到了更多参考信息。</p>
+
+
+<h3 id="rce-in-curl-libcurl">CURL/LIBCURL 中的远程代码执行漏洞</h3>
+<p>
+下表列出了影响 CURL 和 LIBCURL 库的安全漏洞。其中最严重的问题可让中间人攻击者使用伪造的证书通过特许进程执行任意代码。由于攻击者需要伪造的证书，因此我们将该漏洞的严重程度评为“高”。
+</p>
+
+<table>
+  <col width="18%">
+  <col width="18%">
+  <col width="10%">
+  <col width="19%">
+  <col width="17%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>参考信息</th>
+    <th>严重程度</th>
+    <th>已更新的 Google 设备</th>
+    <th>已更新的 AOSP 版本</th>
+    <th>报告日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-5419</td>
+    <td>A-31271247</td>
+    <td>高</td>
+    <td>所有</td>
+    <td>7.0</td>
+    <td>2016 年 8 月 3 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-5420</td>
+    <td>A-31271247</td>
+    <td>高</td>
+    <td>所有</td>
+    <td>7.0</td>
+    <td>2016 年 8 月 3 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-5421</td>
+    <td>A-31271247</td>
+    <td>高</td>
+    <td>所有</td>
+    <td>7.0</td>
+    <td>2016 年 8 月 3 日</td>
+  </tr>
+</table>
+
+
+<h3 id="eop-in-libziparchive">libziparchive 中的提权漏洞</h3>
+<p>
+libziparchive 库中的提权漏洞可让本地恶意应用通过特许进程执行任意代码。由于该漏洞可用于获取第三方应用通常无法获取的本地特权，因此我们将其严重程度评为“高”。
+</p>
+
+<table>
+  <col width="18%">
+  <col width="18%">
+  <col width="10%">
+  <col width="19%">
+  <col width="17%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>参考信息</th>
+    <th>严重程度</th>
+    <th>已更新的 Google 设备</th>
+    <th>已更新的 AOSP 版本</th>
+    <th>报告日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-6762</td>
+   <td><a href="https://android.googlesource.com/platform/system/core/+/1ee4892e66ba314131b7ecf17e98bb1762c4b84c">A-31251826</a> [<a href="https://android.googlesource.com/platform/bionic/+/3656958a16590d07d1e25587734e000beb437740">2</a>]</td>
+    <td>高</td>
+    <td>所有</td>
+    <td>5.0.2、5.1.1、6.0、6.0.1、7.0</td>
+    <td>2016 年 8 月 28 日</td>
+  </tr>
+</table>
+
+
+<h3 id="dos-in-telephony">Telephony 中的拒绝服务漏洞</h3>
+<p>
+Telephony 中的拒绝服务漏洞可让本地恶意应用使用特制文件挂起或重启设备。由于该漏洞可用于在本地发起永久拒绝服务攻击，因此我们将其严重程度评为“高”。
+</p>
+
+<table>
+  <col width="18%">
+  <col width="18%">
+  <col width="10%">
+  <col width="19%">
+  <col width="17%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>参考信息</th>
+    <th>严重程度</th>
+    <th>已更新的 Google 设备</th>
+    <th>已更新的 AOSP 版本</th>
+    <th>报告日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-6763</td>
+    <td><a href="https://android.googlesource.com/platform/packages/services/Telephony/+/1294620627b1e9afdf4bd0ad51c25ed3daf80d84">A-31530456</a></td>
+    <td>高</td>
+    <td>所有</td>
+    <td>4.4.4、5.0.2、5.1.1、6.0、6.0.1、7.0</td>
+    <td>2016 年 9 月 12 日</td>
+  </tr>
+</table>
+
+
+<h3 id="dos-in-mediaserver">Mediaserver 中的拒绝服务漏洞</h3>
+<p>
+Mediaserver 中的拒绝服务漏洞可让攻击者使用特制文件挂起或重启设备。由于该漏洞可用于远程发起拒绝服务攻击，因此我们将其严重程度评为“高”。
+</p>
+
+<table>
+  <col width="18%">
+  <col width="18%">
+  <col width="10%">
+  <col width="19%">
+  <col width="17%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>参考信息</th>
+    <th>严重程度</th>
+    <th>已更新的 Google 设备</th>
+    <th>已更新的 AOSP 版本</th>
+    <th>报告日期</th>
+  </tr>
+  <tr>
+   <td>CVE-2016-6766</td>
+   <td><a href="https://android.googlesource.com/platform/frameworks/av/+/0d13824315b0491d44e9c6eb5db06489ab0fcc20">A-31318219</a></td>
+   <td>高</td>
+   <td>所有</td>
+   <td>4.4.4、5.0.2、5.1.1、6.0、6.0.1、7.0</td>
+   <td>2016 年 9 月 5 日</td>
+  </tr>
+  <tr>
+   <td>CVE-2016-6765</td>
+   <td><a href="https://android.googlesource.com/platform/frameworks/av/+/fd9cc97d4dfe2a2fbce2c0f1704d7a27ce7cbc44">A-31449945</a></td>
+   <td>高</td>
+   <td>所有</td>
+   <td>4.4.4、5.0.2、5.1.1、7.0</td>
+   <td>2016 年 9 月 13 日</td>
+  </tr>
+  <tr>
+   <td>CVE-2016-6764</td>
+   <td><a href="https://android.googlesource.com/platform/frameworks/av/+/0d13824315b0491d44e9c6eb5db06489ab0fcc20">A-31681434</a></td>
+   <td>高</td>
+   <td>所有</td>
+   <td>4.4.4、5.0.2、5.1.1、6.0、6.0.1、7.0</td>
+   <td>2016 年 9 月 22 日</td>
+  </tr>
+  <tr>
+   <td>CVE-2016-6767</td>
+   <td>A-31833604</td>
+   <td>高</td>
+   <td>无*</td>
+   <td>4.4.4</td>
+   <td>Google 内部</td>
+  </tr>
+</table>
+
+<p>
+* 搭载 Android 7.0（或更高版本）且已安装所有可用更新的受支持的 Google 设备不受此漏洞的影响。
+</p>
+
+
+<h3 id="rce-in-framesequence-library">Framesequence 库中的远程代码执行漏洞</h3>
+<p>
+Framesequence 库中的远程代码执行漏洞可让攻击者使用特制文件通过非特许进程执行任意代码。由于该漏洞可用于在使用 Framesequence 库的应用中执行远程代码，因此我们将其严重程度评为“高”。
+</p>
+
+<table>
+  <col width="18%">
+  <col width="18%">
+  <col width="10%">
+  <col width="19%">
+  <col width="17%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>参考信息</th>
+    <th>严重程度</th>
+    <th>已更新的 Google 设备</th>
+    <th>已更新的 AOSP 版本</th>
+    <th>报告日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-6768</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/ex/+/0ada9456d0270cb0e357a43d9187a6418d770760">A-31631842</a></td>
+    <td>高</td>
+    <td>所有</td>
+    <td>5.0.2、5.1.1、6.0、6.0.1、7.0</td>
+    <td>2016 年 9 月 19 日</td>
+  </tr>
+</table>
+
+
+<h3 id="eop-in-smart-lock">Smart Lock 中的提权漏洞</h3>
+<p>
+Smart Lock 中的提权漏洞可让本地恶意用户在无需输入 PIN 码的情况下访问 Smart Lock 设置。由于该漏洞需要攻击者先拿到已解锁的实物设备，且要求设备用户最后一次访问的设置窗格必须是 Smart Lock，因此我们将其严重程度评为“中”。
+</p>
+
+<table>
+  <col width="18%">
+  <col width="18%">
+  <col width="10%">
+  <col width="19%">
+  <col width="17%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>参考信息</th>
+    <th>严重程度</th>
+    <th>已更新的 Google 设备</th>
+    <th>已更新的 AOSP 版本</th>
+    <th>报告日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-6769</td>
+    <td>A-29055171</td>
+    <td>中</td>
+    <td>无*</td>
+    <td>5.0.2、5.1.1、6.0、6.0.1</td>
+    <td>2016 年 5 月 27 日</td>
+  </tr>
+</table>
+<p>
+* 搭载 Android 7.0（或更高版本）且已安装所有可用更新的受支持的 Google 设备不受此漏洞的影响。
+</p>
+
+
+<h3 id="eop-in-framework-apis">Framework API 中的提权漏洞</h3>
+<p>
+Framework API 中的提权漏洞可让本地恶意应用访问超出其访问权限级别的系统功能。由于该漏洞允许在本地绕过对受限进程的限制，因此我们将其严重程度评为“中”。
+</p>
+
+<table>
+  <col width="18%">
+  <col width="18%">
+  <col width="10%">
+  <col width="19%">
+  <col width="17%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>参考信息</th>
+    <th>严重程度</th>
+    <th>已更新的 Google 设备</th>
+    <th>已更新的 AOSP 版本</th>
+    <th>报告日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-6770</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/base/+/2c61c57ac53cbb270b4e76b9d04465f8a3f6eadc">A-30202228</a></td>
+    <td>中</td>
+    <td>所有</td>
+    <td>4.4.4、5.0.2、5.1.1、6.0、6.0.1、7.0</td>
+    <td>2016 年 7 月 16 日</td>
+  </tr>
+</table>
+
+
+<h3 id="eop-in-telephony">Telephony 中的提权漏洞</h3>
+<p>
+Telephony 中的提权漏洞可让本地恶意应用访问超出其访问权限级别的系统功能。由于该漏洞允许在本地绕过对受限进程的限制，因此我们将其严重程度评为“中”。
+</p>
+
+<table>
+  <col width="18%">
+  <col width="18%">
+  <col width="10%">
+  <col width="19%">
+  <col width="17%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>参考信息</th>
+    <th>严重程度</th>
+    <th>已更新的 Google 设备</th>
+    <th>已更新的 AOSP 版本</th>
+    <th>报告日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-6771</td>
+    <td><a href="https://android.googlesource.com/platform/packages/services/Telephony/+/a39ff9526aee6f2ea4f6e02412db7b33d486fd7d">A-31566390</a></td>
+    <td>中</td>
+    <td>所有</td>
+    <td>6.0、6.0.1、7.0</td>
+    <td>2016 年 9 月 17 日</td>
+  </tr>
+</table>
+
+
+<h3 id="eop-in-wi-fi">WLAN 中的提权漏洞</h3>
+<p>
+WLAN 中的提权漏洞可让本地恶意应用通过特许进程执行任意代码。由于该漏洞需要先破坏特许进程，因此我们将其严重程度评为“中”。
+</p>
+
+<table>
+  <col width="18%">
+  <col width="18%">
+  <col width="10%">
+  <col width="19%">
+  <col width="17%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>参考信息</th>
+    <th>严重程度</th>
+    <th>已更新的 Google 设备</th>
+    <th>已更新的 AOSP 版本</th>
+    <th>报告日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-6772</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/opt/net/wifi/+/a5a18239096f6faee80f15f3fff39c3311898484">A-31856351</a> [<a href="https://android.googlesource.com/platform/frameworks/opt/net/wifi/+/29a2baf3195256bab6a0a4a2d07b7f2efa46b614">2</a>]</td>
+    <td>中</td>
+    <td>所有</td>
+    <td>5.0.2、5.1.1、6.0、6.0.1、7.0</td>
+    <td>2016 年 9 月 30 日</td>
+  </tr>
+</table>
+
+
+<h3 id="id-in-mediaserver">Mediaserver 中的信息披露漏洞</h3>
+<p>
+Mediaserver 中的信息披露漏洞可让本地恶意应用获取超出其权限范围的数据。由于该漏洞可用于在未经许可的情况下获取敏感数据，因此我们将其严重程度评为“中”。
+</p>
+
+<table>
+  <col width="18%">
+  <col width="18%">
+  <col width="10%">
+  <col width="19%">
+  <col width="17%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>参考信息</th>
+    <th>严重程度</th>
+    <th>已更新的 Google 设备</th>
+    <th>已更新的 AOSP 版本</th>
+    <th>报告日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-6773</td>
+    <td><a href="https://android.googlesource.com/platform/external/libavc/+/026745ef046e646b8d04f4f57d8320042f6b29b0">A-30481714</a> [<a href="https://android.googlesource.com/platform/external/libavc/+/6676aeb4195e7c7379915c0972f3d209410f0641">2</a>]</td>
+    <td>中</td>
+    <td>所有</td>
+    <td>6.0、6.0.1、7.0</td>
+    <td>2016 年 7 月 27 日</td>
+  </tr>
+</table>
+
+
+<h3 id="id-in-package-manager">软件包管理器中的信息披露漏洞</h3>
+<p>
+软件包管理器中的信息披露漏洞可让本地恶意应用绕过将应用数据与其他应用隔离开的操作系统防护功能。由于该漏洞需要先破坏特许进程，因此我们将其严重程度评为“中”。
+</p>
+
+<table>
+  <col width="18%">
+  <col width="18%">
+  <col width="10%">
+  <col width="19%">
+  <col width="17%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>参考信息</th>
+    <th>严重程度</th>
+    <th>已更新的 Google 设备</th>
+    <th>已更新的 AOSP 版本</th>
+    <th>报告日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-6774</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/base/+/e2d4f5fc313ecb4ba587b20fff6d346f8cd51775">A-31251489</a></td>
+    <td>中</td>
+    <td>所有</td>
+    <td>7.0</td>
+    <td>2016 年 8 月 29 日</td>
+  </tr>
+</table>
+
+
+<h2 id="2016-12-05-details">2016-12-05 安全补丁程序级别 - 漏洞详情</h2>
+<p>
+我们在下面提供了上述 <a href="#2016-12-05-summary">2016-12-05 安全补丁程序级别 - 漏洞摘要</a>中列出的每个安全漏洞的详细信息。其中包括问题描述、严重程度阐述以及一个包含 CVE、相关参考信息、严重程度、已更新的 Google 设备、已更新的 AOSP 版本（如果适用）及报告日期的表格。在适用的情况下，我们会将 Bug ID 链接到解决问题的公开更改记录（如 AOSP 代码更改列表）。如果某个 Bug 有多条相关的更改记录，我们还通过 Bug ID 后面的数字链接到了更多参考信息。</p>
+
+<h3 id="eop-in-kernel-memory-subsystem">内核内存子系统中的提权漏洞</h3>
+<p>
+内核内存子系统中的提权漏洞可让本地恶意应用通过内核执行任意代码。由于该漏洞有可能会造成本地设备永久损坏，而用户可能需要通过重写操作系统来修复设备，因此我们将其严重程度评为“严重”。
+</p>
+
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>参考信息</th>
+    <th>严重程度</th>
+    <th>已更新的 Google 设备</th>
+    <th>报告日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-4794</td>
+    <td>A-31596597<br>
+       <a href="http://git.kernel.org/cgit/linux/kernel/git/stable/linux-stable.git/commit/?id=6710e594f71ccaad8101bc64321152af7cd9ea28">上游内核</a> [<a href="http://git.kernel.org/cgit/linux/kernel/git/stable/linux-stable.git/commit/?id=4f996e234dad488e5d9ba0858bc1bae12eff82c3">2</a>]</td>
+    <td>严重</td>
+    <td>Pixel C、Pixel、Pixel XL</td>
+    <td>2016 年 4 月 17 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-5195</td>
+    <td>A-32141528<br>
+       <a href="https://git.kernel.org/cgit/linux/kernel/git/stable/linux-stable.git/commit/?id=9691eac5593ff1e2f82391ad327f21d90322aec1">上游内核</a> [<a href="https://git.kernel.org/cgit/linux/kernel/git/stable/linux-stable.git/commit/?id=e45a502bdeae5a075257c4f061d1ff4ff0821354">2</a>]</td>
+    <td>严重</td>
+    <td>Nexus 5X、Nexus 6、Nexus 6P、Nexus 9、Android One、Pixel C、Nexus Player、Pixel、Pixel XL</td>
+    <td>2016 年 10 月 12 日</td>
+  </tr>
+</table>
+
+
+<h3 id="eop-in-nvidia-gpu-driver">NVIDIA GPU 驱动程序中的提权漏洞</h3>
+<p>
+NVIDIA GPU 驱动程序中的提权漏洞可让本地恶意应用通过内核执行任意代码。由于该漏洞有可能会造成本地设备永久损坏，而用户可能需要通过重写操作系统来修复设备，因此我们将其严重程度评为“严重”。
+</p>
+
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>参考信息</th>
+    <th>严重程度</th>
+    <th>已更新的 Google 设备</th>
+    <th>报告日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-6775</td>
+    <td>A-31222873*<br>N-CVE-2016-6775</td>
+    <td>严重</td>
+    <td>Nexus 9</td>
+    <td>2016 年 8 月 25 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-6776</td>
+    <td>A-31680980*<br>N-CVE-2016-6776</td>
+    <td>严重</td>
+    <td>Nexus 9</td>
+    <td>2016 年 9 月 22 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-6777</td>
+    <td>A-31910462*<br>N-CVE-2016-6777</td>
+    <td>严重</td>
+    <td>Nexus 9</td>
+    <td>2016 年 10 月 3 日</td>
+  </tr>
+</table>
+<p>
+* 针对该问题的补丁程序未公开发布。<a href="https://developers.google.com/android/nexus/drivers">Google Developers 网站</a>上提供的 Google 设备的最新二进制驱动程序中包含相应更新。
+</p>
+
+<h3 id="eop-in-kernel">内核中的提权漏洞</h3>
+<p>
+内核中的提权漏洞可让本地恶意应用通过内核执行任意代码。由于该漏洞有可能会造成本地设备永久损坏，而用户可能需要通过重写操作系统来修复设备，因此我们将其严重程度评为“严重”。
+</p>
+
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>参考信息</th>
+    <th>严重程度</th>
+    <th>已更新的 Google 设备</th>
+    <th>报告日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2015-8966</td>
+    <td>A-31435731<br>
+        <a href="https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/commit/?id=76cc404bfdc0d419c720de4daaf2584542734f42">上游内核</a></td>
+    <td>严重</td>
+    <td>无*</td>
+    <td>2016 年 9 月 10 日</td>
+  </tr>
+</table>
+<p>
+* 搭载 Android 7.0（或更高版本）且已安装所有可用更新的受支持的 Google 设备不受此漏洞的影响。
+</p>
+
+
+<h3 id="eop-in-nvidia-video-driver">NVIDIA 视频驱动程序中的提权漏洞</h3>
+<p>NVIDIA 视频驱动程序中的提权漏洞可让本地恶意应用通过内核执行任意代码。由于该漏洞有可能会造成本地设备永久损坏，而用户可能需要通过重写操作系统来修复设备，因此我们将其严重程度评为“严重”。
+</p>
+
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>参考信息</th>
+    <th>严重程度</th>
+    <th>已更新的 Google 设备</th>
+    <th>报告日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-6915</td>
+    <td>A-31471161*<br>N-CVE-2016-6915</td>
+    <td>严重</td>
+    <td>Nexus 9</td>
+    <td>2016 年 9 月 13 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-6916</td>
+    <td>A-32072350*<br>N-CVE-2016-6916</td>
+    <td>严重</td>
+    <td>Nexus 9、Pixel C</td>
+    <td>2016 年 9 月 13 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-6917</td>
+    <td>A-32072253*<br>N-CVE-2016-6917</td>
+    <td>严重</td>
+    <td>Nexus 9</td>
+    <td>2016 年 9 月 13 日</td>
+  </tr>
+</table>
+<p>
+* 针对该问题的补丁程序未公开发布。<a href="https://developers.google.com/android/nexus/drivers">Google Developers 网站</a>上提供的 Google 设备的最新二进制驱动程序中包含相应更新。
+</p>
+
+<h3 id="eop-in-kernel-ion-driver">内核 ION 驱动程序中的提权漏洞</h3>
+<p>
+内核 ION 驱动程序中的提权漏洞可让本地恶意应用通过内核执行任意代码。由于该漏洞有可能会造成本地设备永久损坏，而用户可能需要通过重写操作系统来修复设备，因此我们将其严重程度评为“严重”。
+</p>
+
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>参考信息</th>
+    <th>严重程度</th>
+    <th>已更新的 Google 设备</th>
+    <th>报告日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-9120</td>
+    <td>A-31568617<br>
+        <a href="http://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/commit/?id=9590232bb4f4cc824f3425a6e1349afbe6d6d2b7">上游内核</a></td>
+    <td>严重</td>
+    <td>Nexus 5X、Nexus 6、Nexus 6P、Android One、Pixel C、Nexus Player</td>
+    <td>2016 年 9 月 16 日</td>
+  </tr>
+</table>
+
+<h3>Qualcomm 组件中的漏洞</h3>
+<p>
+下列漏洞会影响 Qualcomm 组件；此外，2015 年 11 月的 Qualcomm AMSS 安全公告也对这些安全漏洞进行了详细说明。
+</p>
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+   <th>CVE</th>
+   <th>参考信息</th>
+   <th>严重程度*</th>
+   <th>已更新的 Google 设备</th>
+   <th>报告日期</th>
+  </tr>
+  <tr>
+   <td>CVE-2016-8411</td>
+   <td>A-31805216**</td>
+   <td>严重</td>
+   <td>Nexus 6、Nexus 6P、Android One</td>
+   <td>Qualcomm 内部</td>
+  </tr>
+</table>
+<p>* 这些漏洞的严重程度评级由供应商决定。</p>
+<p>** 针对该问题的补丁程序未公开发布。<a href="https://developers.google.com/android/nexus/drivers">Google Developers 网站</a>上提供的 Google 设备的最新二进制驱动程序中包含相应更新。
+</p>
+
+<h3 id="eop-in-kernel-file-system">内核文件系统中的提权漏洞</h3>
+<p>
+内核文件系统中的提权漏洞可让本地恶意应用绕过将应用数据与其他应用隔离开的操作系统防护功能。由于该漏洞可用于获取第三方应用通常无法获取的本地特权，因此我们将其严重程度评为“高”。
+</p>
+
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>参考信息</th>
+    <th>严重程度</th>
+    <th>已更新的 Google 设备</th>
+    <th>报告日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2014-4014</td>
+    <td>A-31252187<br>
+        <a href="https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/commit/?id=23adbe12ef7d3d4195e80800ab36b37bee28cd03">上游内核</a></td>
+    <td>高</td>
+    <td>Nexus 6、Nexus Player</td>
+    <td>2014 年 6 月 10 日</td>
+  </tr>
+</table>
+
+
+<h3 id="eop-in-kernel-2">内核中的提权漏洞</h3>
+<p>
+内核中的提权漏洞可让本地恶意应用通过内核执行任意代码。由于该漏洞的攻击行为必须发生在另一个漏洞攻击行为之后，因此我们将其严重程度评为“高”。
+</p>
+
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>参考信息</th>
+    <th>严重程度</th>
+    <th>已更新的 Google 设备</th>
+    <th>报告日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2015-8967</td>
+    <td>A-31703084<br>
+        <a href="http://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/commit/?id=c623b33b4e9599c6ac5076f7db7369eb9869aa04">上游内核</a></td>
+    <td>高</td>
+    <td>Nexus 5X、Nexus 6P、Nexus 9、Pixel C、Pixel、Pixel XL</td>
+    <td>2015 年 1 月 8 日</td>
+  </tr>
+</table>
+
+
+<h3 id="eop-in-htc-sound-codec-driver">HTC 声音编解码器驱动程序中的提权漏洞</h3>
+<p>
+HTC 声音编解码器驱动程序中的提权漏洞可让本地恶意应用通过内核执行任意代码。由于该漏洞需要先破坏特许进程，因此我们将其严重程度评为“高”。
+</p>
+
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>参考信息</th>
+    <th>严重程度</th>
+    <th>已更新的 Google 设备</th>
+    <th>报告日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-6778</td>
+    <td>A-31384646*</td>
+    <td>高</td>
+    <td>Nexus 9</td>
+    <td>2016 年 2 月 25 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-6779</td>
+    <td>A-31386004*</td>
+    <td>高</td>
+    <td>Nexus 9</td>
+    <td>2016 年 2 月 25 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-6780</td>
+    <td>A-31251496*</td>
+    <td>高</td>
+    <td>Nexus 9</td>
+    <td>2016 年 8 月 30 日</td>
+  </tr>
+</table>
+<p>
+* 针对该问题的补丁程序未公开发布。<a href="https://developers.google.com/android/nexus/drivers">Google Developers 网站</a>上提供的 Google 设备的最新二进制驱动程序中包含相应更新。
+</p>
+
+<h3 id="eop-in-mediatek-driver">MediaTek 驱动程序中的提权漏洞</h3>
+<p>
+MediaTek 驱动程序中的提权漏洞可让本地恶意应用通过内核执行任意代码。由于该漏洞需要先破坏特许进程，因此我们将其严重程度评为“高”。
+</p>
+
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>参考信息</th>
+    <th>严重程度</th>
+    <th>已更新的 Google 设备</th>
+    <th>报告日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-6492</td>
+    <td>A-28175122<br>MT-ALPS02696413</td>
+    <td>高</td>
+    <td>无*</td>
+    <td>2016 年 4 月 11 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-6781</td>
+    <td>A-31095175<br>MT-ALPS02943455</td>
+    <td>高</td>
+    <td>无*</td>
+    <td>2016 年 8 月 22 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-6782</td>
+    <td>A-31224389<br>MT-ALPS02943506</td>
+    <td>高</td>
+    <td>无*</td>
+    <td>2016 年 8 月 24 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-6783</td>
+    <td>A-31350044<br>MT-ALPS02943437</td>
+    <td>高</td>
+    <td>无*</td>
+    <td>2016 年 9 月 6 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-6784</td>
+    <td>A-31350755<br>MT-ALPS02961424</td>
+    <td>高</td>
+    <td>无*</td>
+    <td>2016 年 9 月 6 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-6785</td>
+    <td>A-31748056<br>MT-ALPS02961400</td>
+    <td>高</td>
+    <td>无*</td>
+    <td>2016 年 9 月 25 日</td>
+  </tr>
+</table>
+<p>
+* 搭载 Android 7.0（或更高版本）且已安装所有可用更新的受支持的 Google 设备不受此漏洞的影响。
+</p>
+
+
+<h3 id="eop-in-qualcomm-media-codecs">Qualcomm 媒体编解码器中的提权漏洞</h3>
+<p>
+Qualcomm 媒体编解码器中的提权漏洞可让本地恶意应用通过特许进程执行任意代码。由于该漏洞可用于获取第三方应用通常无法获取的本地特权，因此我们将其严重程度评为“高”。
+</p>
+
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>参考信息</th>
+    <th>严重程度</th>
+    <th>已更新的 Google 设备</th>
+    <th>报告日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-6761</td>
+    <td>A-29421682*<br>QC-CR#1055792</td>
+    <td>高</td>
+    <td>Nexus 5X、Nexus 6、Nexus 6P、Nexus 9、Android One、Nexus Player、Pixel、Pixel XL</td>
+    <td>2016 年 6 月 16 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-6760</td>
+    <td>A-29617572*<br>QC-CR#1055783</td>
+    <td>高</td>
+    <td>Nexus 5X、Nexus 6、Nexus 6P、Nexus 9、Android One、Nexus Player、Pixel、Pixel XL</td>
+    <td>2016 年 6 月 23 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-6759</td>
+    <td>A-29982686*<br>QC-CR#1055766</td>
+    <td>高</td>
+    <td>Nexus 5X、Nexus 6、Nexus 6P、Nexus 9、Android One、Nexus Player、Pixel、Pixel XL</td>
+    <td>2016 年 7 月 4 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-6758</td>
+    <td>A-30148882*<br>QC-CR#1071731</td>
+    <td>高</td>
+    <td>Nexus 5X、Nexus 6、Nexus 6P、Nexus 9、Android One、Nexus Player、Pixel、Pixel XL</td>
+    <td>2016 年 7 月 13 日</td>
+  </tr>
+</table>
+<p>
+* 针对该问题的补丁程序未公开发布。<a href="https://developers.google.com/android/nexus/drivers">Google Developers 网站</a>上提供的 Google 设备的最新二进制驱动程序中包含相应更新。
+</p>
+
+<h3 id="eop-in-qualcomm-camera-driver">Qualcomm 相机驱动程序中的提权漏洞</h3>
+<p>
+Qualcomm 相机驱动程序中的提权漏洞可让本地恶意应用通过内核执行任意代码。由于该漏洞需要先破坏特许进程，因此我们将其严重程度评为“高”。
+</p>
+
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>参考信息</th>
+    <th>严重程度</th>
+    <th>已更新的 Google 设备</th>
+    <th>报告日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-6755</td>
+    <td>A-30740545<br>
+        <a href="https://source.codeaurora.org/quic/la//kernel/msm-3.10/commit/?id=b5df02edbcdf53dbbab77903d28162772edcf6e0">QC-CR#1065916</a></td>
+    <td>高</td>
+    <td>Nexus 5X、Nexus 6、Nexus 6P、Android One、Pixel、Pixel XL</td>
+    <td>2016 年 8 月 3 日</td>
+  </tr>
+</table>
+
+
+<h3 id="eop-in-kernel-performance-subsystem">内核效能子系统中的提权漏洞</h3>
+<p>
+内核效能子系统中的提权漏洞可让本地恶意应用通过内核执行任意代码。由于该漏洞需要先破坏特许进程，因此我们将其严重程度评为“高”。
+</p>
+
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>参考信息</th>
+    <th>严重程度</th>
+    <th>已更新的 Google 设备</th>
+    <th>报告日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-6786</td>
+    <td>A-30955111<a href="https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/commit/?id=f63a8daa5812afef4f06c962351687e1ff9ccb2b">
+上游内核</a></td>
+    <td>高</td>
+    <td>Nexus 5X、Nexus 6、Nexus 6P、Nexus 9、Android One、Pixel C、Nexus Player、Pixel、Pixel XL</td>
+    <td>2016 年 8 月 18 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-6787</td>
+    <td>A-31095224
+<a href="https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/commit/?id=f63a8daa5812afef4f06c962351687e1ff9ccb2b">上游内核</a></td>
+    <td>高</td>
+    <td>Nexus 5X、Nexus 6、Nexus 6P、Nexus 9、Android One、Pixel C、Nexus Player、Pixel、Pixel XL</td>
+    <td>2016 年 8 月 22 日</td>
+  </tr>
+</table>
+
+
+<h3 id="eop-in-mediatek-i2c-driver">MediaTek I2C 驱动程序中的提权漏洞</h3>
+<p>
+MediaTek I2C 驱动程序中的提权漏洞可让本地恶意应用通过内核执行任意代码。由于该漏洞需要先破坏特许进程，因此我们将其严重程度评为“高”。
+</p>
+
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>参考信息</th>
+    <th>严重程度</th>
+    <th>已更新的 Google 设备</th>
+    <th>报告日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-6788</td>
+    <td>A-31224428<br>MT-ALPS02943467</td>
+    <td>高</td>
+    <td>无*</td>
+    <td>2016 年 8 月 24 日</td>
+  </tr>
+</table>
+<p>
+* 搭载 Android 7.0（或更高版本）且已安装所有可用更新的受支持的 Google 设备不受此漏洞的影响。
+</p>
+
+
+<h3 id="eop-in-nvidia-libomx-library">NVIDIA libomx 库中的提权漏洞</h3>
+<p>
+NVIDIA libomx 库 (libnvomx) 中的提权漏洞可让本地恶意应用通过特许进程执行任意代码。由于该漏洞可用于获取第三方应用通常无法获取的本地特权，因此我们将其严重程度评为“高”。
+</p>
+
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>参考信息</th>
+    <th>严重程度</th>
+    <th>已更新的 Google 设备</th>
+    <th>报告日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-6789</td>
+    <td>A-31251973*
+<br>N-CVE-2016-6789</td>
+    <td>高</td>
+    <td>Pixel C</td>
+    <td>2016 年 8 月 29 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-6790</td>
+    <td>A-31251628*
+<br>N-CVE-2016-6790</td>
+    <td>高</td>
+    <td>Pixel C</td>
+    <td>2016 年 8 月 28 日</td>
+  </tr>
+</table>
+<p>
+* 针对该问题的补丁程序未公开发布。<a href="https://developers.google.com/android/nexus/drivers">Google Developers 网站</a>上提供的 Google 设备的最新二进制驱动程序中包含相应更新。
+</p>
+
+<h3 id="eop-in-qualcomm-sound-driver">Qualcomm 声音驱动程序中的提权漏洞</h3>
+<p>
+Qualcomm 声音驱动程序中的提权漏洞可让本地恶意应用通过内核执行任意代码。由于该漏洞需要先破坏特许进程，因此我们将其严重程度评为“高”。
+</p>
+
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>参考信息</th>
+    <th>严重程度</th>
+    <th>已更新的 Google 设备</th>
+    <th>报告日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-6791</td>
+    <td>A-31252384<br>
+        <a href="https://source.codeaurora.org/quic/la/kernel/msm-3.10/commit/?id=62580295210b6c0bd809cde7088b45ebb65ace79">
+QC-CR#1071809</a></td>
+    <td>高</td>
+    <td>Nexus 5X、Nexus 6、Nexus 6P、Android One、Pixel、Pixel XL</td>
+    <td>2016 年 8 月 31 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-8391</td>
+    <td>A-31253255<br>
+        <a href="https://source.codeaurora.org/quic/la/kernel/msm-3.10/commit/?id=62580295210b6c0bd809cde7088b45ebb65ace79">
+QC-CR#1072166</a></td>
+    <td>高</td>
+    <td>Nexus 5X、Nexus 6、Nexus 6P、Android One、Pixel、Pixel XL</td>
+    <td>2016 年 8 月 31 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-8392</td>
+    <td>A-31385862<br>
+        <a href="https://source.codeaurora.org/quic/la/kernel/msm-3.10/commit/?id=62580295210b6c0bd809cde7088b45ebb65ace79">
+QC-CR#1073136</a></td>
+    <td>高</td>
+    <td>Nexus 5X、Nexus 6、Nexus 6P、Android One、Pixel、Pixel XL</td>
+    <td>2016 年 9 月 8 日</td>
+  </tr>
+</table>
+
+
+<h3 id="eop-in-kernel-security-subsystem">内核安全子系统中的提权漏洞</h3>
+<p>
+内核安全子系统中的提权漏洞可让本地恶意应用通过内核执行任意代码。由于该漏洞需要先破坏特许进程，因此我们将其严重程度评为“高”。
+</p>
+
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>参考信息</th>
+    <th>严重程度</th>
+    <th>已更新的 Google 设备</th>
+    <th>报告日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2015-7872</td>
+    <td>A-31253168<br>
+        <a href="http://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/commit/?id=f05819df10d7b09f6d1eb6f8534a8f68e5a4fe61">
+上游内核</a></td>
+    <td>高</td>
+    <td>Nexus 5X、Nexus 6、Nexus 6P、Nexus 9、Android One、Nexus Player、Pixel、Pixel XL</td>
+    <td>2016 年 8 月 31 日</td>
+  </tr>
+</table>
+
+
+<h3 id="eop-in-synaptics-touchscreen-driver">Synaptics 触摸屏驱动程序中的提权漏洞</h3>
+<p>
+Synaptics 触摸屏驱动程序中的提权漏洞可让本地恶意应用通过内核执行任意代码。由于该漏洞需要先破坏特许进程，因此我们将其严重程度评为“高”。
+</p>
+
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>参考信息</th>
+    <th>严重程度</th>
+    <th>已更新的 Google 设备</th>
+    <th>报告日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-8393</td>
+    <td>A-31911920*</td>
+    <td>高</td>
+    <td>Nexus 5X、Nexus 6P、Nexus 9、Android One、Pixel、Pixel XL</td>
+    <td>2016 年 9 月 8 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-8394</td>
+    <td>A-31913197*</td>
+    <td>高</td>
+    <td>Nexus 9、Android One</td>
+    <td>2016 年 9 月 8 日</td>
+  </tr>
+</table>
+<p>
+* 针对该问题的补丁程序未公开发布。<a href="https://developers.google.com/android/nexus/drivers">Google Developers 网站</a>上提供的 Google 设备的最新二进制驱动程序中包含相应更新。
+</p>
+
+<h3 id="eop-in-broadcom-wi-fi-driver">Broadcom WLAN 驱动程序中的提权漏洞</h3>
+<p>
+Broadcom WLAN 驱动程序中的提权漏洞可让本地恶意应用通过内核执行任意代码。由于该漏洞需要先破坏特许进程，因此我们将其严重程度评为“高”。
+</p>
+
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>参考信息</th>
+    <th>严重程度</th>
+    <th>已更新的 Google 设备</th>
+    <th>报告日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2014-9909</td>
+    <td>A-31676542<br>B-RB#26684</td>
+    <td>高</td>
+    <td>无*</td>
+    <td>2016 年 9 月 21 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2014-9910</td>
+    <td>A-31746399<br>B-RB#26710</td>
+    <td>高</td>
+    <td>无*</td>
+    <td>2016 年 9 月 26 日</td>
+  </tr>
+</table>
+<p>
+* 搭载 Android 7.0（或更高版本）且已安装所有可用更新的受支持的 Google 设备不受此漏洞的影响。
+</p>
+
+
+<h3 id="id-in-mediatek-video-driver">MediaTek 视频驱动程序中的信息披露漏洞</h3>
+<p>
+MediaTek 视频驱动程序中的信息披露漏洞可让本地恶意应用获取超出其权限范围的数据。由于该漏洞可用于在未经用户明确许可的情况下获取敏感数据，因此我们将其严重程度评为“高”。
+</p>
+
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>参考信息</th>
+    <th>严重程度</th>
+    <th>已更新的 Google 设备</th>
+    <th>报告日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-8396</td>
+    <td>A-31249105</td>
+    <td>高</td>
+    <td>无*</td>
+    <td>2016 年 8 月 26 日</td>
+  </tr>
+</table>
+<p>
+* 搭载 Android 7.0（或更高版本）且已安装所有可用更新的受支持的 Google 设备不受此漏洞的影响。
+</p>
+
+
+<h3 id="id-in-nvidia-video-driver">NVIDIA 视频驱动程序中的信息披露漏洞</h3>
+<p>
+NVIDIA 视频驱动程序中的信息披露漏洞可让本地恶意应用获取超出其权限范围的数据。由于该漏洞可用于在未经用户明确许可的情况下获取敏感数据，因此我们将其严重程度评为“高”。
+</p>
+
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>参考信息</th>
+    <th>严重程度</th>
+    <th>已更新的 Google 设备</th>
+    <th>报告日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-8397</td>
+    <td>A-31385953*<br>
+N-CVE-2016-8397</td>
+    <td>高</td>
+    <td>Nexus 9</td>
+    <td>2016 年 9 月 8 日</td>
+  </tr>
+</table>
+<p>
+* 针对该问题的补丁程序未公开发布。<a href="https://developers.google.com/android/nexus/drivers">Google Developers 网站</a>上提供的 Google 设备的最新二进制驱动程序中包含相应更新。
+</p>
+
+<h3 id="dos-in-gps">GPS 中的拒绝服务漏洞</h3>
+<p>
+Qualcomm GPS 组件中的拒绝服务漏洞可让远程攻击者挂起或重启设备。由于该漏洞可用于远程发起暂时拒绝服务攻击，因此我们将其严重程度评为“高”。
+</p>
+
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>参考信息</th>
+    <th>严重程度</th>
+    <th>已更新的 Google 设备</th>
+    <th>报告日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-5341</td>
+    <td>A-31470303*</td>
+    <td>高</td>
+    <td>Nexus 6、Nexus 5X、Nexus 6P、Nexus 9、Android One、Pixel、Pixel XL</td>
+    <td>2016 年 6 月 21 日</td>
+  </tr>
+</table>
+<p>
+* 针对该问题的补丁程序未公开发布。<a href="https://developers.google.com/android/nexus/drivers">Google Developers 网站</a>上提供的 Google 设备的最新二进制驱动程序中包含相应更新。
+</p>
+
+<h3 id="dos-in-nvidia-camera-driver">NVIDIA 相机驱动程序中的拒绝服务漏洞</h3>
+<p>
+NVIDIA 相机驱动程序中的拒绝服务漏洞可让攻击者在本地发起永久拒绝服务攻击，而用户可能需要通过重写操作系统来修复设备。由于该漏洞可用于在本地发起永久拒绝服务攻击，因此我们将其严重程度评为“高”。
+</p>
+
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>参考信息</th>
+    <th>严重程度</th>
+    <th>已更新的 Google 设备</th>
+    <th>报告日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-8395</td>
+    <td>A-31403040*
+<br>N-CVE-2016-8395</td>
+    <td>高</td>
+    <td>Pixel C</td>
+    <td>2016 年 9 月 9 日</td>
+  </tr>
+</table>
+<p>
+* 针对该问题的补丁程序未公开发布。<a href="https://developers.google.com/android/nexus/drivers">Google Developers 网站</a>上提供的 Google 设备的最新二进制驱动程序中包含相应更新。
+</p>
+
+<h3 id="eop-in-kernel-networking-subsystem">内核网络子系统中的提权漏洞</h3>
+<p>
+内核网络子系统中的提权漏洞可让本地恶意应用通过内核执行任意代码。由于该漏洞需要先破坏特许进程，而且当前编译器优化功能限制访问有漏洞的代码，因此我们将其严重程度评为“中”。
+</p>
+
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>参考信息</th>
+    <th>严重程度</th>
+    <th>已更新的 Google 设备</th>
+    <th>报告日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-8399</td>
+    <td>A-31349935*</td>
+    <td>中</td>
+    <td>Nexus 5X、Nexus 6、Nexus 6P、Nexus 9、Android One、Pixel C、Nexus Player、Pixel、Pixel XL</td>
+    <td>2016 年 9 月 5 日</td>
+  </tr>
+</table>
+<p>
+* 针对该问题的补丁程序未公开发布。<a href="https://developers.google.com/android/nexus/drivers">Google Developers 网站</a>上提供的 Google 设备的最新二进制驱动程序中包含相应更新。
+</p>
+
+<h3 id="id-in-qualcomm-components">Qualcomm 组件中的信息披露漏洞</h3>
+<p>
+Qualcomm 组件（包括相机驱动程序和视频驱动程序）中的信息披露漏洞可让本地恶意应用获取超出其权限范围的数据。由于该漏洞需要先破坏特许进程，因此我们将其严重程度评为“中”。
+</p>
+
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>参考信息</th>
+    <th>严重程度</th>
+    <th>已更新的 Google 设备</th>
+    <th>报告日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-6756</td>
+    <td>A-29464815<br>
+        <a href="https://source.codeaurora.org/quic/la//kernel/msm-3.10/commit/?id=f91d28dcba304c9f3af35b5bebaa26233c8c13a5">
+QC-CR#1042068</a> [<a href="https://source.codeaurora.org/quic/la/kernel/msm-3.18/commit/?id=3a214ef870dc97437c7de79a1507dfe5079dce88">2</a>]</td>
+    <td>中</td>
+    <td>Nexus 5X、Nexus 6、Nexus 6P、Android One、Pixel、Pixel XL</td>
+    <td>2016 年 6 月 17 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-6757</td>
+    <td>A-30148242<br>
+        <a href="https://source.codeaurora.org/quic/la/kernel/msm-3.10/commit/?id=cd99d3bbdb16899a425716e672485e0cdc283245">
+QC-CR#1052821</a></td>
+    <td>中</td>
+    <td>Nexus 5X、Nexus 6、Nexus 6P、Pixel、Pixel XL</td>
+    <td>2016 年 7 月 13 日</td>
+  </tr>
+</table>
+
+
+<h3 id="id-in-nvidia-librm-library">NVIDIA librm 库中的信息披露漏洞</h3>
+<p>
+NVIDIA librm 库 (libnvrm) 中的信息披露漏洞可让本地恶意应用获取超出其权限范围的数据。由于该漏洞可用于在未经许可的情况下获取敏感数据，因此我们将其严重程度评为“中”。
+</p>
+
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>参考信息</th>
+    <th>严重程度</th>
+    <th>已更新的 Google 设备</th>
+    <th>报告日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-8400</td>
+    <td>A-31251599*
+<br>N-CVE-2016-8400</td>
+    <td>中</td>
+    <td>Pixel C</td>
+    <td>2016 年 8 月 29 日</td>
+  </tr>
+</table>
+<p>
+* 针对该问题的补丁程序未公开发布。<a href="https://developers.google.com/android/nexus/drivers">Google Developers 网站</a>上提供的 Google 设备的最新二进制驱动程序中包含相应更新。
+</p>
+
+<h3 id="id-in-kernel-components">内核组件中的信息披露漏洞</h3>
+<p>
+内核组件（包括 ION 子系统、Binder、USB 驱动程序和网络子系统）中的信息披露漏洞可让本地恶意应用获取超出其权限范围的数据。由于该漏洞需要先破坏特许进程，因此我们将其严重程度评为“中”。
+</p>
+
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>参考信息</th>
+    <th>严重程度</th>
+    <th>已更新的 Google 设备</th>
+    <th>报告日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-8401</td>
+    <td>A-31494725*</td>
+    <td>中</td>
+    <td>Nexus 5X、Nexus 6、Nexus 6P、Nexus 9、Android One、Pixel C、Nexus Player、Pixel、Pixel XL</td>
+    <td>2016 年 9 月 13 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-8402</td>
+    <td>A-31495231*</td>
+    <td>中</td>
+    <td>Nexus 5X、Nexus 6、Nexus 6P、Nexus 9、Android One、Pixel C、Nexus Player、Pixel、Pixel XL</td>
+    <td>2016 年 9 月 13 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-8403</td>
+    <td>A-31495348*</td>
+    <td>中</td>
+    <td>Nexus 9</td>
+    <td>2016 年 9 月 13 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-8404</td>
+    <td>A-31496950*</td>
+    <td>中</td>
+    <td>Nexus 9</td>
+    <td>2016 年 9 月 13 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-8405</td>
+    <td>A-31651010*</td>
+    <td>中</td>
+    <td>Nexus 5X、Nexus 6、Nexus 6P、Nexus 9、Android One、Pixel C、Nexus Player、Pixel、Pixel XL</td>
+    <td>2016 年 9 月 21 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-8406</td>
+    <td>A-31796940*</td>
+    <td>中</td>
+    <td>Nexus 5X、Nexus 6、Nexus 6P、Nexus 9、Android One、Pixel C、Nexus Player、Pixel、Pixel XL</td>
+    <td>2016 年 9 月 27 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-8407</td>
+    <td>A-31802656*</td>
+    <td>中</td>
+    <td>Nexus 5X、Nexus 6、Nexus 6P、Android One、Pixel、Pixel XL</td>
+    <td>2016 年 9 月 28 日</td>
+  </tr>
+</table>
+<p>
+* 针对该问题的补丁程序未公开发布。<a href="https://developers.google.com/android/nexus/drivers">Google Developers 网站</a>上提供的 Google 设备的最新二进制驱动程序中包含相应更新。
+</p>
+
+<h3 id="id-in-nvidia-video-driver-2">NVIDIA 视频驱动程序中的信息披露漏洞</h3>
+<p>
+NVIDIA 视频驱动程序中的信息披露漏洞可让本地恶意应用获取超出其权限范围的数据。由于该漏洞需要先破坏特许进程，因此我们将其严重程度评为“中”。
+</p>
+
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>参考信息</th>
+    <th>严重程度</th>
+    <th>已更新的 Google 设备</th>
+    <th>报告日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-8408</td>
+    <td>A-31496571*
+<br>N-CVE-2016-8408</td>
+    <td>中</td>
+    <td>Nexus 9</td>
+    <td>2016 年 9 月 13 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-8409</td>
+    <td>A-31495687*
+<br>N-CVE-2016-8409</td>
+    <td>中</td>
+    <td>Nexus 9</td>
+    <td>2016 年 9 月 13 日</td>
+  </tr>
+</table>
+<p>
+* 针对该问题的补丁程序未公开发布。<a href="https://developers.google.com/android/nexus/drivers">Google Developers 网站</a>上提供的 Google 设备的最新二进制驱动程序中包含相应更新。
+</p>
+
+<h3 id="id-in-qualcomm-sound-driver">Qualcomm 声音驱动程序中的信息披露漏洞</h3>
+<p>
+Qualcomm 声音驱动程序中的信息披露漏洞可让本地恶意应用获取超出其权限范围的数据。由于该漏洞需要先破坏特许进程，因此我们将其严重程度评为“中”。
+</p>
+
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>参考信息</th>
+    <th>严重程度</th>
+    <th>已更新的 Google 设备</th>
+    <th>报告日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-8410</td>
+    <td>A-31498403<br>
+        <a href="https://source.codeaurora.org/quic/la//kernel/msm-3.10/commit/?h=e2bbf665187a1f0a1248e4a088823cb182153ba9">
+QC-CR#987010</a></td>
+    <td>中</td>
+    <td>Nexus 5X、Nexus 6、Nexus 6P、Android One</td>
+    <td>Google 内部</td>
+  </tr>
+</table>
+
+<h2 id="common-questions-and-answers">常见问题和解答</h2>
+<p>
+本部分针对阅读本公告后可能产生的常见问题提供了相应的解答。
+</p>
+<p>
+<strong>1. 如何确定我的设备是否已更新到解决了这些问题的版本？
+</strong>
+</p>
+<p>
+要了解如何检查设备的安全补丁程序级别，请阅读 <a href="https://support.google.com/pixelphone/answer/4457705#pixel_phones&amp;nexus_devices">Pixel 和 Nexus 更新时间表</a>中的说明。
+</p>
+<ul>
+  <li>2016-12-01（或之后）的安全补丁程序级别解决了与 2016-12-01 安全补丁程序级别相关的所有问题。</li>
+  <li>2016-12-05（或之后）的安全补丁程序级别解决了与 2016-12-05 安全补丁程序级别以及之前的所有补丁程序级别相关的所有问题。</li>
+</ul>
+<p>
+提供这些更新的设备制造商应将补丁程序字符串级别设为：</p>
+<ul>
+  <li>[ro.build.version.security_patch]:[2016-12-01]</li>
+  <li>[ro.build.version.security_patch]:[2016-12-05]</li>
+</ul>
+<p>
+<strong>2. 为何此公告有 2 个安全补丁程序级别？</strong>
+</p>
+<p>
+本公告有 2 个安全补丁程序级别，目的是让 Android 合作伙伴能够灵活地、更快速地修复所有 Android 设备上类似的一系列漏洞。我们建议 Android 合作伙伴修复本公告中的所有问题并使用最新的安全补丁程序级别。
+</p>
+<ul>
+  <li>使用 2016 年 12 月 1 日安全补丁程序级别的设备必须包含该安全补丁程序级别对应的所有问题的修复方案，以及针对之前的安全公告中报告的所有问题的修复方案。</li>
+  <li>使用 2016 年 12 月 5 日或更新的安全补丁程序级别的设备必须包含此（以及之前的）安全公告中的所有适用补丁程序。</li>
+</ul>
+<p>
+我们建议合作伙伴在一次更新中汇总要解决的所有问题的修复方案。
+</p>
+<p>
+<strong>3. 如何确定各个问题都会影响哪些 Google 设备？</strong>
+</p>
+<p>
+在 <a href="#2016-12-01-details">2016-12-01</a> 和 <a href="#2016-12-05-details">2016-12-05</a> 安全漏洞详情部分，每个表均包含“已更新的 Google 设备”列，其中列出了已针对每个问题更新过的受影响的 Google 设备系列。<em></em>此列有以下几种情形：
+</p>
+<ul>
+  <li><strong>所有 Google 设备</strong>：如果某个问题会影响所有 Nexus 和 Pixel 设备，则相应表的“已更新的 Google 设备”列中会显示“所有”。<em></em>“所有”包含下列<a href="https://support.google.com/pixelphone/answer/4457705#pixel_phones&amp;nexus_devices">受支持的设备</a>：Nexus 5、Nexus 5X、Nexus 6、Nexus 6P、Nexus 7 (2013)、Nexus 9、Android One、Nexus Player、Pixel C、Pixel 和 Pixel XL。</li>
+  <li><strong>部分 Google 设备</strong>：如果某个问题仅会影响部分 Google 设备，则“已更新的 Google 设备”列中会列出受影响的 Google 设备。<em></em></li>
+  <li><strong>无 Google 设备</strong>：如果某个问题不会影响任何运行 Android 7.0 的 Google 设备，则相应表的“已更新的 Google 设备”列中会显示“无”。<em></em></li>
+</ul>
+<p>
+<strong>4. “参考信息”列中的条目对应的是什么内容？</strong>
+</p>
+<p>
+漏洞详情表的“参考信息”列中的条目可能包含用于标识参考值所属组织的前缀。<em></em>这些前缀对应的内容如下：
+</p>
+<table>
+  <tr>
+   <th>前缀</th>
+   <th>参考信息</th>
+  </tr>
+  <tr>
+   <td>A-</td>
+   <td>Android Bug ID</td>
+  </tr>
+  <tr>
+   <td>QC-</td>
+   <td>Qualcomm 参考编号</td>
+  </tr>
+  <tr>
+   <td>M-</td>
+   <td>MediaTek 参考编号</td>
+  </tr>
+  <tr>
+   <td>N-</td>
+   <td>NVIDIA 参考编号</td>
+  </tr>
+  <tr>
+   <td>B-</td>
+   <td>Broadcom 参考编号</td>
+  </tr>
+</table>
+<h2 id="revisions">修订版本</h2>
+<ul>
+  <li>2016 年 12 月 5 日：发布了本公告。</li>
+  <li>2016 年 12 月 7 日：修订了本公告，添加了 AOSP 链接，并更新了 CVE-2016-6915、CVE-2016-6916 和 CVE-2016-6917 的致谢信息。</li>
+</ul>
+
+  </body>
+</html>

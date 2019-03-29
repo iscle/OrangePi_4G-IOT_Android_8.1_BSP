@@ -1,0 +1,154 @@
+<html devsite><head>
+    <title>应用安全</title>
+    <meta name="project_path" value="/_project.yaml"/>
+    <meta name="book_path" value="/_book.yaml"/>
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+<h2 id="elements-of-applications">应用元素</h2>
+<p>Android 提供了一个适用于移动设备的开放源代码平台和应用环境。核心操作系统基于 Linux 内核。Android 应用通常都是使用 Java 编程语言编写的，并在 Dalvik 虚拟机中运行。不过，也可以使用本机代码编写应用。应用是通过文件扩展名为 .apk 的单个文件安装的。</p>
+<p>Android 应用的主要构造块包括：</p>
+<ul>
+  <li>
+    <p><strong>AndroidManifest.xml</strong>：<a href="https://developer.android.com/guide/topics/manifest/manifest-intro.html">AndroidManifest.xml</a> 是控制文件，用于告诉系统如何处理应用中的所有顶级组件（具体来说就是下面介绍的活动、服务、广播接收器和内容提供程序）。该文件还用于指定需要哪些权限。</p>
+  </li>
+  <li>
+    <p><strong>活动</strong>：一般情况下，<a href="https://developer.android.com/guide/topics/fundamentals/activities.html">活动</a>是指聚焦于用户的单个任务的代码。活动通常包括向用户显示界面，但并不一定会这样，有些活动就从不显示界面。通常情况下，应用的入口点是应用的其中一项活动。</p>
+  </li>
+  <li>
+    <p><strong>服务</strong>：<a href="https://developer.android.com/guide/topics/fundamentals/services.html">服务</a>是指在后台运行的代码的主体。服务可以在自己的进程中运行，也可以在其他应用的进程中运行。其他组件会“绑定”到某项服务，并通过远程过程调用来调用该服务的方法。比如媒体播放器就是一项服务：即使用户退出媒体选择界面，也可能仍然希望音乐继续播放。即使界面已关闭，服务也可使音乐继续播放。</p>
+  </li>
+  <li>
+    <p><strong>广播接收器</strong>：<a href="https://developer.android.com/reference/android/content/BroadcastReceiver.html">BroadcastReceiver</a> 是在操作系统或其他应用发出称为 <a href="https://developer.android.com/reference/android/content/Intent.html">Intent</a> 的 IPC 机制时实例化的对象。例如，应用可以注册一个接收器来接收电量不足消息，并可以根据该信息改变自己的行为。</p>
+  </li>
+</ul>
+<h2 id="the-android-permission-model-accessing-protected-apis">Android 权限模式：访问受保护的 API</h2>
+<p>Android 上的所有应用均在应用沙盒（本文档的前面对其进行了介绍）内运行。默认情况下，Android 应用只能访问有限的系统资源。系统负责管理 Android 应用对资源的访问权限。如果资源使用不当或被恶意使用，可能会给用户体验、网络或设备上的数据带来不利影响。</p>
+<p>这些限制是通过多种不同的形式实现的。有些功能会因 Android 有意未提供针对敏感功能的 API（例如，Android 中没有用于直接操控 SIM 卡的 Android API）而受到限制。在某些情况下，角色分离能够提供一种安全措施，就像按应用隔离存储空间一样。在其他情况下，敏感 API 旨在供可信应用使用，并由一种称为“权限”的安全机制进行保护。</p>
+<p>这些受保护的 API 包括：</p>
+<ul>
+  <li>摄像头功能</li>
+  <li>位置数据 (GPS)</li>
+  <li>蓝牙功能</li>
+  <li>电话功能</li>
+  <li>短信/彩信功能</li>
+  <li>网络/数据连接</li>
+</ul>
+<p>这些资源只能通过操作系统进行访问。要使用设备上受保护的 API，应用必须在其清单中定义所需的功能。在准备安装应用时，系统会向用户显示一个对话框，其中会注明应用请求的权限并询问是否继续安装。如果用户选择继续安装，系统会认定用户已授予应用请求的所有权限。用户不能单独授予或拒绝个别权限，而是必须要一起授予或拒绝应用请求的所有权限。</p>
+<p>获得授权后，应用只要安装在设备上，便会一直拥有这些权限。为了避免用户混淆，系统不会再次通知用户向应用授予的权限，而核心操作系统中包含的应用或由原始设备制造商 (OEM) 绑定的应用不会向用户请求权限。应用卸载后，权限也会被移除，因此如果用户之后重新安装卸载的应用，系统会再次显示应用请求的权限。</p>
+<p>在设备设置中，用户可以查看之前安装的应用的权限。此外，用户还可以根据需要在全局范围内停用某些功能，例如停用 GPS、无线功能或 WLAN。</p>
+<p>如果应用尝试使用未在其清单中声明的受保护功能，权限失败通常会导致系统向应用抛回一个安全异常。受保护 API 权限检查会在最底层被强制执行，以防止出现规避行为。<em></em>图 2 中显示了如果应用在安装时请求获得受保护 API 的访问权限，会导致系统向用户显示的消息示例。</p>
+<p>如需关于系统默认权限的说明，请访问：<a href="https://developer.android.com/reference/android/Manifest.permission.html">https://developer.android.com/reference/android/Manifest.permission.html</a>。
+应用可以声明自己的权限以供其他应用使用。上述位置中未列出此类权限。</p>
+<p>在定义权限时，protectionLevel 属性用于告诉系统如何让用户知道哪些应用需要或可以获得相应权限。如需关于如何创建和使用应用特有权限的详细信息，请访问：<a href="https://develo
+per.android.com/guide/topics/security/security.html">https://developer.android.com/guide/topics/security/security.html</a>。</p>
+<p>有些设备功能（例如，发送短信广播 Intent 的功能）不会供第三方应用使用，但可供原始设备制造商 (OEM) 预先安装的应用使用。这些应用使用 signatureOrSystem 权限。</p>
+<h2 id="how-users-understand-third-party-applications">用户如何了解第三方应用</h2>
+<p>当用户与第三方应用互动时，Android 会尽力让用户清楚这一情况，并让用户知道这些应用具备的功能。在安装任何应用之前，系统都会向用户显示一条明晰的消息，让用户知道要安装的应用请求获得的各项权限。安装完毕后，系统不会再次提示用户确认任何权限。</p>
+<p>在安装前一刻显示权限的原因有很多。这时用户正在主动查看应用、开发者和功能方面的信息，以确定其是否符合自己的需求和期望。同样非常重要的一点是，他们尚未对要安装的应用做出心理或财务方面的承诺，并且可以轻松地将要安装的应用与其他替代应用进行比较。</p>
+<p>有些其他平台会使用不同的方式通知用户，即在每个会话开始时或用户正在使用应用时请求权限。Android 的愿景是让用户能够随意在应用之间无缝切换。每次都让用户确认会拖慢用户的操作速度，而且会导致 Android 无法提供良好的用户体验。如果让用户在安装应用时查看权限，用户便可以在不愿意授予相应权限时选择不进行安装。</p>
+<p>此外，许多界面研究表明，过度提示用户会导致用户开始在看到任何对话框时都选择“确定”。Android 的安全目标之一是向用户有效地传达重要的安全信息，而使用让用户习惯性忽略的对话框则无法做到这一点。如果只向用户提供一次重要信息并且仅在重要时刻提供，用户更有可能慎重思考他们要同意的是什么。</p>
+<p>有些平台会选择完全不显示与应用功能有关的任何信息。这种方式会导致用户无法轻松了解和讨论应用功能。尽管无法使所有用户都是在充分了解相关信息的情况下做出决定，但 Android 权限模式可让众多用户轻松获取与应用相关的信息。例如，如果遇到意外的权限请求，经验更丰富的用户可能会询问有关应用功能的关键问题，并在 <a href="htts://play.google.com">Google Play</a> 等所有用户都可以看到的位置分享他们的疑问。</p>
+<table>
+  <tbody><tr>
+    <td><strong>应用安装时显示权限 - Google 地图</strong></td>
+    <td><strong>应用安装后显示权限 - Gmail</strong></td>
+  </tr>
+  <tr>
+    <td><img alt="应用安装时显示权限 - Google 地图" width="250" src="../images/image_install.png"/></td>
+    <td><img alt="应用安装后显示权限 - Gmail" width="250" src="../images/image_gmail_installed.png" id="figure1"/></td>
+  </tr>
+</tbody></table>
+<p class="img-caption">
+  <strong>图 1.</strong> 应用所需权限的显示方式</p>
+<h2 id="interprocess-communication">进程间通信</h2>
+<p>进程可以使用 UNIX 类型的任何传统机制进行通信。例如，文件系统、本地套接字或信号。不过，Linux 权限仍然适用。</p>
+<p>Android 还提供了一些新的 IPC 机制：</p>
+<ul>
+  <li>
+    <p><strong>Binder</strong>：一种基于功能的轻量型远程过程调用机制，在执行进程内调用和跨进程调用时能够实现出色的性能。Binder 是使用自定义 Linux 驱动程序实现的。请访问 <a href="https://developer
+.android.com/reference/android/os/Binder.html">https://developer.android.com/reference/android/os/Binder.html</a>。</p>
+  </li>
+  <li>
+    <p><strong>服务</strong>：服务（如上文所述）可提供能够使用 Binder 直接访问的接口。</p>
+  </li>
+  <li>
+    <p><strong>Intent</strong>：Intent 是简单的消息对象，表示想要执行某项操作的“意图”。例如，如果您的应用想要显示某个网页，则会创建一个 Intent 实例并将其传递给系统，以此来表示想要访问相应网址的“意图”。然后，系统会找到一些知道如何处理该 Intent 的其他代码（在本例中为浏览器），然后运行该代码。Intent 也可用于在系统范围内广播有趣的事件（例如通知）。请访问 <a href="https://developer.android.com/reference/android/content/Intent.html">https://developer.android.com/reference/android/content/Intent.html</a>。</p>
+  </li>
+  <li>
+    <p><strong>ContentProvider</strong>：ContentProvider 是一个数据存储库，用于访问设备上的数据；典型的示例就是用于访问用户通讯录的 ContentProvider。应用可以访问其他应用通过 ContentProvider 提供的数据，还可以定义自己的 ContentProviders 来提供自己的数据。请访问 <a href="https://developer.android.com/reference/android/content/ContentProvider.html">https://developer.android.com/reference/android/content/ContentProvider.html</a>。</p>
+  </li>
+</ul>
+<p>虽然可以使用其他机制（例如，网络套接字或全局可写文件）来实现 IPC，但上面这些都是建议使用的 Android IPC 框架。建议 Android 开发者遵循保护用户数据及避免引入安全漏洞方面的最佳做法。</p>
+<h2 id="cost-sensitive-apis">费用敏感 API</h2>
+<p>费用敏感 API 指可能会给用户或网络带来费用的任何功能。Android 平台已将费用敏感 API 放入由操作系统控制的受保护 API 列表中。如果有第三方应用请求使用费用敏感 API，必须要由用户授予明确的权限，它们才能使用这些 API。这些 API 包括：</p>
+<ul>
+  <li>电话</li>
+  <li>短信/彩信</li>
+  <li>网络/数据</li>
+  <li>应用内结算</li>
+  <li>NFC 访问</li>
+</ul>
+<p>Android 4.2 进一步增强了对使用短信的控制。如果有应用尝试向使用付费服务的短代码发送短信（可能会产生额外的费用），Android 将会通知用户。用户可以选择是允许还是阻止该应用发送短信。</p>
+<h2 id="sim-card-access">SIM 卡访问</h2>
+<p>第三方应用无法对 SIM 卡进行底层访问。操作系统负责处理与 SIM 卡之间的所有通信，包括访问 SIM 卡内存中的个人信息（通讯录）。应用也无法访问 AT 命令，因为这些命令完全由无线接口层 (RIL) 进行管理。RIL 不会为这些命令提供任何高层 API。</p>
+<h2 id="personal-information">个人信息</h2>
+<p>Android 已将能够用于访问用户数据的 API 放入受保护 API 组中。在正常使用期间，Android 设备还会收集用户安装的第三方应用内的用户数据。选择分享这些信息的应用可以使用 Android 操作系统权限检查功能保护来自第三方应用的数据。</p>
+<img alt="只能通过受保护的 API 访问敏感用户数据" src="../images/permissions_check.png" id="figure2"/>
+<p class="img-caption">
+  <strong>图 2.</strong> 只能通过受保护的 API 访问敏感的用户数据</p>
+<p>可能包含个人信息或个人身份信息（例如，通讯录和日历）的系统内容提供程序在创建时便已拥有明确确定的权限。这种精细的设计可让用户清楚地知道哪些类型的信息可能会提供给相应应用。在安装过程中，第三方应用可能会请求获得访问这些资源的权限。获得授权后，应用便可以进行安装，并且只要安装在设备上，便会一直有权访问请求的数据。</p>
+<p>默认情况下，收集个人信息的所有应用都会仅限特定应用访问这些数据。如果某个应用选择通过 IPC 将数据提供给其他应用，那么这个授予访问权限的应用便可以限制由操作系统强制执行的 IPC 机制的权限。</p>
+<h2 id="sensitive-data-input-devices">敏感数据输入设备</h2>
+<p>Android 设备经常会提供可让应用与周围环境进行互动的敏感数据输入设备（例如，摄像头、麦克风或 GPS）。对于要使用这些设备的第三方应用，必须先由用户通过使用 Android 操作系统权限向其明确提供使用权限。安装应用时，安装程序会以提供名称的方式请求用户授予使用相应传感器的权限。</p>
+<p>如果某个应用想要知道用户所在的位置，则需要获得获取用户位置信息的权限。安装应用时，安装程序会询问用户是否允许相应应用获取用户的位置信息。如果用户不希望任何应用获取其位置信息，可以随时运行“设置”应用，转到“位置和安全”，然后取消选中“使用无线网络”和“启用 GPS 卫星”。这将针对用户设备上的所有应用停用需要使用位置信息的服务。</p>
+<h2 id="device-metadata">设备元数据</h2>
+<p>Android 还会尽力限制访问本身并不属于敏感数据，但可能会间接透露用户特征、用户偏好以及用户使用设备的方式的数据。</p>
+<p>默认情况下，应用无权访问操作系统日志、浏览器历史记录、电话号码以及硬件/网络标识信息。如果应用在安装时请求获得访问此类信息的权限，安装程序会询问用户是否允许相应应用访问此类信息。如果用户没有授予该权限，系统将不会安装相应应用。</p>
+<h2 id="certificate-authorities">证书授权中心</h2>
+<p>Android 中收录了一组已安装的系统证书授权中心，这些授权中心在整个系统范围内均可信。在 Android 7.0 之前的版本中，设备制造商可以修改其设备上搭载的 CA 组。不过，运行 7.0 及更高版本的设备将具有一组统一的系统 CA，并且不再允许设备制造商对其进行修改。
+</p>
+<p>要作为新的公共 CA 添加到 Android 收录的 CA 组中，相应 CA 必须要完成 <a href="https://wiki.mozilla.org/CA:How_to_apply">Mozilla CA 收录流程</a>，然后提交一项针对 Android 的功能请求 (<a href="https://code.google.com/p/android/issues/entry">https://code.google.com/p/android/issues/entry</a>)，以便请求添加到 <a href="https://android.googlesource.com/">Android 开放源代码项目</a> (AOSP) 收录的 Android CA 组中。
+</p>
+<p>此外还有一些设备专用 CA，这些 CA 不应被收录到 AOSP CA 核心组中，例如，安全访问运营商基础架构组件（例如，短信/彩信网关）时可能需要的运营商私有 CA。建议设备制造商将私有 CA 仅收录在需要信任这些 CA 的组件/应用中。如需更多详细信息，请参阅<a href="https://developer.android.com/preview/features/security-config.html">网络安全配置</a>。
+</p>
+<h2 id="application-signing">应用签名</h2>
+<p>通过<a href="/security/apksigning/index.html">代码签名</a>，开发者可以标识应用创作者并更新其应用，而无需创建复杂的接口和权限。在 Android 平台上运行的每个应用都必须要有开发者的签名。Google Play 或 Android 设备上的软件包安装程序会拒绝没有获得签名就尝试安装的应用。</p>
+<p>在 Google Play 上，应用签名可以将 Google 对开发者的信任和开发者对自己的应用的信任联系在一起。开发者知道自己的应用是以未经修改的形式提供给 Android 设备的，并且开发者可以对自己的应用的行为负责。</p>
+<p>在 Android 上，应用签名是将应用放入其应用沙盒的第一步。已签名的应用证书定义了哪个用户 ID 与哪个应用相关联；不同的应用要以不同的用户 ID 运行。应用签名可确保一个应用无法访问任何其他应用，通过明确定义的 IPC 进行访问时除外。</p>
+<p>当应用（APK 文件）安装到 Android 设备上时，软件包管理器会验证 APK 是否已经过适当签名（已使用 APK 中包含的证书签名）。如果该证书（或更准确地说，证书中的公钥）与为设备上的任何其他 APK 签名时使用的密钥一致，那么这个新 APK 可以选择在清单中指定它将与其他以类似方式签名的 APK 共用一个 UID。</p>
+<p>应用可以由第三方（原始设备制造商(OEM)、运营商、其他相关方）签名，也可以自行签名。Android 提供了使用自签名证书进行代码签名的功能，而开发者无需外部协助或许可即可生成自签名证书。应用并非必须由核心机构签名。Android 目前不对应用证书进行 CA 认证。</p>
+<p>应用还可以在“签名”保护级别声明安全权限，以便仅限使用同一个密钥签名的应用访问它们，同时维持单独的 UID 和应用沙盒。通过<a href="https://developer.android.com/guide/topics/manifest/manifest-element.html#uid">共用 UID 功能</a>，可以与共用的应用沙盒建立更紧密的联系，这是因为借助该功能，使用同一个开发者密钥签名的两个或更多应用可以在其清单中声明共用的 UID。</p>
+<h2 id="app-verification">应用验证</h2>
+<p>Android 4.2 及更高版本均支持应用验证。用户可以选择启用“验证应用”，并在安装应用之前由应用验证程序对其进行评估。如果用户尝试安装的应用可能有害，应用验证功能可以提醒用户；如果应用的危害性非常大，应用验证功能可以阻止安装。</p>
+<h2 id="digital-rights-management">数字版权管理</h2>
+<p>Android 平台提供了一个可扩展的 DRM 框架，以便应用根据与受版权保护的内容相关的许可限制条件来管理这些内容。DRM 框架支持多种 DRM 方案；设备具体支持哪些 DRM 方案由设备制造商决定。</p>
+<p><a href="https://developer.android.com/reference/android/drm/package-summary.html">Android DRM 框架</a>是在以下两个架构层中实现的（请参见下图）：</p>
+<ul>
+  <li>
+    <p>DRM 框架 API：通过 Android 应用框架提供给应用，并通过适用于标准应用的 Dalvik VM 运行。</p>
+  </li>
+  <li>
+    <p>本机代码 DRM 管理器：用于实现 DRM 框架，并为 DRM 插件（代理）提供接口，以便处理各种 DRM 方案的版权管理和解密操作。</p>
+  </li>
+</ul>
+<p><img alt="Android 平台上的数字版权管理架构" src="/devices/images/ape_fwk_drm_2.png" id="figure3"/></p>
+<p class="img-caption">
+  <strong>图 3.</strong> Android 平台上的数字版权管理架构</p>
+
+</body></html>

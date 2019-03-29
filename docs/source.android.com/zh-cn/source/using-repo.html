@@ -1,0 +1,258 @@
+<html devsite><head>
+    <title>Repo 命令参考资料</title>
+    <meta name="project_path" value="/_project.yaml"/>
+    <meta name="book_path" value="/_book.yaml"/>
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+<p>使用 Repo 需遵循的格式如下：</p>
+<pre><code>repo <em>&lt;COMMAND&gt;</em> <em>&lt;OPTIONS&gt;</em>
+</code></pre>
+<p>可选元素显示在方括号 [ ] 中。例如，许多命令会将项目列表用作参数。您可以为项目指定项目列表，作为名称列表或本地源代码目录的路径列表：</p>
+<pre><code>repo sync [<em>&lt;PROJECT0&gt;</em> <em>&lt;PROJECT1&gt;</em> <em>&lt;PROJECTN&gt;</em>]
+repo sync [<em>&lt;/PATH/TO/PROJECT0&gt;</em> ... <em>&lt;/PATH/TO/PROJECTN&gt;</em>]
+</code></pre>
+
+<h2 id="help">help</h2>
+<p>安装 Repo 后，您可以通过运行以下命令找到最新文档（开头是包含所有命令的摘要）：</p>
+<pre><code>repo help
+</code></pre>
+<p>您可以通过在 Repo 树中运行以下命令来获取有关某个命令的信息：</p>
+<pre><code>repo help <em>&lt;COMMAND&gt;</em>
+</code></pre>
+
+<p>例如，以下命令会生成 Repo <code>init</code> 参数的说明和选项列表，该参数会在当前目录中初始化 Repo。（要了解详情，请参阅 <a href="#init">init</a>。）</p>
+<pre><code>repo help init
+</code></pre>
+
+<h2 id="init">init</h2>
+<pre><code>$ repo init -u <em>&lt;URL&gt;</em> [<em>&lt;OPTIONS&gt;</em>]
+</code></pre>
+<p>在当前目录中安装 Repo。这会创建一个 <code>.repo/</code> 目录，其中包含用于 Repo 源代码和标准 Android 清单文件的 Git 代码库。该 <code>.repo/</code> 目录中还包含 <code>manifest.xml</code>，这是一个指向 <code>.repo/manifests/</code> 目录中所选清单的符号链接。</p>
+<p>选项：</p>
+<ul>
+<li>
+<p><code>-u</code>：指定要从中检索清单代码库的网址。您可以在 <code>https://android.googlesource.com/platform/manifest</code> 中找到常见清单</p>
+</li>
+<li>
+<p><code>-m</code>：在代码库中选择清单文件。如果未选择任何清单名称，则会默认选择 default.xml。</p>
+</li>
+<li>
+<p><code>-b</code>：指定修订版本，即特定的清单分支。</p>
+</li>
+</ul>
+<p class="note"><strong>注意</strong>：对于其余的所有 Repo 命令，当前工作目录必须是 <code>.repo/</code> 的父目录或相应父目录的子目录。</p>
+<h2 id="sync">sync</h2>
+<pre><code>repo sync [<em>&lt;PROJECT_LIST&gt;</em>]
+</code></pre>
+<p>下载新的更改并更新本地环境中的工作文件。如果您在未使用任何参数的情况下运行 <code>repo sync</code>，则该操作会同步所有项目的文件。</p>
+<p>运行 <code>repo sync</code> 后，将出现以下情况：</p>
+<ul>
+<li>
+<p>如果目标项目从未同步过，则 <code>repo sync</code> 相当于 <code>git clone</code>。远程代码库中的所有分支都会复制到本地项目目录中。</p>
+</li>
+<li>
+<p>如果目标项目已同步过，则 <code>repo sync</code> 相当于以下命令：</p>
+<pre><code>git remote update
+git rebase origin/<em>&lt;BRANCH&gt;</em>
+</code></pre>
+<p>其中 <code><em>&lt;BRANCH&gt;</em></code> 是本地项目目录中当前已检出的分支。如果本地分支没有在跟踪远程代码库中的分支，则相应项目不会发生任何同步。</p>
+</li>
+<li>
+<p>如果 git rebase 操作导致合并冲突，那么您需要使用普通 Git 命令（例如 <code>git rebase --continue</code>）来解决冲突。</p>
+</li>
+</ul>
+<p><code>repo sync</code> 运行成功后，指定项目中的代码会与远程代码库中的代码保持同步。</p>
+<p>选项：</p>
+<ul>
+<li>
+<p><code>-d</code>：将指定项目切换回清单修订版本。如果项目当前属于某个主题分支，但只是临时需要清单修订版本，则此选项会有所帮助。</p>
+</li>
+<li>
+<p><code>-s</code>：同步到当前清单中清单服务器元素指定的一个已知的良好版本。</p>
+</li>
+<li>
+<p><code>-f</code>：即使某个项目同步失败，系统也会继续同步其他项目。</p>
+</li>
+</ul>
+<h2 id="upload">upload</h2>
+<pre><code>repo upload [<em>&lt;PROJECT_LIST&gt;</em>]
+</code></pre>
+<p>对于指定的项目，Repo 会将本地分支与最后一次 repo sync 时更新的远程分支进行比较。Repo 会提示您选择一个或多个尚未上传以供审核的分支。</p>
+<p>您选择一个或多个分支后，所选分支上的所有提交都会通过 HTTPS 连接传输到 Gerrit。您需要配置一个 HTTPS 密码以启用上传授权。要生成新的用户名/密码对以用于 HTTPS 传输，请访问<a href="https://android-review.googlesource.com/new-password">密码生成器</a>。</p>
+<p>当 Gerrit 通过其服务器接收对象数据时，它会将每项提交转变成一项更改，以便审核者可以单独针对每项提交给出意见。要将几项“检查点”提交合并为一项提交，请使用 git rebase -i，然后再运行 repo upload。</p>
+<p>如果您在未使用任何参数的情况下运行 repo upload，则该操作会搜索所有项目中的更改以进行上传。</p>
+<p>要在更改上传之后对其进行修改，您应该使用 <code>git rebase -i</code> 或 <code>git commit --amend</code> 等工具更新您的本地提交。修改完成之后，请执行以下操作：</p>
+<ul>
+<li>
+<p>进行核对以确保更新后的分支是当前已检出的分支。</p>
+</li>
+<li>
+<p>对于相应系列中的每项提交，请在方括号内输入 Gerrit 更改 ID：</p>
+<pre><code># Replacing from branch foo
+[ 3021 ] 35f2596c Refactor part of GetUploadableBranches to lookup one specific...
+[ 2829 ] ec18b4ba Update proto client to support patch set replacments
+# Insert change numbers in the brackets to add a new patch set.
+# To create a new change record, leave the brackets empty.
+</code></pre>
+</li>
+</ul>
+<p>上传完成后，这些更改将拥有一个额外的补丁程序集。</p>
+<h2 id="diff">diff</h2>
+<pre><code>repo diff [<em>&lt;PROJECT_LIST&gt;</em>]
+</code></pre>
+<p>使用 <code>git diff</code> 显示提交与工作树之间的明显更改。</p>
+<h2 id="download">download</h2>
+<pre><code>repo download <em>&lt;TARGET&gt;</em> <em>&lt;CHANGE&gt;</em>
+</code></pre>
+<p>从审核系统中下载指定更改，并放在您项目的本地工作目录中供使用。</p>
+<p>例如，要将<a href="https://android-review.googlesource.com/23823">更改 23823</a> 下载到您的平台/编译目录，请运行以下命令：</p>
+<pre><code>$ repo download platform/build 23823
+</code></pre>
+<p><code>repo sync</code> 应该可以有效移除通过 <code>repo download</code> 检索到的任何提交。或者，您可以将远程分支检出，例如 <code>git checkout m/master</code>。</p>
+<p class="note"><strong>注意</strong>：由于全球的所有服务器均存在复制延迟，因此某项更改（位于 <a href="https://android-review.googlesource.com/">Gerrit</a> 中）出现在网络上的时间与所有用户可通过 <code>repo download</code> 找到此项更改的时间之间存在些许的镜像延迟。</p>
+<h2 id="forall">forall</h2>
+<pre><code>repo forall [<em>&lt;PROJECT_LIST&gt;</em>] -c <em>&lt;COMMAND&gt;</em>
+</code></pre>
+<p>在每个项目中运行指定的 shell 命令。通过 <code>repo forall</code> 可使用下列额外的环境变量：</p>
+<ul>
+<li>
+<p><code>REPO_PROJECT</code> 可设为项目的具有唯一性的名称。</p>
+</li>
+<li>
+<p><code>REPO_PATH</code> 是客户端根目录的相对路径。</p>
+</li>
+<li>
+<p><code>REPO_REMOTE</code> 是清单中远程系统的名称。</p>
+</li>
+<li>
+<p><code>REPO_LREV</code> 是清单中修订版本的名称，已转换为本地跟踪分支。如果您需要将清单修订版本传递到某个本地运行的 Git 命令，则可使用此变量。</p>
+</li>
+<li>
+<p><code>REPO_RREV</code> 是清单中修订版本的名称，与清单中显示的名称完全一致。</p>
+</li>
+</ul>
+<p>选项：</p>
+<ul>
+<li>
+<p><code>-c</code>：要运行的命令和参数。此命令会通过 <code>/bin/sh</code> 进行求值，它之后的任何参数都将作为 shell 位置参数传递。</p>
+</li>
+<li>
+<p><code>-p</code>：在指定命令输出结果之前显示项目标头。这通过以下方式实现：将管道绑定到命令的 stdin、stdout 和 sterr 流，然后通过管道将所有输出结果传输到一个页面调度会话中显示的连续流中。</p>
+</li>
+<li>
+<p><code>-v</code>：显示该命令向 stderr 写入的消息。</p>
+</li>
+</ul>
+<h2 id="prune">prune</h2>
+<pre><code>repo prune [<em>&lt;PROJECT_LIST&gt;</em>]
+</code></pre>
+<p>删减（删除）已合并的主题。</p>
+<h2 id="start">start</h2>
+<pre><code>repo start <em>&lt;BRANCH_NAME&gt;</em> [<em>&lt;PROJECT_LIST&gt;</em>]
+</code></pre>
+<p>从清单中指定的修订版本开始，创建一个新的分支进行开发。</p>
+<p><code><em>&lt;BRANCH_NAME&gt;</em></code> 参数应简要说明您尝试对项目进行的更改。如果您不知道，则不妨考虑使用默认名称。</p>
+<p><code><em>&lt;PROJECT_LIST&gt;</em></code> 指定了将参与此主题分支的项目。</p>
+<p class="note"><strong>注意</strong>：“.”是一个非常实用的简写形式，用来代表当前工作目录中的项目。</p>
+<h2 id="status">status</h2>
+<pre><code>repo status [<em>&lt;PROJECT_LIST&gt;</em>]
+</code></pre>
+<p>对于每个指定的项目，将工作树与临时区域（索引）以及此分支 (HEAD) 上的最近一次提交进行比较。在这三种状态存在差异之处显示每个文件的摘要行。</p>
+<p>要仅查看当前分支的状态，请运行 <code>repo status</code>。系统会按项目列出状态信息。对于项目中的每个文件，系统使用两个字母的代码来表示：</p>
+<p>在第一列中，大写字母表示临时区域与上次提交状态之间的不同之处。</p>
+<table>
+<thead>
+<tr>
+<th>字母</th>
+<th>含义</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>-</td>
+<td>无更改</td>
+<td>HEAD 与索引中相同</td>
+</tr>
+<tr>
+<td>A</td>
+<td>已添加</td>
+<td>不存在于 HEAD 中，但存在于索引中</td>
+</tr>
+<tr>
+<td>M</td>
+<td>已修改</td>
+<td>存在于 HEAD 中，但索引中的文件已修改</td>
+</tr>
+<tr>
+<td>D</td>
+<td>已删除</td>
+<td>存在于 HEAD 中，但不存在于索引中</td>
+</tr>
+<tr>
+<td>R</td>
+<td>已重命名</td>
+<td>不存在于 HEAD 中，但索引中的文件的路径已更改</td>
+</tr>
+<tr>
+<td>C</td>
+<td>已复制</td>
+<td>不存在于 HEAD 中，已从索引中的另一个文件复制</td>
+</tr>
+<tr>
+<td>T</td>
+<td>模式已更改</td>
+<td>HEAD 与索引中的内容相同，但模式已更改</td>
+</tr>
+<tr>
+<td>U</td>
+<td>未合并</td>
+<td>HEAD 与索引之间存在冲突；需要解决方案</td>
+</tr>
+</tbody>
+</table>
+<p>在第二列中，小写字母表示工作目录与索引之间的不同之处。</p>
+<table>
+<thead>
+<tr>
+<th>字母</th>
+<th>含义</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>-</td>
+<td>新/未知</td>
+<td>不存在于索引中，但存在于工作树中</td>
+</tr>
+<tr>
+<td>m</td>
+<td>已修改</td>
+<td>存在于索引中，也存在于工作树中（但已修改）</td>
+</tr>
+<tr>
+<td>d</td>
+<td>已删除</td>
+<td>存在于索引中，不存在于工作树中</td>
+</tr>
+</tbody>
+</table>
+
+</body></html>

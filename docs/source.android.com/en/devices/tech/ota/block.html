@@ -1,0 +1,150 @@
+<html devsite>
+  <head>
+    <title>Block-Based OTAs</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>You can enable block-based over-the-air (OTA) updates for new devices
+running Android 5.0. OTA is the mechanism by which OEMs remotely update the
+system partition of a device:</p>
+<ul>
+<li><b>Android 5.0</b> and later versions use block OTA updates to ensure that
+each device uses the exact same partition. Instead of comparing individual
+files and computing binary patches, block OTA handles the entire partition as
+one file and computes a single binary patch, ensuring the resultant partition
+contains exactly the intended bits. This allows the device system image to
+achieve the same state via fastboot or OTA.</li>
+<li><b>Android 4.4</b> and earlier versions used file OTA updates, which
+ensured devices contained similar file contents, permissions, and modes, but
+allowed metadata such as timestamps and the layout of the underlying storage
+to vary between devices based on the update method.</li>
+
+</ul>
+<p>Because block OTA ensures that each device uses the same partition, it
+enables the use of dm-verity to cryptographically sign the system partition.
+For details on dm-verity, see
+<a href="/security/verifiedboot/index.html">Verified Boot</a>.
+</p>
+
+<p class="note"><strong>Note:</strong> You must have a working block OTA
+system before using dm-verity.</p>
+
+<h2 id="Recommendations">Recommendations</h2>
+
+<p>For devices launching with Android 5.0 or later, use block OTA updates in
+the factory ROM. To generate a block-based OTA for subsequent updates, pass
+the <code>--block</code> option to <code>ota_from_target_files</code>.</p>
+
+<p>For devices that launched with Android 4.4 or earlier, use file OTA
+updates. While it is possible to transition devices by sending a full block
+OTA of Android 5.0 or later, it requires sending out a full OTA that is
+significantly larger than an incremental OTA (and is therefore discouraged).
+</p>
+
+<p>Because dm-verity requires bootloader support found only in new devices
+shipping with Android 5.0 or later, you <i>cannot</i> enable dm-verity for
+existing devices.</p>
+
+<p>Developers working on the Android OTA system (the recovery image and the
+scripts that generate OTAs) can keep up with changes by subscribing to the
+<a href="https://groups.google.com/forum/#!forum/android-ota">android-ota@googlegroups.com</a>
+mailing list.</p>
+
+<h2 id="File vs. Block OTAs">File vs. Block OTAs</h2>
+
+<p>During a file-based OTA, Android attempts to change the contents of the
+system partition at the filesystem layer (on a file-by-file basis). The update
+is not guaranteed to write files in a consistent order, have a consistent last
+modified time or superblock, or even place the blocks in the same location on
+the block device. For this reason, file-based OTAs fail on a dm-verity-enabled
+device; after the OTA attempt, the device does not boot.</p>
+<p>During a block-based OTA, Android serves the device the difference between
+the two block images (rather than two sets of files). The update checks a
+device build against the corresponding build server at the block level (below
+the filesystem) using one of the following methods:</p>
+<ul>
+<li><b>Full update</b>. Copying the full system image is simple and makes
+patch generation easy but also generates large images that can make applying
+patches expensive.</li>
+<li><b>Incremental update</b>. Using a binary differ tool generates smaller
+images and makes patch application easy, but is memory-intensive when
+generating the patch itself.</li>
+</ul>
+
+<p class="note"><strong>Note:</strong> <code>adb fastboot</code> places the
+exact same bits on the device as a full OTA, so flashing is compatible with
+block OTA.</p>
+
+<h3 id="Unmodified Systems">Updating unmodified systems</h3>
+
+<p>For devices with <i>unmodified</i> system partitions running Android 5.0,
+the download and install process for a block OTA remains the same as for a
+file OTA. However, the OTA update itself might include one or more of the
+following differences:</p>
+<ul>
+<li><b>Download size</b>. Full block OTA updates are approximately the same
+size as full file OTA updates, and incremental updates can be just a few
+megabytes larger.</p>
+
+<img src="../images/ota_size_comparison.png" alt="comparison of OTA sizes">
+
+<p class="img-caption"><strong>Figure 1.</strong> Compare Nexus 6 OTA sizes
+between Android 5.0 and Android 5.1 releases (varying target build changes)</p>
+
+<p>In general, incremental block OTA updates are larger than incremental file
+OTA updates due to:</p>
+<ul>
+<li><i>Data preservation</i>. Block-based OTAs preserve more data (file
+metadata, dm-verity data, ext4 layout, etc.) than file-based OTA.</li>
+<li><i>Computation algorithm differences</i>. In a file OTA update, if a file
+path is identical in both builds, the OTA package contains no data for that
+file. In a block OTA update, determining little or no change in a file depends
+on the quality of the patch computation algorithm and layout of file data in
+both source and target system.</li>
+</ul>
+</li>
+<li><b>Sensitivity to faulty flash and RAM</b>. If a file is corrupted, a file
+OTA succeeds as long as it doesn't touch the corrupted file, but a block OTA
+fails if it detects any corruption on the system partition.</li>
+</ul>
+
+<h3 id="Modified Systems">Updating modified systems</h3>
+<p>For devices with <i>modified</i> system partitions running Android 5.0:</p>
+<ul>
+<li><b>Incremental block OTA updates fail</b>. A system partition might be
+modified during an <code>adb remount</code> or as a result of malware. File
+OTA tolerates some changes to the partition, such as the addition of files
+that are not part of the source or target build. However, block OTA does not
+tolerate additions to the partition, so users will need to install a full OTA
+overwriting any system partition modifications) or flash a new system image to
+enable future OTAs.</li>
+<li><b>Attempts to change modified files cause update failure</b>. For both
+file and block OTA updates, if the OTA attempts to change a file that has been
+modified, the OTA update fails.</li>
+<li><b>Attempts to access modified files generate errors </b><i>(dm-verity
+only)</i>. For both file and block OTA updates, if dm-verity is enabled and
+the OTA attempts to access modified parts of the system filesystem, the OTA
+generates an error.</li>
+</ul>
+
+  </body>
+</html>

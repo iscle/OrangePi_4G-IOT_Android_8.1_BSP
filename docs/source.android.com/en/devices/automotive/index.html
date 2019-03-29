@@ -1,0 +1,109 @@
+<html devsite>
+  <head>
+    <title>Automotive</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<img style="float: right; margin: 0px 15px 15px 15px;"
+src="../images/ape_fwk_hal_vehicle.png" alt="Android vehicle HAL icon"/>
+
+<p>Many car subsystems interconnect with each other and the in-vehicle
+infotainment (IVI) system via various bus topologies. The exact bus type and
+protocols vary widely between manufacturers (and even between different vehicle
+models of the same brand); examples include Controller Area Network (CAN) bus,
+Local Interconnect Network (LIN) bus, Media Oriented Systems Transport (MOST),
+as well as automotive-grade Ethernet and TCP/IP networks such as BroadR-Reach.
+</p>
+<p>the Android Automotive hardware abstraction layer (HAL) provides a
+consistent interface to the Android framework regardless of physical transport
+layer. This vehicle HAL is the interface for developing Android Automotive
+implementations.</p>
+<p>System integrators can implement a vehicle HAL module by connecting
+function-specific platform HAL interfaces (e.g. HVAC) with technology-specific
+network interfaces (e.g. CAN bus). Typical implementations may include a
+dedicated Microcontroller Unit (MCU) running a proprietary real-time operating
+system (RTOS) for CAN bus access or similar, which may be connected via a serial
+link to the CPU running Android Automotive. Instead of a dedicated MCU, it may
+also be possible to implement the bus access as a virtualized CPU. It is up to
+each partner to choose the architecture suitable for the hardware as long as the
+implementation fulfills the interface requirements for the vehicle HAL.</p>
+
+<h2 id=arch>Architecture</h2>
+<p>The vehicle HAL is the interface definition between the car and the vehicle
+network service:</p>
+
+<img src="../images/vehicle_hal_arch.png" alt="Android vehicle HAL architecture">
+<p class="img-caption"><strong>Figure 1</strong>. Vehicle HAL and Android
+automotive architecture</p>
+
+<ul>
+<li><strong>Car API</strong>. Contains the APIs such as CarHvacManager,
+CarSensorManager, and CarCameraManager. For details on supported APIs,
+refer to <code>/platform/packages/services/Car/car-lib</code>.</li>
+<li><strong>CarService</strong>. Located at
+<code>/platform/packages/services/Car/</code>.</li>
+<li><strong>VehicleNetworkService</strong>. Controls vehicle HAL with built-in
+security. Access restricted to system components only (non-system components
+such as third party apps should use car API instead). OEMs can control access
+using <code>vns_policy.xml</code> and <code>vendor_vns_policy.xml</code>.
+Located at <code>/platform/packages/services/Car/vehicle_network_service/</code>;
+for libraries to access the vehicle network, refer to
+<code>/platform/packages/services/Car/libvehiclenetwork/</code>.</li>
+<li><strong>Vehicle HAL</strong>. Interface that defines the vehicle properties
+OEMs can implement. Contains property metadata (for example, whether the vehicle
+property is an int and which change modes are allowed). Located at
+<code>hardware/libhardware/include/hardware/vehicle.h</code>. For a basic
+reference implementation, refer to
+<code>hardware/libhardware/modules/vehicle/</code>.</li>
+</ul>
+<p>For more details, see <a href="/devices/automotive/properties.html">Vehicle
+Properties</a>.
+
+<h2 id=security>Security</h2>
+<p>The vehicle HAL supports three levels of security for accessing data:</p>
+<ul>
+<li>System only (controlled by <code>vns_policy.xml</code>)</li>
+<li>Accessible to app with permission (through car service)</li>
+<li>Accessible without permission (through car service)</li>
+</ul>
+<p>Direct access to vehicle properties is allowed only to selected system
+components with vehicle network service acting as the gatekeeper. Most
+applications go through additional gatekeeping by car service (for example, only
+system applications can control HVAC as it requires system permission granted
+only to system apps).</p>
+
+<h2 id=validation>Validation</h2>
+<p>AOSP includes the following testing resources for use in development:</p>
+<ul>
+<li><code>hardware/libhardware/tests/vehicle/vehicle-hal-tool.c</code><br>
+Command-line native tool to load vehicle HAL and do simple operations. Useful
+for getting the system up and running in the early stages of development.</li>
+<li><code>packages/services/Car/tests/carservice_test/</code><br>Contains car
+service testing with mocked vehicle HAL properties. For each property, expected
+behavior is implemented in the test. This can be a good starting point to
+understand expected behavior.</li>
+<li><code>hardware/libhardware/modules/vehicle/</code><br>A basic reference
+implementation.</li>
+</ul>
+
+  </body>
+</html>

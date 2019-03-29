@@ -1,0 +1,334 @@
+<html devsite>
+  <head>
+    <title>Signing Builds for Release</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>Android OS images use cryptographic signatures in two places:</p>
+<ol>
+<li>Each .apk file inside the image must be signed. Android's Package Manager
+uses an .apk signature in two ways:<ul>
+<li>When an application is replaced, it must be signed by the same key as the
+old application in order to get access to the old application's data. This
+holds true both for updating user apps by overwriting the .apk, and for
+overriding a system app with a newer version installed under
+<code>/data</code>.</li>
+<li>If two or more applications want to share a user ID (so they can share
+data, etc.), they must be signed with the same key.</li></ul>
+<li>OTA update packages must be signed with one of the keys expected by the
+system or the installation process will reject them.</li>
+</ol>
+
+<h2 id="release-keys">Release keys</h2>
+
+<p>The Android tree includes <i>test-keys</i> under
+<code>build/target/product/security</code>. Building an Android OS image
+using <code>make</code> will sign all .apk files using the test-keys.
+Since the test-keys are publicly known, anybody can sign their own .apk files
+with the same keys, which may allow them to replace or hijack system
+apps built into your OS image. For this reason it is critical to sign any
+publicly released or deployed Android OS image with a special set of
+<i>release-keys</i> that only you have access to.</p>
+
+<p>To generate your own unique set of release-keys, run these commands from
+the root of your Android tree:</p>
+
+<pre class="devsite-click-to-copy">
+<code class="devsite-terminal">subject='/C=US/ST=California/L=Mountain View/O=Android/OU=Android/CN=Android/emailAddress=android@android.com'</code>
+<code class="devsite-terminal">mkdir ~/.android-certs</code>
+<code class="devsite-terminal">for x in releasekey platform shared media; do \
+    ./development/tools/make_key ~/.android-certs/$x "$subject"; \
+done</code>
+</pre>
+
+<p><code>$subject</code> should be changed to reflect your organization's
+information. You can use any directory, but be careful to pick a
+location that is backed up and secure. Some vendors choose to encrypt
+their private key with a strong passphrase and store the encrypted key
+in source control; others store their release keys somewhere else entirely,
+such as on an air-gapped computer.</p>
+
+<p>To generate a release image, use:</p>
+
+<pre class="devsite-click-to-copy">
+<code class="devsite-terminal">make dist</code>
+<code class="devsite-terminal">./build/tools/releasetools/sign_target_files_apks \
+    -o \    # explained in the next section
+    -d ~/.android-certs out/dist/*-target_files-*.zip \
+    signed-target_files.zip</code>
+</pre>
+
+<p>The <code>sign_target_files_apks</code> script takes a target-files .zip
+as input and produces a new target-files .zip in which all the .apks have
+been signed with new keys. The newly signed images can be found under
+<code>IMAGES/</code> in <code>signed-target_files.zip</code>.</p>
+
+<h2 id="sign-ota-packages">Signing OTA packages</h2>
+
+A signed target-files zip can be converted into a signed OTA update zip
+using the following procedure:
+
+<pre class="devsite-click-to-copy">
+<code class="devsite-terminal">./build/tools/releasetools/ota_from_target_files \
+    -k ~/.android-certs/releasekey \
+    signed-target_files.zip \
+    signed-ota_update.zip</code>
+</pre>
+
+<h3 id="signatures-sideloading">Signatures and sideloading</h3>
+<p>Sideloading does not bypass recovery's normal package signature
+verification mechanism—before installing a package, recovery will verify that
+it is signed with one of the private keys matching the public keys stored in
+the recovery partition, just as it would for a package delivered over-the-air.
+</p>
+
+<p>Update packages received from the main system are typically verified twice:
+once by the main system, using the
+<code><a href="http://developer.android.com/reference/android/os/RecoverySystem.html#verifyPackage">RecoverySystem.verifyPackage()</a></code>
+method in the android API, and then again by
+recovery. The RecoverySystem API checks the signature against public keys
+stored in the main system, in the file <code>/system/etc/security/otacerts.zip
+</code> (by default). Recovery checks the signature against public keys stored
+in the recovery partition RAM disk, in the file <code>/res/keys</code>.</p>
+
+<p>By default, the target-files .zip produced by the build sets the OTA
+certificate to match the test key. On a released image, a
+different certificate must be used so that devices can verify the
+authenticity of the update package. Passing the <code>-o</code> flag to
+<code>sign_target_files_apks</code>, as shown in the previous section, replaces
+the test key certificate with the release key certificate from your certs
+directory.</p>
+
+<p>Normally the system image and recovery image store the same set of OTA
+public keys.  By adding a key to <i>just</i> the recovery set of keys, it is
+possible to sign packages that can be installed only via sideloading
+(assuming the main system's update download mechanism is correctly doing
+verification against otacerts.zip). You can specify extra keys to be
+included only in recovery by setting the PRODUCT_EXTRA_RECOVERY_KEYS
+variable in your product definition:</p>
+
+<pre class="devsite-click-to-copy">
+vendor/yoyodyne/tardis/products/tardis.mk
+</pre>
+<pre class="devsite-click-to-copy">
+ [...]
+
+PRODUCT_EXTRA_RECOVERY_KEYS := vendor/yoyodyne/security/tardis/sideload
+</pre>
+
+<p>This includes the public key
+<code>vendor/yoyodyne/security/tardis/sideload.x509.pem</code> in the recovery
+keys file so it can install packages signed
+with it. The extra key is <i>not</i> included in otacerts.zip though, so
+systems that correctly verify downloaded packages do not invoke recovery for
+packages signed with this key.</p>
+
+<h2 id="certificates-keys">Certificates and private keys</h2>
+<p>Each key comes in two files: the <i>certificate</i>, which has the
+extension .x509.pem, and the <i>private key</i>, which has the extension .pk8.
+The private key should be kept secret and is needed to sign a package. The key
+may itself be protected by a password. The certificate, in
+contrast, contains only the public half of the key, so it can be distributed
+widely. It is used to verify a package has been signed by the corresponding
+private key.</p>
+<p>The standard Android build uses four keys, all of which reside in <code>
+build/target/product/security</code>:</p>
+
+<dl>
+<dt>testkey</dt>
+<dd>Generic default key for packages that do not otherwise specify a key.</dd>
+<dt>platform</dt>
+<dd>Test key for packages that are part of the core platform.</dd>
+<dt>shared</dt>
+<dd>Test key for things that are shared in the home/contacts process.</dd>
+<dt>media</dt>
+<dd>Test key for packages that are part of the media/download system.</dd></dl>
+
+<p>Individual packages specify one of these keys by setting LOCAL_CERTIFICATE
+in their Android.mk file. (testkey is used if this variable is not set.) You
+can also specify an entirely different key by pathname, e.g.:</p>
+
+<pre class="devsite-click-to-copy">
+device/yoyodyne/apps/SpecialApp/Android.mk
+</pre>
+<pre class="devsite-click-to-copy">
+ [...]
+
+LOCAL_CERTIFICATE := device/yoyodyne/security/special
+</pre>
+
+<p>Now the build uses the <code>device/yoyodyne/security/special.{x509.pem,pk8}
+</code> key to sign SpecialApp.apk. The build can use only private keys that
+are <i>not </i>password protected.</p>
+
+<h2 id="advanced-signing-options">Advanced signing options</h2>
+<p>When you run the <code>sign_target_files_apks</code> script, you must
+specify on the command line a replacement key for each key used in the build.
+The <code>-k <i>src_key</i>=<i>
+dest_key</i></code> flag specifies key replacements one at a time. The flag
+<code>-d <i>dir</i></code> lets you specify a directory with four keys to
+replace all those in <code>build/target/product/security</code>; it is
+equivalent to using <code>-k</code> four times to specify the mappings:</p>
+
+<pre class="devsite-click-to-copy">
+build/target/product/security/testkey  = dir/releasekey
+build/target/product/security/platform = dir/platform
+build/target/product/security/shared   = dir/shared
+build/target/product/security/media    = dir/media
+</pre>
+
+<p>For the hypothetical tardis product, you need five password-protected keys:
+four to replace the four in <code>build/target/product/security</code>, and
+one to replace the additional <code>keydevice/yoyodyne/security/special</code>
+required by SpecialApp in the example above. If the keys were in the following
+files:</p>
+
+<pre class="devsite-click-to-copy">
+vendor/yoyodyne/security/tardis/releasekey.x509.pem
+vendor/yoyodyne/security/tardis/releasekey.pk8
+vendor/yoyodyne/security/tardis/platform.x509.pem
+vendor/yoyodyne/security/tardis/platform.pk8
+vendor/yoyodyne/security/tardis/shared.x509.pem
+vendor/yoyodyne/security/tardis/shared.pk8
+vendor/yoyodyne/security/tardis/media.x509.pem
+vendor/yoyodyne/security/tardis/media.pk8
+vendor/yoyodyne/security/special.x509.pem
+vendor/yoyodyne/security/special.pk8           # NOT password protected
+vendor/yoyodyne/security/special-release.x509.pem
+vendor/yoyodyne/security/special-release.pk8   # password protected
+</pre>
+
+<p>Then you would sign all the apps like this:</p>
+
+<pre class="devsite-click-to-copy">
+<code class="devsite-terminal">./build/tools/releasetools/sign_target_files_apks -d vendor/yoyodyne/security/tardis -k vendor/yoyodyne/special=vendor/yoyodyne/special-release -o tardis-target_files.zip signed-tardis-target_files.zip</code>
+</pre>
+
+<p>This brings up the following:</p>
+<pre class="devsite-click-to-copy">
+Enter password for vendor/yoyodyne/security/special-release key&gt;
+Enter password for vendor/yoyodyne/security/tardis/media key&gt;
+Enter password for vendor/yoyodyne/security/tardis/platform key&gt;
+Enter password for vendor/yoyodyne/security/tardis/releasekey key&gt;
+Enter password for vendor/yoyodyne/security/tardis/shared key&gt;
+    signing: Phone.apk (vendor/yoyodyne/security/tardis/platform)
+    signing: Camera.apk (vendor/yoyodyne/security/tardis/media)
+    signing: Special.apk (vendor/yoyodyne/security/special-release)
+    signing: Email.apk (vendor/yoyodyne/security/tardis/releasekey)
+        [...]
+    signing: ContactsProvider.apk (vendor/yoyodyne/security/tardis/shared)
+    signing: Launcher.apk (vendor/yoyodyne/security/tardis/shared)
+rewriting SYSTEM/build.prop:
+  replace:  ro.build.description=tardis-user Eclair ERC91 15449 test-keys
+     with:  ro.build.description=tardis-user Eclair ERC91 15449 release-keys
+  replace: ro.build.fingerprint=generic/tardis/tardis/tardis:Eclair/ERC91/15449:user/test-keys
+     with: ro.build.fingerprint=generic/tardis/tardis/tardis:Eclair/ERC91/15449:user/release-keys
+    signing: framework-res.apk (vendor/yoyodyne/security/tardis/platform)
+rewriting RECOVERY/RAMDISK/default.prop:
+  replace:  ro.build.description=tardis-user Eclair ERC91 15449 test-keys
+     with:  ro.build.description=tardis-user Eclair ERC91 15449 release-keys
+  replace: ro.build.fingerprint=generic/tardis/tardis/tardis:Eclair/ERC91/15449:user/test-keys
+     with: ro.build.fingerprint=generic/tardis/tardis/tardis:Eclair/ERC91/15449:user/release-keys
+using:
+    vendor/yoyodyne/security/tardis/releasekey.x509.pem
+for OTA package verification
+done.
+</pre>
+
+<p>After prompting the user for passwords for all password-protected keys, the
+script re-signs all the .apk files in the input target .zip with the release
+keys. Before running the command, you can also set the ANDROID_PW_FILE
+environment variable to a temporary filename; the script then invokes your
+editor to allow you to enter passwords for all keys (this may be a more
+convenient way to enter passwords).<p>
+<p><code>sign_target_files_apks</code> also rewrites the build description and
+fingerprint in the build properties files to reflect the fact that this is a
+signed build. The <code>-t</code> flag can control what edits are made to the
+fingerprint. Run the script with <code>-h</code> to see documentation on all
+flags.</p>
+
+<h2 id="manually-generating-keys">Manually generating keys</h2>
+<p>Android uses 2048-bit RSA keys with public exponent 3. You can generate
+certificate/private key pairs using the openssl tool from
+<a href="https://www.openssl.org/">openssl.org</a>:</p>
+
+<pre class="devsite-click-to-copy">
+# generate RSA key
+<code class="devsite-terminal">openssl genrsa -3 -out temp.pem 2048</code>
+Generating RSA private key, 2048 bit long modulus
+....+++
+.....................+++
+e is 3 (0x3)
+
+# create a certificate with the public part of the key
+<code class="devsite-terminal">openssl req -new -x509 -key temp.pem -out releasekey.x509.pem -days 10000 -subj '/C=US/ST=California/L=San Narciso/O=Yoyodyne, Inc./OU=Yoyodyne Mobility/CN=Yoyodyne/emailAddress=yoyodyne@example.com'</code>
+
+# create a PKCS#8-formatted version of the private key
+<code class="devsite-terminal">openssl pkcs8 -in temp.pem -topk8 -outform DER -out releasekey.pk8 -nocrypt</code>
+
+# securely delete the temp.pem file
+<code class="devsite-terminal">shred --remove temp.pem</code>
+</pre>
+
+<p>The openssl pkcs8 command given above creates a .pk8 file with <i>no</i>
+password, suitable for use with the build system. To create a .pk8 secured
+with a password (which you should do for all actual release keys), replace the
+<code>-nocrypt</code> argument with <code>-passout stdin</code>; then openssl
+will encrypt the private key with a password read from standard input. No
+prompt is printed, so if stdin is the terminal the program will appear to hang
+when it's really just waiting for you to enter a password. Other values can be
+used for the-passout argument to read the password from other locations; for
+details, see the
+<a href="http://www.openssl.org/docs/man1.0.1/apps/openssl.html#PASS-PHRASE-ARGUMENTS">
+openssl documentation</a>.</p>
+<p>The temp.pem intermediate file contains the private key without any kind of
+password protection, so dispose of it thoughtfully when generating release
+keys. In particular, the GNUshred utility may not be effective on network or
+journaled filesystems. You can use a working directory located in a RAM disk
+(such as a tmpfs partition) when generating keys to ensure the intermediates
+are not inadvertently exposed.</p>
+
+<h2 id="creating-image-files">Creating image files</h2>
+
+<p>
+Once you have signed-target-files.zip, you need to
+create the image so you can put it onto a device.
+To create the signed image from the target files, run
+the following command from the root of the Android
+tree:
+</p>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+./build/tools/releasetools/img_from_target_files signed-target-files.zip signed-img.zip
+</pre>
+
+The resulting file, <code>signed-img.zip</code>, contains all the .img files.
+
+To load an image onto a device, use fastboot as
+follows:
+
+<pre class="devsite-terminal devsite-click-to-copy">
+fastboot update signed-img.zip
+</pre>
+
+  </body>
+</html>

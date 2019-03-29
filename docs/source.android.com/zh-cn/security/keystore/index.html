@@ -1,0 +1,55 @@
+<html devsite><head>
+    <title>由硬件支持的 Keystore</title>
+    <meta name="project_path" value="/_project.yaml"/>
+    <meta name="book_path" value="/_book.yaml"/>
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+<p>借助系统芯片 (SoC) 中提供的可信执行环境，Android 设备可以为 Android 操作系统、平台服务甚至是第三方应用提供由硬件支持的强大安全服务。寻求 Android 专用扩展程序的开发者应访问 <a href="https://developer.android.com/reference/android/security/keystore/KeyGenParameterSpec.html">android.security.keystore</a>。</p>
+
+<p>Keystore 在 Android 6.0 中得到了<a href="features.html">显著增强</a>，不仅增加了对称加密基元（AES 和 HMAC），还增加了针对由硬件支持的密钥的访问控制系统。访问控制在密钥生成期间指定，并会在密钥的整个生命周期内被强制执行。可以将密钥限定为仅在用户通过身份验证后才可使用，并且只能用于指定的目的或只有在具有指定的加密参数时才可使用。如需更多信息，请参阅<a href="implementer-ref.html">面向实现人员的参考资料</a>。</p>
+
+<p>在 Android 6.0 之前的版本中，Android 已有一个非常简单的由硬件支持的加密服务 API（由 0.2 和 0.3 版的 Keymaster 硬件抽象层 (HAL) 提供）。该 Keystore 能够提供数字签名和验证操作，以及不对称签名密钥对的生成和导入操作。该 API 在许多设备上都已实现，但有许多安全目标无法只通过一个签名 API 来轻松达成。Android 6.0 中的 Keystore 在该 Keystore API 的基础上进行了扩展，能够提供更广泛的功能。</p>
+
+<h2 id="goals">目标</h2>
+
+<p>Android 6.0 Keystore API 和底层 Keymaster 1.0 HAL 的目标是提供一套基本的但足以满足需求的加密基元，以便使用访问受控且由硬件支持的密钥实现相关协议。</p>
+
+<p>除了扩大加密基元的范围外，Android 6.0 中的 Keystore 还增加了以下内容：</p>
+
+<ul>
+  <li>一种使用控制方案：用于限制密钥的使用，并降低因滥用密钥而导致安全性受损的风险</li><li>一种访问控制方案：用于限定只有指定的用户和客户端能够使用相应密钥，并且只能在定义的时间范围内使用</li></ul>
+
+<h2 id="architecture">架构</h2>
+
+<p>Keymaster HAL 是由原始设备制造商 (OEM) 提供的动态加载库，Keystore 服务使用它来提供由硬件支持的加密服务。HAL 实现不得在用户空间（甚至是内核空间）中执行任何敏感操作。敏感操作会被委派给通过某个内核接口连接的安全处理器。最终的架构如下所示：</p>
+
+<div align="center">
+  <img src="../images/access-to-keymaster.png" alt="访问 Keymaster" id="figure1"/>
+</div>
+<p class="img-caption"><strong>图 1. </strong> 访问 Keymaster</p>
+
+<p>在 Android 设备中，Keymaster HAL 的“客户端”包含多个层（例如，应用、框架、Keystore 守护进程），但在本文档中可以将其忽略。这意味着，所介绍的 Keymaster HAL API 为底层 API，供平台内部组件使用，不面向应用开发者提供。<a href="https://developer.android.com/reference/android/security/keystore/KeyGenParameterSpec.html">Android 开发者网站</a>对更高层 API（第 23 层 API）进行了介绍。</p>
+
+<p>Keymaster HAL 的目的不是实现安全敏感型算法，而只是对发送到安全域的请求进行编排和解排。传输格式是由实现定义的。</p>
+
+<h2 id="compatibility_with_previous_versions">与之前版本的兼容性</h2>
+
+<p>Keymaster v1.0 HAL 与之前发布的 HAL（例如，Keymaster v0.2 和 v0.3）完全不兼容。为了在采用旧版 Keymaster HAL 且搭载的 Android 版本低于 Marshmallow 的设备上实现互用性，Keystore 提供了一个可通过调用现有硬件库来实现 1.0 HAL 的适配器。但结果是，它并不能提供 1.0 HAL 中的全部功能。尤其是，它仅支持 RSA 和 ECDSA 算法，而且所有密钥授权强制执行都将由该适配器在非安全域中进行。</p>
+
+</body></html>

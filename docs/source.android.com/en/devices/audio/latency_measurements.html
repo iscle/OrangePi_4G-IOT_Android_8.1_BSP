@@ -1,0 +1,423 @@
+<html devsite>
+  <head>
+    <title>Audio Latency Measurements</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+<p><a href="http://en.wikipedia.org/wiki/Latency_%28engineering%29">Latency</a>
+is an important system performance metric. While many kinds of
+<a href="latency.html">audio latency</a> metrics exist, one useful and
+well-understood metric is
+<a href="latency_measure.html#measuringRoundTrip">round-trip latency</a>,
+defined as the time it takes for an audio signal to enter the input of a mobile
+device, be processed by an app running on the application processor, and exit
+the output.</p>
+
+<img src="images/round_trip_on_device.png" alt="Round-trip audio latency on
+device" id="figure1" />
+<p class="img-caption"><strong>Figure 1.</strong> Round-trip audio latency on
+device: T<sub>output</sub> - T<sub>input</sub></p>
+
+<p>This page provides round-trip audio latency measurements for select
+Nexus/Pixel devices and Android platform versions.</p>
+
+<h2 id="why">Why we measure latency</h2>
+
+<p>Google measures and reports latency so Android application developers have
+the data they need to make informed decisions about available latency on actual
+devices. By sharing latency numbers for select Nexus and Pixel devices, we hope
+to encourage the entire Android community to measure, publish, and reduce
+latency on <em>all</em> Android devices. Please join us in our commitment to
+reducing audio latency!</p>
+
+<h2 id="app">Application impact on latency</h2>
+
+<p>Signal processing can add the following types of delay to latency:</p>
+<ul>
+<li><strong>Algorithmic</strong>. This delay is inherent and does not vary with
+the CPU. An example is the delay added by a
+<a href="http://en.wikipedia.org/wiki/Finite_impulse_response">finite impulse
+response</a> (FIR) filter.</li>
+<li><strong>Computational</strong>. This delay is related to the number of
+required CPU cycles. For example, attenuation of a signal is usually done by a
+multiplication operation that takes a varying number of cycles depending on the
+CPU.</li>
+</ul>
+
+<h2 id="how">How we measure</h2>
+
+<p>We made the measurements listed on this page using the
+<a href="loopback.html">Dr. Rick O'Rang audio loopback dongle</a> and an
+<a href="latency_measure.html#larsenTest">audio feedback (Larsen effect)
+test</a>. Measurements assume the application signal processing adds zero
+algorithmic delay and near-zero computational delay.</p>
+
+<p>We measure round-trip latency via the headset connector for several reasons:
+</p>
+<img src="images/round_trip_via_headset_connector.png" alt="Round-trip latency
+via headset connector" id="figure2" />
+<p class="img-caption"><strong>Figure 2.</strong> Round-trip latency via headset
+connector: T<sub>output</sub> - T<sub>input</sub></p>
+<ul>
+<li>Important music applications (such as guitar and voice processing) use the
+headset connector.</li>
+<li>Measuring round-trip latency of the on-device microphone and speaker can be
+cumbersome, as it is difficult to keep a feedback loop in open air from entering
+uncontrolled oscillation.</li>
+<li>On-device transducers are small and sacrifice frequency response to achieve
+their small size. To compensate, digital signal processing is applied but
+increases algorithmic delay for the on-device path.</li>
+</ul>
+
+<p>There are cases where on-device microphone and speaker latencies <em>do</em>
+matter, but they are usually for one direction, not round-trip. Techniques for
+measuring unidirectional latency are described at
+<a href="latency_measure.html#measuringOutput">Measuring Output Latency</a>
+and
+<a href="latency_measure.html#measuringInput">Measuring Input Latency</a>.</p>
+
+<h2 id="measurements">Example measurements</h2>
+
+<p>The measurements listed below are specific to a
+<a href="/source/build-numbers.html">build number</a>. Devices are listed in
+approximate order of initial release and by platform version; you can also
+<a href="#chart">view latencies in a chart</a>. The test application uses the
+Android native audio API based on OpenSL ES.</p>
+
+<table>
+<tr>
+  <th>Model</th>
+  <th>Platform<br />version</th>
+  <th>Build<br />number</th>
+  <th>Sample rate<br />(Hz)</th>
+  <th>Buffer size<br />(frames)</th>
+  <th>Buffer size<br />(ms)</th>
+  <th>Round-trip<br />latency (ms)<br />&plusmn; one buffer</th>
+</tr>
+
+<tr>
+  <td>Nexus One</td>
+  <td>2.3.6</td>
+  <td>GRK39F</td>
+  <td>44100</td>
+  <td>768</td>
+  <td>17.4</td>
+  <td>345</td>
+</tr>
+
+<tr>
+  <td>Nexus S</td>
+  <td>2.3.6</td>
+  <td>GRK39F</td>
+  <td>44100</td>
+  <td>1024</td>
+  <td>23.2</td>
+  <td>260</td>
+</tr>
+
+<tr>
+  <td>Nexus S</td>
+  <td>4.0.4</td>
+  <td>IMM76D</td>
+  <td>44100</td>
+  <td>1024</td>
+  <td>23.2</td>
+  <td>260</td>
+</tr>
+
+<tr>
+  <td>Nexus S</td>
+  <td>4.1.2</td>
+  <td>JZO54K</td>
+  <td>44100</td>
+  <td>880</td>
+  <td>20</td>
+  <td>210</td>
+</tr>
+
+<tr>
+  <td>Galaxy Nexus</td>
+  <td>4.0.1</td>
+  <td>ITL41D</td>
+  <td>44100</td>
+  <td>976</td>
+  <td>22.1</td>
+  <td>270</td>
+</tr>
+
+<tr>
+  <td>Galaxy Nexus</td>
+  <td>4.3</td>
+  <td>JWR66Y</td>
+  <td>44100</td>
+  <td>144</td>
+  <td>3.3</td>
+  <td>130</td>
+</tr>
+
+<tr>
+  <td>Nexus 4</td>
+  <td>4.2.2</td>
+  <td>JDQ39E</td>
+  <td>48000</td>
+  <td>240</td>
+  <td>5</td>
+  <td>195</td>
+</tr>
+
+<tr>
+  <td>Nexus 4</td>
+  <td>5.1</td>
+  <td>LMY47O</td>
+  <td>48000</td>
+  <td>240</td>
+  <td>5</td>
+  <td>58</td>
+</tr>
+
+<tr>
+  <td>Nexus 10</td>
+  <td>5.0.2</td>
+  <td>LRX22G</td>
+  <td>44100</td>
+  <td>256</td>
+  <td>5.8</td>
+  <td>36</td>
+</tr>
+
+<tr>
+  <td>Nexus 10</td>
+  <td>5.1</td>
+  <td>LMY47D</td>
+  <td>44100</td>
+  <td>256</td>
+  <td>5.8</td>
+  <td>35</td>
+</tr>
+
+<tr>
+  <td>Nexus 7<br />2013</td>
+  <td>4.3</td>
+  <td>JSR78D</td>
+  <td>48000</td>
+  <td>240</td>
+  <td>5</td>
+  <td>149</td>
+</tr>
+
+<tr>
+  <td>Nexus 7<br />2013</td>
+  <td>4.4</td>
+  <td>KRT16S</td>
+  <td>48000</td>
+  <td>240</td>
+  <td>5</td>
+  <td>85</td>
+</tr>
+
+<tr>
+  <td>Nexus 7<br />2013</td>
+  <td>5.0.2</td>
+  <td>LRX22G</td>
+  <td>48000</td>
+  <td>240</td>
+  <td>5</td>
+  <td>64</td>
+</tr>
+
+<tr>
+  <td>Nexus 7<br />2013</td>
+  <td>5.1</td>
+  <td>LMY47O</td>
+  <td>48000</td>
+  <td>240</td>
+  <td>5</td>
+  <td>55</td>
+</tr>
+
+<tr>
+  <td>Nexus 7<br />2013</td>
+  <td>6.0</td>
+  <td>MRA58K</td>
+  <td>48000</td>
+  <td>240</td>
+  <td>5</td>
+  <td>55</td>
+</tr>
+
+<tr>
+  <td>Nexus 5</td>
+  <td>4.4.4</td>
+  <td>KTU84P</td>
+  <td>48000</td>
+  <td>240</td>
+  <td>5</td>
+  <td>95</td>
+</tr>
+
+<tr>
+  <td>Nexus 5</td>
+  <td>5.0.0</td>
+  <td>LRX21O</td>
+  <td>48000</td>
+  <td>240</td>
+  <td>5</td>
+  <td>47</td>
+</tr>
+
+<tr>
+  <td>Nexus 5</td>
+  <td>5.1</td>
+  <td>LMY47I</td>
+  <td>48000</td>
+  <td>240</td>
+  <td>5</td>
+  <td>42</td>
+</tr>
+
+<tr>
+  <td>Nexus 5</td>
+  <td>6.0</td>
+  <td>MRA58K</td>
+  <td>48000</td>
+  <td>192</td>
+  <td>4</td>
+  <td>38</td>
+</tr>
+
+<tr>
+  <td>Nexus 9</td>
+  <td>5.0.0</td>
+  <td>LRX21L</td>
+  <td>48000</td>
+  <td>256</td>
+  <td>5.3</td>
+  <td>35</td>
+</tr>
+
+<tr>
+  <td>Nexus 9</td>
+  <td>5.0.1</td>
+  <td>LRX22C</td>
+  <td>48000</td>
+  <td>256</td>
+  <td>5.3</td>
+  <td>38</td>
+</tr>
+
+<tr>
+  <td>Nexus 9</td>
+  <td>5.1.1</td>
+  <td>LMY47X</td>
+  <td>48000</td>
+  <td>256</td>
+  <td>5.3</td>
+  <td>32</td>
+</tr>
+
+<tr>
+  <td>Nexus 9</td>
+  <td>6.0</td>
+  <td>MRA58K</td>
+  <td>48000</td>
+  <td>128</td>
+  <td>2.6</td>
+  <td>15</td>
+</tr>
+
+<tr>
+  <td>Nexus 6</td>
+  <td>5.0.1</td>
+  <td>LRX22C</td>
+  <td>48000</td>
+  <td>240</td>
+  <td>5</td>
+  <td>65</td>
+</tr>
+
+<tr>
+  <td>Nexus 6</td>
+  <td>5.1</td>
+  <td>LMY47I</td>
+  <td>48000</td>
+  <td>240</td>
+  <td>5</td>
+  <td>42</td>
+</tr>
+
+<tr>
+  <td>Nexus 6</td>
+  <td>6.0</td>
+  <td>MRA58K</td>
+  <td>48000</td>
+  <td>192</td>
+  <td>4</td>
+  <td>33</td>
+</tr>
+
+<tr>
+  <td>Nexus 5X</td>
+  <td>6.0</td>
+  <td>MDA89E</td>
+  <td>48000</td>
+  <td>192</td>
+  <td>4</td>
+  <td>18</td>
+</tr>
+
+<tr>
+  <td>Nexus 6P</td>
+  <td>6.0</td>
+  <td>MDA89D</td>
+  <td>48000</td>
+  <td>192</td>
+  <td>4</td>
+  <td>18</td>
+</tr>
+
+<tr>
+  <td>Pixel</td>
+  <td>7.1.2</td>
+  <td>NHG47L</td>
+  <td>48000</td>
+  <td>192</td>
+  <td>4</td>
+  <td>18</td>
+</tr>
+
+<tr>
+  <td>Pixel XL</td>
+  <td>7.1.2</td>
+  <td>NHG47L</td>
+  <td>48000</td>
+  <td>192</td>
+  <td>4</td>
+  <td>18</td>
+</tr>
+
+</table>
+
+<a id=chart></a>
+<img src="/devices/audio/images/round-trip-latencies.png" />
+<p class="img-caption"><strong>Figure 3.</strong> Round trip latencies.</p>
+
+</body>
+</html>

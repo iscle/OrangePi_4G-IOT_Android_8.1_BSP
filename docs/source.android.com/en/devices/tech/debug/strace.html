@@ -1,0 +1,121 @@
+<html devsite>
+  <head>
+    <title>Using Strace</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+<p><a href="https://strace.io">Strace</a> enables you to see the system calls a
+process makes and what those system calls return. A typical process makes a lot
+of system calls, so you'll want to review the
+<a href="http://man7.org/linux/man-pages/man1/strace.1.html">strace man page</a>
+to learn how to collect only data you're actually interested in.</p>
+
+<h2 id=build-strace>Building strace</h2>
+
+<p>To build strace, run the following:
+<pre class="devsite-terminal devsite-click-to-copy">
+mmma -j6 external/strace
+</pre>
+
+<h2 id=attach-strace>Attaching to a running process</h2>
+
+<p>The simplest and most common use case for strace is to attach it to a running
+process, which you can do with:</p>
+<pre class="devsite-terminal devsite-click-to-copy">
+adb shell strace -f -p PID
+</pre>
+<p>The <code>-f</code> flag tells strace to attach to all the threads in the
+process, plus any new threads spawned later.</p>
+
+<h2 id=app-strace>Using on an application</h2>
+<p>To use strace on an application:</p>
+
+<ol>
+<li>Set up a directory for strace logs:
+<pre class="devsite-click-to-copy">
+<code class="devsite-terminal">adb shell setenforce 0</code>
+<code class="devsite-terminal">adb shell mkdir /data/local/tmp/strace</code>
+<code class="devsite-terminal">adb shell chmod 777 /data/local/tmp/strace</code>
+</pre>
+</li>
+
+<li>Choose the process to trace before launching it:
+<pre class="devsite-terminal devsite-click-to-copy">
+adb shell setprop wrap.com.google.android.browser "logwrapper strace -f -o /data/local/tmp/strace/strace.com.google.android.browser.txt"
+</pre>
+</li>
+<li>Launch the process normally.</li>
+</ol>
+
+<h2 id=zygote-systrace>Using on the zygote</h2>
+<p>To use strace on the zygote, fix the relevant <code>init.rc</code> zygote
+line (requires <code>adb shell setenforce 0</code>):
+</p>
+
+<pre class="devsite-click-to-copy">
+<code class="devsite-terminal">cd system/core/</code>
+<code class="devsite-terminal">patch -p1 &lt;&lt;EOF
+--- a/rootdir/init.zygote32.rc
++++ b/rootdir/init.zygote32.rc
+@@ -1,4 +1,4 @@
+-service zygote /system/bin/app_process -Xzygote /system/bin --zygote --start-system-server
++service zygote /system/xbin/strace -o /data/local/tmp/zygote.strace /system/bin/app_process -Xzygote /system/bin --zygote --start-system-server
+     class main
+     socket zygote stream 660 root system
+     onrestart write /sys/android_power/request_state wake
+EOF</code>
+</pre>
+
+<h2 id=get-logs-boot>Getting strace logs during Android boot</h2>
+
+<p>To get strace logs during Android boot, make the following changes:</p>
+
+<ul>
+<li>Since the process name changes from <code>zygote</code> to
+<code>strace</code>, the given service may fail to start due to the missing
+SELinux <code>file_context</code> for <code>strace</code>. The solution is to
+add a new line for strace in <code>system/sepolicy/private/file_contexts</code>
+and copy the original file context over. Example:
+<pre class="devsite-click-to-copy">
+/dev/socket/zygote      u:object_r:zygote_socket:s0
++ /system/xbin/strace u:object_r:zygote_socket:s0
+</pre>
+</li>
+
+<li>Add kernel command, then boot the device in SELinux permissive mode. You can
+do this by adding <code>androidboot.selinux=permissive</code>to
+<code>BOARD_KERNEL_CMDLINE</code>. (This variable becomes read-only in
+<code>build/core/Makefile</code> but is always available under
+<code>/device/*/BoardConfig</code>.)
+
+<br>
+<br>Example for the Pixel (sailfish) device in
+<code>/device/google/marlin/sailfish/BoardConfig.mk</code>:
+<pre class="devsite-click-to-copy">
+- BOARD_KERNEL_CMDLINE := ....  androidboot.hardware=sailfish ...
++BOARD_KERNEL_CMDLINE := ....  androidboot.hardware=sailfish ...  androidboot.selinux=permissive
+</pre>
+After making the change, build and flash the boot image and the device will boot
+in permissive mode.
+</li>
+</ul>
+
+  </body>
+</html>

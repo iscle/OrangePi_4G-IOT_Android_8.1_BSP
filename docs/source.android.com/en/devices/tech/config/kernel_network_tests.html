@@ -1,0 +1,114 @@
+<html devsite>
+  <head>
+    <title>Kernel Networking Unit Tests</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+<p>Since Android 5.0, proper operation of the Android networking stack on Linux
+kernels requires a number of commits that were upstreamed relatively recently
+or have not yet made it upstream. It is not easy to manually verify the
+required kernel functionality or track the missing commits, so the Android team
+is sharing the tests it uses to ensure the kernel behaves as expected.</p>
+
+<h2 id=purpose>Why run the tests?</h2> <p>These tests exist for three main
+reasons:</p> <ol> <li>The exact version of the Linux kernel used on a device is
+typically device-specific, and it is difficult to know whether any kernel will
+work properly without running the tests.</li> <li>Forward-porting and
+back-porting the kernel patches to different kernel versions or different
+device trees may introduce subtle issues that can be impossible to spot without
+running the tests. For example, during development the initial versions of
+certain devices had UID routing patches forward-ported from android-3.4 instead
+of cherry-picked from android-3.10, and did not behave correctly.</li> <li>New
+networking features may require new kernel functionality or kernel bug
+fixes.</li> </ol> <p>If the tests do not pass, the device's network stack will
+behave incorrectly, causing user-visible connectivity bugs such as falling off
+Wi-Fi networks. The device will likely also fail Android Compatibility Test
+Suite (CTS) tests.</p>
+
+<h2 id=using>Using the tests</h2> <p>The tests use <a
+href="http://user-mode-linux.sourceforge.net/">User-Mode Linux</a> to boot the
+kernel as a process on a Linux host machine. See <a
+href="https://source.android.com/source/initializing.html">Establishing a Build
+Environment</a> for suitable operating system versions. The unit test framework
+boots the kernel with an appropriate disk image and runs the tests from the
+host file system. The tests are written in Python 2.x and use TAP interfaces to
+exercise kernel behaviour and the socket API.</p>
+
+<h3 id=compiling>Compiling the kernel for ARCH=um</h3> <p>For the tests to run,
+the kernel must compile for <code>ARCH=um SUBARCH=x86_64</code>. This is a
+supported architecture upstream and in the common Android kernel trees (e.g.,
+<code>android-3.10</code>, <code>android-3.18</code>). But sometimes device
+kernels do not compile in this mode because device trees contain
+device-specific or hardware-specific code in common files (e.g.,
+<code>sys/exit.c</code>).</p> <p>In many cases, it's sufficient to ensure that
+hardware-specific code is behind an <code>#ifdef</code>. Typically this should
+be an <code>#ifdef</code> on a configuration option that controls the specific
+feature relevant to the code. If there is no such configuration option, put
+hardware-specific code inside <code>#ifndef CONFIG_UML</code> blocks.</p> <p>In
+general, fixing this should be the responsibility of the kernel tree provider
+(e.g., chipset or SoC vendor). We're working with OEMs and vendors to ensure
+that current and future kernels will compile for <code>ARCH=um
+SUBARCH=x86_64</code> without requiring any changes.</p>
+
+<h3 id=running>Running the tests</h3> <p>The tests are at <a
+href="https://android.googlesource.com/kernel/tests/+/master/net/test"><code>kernel/tests/net/test</code></a>.
+It is recommended that the tests <b>be run from AOSP master</b> because they
+are the most up-to-date; in some cases, kernel features that are necessary for
+proper operation in a given Android release do not yet have full test coverage
+in the given release. For information on how to run the tests, see the <a
+href="https://android.googlesource.com/kernel/tests/+/master/net/test/README">kernel
+network test README file</a>. Basically, from the top of your kernel tree, run:</p>
+
+<pre class="devsite-click-to-copy">
+<var>ANDROID_TREE</var>/kernel/tests/net/test/run_net_test.sh all_tests.sh
+</pre>
+
+<h3 id=passing>Passing the tests</h3> <p>The kernel network test Python
+source files contain comments that specify kernel commits that are known to be
+required to pass the tests. The tests should pass in the common kernel trees -
+at least the <code>android-3.10</code> and <code>android-3.18</code> branches
+in the <a
+href="https://android-review.googlesource.com/#/q/project:kernel/common"><code>kernel/common</code></a>
+project in AOSP. Therefore, passing the tests on a kernel tree that's derived
+from 3.10 or 3.18 should mostly be a matter of cherry-picking the patches from
+these trees.</p>
+
+<h2 id=contributing>Contributing</h2>
+
+<h3 id=reporting>Reporting issues</h3> <p>Please report any issues with
+the kernel network tests in the <a
+href="https://code.google.com/p/android/issues/entry?template=Developer%20bug%20report">Android
+issue tracker</a> with the <a
+href="https://code.google.com/p/android/issues/list?q=label%3AComponent-Networking">Component-Networking</a>
+label.</p>
+
+<h3 id=documenting>Documenting commits and adding tests</h3> <p>Please report
+issues as described above, and if possible upload a change to fix the issue,
+if:</p> <ul> <li>The tests do not pass on the common kernel trees</li> <li>You
+find a necessary commit that is not mentioned in the source comments,</li>
+<li>Getting the tests to pass on upstream kernels requires major changes</li>
+<li>You believe that the tests are overspecified, or the test fail on future
+kernels</li> <li>You'd like to add more tests or more coverage to existing
+tests.</li>
+</ul>
+
+  </body>
+</html>

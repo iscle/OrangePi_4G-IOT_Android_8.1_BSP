@@ -1,0 +1,175 @@
+<html devsite>
+  <head>
+    <title>Fingerprint HAL</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<h2 id=overview>Overview</h2>
+
+<p>If a device has a fingerprint sensor, a user can enroll one or more
+fingerprints and then use their fingerprints to unlock the device and perform
+other tasks.</p>
+
+<p>Android uses the Fingerprint Hardware Abstraction Layer (HAL) to connect to a
+vendor-specific library and fingerprint hardware, e.g. a fingerprint sensor.</p>
+
+<p>To implement the Fingerprint HAL, you must implement
+<a href="#major_functions_in_the_fingerprint_hal">functions</a>
+in <code>fingerprint.h</code> (<code>/hardware/libhardware/include/hardware/fingerprint.h</code>)
+in a vendor-specific library; please see the comments in
+the <a href="https://android.googlesource.com/platform/hardware/libhardware/+/master/include/hardware/fingerprint.h"><code>fingerprint.h</code></a> file.</p>
+
+<h3 id=fingerprint_matching_flow>Fingerprint matching flow</h3>
+
+<p>The following is a high-level flow for fingerprint matching. This flow assumes
+that a fingerprint already has been enrolled on the device, i.e. the
+vendor-specific library already has enrolled a template for the fingerprint.
+Also see <a href="index.html">Authentication</a>.</p>
+
+<p>The fingerprint sensor of a device generally is idle. But in response to a call
+to the <code>authenticate</code> or <code>enroll</code> function, the fingerprint
+sensor listens for a touch (and perhaps the screen
+wakes up when a user touches the fingerprint sensor).</p>
+
+<ol>
+  <li>The user places a finger on the fingerprint sensor, and the vendor-specific
+library determines if there is a match based on the current set of enrolled
+templates.
+  <li>The result of step 1 is passed to the Fingerprint HAL, which notifies
+<code>fingerprintd</code> (the Fingerprint daemon) of a fingerprint authentication.
+</ol>
+
+<p>Note that as more templates are stored on a single device, the time needed for
+matching is increased.</p>
+
+<h2 id=architecture>Architecture</h2>
+
+<p>The <strong>Fingerprint HAL</strong> interacts with the following components:</p>
+
+<ul>
+  <li><strong>FingerprintManager API</strong>. Interacts directly with an app in an app process.
+  <ul>
+    <li>Each app has an instance of FingerprintManager.
+    <li>FingerprintManager is a wrapper that communicates with FingerprintService.
+  </ul>
+  <li><strong>FingerprintService</strong>. A singleton service that operates in the system
+  process, which handles
+communication with <code>fingerprintd</code>.
+  <li><strong>fingerprintd (Fingerprint daemon)</strong>. A C/C++ implementation of the
+  binder interface from FingerprintService. The
+<code>fingerprintd</code> daemon operates in its own process and wraps the Fingerprint HAL
+vendor-specific library.
+  <li><strong>Fingerprint HAL vendor-specific library</strong>. A hardware vendor's
+  implementation of the Fingerprint HAL. The
+vendor-specific library communicates with the device-specific hardware.
+  <li><strong>Keystore API and Keymaster</strong>. These components provide hardware-backed cryptography
+  for secure key storage
+  in a Trusted Execution Environment (TEE).
+</ul>
+
+<p>As shown in the following diagram, a vendor-specific HAL implementation needs
+to use the communication protocol required by a TEE.</p>
+
+<img src="../images/fingerprint-data-flow.png" alt="Data flow for fingerprint authentication" id="figure1" />
+
+<p class="img-caption"><strong>Figure 1.</strong> High-level data flow for fingerprint authentication</p>
+
+<p>Thus, raw images and processed fingerprint features must not be passed in
+untrusted memory. All such biometric data needs to be secured within sensor
+hardware or trusted memory. (Memory inside the TEE is considered as trusted
+memory; memory outside the TEE is considered untrusted.)</p>
+
+<p>Rooting must not compromise biometric data.</p>
+
+<p>As shown in the following diagram, <code>fingerprintd</code> makes calls through the
+Fingerprint HAL to the vendor-specific library to enroll fingerprints and
+perform other operations.</p>
+
+<img src="../images/fingerprint-daemon.png" alt="Interaction with fingerprintd" id="figure2" />
+<p class="img-caption"><strong>Figure 2.</strong> Interaction of the
+fingerprint daemon (<code>fingerprintd</code>) with the fingerprint vendor-specific library</p>
+
+<h2 id=fingerprint_implementation_guidelines>Fingerprint implementation guidelines</h2>
+
+<p>The guidelines in this section are intended to ensure the following:</p>
+
+<ul>
+  <li>Fingerprint data is not leaked
+  <li>Fingerprint data is removed when a user is removed from a device
+</ul>
+
+<p>Here are the guidelines:</p>
+
+<ol>
+  <li>Raw fingerprint data or derivatives (e.g. templates) must never be accessible
+from outside the sensor driver or Trusted Execution Environment (TEE). Hardware
+access must be limited to the TEE, if the hardware supports it, and must be protected by
+an SELinux policy. That is, the Serial Peripheral Interface (SPI) channel must
+be accessible only to the TEE, and there must be an explicit SELinux policy on
+all device files.
+  <li>Fingerprint acquisition, enrollment and recognition must occur inside the TEE.
+  <li>Only the encrypted form of the fingerprint data can be stored on the file
+system, even if the file system itself is encrypted.
+  <li>Fingerprint templates must be signed with a private, device-specific key, for
+example with AES, with at least the absolute file-system path, group and finger
+ID such that template files are inoperable on another device or for anyone
+other than the user that enrolled them on the same device. For example, copying
+the fingerprint data from a different user on the same device, or from another
+device, must not work.
+  <li>Implementations must either use the file system path provided by the
+  <code>set_active_group()</code> function or provide a way to erase all user template data when the user
+is removed. It is strongly recommended that fingerprint template files
+be stored as encrypted in the path provided. If this is infeasible due to TEE
+storage requirements, then the implementer must add hooks to ensure removal of
+the data when the user is removed.
+</ol>
+
+<h2 id=major_functions_in_the_fingerprint_hal>Major functions in the Fingerprint HAL</h2>
+
+<p>Below are the major functions in the <code>/hardware/libhardware/include/hardware/fingerprint.h</code> file; see the detailed descriptions in that
+file.</p>
+
+<ul>
+  <li><strong>enroll.</strong> Switches the HAL state machine to start the collection and storage of a
+fingerprint template. As soon as enrollment is complete, or after a timeout,
+the HAL state machine is returned to the idle state.
+  <li><strong>pre_enroll.</strong> Generates a unique token to indicate the start of a fingerprint enrollment.
+Provides a token to the <code>enroll</code> function to ensure there was prior authentication, e.g. using a password. The
+token is wrapped and, for example, HMAC'd, once the device credential is
+confirmed, to prevent tampering. The token must be checked during enrollment to
+verify that the token is still valid.
+  <li><strong>get_authenticator_id.</strong> Returns a token associated with the current fingerprint set.
+  <li><strong>cancel.</strong> Cancels any pending enroll or authenticate operations. The HAL state machine
+is returned to the idle state.
+  <li><strong>enumerate.</strong> Synchronous call for enumerating all known fingerprint templates.
+  <li><strong>remove.</strong> Deletes a fingerprint template.
+  <li><strong>set_active_group.</strong> Restricts a HAL operation to a set of fingerprints that belong to a specified
+group (identified by a group identifier, or GID).
+  <li><strong>authenticate.</strong> Authenticates a fingerprint-related operation (identified by an operation ID).
+  <li><strong>set_notify.</strong> Registers a user function that will get notifications from the HAL. If the HAL
+state machine is in a busy state, the function is blocked until the HAL leaves
+the busy state.
+</ul>
+
+
+  </body>
+</html>

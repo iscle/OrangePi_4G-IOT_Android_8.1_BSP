@@ -1,0 +1,201 @@
+<html devsite>
+  <head>
+    <title>Implementing Device Administration</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>This section describes how to enable and validate device administration
+features required to prepare devices for managed profiles. It also covers device
+owner user cases that are essential in a corporate environment.</p>
+
+<p>In addition to AOSP code, a device requires the following components to function with managed
+profiles.</p>
+
+<h2 id=requirements>General requirements</h2>
+<p>Devices intending to support device administration must meet the following
+general requirements.</p>
+
+<h3 id=HAL_values>Thermal HAL values</h3>
+<p>Android 7.0 and later includes support for HardwarePropertiesManager API, a device
+monitoring and health reporting API that enables applications to query the state
+of device hardware. This API is exposed via
+<code>android.os.HardwarePropertiesManager</code> and makes calls through
+<code>HardwarePropertiesManagerService</code> to the hardware thermal HAL
+(<code>hardware/libhardware/include/hardware/thermal.h</code>). It is a
+protected API, meaning only device/profile owner Device Policy Controller (DPC)
+applications and the current <code>VrListenerService</code> can call it.</p>
+
+<p>To support the HardwarePropertiesManager API, the device thermal HAL
+implementation must be able to report the following values:</p>
+
+<table>
+<tr>
+<th width="32%">Value</th>
+<th>Reporting Scale</th>
+<th>Enables</th>
+</tr>
+
+<tr>
+  <td>Temperature of [CPU|GPU|Battery|Device Skin]</td>
+  <td>Temperature of component in degrees Celsius</td>
+  <td>Apps can check device temperatures and component throttling/shutdown
+  temperatures</td>
+</tr>
+
+<tr>
+  <td>CPU active/total enabled times</td>
+  <td>Time in milliseconds</td>
+  <td>Apps can check CPU usage per core</td>
+</tr>
+
+<tr>
+  <td>Fan speed</td>
+  <td>RPM</td>
+  <td>Apps can check fan speed</td>
+</tr>
+
+</table>
+
+<p>Implementations should correctly handle reporting values situations when a
+core (or GPU, battery, fan) goes offline or is plugged/unplugged.</p>
+
+
+<h3 id=low_ram>No low-RAM</h3>
+<p>Device should not be a low-RAM device, meaning <code>ro.config.low_ram</code>
+should not be defined. The framework automatically limits the number of users
+to 1 when the <code>low_ram</code> flag is defined.</p>
+
+<h3 id=uses-feature>Uses-feature</h3>
+<p>Devices must define the following <code>uses-feature</code>:</p>
+
+<pre class="devsite-click-to-copy">
+android.software.managed_users
+android.software.device_admin
+</pre>
+
+<p>To confirm these <code>uses-feature</code> values have been defined on a
+device, run: <code>adb shell pm list features</code>.</p>
+
+<h3 id=required_apps>Essential apps only</h3>
+<p>By default, only applications essential for correct operation of the profile
+should be enabled as part of provisioning a managed device. OEMs must ensure the
+managed profile or device has all required applications by modifying:</p>
+
+<pre class="devsite-click-to-copy">
+vendor_required_apps_managed_profile.xml
+vendor_required_apps_managed_device.xml
+</pre>
+
+<p>Examples from a Nexus device:</p>
+
+<pre class="devsite-click-to-copy">
+packages/apps/ManagedProvisioning/res/values/vendor_required_apps_managed_device.xml
+</pre>
+
+<pre class="devsite-click-to-copy">
+&lt;resources&gt;
+  &lt;!-- A list of apps to be retained on the managed device --&gt;
+  &lt;string-array name="vendor_required_apps_managed_device"&gt;
+    &lt;item&gt;com.android.vending&lt;/item&gt; &lt;!--­Google Play --&gt;
+    &lt;item&gt;com.google.android.gms&lt;/item&gt; &lt;!--­Required by Play --&gt;
+    &lt;item&gt;com.google.android.contacts&lt;/item&gt; &lt;!--­Google or OEM Contacts­--&gt;
+    &lt;item&gt;com.google.android.googlequicksearchbox&lt;/item&gt; &lt;!--­Google Launcher --&gt;
+    &lt;item&gt;com.google.android.launcher&lt;/item&gt; &lt;!--­Google Launcher or OEM Launcher --&gt;
+    &lt;item&gt;com.google.android.dialer&lt;/item&gt; &lt;!--­Google or OEM dialer to enable making phone calls --&gt;
+  &lt;/string-array&gt;
+&lt;/resources&gt;
+</pre>
+
+<pre class="devsite-click-to-copy">
+packages/apps/ManagedProvisioning/res/values/vendor_required_apps_managed_profile.xml
+</pre>
+
+<pre class="devsite-click-to-copy">
+&lt;resources&gt;
+    &lt;!-- A list of apps to be retained in the managed profile. This includes any Google experience apps required. --&gt;
+    &lt;string-array name="vendor_required_apps_managed_profile"&gt;
+        &lt;item&gt;com.android.vending&lt;/item&gt; &lt;!-- Google Play --&gt;
+        &lt;item&gt;com.google.android.gms&lt;/item&gt; &lt;!-- Required by Play --&gt;
+        &lt;item&gt;com.google.android.contacts&lt;/item&gt; &lt;!-- Google or OEM Contacts --&gt;
+    &lt;/string-array&gt;
+&lt;/resources&gt;
+</pre>
+
+<h2 id=launcher>Launcher requirements</h2>
+
+<p>You must update the Launcher to support badging applications with the icon
+badge (provided in AOSP to represent the managed applications) and other badge
+user interface elements such as recents and notifications. If you use
+<a href="https://android.googlesource.com/platform/packages/apps/Launcher3/">launcher3</a>
+in AOSP without modifications, then you likely already support this badging
+feature.</p>
+
+<h2 id=nfc>NFC requirements</h2>
+
+<p>Devices with NFC must enable NFC during the out-of-the-box experience (i.e.,
+setup wizard) and be configured to accept managed provisioning intents:</p>
+
+<pre class="devsite-click-to-copy">
+packages/apps/Nfc/res/values/provisioning.xml
+</pre>
+
+<pre class="devsite-click-to-copy">
+&lt;bool name="enable_nfc_provisioning"&gt;true&lt;/bool&gt;
+&lt;item>application/com.android.managedprovisioning&lt;/item&gt;
+</pre>
+
+<h2 id=setup_wizard>Setup requirements</h2>
+
+<p>Devices that include an out-of-box experience (i.e., setup wizard)
+should implement device owner provisioning. When the out-of-box experience
+opens, it should check if another process (such as device owner provisioning)
+has already finished the user setup and, if so, it should fire a home intent
+and finish the setup. This intent is caught by the provisioning application,
+which then hands control to the newly-set device owner.</p>
+
+<p>To meet setup requirements, add the following code to the device setup's main
+activity:</p>
+
+<pre class="devsite-click-to-copy">
+&#64;Override
+   protected void onStart() {
+        super.onStart();
+
+        // When returning to a setup wizard activity, check to see if another setup process
+        // has intervened and, if so, complete an orderly exit
+        boolean completed = Settings.Secure.getInt(getContentResolver(),
+                Settings.Secure.USER_SETUP_COMPLETE, 0) != 0;
+        if (completed) {
+           startActivity(new Intent(Intent.ACTION_MAIN, null)
+                .addCategory(Intent.CATEGORY_HOME)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                        | Intent.FLAG_ACTIVITY_CLEAR_TASK
+                        | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED));
+           finish();
+       }
+
+       ...
+   }
+</pre>
+
+  </body>
+</html>

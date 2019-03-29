@@ -1,0 +1,114 @@
+<html devsite>
+  <head>
+    <title>Adoptable Storage</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+
+<p>Android has always supported external storage accessories (such as SD cards), but
+these accessories were historically limited to simple file storage, due to
+their expected impermanence and the minimal data protection offered to
+<a href="/devices/storage/traditional.html">traditional external storage</a>.
+Android 6.0 introduced the ability to
+<a href="http://developer.android.com/about/versions/marshmallow/android-6.0.html#adoptable-storage">adopt</a>
+external storage media to act like internal storage.</p>
+
+<p class="warning"><strong>Warning:</strong> <a
+href="/security/encryption/file-based.html">File-based encryption</a> cannot
+currently be used together with adoptable storage. On devices using file-based
+encryption, new storage media (such as an SD card) must be used as <a
+href="/devices/storage/traditional.html">traditional storage</a>.</p>
+
+<p>When external storage media is adopted, it’s formatted and encrypted to only
+work with a single Android device at a time. Because the media is strongly tied
+to the Android device that adopted it, it can safely store both apps and
+private data for all users.</p>
+
+<p>When users insert new storage media (such as an SD card) in an adoptable
+location, Android asks them how they want to use the media. They can choose to
+adopt the media, which formats and encrypts it, or they can continue using it
+as-is for simple file storage. If they choose to adopt, the platform offers to
+migrate the primary shared storage contents (typically mounted at <code>/sdcard</code>)
+to the newly adopted media, freeing up valuable space on internal storage.
+Unlike traditional storage, which is limited to 2TB due to its use of
+<a href="https://en.wikipedia.org/wiki/Master_boot_record">MBR</a>, adoptable
+storage uses <a href="https://en.wikipedia.org/wiki/GUID_Partition_Table">GPT</a>
+and therefore has file storage limit of ~9ZB.</p>
+
+<p>Apps can be placed on adopted storage media only when the developer has
+indicated support through the <code>android:installLocation</code> attribute.
+New installs of supported apps are automatically placed on the
+storage device with the most free space, and users can move supported apps
+between storage devices in the <em>Settings</em> app. Apps moved to adopted
+media are remembered while the media is ejected,
+and return when the media is reinserted.</p>
+
+<h2 id=security>Security</h2>
+
+
+<p>The platform randomly generates an encryption key for each adopted device,
+and that key is stored on the internal storage of the Android device. This
+effectively makes the adopted media as secure as internal storage. Keys are
+associated with adopted devices based on the adopted partition GUID. The
+adopted device is encrypted using <code>dm-crypt</code> configured with the
+<code>aes-cbc-essiv:sha256</code> algorithm and a 128-bit key size.</p>
+
+<p>The on-disk layout of the adopted device closely mirrors the internal data
+partition, including SELinux labels, etc. When multi-user is supported on the
+Android device, the adopted storage device also supports multi-user with the
+same level of isolation as internal storage.</p>
+
+<p>Because the contents of an adopted storage device are strongly tied to the
+Android device that adopted it, the encryption keys should not be extractable
+from the parent device, and therefore the storage device can't be mounted elsewhere.</p>
+
+<h2 id=performance_and_stability>Performance and stability</h2>
+
+
+<p>Only external storage media in stable locations, such as a slot inside a
+battery compartment or behind a protective cover, should be considered for
+adoption to help avoid accidental data loss or corruption. In particular, USB
+devices connected to a phone or tablet should never be considered for adoption.
+One common exception would be an external USB drive connected to a TV-style
+device, because the entire TV is typically installed in a stable location.</p>
+
+<p>When a user adopts a new storage device, the platform runs a benchmark and
+compares its performance against internal storage. If the adopted device is
+significantly slower than internal storage, the platform warns the user about a
+possibly degraded experience. This benchmark was derived from the actual I/O
+behavior of popular Android apps. Currently, the AOSP implementation will only
+warn users beyond a single threshold, but device manufacturers may adapt this
+further, such as rejecting adoption completely if the card is extremely slow.</p>
+
+<p>Adopted devices must be formatted with a filesystem that supports POSIX
+permissions and extended attributes, such as <code>ext4</code> or <code>f2fs</code>.
+For optimal performance, the <code>f2fs</code> filesystem is recommended for
+flash-based storage devices.</p>
+
+<p>When performing periodic idle maintenance, the platform issues <code>FI_TRIM</code>
+to adopted media just like it does for internal storage. The current SD card
+specification does not support the <code>DISCARD</code> command; but the kernel
+instead falls back to the <code>ERASE</code> command, which SD card firmware
+may choose to use for optimization purposes.</p>
+
+  </body>
+</html>

@@ -1,0 +1,125 @@
+<html devsite>
+  <head>
+    <title>Supporting Multi-Window</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>
+In Android 7.0 and later, users can have multiple apps simultaneously displayed on their
+device screen with the new platform feature, multi-window. In addition to the
+default implementation of multi-window, Android also supports a few varieties
+of multi-window:</p>
+
+<ul>
+<li><strong>Split-screen</strong> is the base implementation of multi-window and
+provides two activity panes for users to place apps.
+<li><strong>Freeform</strong> allows users to dynamically resize the activity
+panes and have more than two apps visible on their screen.
+<li><strong>Picture-in-picture (PIP)</strong> allows Android devices to continue
+playing video content in a small window while the user interacts with other
+applications.</li>
+</ul>
+
+<p>
+To implement the multi-window feature, device manufacturers set a flag in the
+config file on their devices to enable or disable multi-window support.
+</p>
+
+<h2 id="implementation">Implementation</h2>
+<p>
+Multi-window support is enabled by default in Android 7.0 and later. To disable it, set
+the <code>config_supportsMultiWindow</code> flag to false in the <a
+href="https://android.googlesource.com/platform/frameworks/base/+/master/core/res/res/values/config.xml">config.xml</a>
+file.
+</p>
+<p>
+For devices that declare <code>ActivityManager.isLowRam()</code>, multi-window
+is disabled regardless of the value of <code>config_supportsMultiWindow</code>
+flag.
+</p>
+<h3 id="split-screen">Split-screen</h3>
+<p>
+The default multi-window experience is split-screen mode, where the System UI is
+divided directly down the middle of the device in portrait or landscape. Users
+can resize the window by dragging the dividing line side-to-side or
+top-to-bottom, depending on the device orientation.
+</p>
+<p>
+Then device manufacturers can choose if they want to enable freeform or PIP.
+</p>
+<h3 id="freeform">Freeform</h3>
+<p>
+After enabling standard multi-window mode with the flag
+<code>config_supportsMultiWindow</code>, device manufacturers can optionally
+allow freeform windowing. This mode is most useful for manufacturers of larger
+devices, like tablets.
+</p>
+<p>
+To support freeform mode, enable the
+PackageManager#FEATURE_FREEFORM_WINDOW_MANAGEMENT system feature in <a
+href="https://android.googlesource.com/platform/frameworks/base/+/master/core/java/android/content/pm/PackageManager.java">/android/frameworks/base/core/java/android/content/pm/PackageManager.java</a>
+and set <code>config_freeformWindowManagement</code> to true in <a
+href="https://android.googlesource.com/platform/frameworks/base/+/master/core/res/res/values/config.xml">config.xml</a>.
+</p>
+
+<pre class="devsite-click-to-copy">
+&lt;bool name="config_freeformWindowManagement"&gt;true&lt;/bool&gt;
+</pre>
+
+<h3 id="picture-in-picture">Picture-in-picture</h3>
+<p>
+After enabling standard multi-window mode with the flag
+<code>config_supportsMultiWindow</code>, device manufacturers can support <a
+href="https://developer.android.com/training/tv/playback/picture-in-picture.html">picture-in-picture</a>
+to allow users to continue watching video while browsing other activities.
+While this features is primarily targeted at Android Television devices, other
+device form factors may support this feature.
+</p>
+<p>
+To support PIP, enable the PackageManager#FEATURE_PICTURE_IN_PICTURE system
+feature in <a
+href="https://android.googlesource.com/platform/frameworks/base/+/master/core/java/android/content/pm/PackageManager.java">/android/frameworks/base/core/java/android/content/pm/PackageManager.java</a>.
+</p>
+<h3 id="system-ui">System UI</h3>
+<p>
+Support all standard System UIs according to <a
+href="https://developer.android.com/guide/topics/ui/multi-window.html#testing">
+https://developer.android.com/guide/topics/ui/multi-window.html#testing</a>
+</p>
+<h3 id="applications">Applications</h3>
+<p>
+To support multi-window mode for preloaded apps, consult the <a
+href="https://developer.android.com/guide/topics/ui/multi-window.html">Android
+developer documentation</a>.
+</p>
+<h2 id="validation">Validation</h2>
+<p>
+To validate their implementation of multi-window, device manufacturers should
+run <a
+href="https://android.googlesource.com/platform/cts/+/master/hostsidetests/services/activitymanager/src/android/server/cts">CTS
+tests</a> and follow the <a
+href="https://developer.android.com/guide/topics/ui/multi-window.html#testing">testing
+instructions for multi-window</a>.
+</p>
+
+  </body>
+</html>

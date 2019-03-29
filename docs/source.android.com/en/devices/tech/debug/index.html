@@ -1,0 +1,170 @@
+<html devsite>
+  <head>
+    <title>Debugging Native Android Platform Code</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>This section summarizes useful tools and related commands for debugging,
+tracing, and profiling native Android platform code when developing
+platform-level features.</p>
+
+<p>This page covers use of <code>debuggerd</code>, a daemon process for
+collecting error information after applications crash. Other pages in this
+section explore system services with
+<a href="https://developer.android.com/studio/command-line/dumpsys.html">Dumpsys</a>, viewing
+<a href="/devices/tech/debug/native-memory.html">native memory</a>,
+<a href="https://developer.android.com/studio/command-line/dumpsys.html#network">network</a>, and
+<a href="https://developer.android.com/studio/command-line/dumpsys.html#procstats">RAM</a> usage, using
+<a href="/devices/tech/debug/asan.html">AddressSanitizer</a> to detect memory
+bugs in native code, evaluating
+<a href="/devices/tech/debug/eval_perf.html"> performance issues</a> (includes
+<a href="/devices/tech/debug/systrace">systrace</a>), and using
+<a href="/devices/tech/debug/gdb.html">GNU Project debugger (GDB)</a> and
+other debugging tools.</p>
+
+<h2 id=debuggerd>Using debuggerd</h2>
+
+<p>The <code>debuggerd</code> process dumps registers and unwinds the stack.
+When a dynamically linked executable starts, several signal handlers are
+registered that connect to <code>debuggerd</code> (or <code>debuggerd64)</code>
+in the event that signals (such as SIGSEGV or SIGABRT) are sent to the process.</p>
+
+<p>It's possible for <code>debuggerd</code> to attach only if nothing else is
+already attached, which means using tools such as <code>strace</code> or
+<code>gdb</code> will prevent <code>debuggerd</code> from working. You can also
+explicitly prevent <code>debuggerd</code> from attaching by calling
+<code>prctl(PR_SET_DUMPABLE, 0)</code>, which can be useful when you need to
+opt out of crash reporting.</p>
+
+<p>Example <code>debuggerd</code> output (with timestamps and extraneous
+information removed):</p>
+
+<pre class="devsite-click-to-copy">
+*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+Build fingerprint: 'Android/aosp_angler/angler:7.1.1/NYC/enh12211018:eng/test-keys'
+Revision: '0'
+ABI: 'arm'
+pid: 17946, tid: 17949, name: crasher  &gt;&gt;&gt; crasher &lt;&lt;&lt;
+signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0xc
+    r0 0000000c  r1 00000000  r2 00000000  r3 00000000
+    r4 00000000  r5 0000000c  r6 eccdd920  r7 00000078
+    r8 0000461a  r9 ffc78c19  sl ab209441  fp fffff924
+    ip ed01b834  sp eccdd800  lr ecfa9a1f  pc ecfd693e  cpsr 600e0030
+
+backtrace:
+    #00 pc 0004793e  /system/lib/libc.so (pthread_mutex_lock+1)
+    #01 pc 0001aa1b  /system/lib/libc.so (readdir+10)
+    #02 pc 00001b91  /system/xbin/crasher (readdir_null+20)
+    #03 pc 0000184b  /system/xbin/crasher (do_action+978)
+    #04 pc 00001459  /system/xbin/crasher (thread_callback+24)
+    #05 pc 00047317  /system/lib/libc.so (_ZL15__pthread_startPv+22)
+    #06 pc 0001a7e5  /system/lib/libc.so (__start_thread+34)
+Tombstone written to: /data/tombstones/tombstone_06
+</pre>
+
+<p>The last line of <code>debuggerd</code> output dumps a summary to the log and
+writes a full <em>tombstone</em> to disk. The tombstone is simply a file with
+extra data about the crashed process; it contains information that can be
+helpful in debugging a crash, in particular the stack traces for all threads in
+the crashing process (not just the thread that caught the signal) and a full
+memory map.</p>
+
+<p>Assuming the unstripped binaries can be found, you can get a more detailed
+unwind with line number information by pasting the above example into
+<code>development/scripts/stack</code>:</p>
+
+<p class="key-point"><strong>Tip:</strong> For convenience, if you've lunched
+<code>stack</code> will be on your $PATH already so you don't need to give the
+full path.</p>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+development/tools/stack
+</pre>
+
+<p>Example output:</p>
+<pre class="devsite-click-to-copy">
+Reading native crash info from stdin
+03-02 23:53:49.477 17951 17951 F DEBUG   : *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+03-02 23:53:49.477 17951 17951 F DEBUG   : Build fingerprint: 'Android/aosp_angler/angler:7.1.1/NYC/enh12211018:eng/test-keys'
+03-02 23:53:49.477 17951 17951 F DEBUG   : Revision: '0'
+03-02 23:53:49.477 17951 17951 F DEBUG   : ABI: 'arm'
+03-02 23:53:49.478 17951 17951 F DEBUG   : pid: 17946, tid: 17949, name: crasher  &gt;&gt;&gt; crasher &lt;&lt;&lt;
+03-02 23:53:49.478 17951 17951 F DEBUG   : signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0xc
+03-02 23:53:49.478 17951 17951 F DEBUG   :     r0 0000000c  r1 00000000  r2 00000000  r3 00000000
+03-02 23:53:49.478 17951 17951 F DEBUG   :     r4 00000000  r5 0000000c  r6 eccdd920  r7 00000078
+03-02 23:53:49.478 17951 17951 F DEBUG   :     r8 0000461a  r9 ffc78c19  sl ab209441  fp fffff924
+03-02 23:53:49.478 17951 17951 F DEBUG   :     ip ed01b834  sp eccdd800  lr ecfa9a1f  pc ecfd693e  cpsr 600e0030
+03-02 23:53:49.491 17951 17951 F DEBUG   :
+03-02 23:53:49.491 17951 17951 F DEBUG   : backtrace:
+03-02 23:53:49.492 17951 17951 F DEBUG   :     #00 pc 0004793e  /system/lib/libc.so (pthread_mutex_lock+1)
+03-02 23:53:49.492 17951 17951 F DEBUG   :     #01 pc 0001aa1b  /system/lib/libc.so (readdir+10)
+03-02 23:53:49.492 17951 17951 F DEBUG   :     #02 pc 00001b91  /system/xbin/crasher (readdir_null+20)
+03-02 23:53:49.492 17951 17951 F DEBUG   :     #03 pc 0000184b  /system/xbin/crasher (do_action+978)
+03-02 23:53:49.492 17951 17951 F DEBUG   :     #04 pc 00001459  /system/xbin/crasher (thread_callback+24)
+03-02 23:53:49.492 17951 17951 F DEBUG   :     #05 pc 00047317  /system/lib/libc.so (_ZL15__pthread_startPv+22)
+03-02 23:53:49.492 17951 17951 F DEBUG   :     #06 pc 0001a7e5  /system/lib/libc.so (__start_thread+34)
+03-02 23:53:49.492 17951 17951 F DEBUG   :     Tombstone written to: /data/tombstones/tombstone_06
+Reading symbols from /huge-ssd/aosp-arm64/out/target/product/angler/symbols
+Revision: '0'
+pid: 17946, tid: 17949, name: crasher  &gt;&gt;&gt; crasher &lt;&lt;&lt;
+signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0xc
+     r0 0000000c  r1 00000000  r2 00000000  r3 00000000
+     r4 00000000  r5 0000000c  r6 eccdd920  r7 00000078
+     r8 0000461a  r9 ffc78c19  sl ab209441  fp fffff924
+     ip ed01b834  sp eccdd800  lr ecfa9a1f  pc ecfd693e  cpsr 600e0030
+Using arm toolchain from: /huge-ssd/aosp-arm64/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9/bin/
+
+Stack Trace:
+  RELADDR   FUNCTION                   FILE:LINE
+  0004793e  pthread_mutex_lock+2       bionic/libc/bionic/pthread_mutex.cpp:515
+  v------>  ScopedPthreadMutexLocker   bionic/libc/private/ScopedPthreadMutexLocker.h:27
+  0001aa1b  readdir+10                 bionic/libc/bionic/dirent.cpp:120
+  00001b91  readdir_null+20            system/core/debuggerd/crasher.cpp:131
+  0000184b  do_action+978              system/core/debuggerd/crasher.cpp:228
+  00001459  thread_callback+24         system/core/debuggerd/crasher.cpp:90
+  00047317  __pthread_start(void*)+22  bionic/libc/bionic/pthread_create.cpp:202 (discriminator 1)
+  0001a7e5  __start_thread+34          bionic/libc/bionic/clone.cpp:46 (discriminator 1)
+</pre>
+
+<p class="note"><strong>Note:</strong> Some system libraries are built with
+<code>LOCAL_STRIP_MODULE := keep_symbols</code> to provide usable backtraces
+directly from <code>debuggerd</code> without taking up anywhere near as much
+space as an unstripped version.</p>
+
+<p>You can also <code>stack</code> an entire tombstone. Example:</p>
+<pre class="devsite-terminal devsite-click-to-copy">
+stack < FS/data/tombstones/tombstone_05</code>
+</pre>
+<p>This is useful if you've just unzipped a bugreport in the current directory.
+For more information about diagnosing native crashes and tombstones, see
+<a href="/devices/tech/debug/native-crash.html">Diagnosing Native Crashes</a>.
+</p>
+
+<h2 id="tombstone">Getting a stack trace/tombstone from a running process</h2>
+
+<p>You can also use <code>debuggerd</code> on a running process. From the
+command line, invoke <code>debuggerd</code> using a process ID (PID) to dump the
+full tombstone to <code>stdout</code>. To get just the stack for every thread in
+the process, include the <code>-b</code> or <code>--backtrace</code> flag.</p>
+
+  </body>
+</html>

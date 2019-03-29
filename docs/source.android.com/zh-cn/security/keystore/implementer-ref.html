@@ -1,0 +1,706 @@
+<html devsite><head>
+    <title>面向实现人员的参考资料</title>
+    <meta name="project_path" value="/_project.yaml"/>
+    <meta name="book_path" value="/_book.yaml"/>
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+<p>本页中提供了一些对 <a href="index.html">Keymaster</a> HAL 实现人员很有帮助的详细信息，其中介绍了 HAL 中的每个标记和每个函数。</p>
+
+<h2 id="authorization_tags">授权标记</h2>
+
+<p>除非标记说明中另有注明，否则以下所有标记都是在密钥生成期间用于指定密钥特性。</p>
+
+<h3 id="km_tag_purpose">KM_TAG_PURPOSE</h3>
+
+<p>用于指定相应密钥可用于哪些目的。</p>
+
+<p>可能的值是通过以下枚举定义的：</p>
+
+<pre>
+typedef enum {
+    KM_PURPOSE_ENCRYPT = 0,
+    KM_PURPOSE_DECRYPT = 1,
+    KM_PURPOSE_SIGN = 2,
+    KM_PURPOSE_VERIFY = 3,
+} keymaster_purpose_t;
+</pre>
+
+<p>此标记可重复使用。可以生成具有多个值的密钥，不过一项操作只有一个目的。当调用 <a href="#begin">begin</a> 函数来启动某项操作时，要指定操作的目的。如果为操作指定的目的未通过相应密钥授权，操作必须失败并显示 <code>KM_ERROR_INCOMPATIBLE_PURPOSE</code>。</p>
+
+<h3 id="km_tag_algorithm">KM_TAG_ALGORITHM</h3>
+
+<p>用于指定与相应密钥配合使用的加密算法。</p>
+
+<p>可能的值是通过以下枚举定义的：</p>
+
+<pre>
+typedef enum {
+    KM_ALGORITHM_RSA = 1,
+    KM_ALGORITHM_EC = 3,
+    KM_ALGORITHM_AES = 32,
+    KM_ALGORITHM_HMAC = 128,
+} keymaster_algorithm_t;
+</pre>
+
+<p>此标记不可重复使用。</p>
+
+<h3 id="km_tag_key_size">KM_TAG_KEY_SIZE</h3>
+
+<p>用于指定相应密钥的大小（以位数计，按适用于相应密钥算法的一般方式衡量）。例如，对于 RSA 密钥，<code>KM_TAG_KEY_SIZE</code> 用于指定公开模数的大小。对于 AES 密钥，此标记用于指定密钥私密材料的长度。</p>
+
+<p>此标记不可重复使用。</p>
+
+<h3 id="km_tag_block_mode">KM_TAG_BLOCK_MODE</h3>
+
+<p>用于指定可与相应密钥配合使用的分块加密模式。此标记仅与 AES 密钥有关。</p>
+
+<p>可能的值是通过以下枚举定义的：</p>
+
+<pre>
+typedef enum {
+    KM_MODE_ECB = 1,
+    KM_MODE_CBC = 2,
+    KM_MODE_CTR = 3,
+    KM_MODE_GCM = 32,
+} keymaster_block_mode_t;
+</pre>
+
+<p>此标记可重复使用。对于 AES 密钥操作，必须要在 <a href="#begin">begin</a> 的 <code>additional_params</code> 参数中指定模式。如果指定的模式不在相应密钥的关联模式之列，操作必须失败并显示 <code>KM_ERROR_INCOMPATIBLE_BLOCK_MODE</code>。</p>
+
+<h3 id="km_tag_digest">KM_TAG_DIGEST</h3>
+
+<p>用于指定可与相应密钥配合使用以执行签名和验证操作的摘要算法。此标记与 RSA 密钥、ECDSA 密钥和 HMAC 密钥有关。</p>
+
+<p>可能的值是通过以下枚举定义的：</p>
+
+<pre>
+typedef enum {
+    KM_DIGEST_NONE = 0,
+    KM_DIGEST_MD5 = 1,
+    KM_DIGEST_SHA1 = 2,
+    KM_DIGEST_SHA_2_224 = 3,
+    KM_DIGEST_SHA_2_256 = 4,
+    KM_DIGEST_SHA_2_384 = 5,
+    KM_DIGEST_SHA_2_512 = 6,
+}
+keymaster_digest_t;
+</pre>
+
+<p>此标记可重复使用。对于签名和验证操作，必须要在 <a href="#begin">begin</a> 的 <code>additional_params</code> 参数中指定摘要。如果指定的摘要不在相应密钥的关联摘要之列，操作必须失败并显示 <code>KM_ERROR_INCOMPATIBLE_DIGEST</code>。</p>
+
+<h3 id="km_tag_padding">KM_TAG_PADDING</h3>
+
+<p>用于指定可与相应密钥配合使用的填充模式。此标记与 RSA 密钥和 AES 密钥有关。</p>
+
+<p>可能的值是通过以下枚举定义的：</p>
+
+<pre>
+typedef enum {
+    KM_PAD_NONE = 1,
+    KM_PAD_RSA_OAEP = 2,
+    KM_PAD_RSA_PSS = 3,
+    KM_PAD_RSA_PKCS1_1_5_ENCRYPT = 4,
+    KM_PAD_RSA_PKCS1_1_5_SIGN = 5,
+    KM_PAD_PKCS7 = 64,
+} keymaster_padding_t;
+</pre>
+
+<p><code>KM_PAD_RSA_OAEP</code> 和 <code>KM_PAD_RSA_PKCS1_1_5_ENCRYPT</code> 仅用于 RSA 加密/解密密钥，分别用来指定 RSA PKCS#1v2 OAEP 填充和 RSA PKCS#1 v1.5 随机填充。<code>KM_PAD_RSA_PSS</code> 和 <code>KM_PAD_RSA_PKCS1_1_5_SIGN</code> 仅用于 RSA 签名/验证密钥，分别用来指定 RSA PKCS#1v2 PSS 填充和 RSA PKCS#1 v1.5 确定性填充。另外请注意，RSA PSS 填充模式与 <a href="#km_tag_digest">KM_DIGEST_NONE</a> 不兼容。</p>
+
+<p><code>KM_PAD_NONE</code> 可与 RSA 密钥或 AES 密钥配合使用。对于 AES 密钥，如果将 <code>KM_PAD_NONE</code> 与分块模式 ECB 或 CBC 配合使用，并且要加密或解密的数据的长度不是 AES 分块大小的倍数，调用 finish 必须失败并显示 <code>KM_ERROR_INVALID_INPUT_LENGTH</code>。</p>
+
+<p><code>KM_PAD_PKCS7</code> 只能与 AES 密钥以及 ECB 和 CBC 模式配合使用。</p>
+
+<p>此标记可重复使用。在调用 <a href="#begin">begin</a> 时必须指定填充模式。如果指定的模式未针对相应密钥获得授权，操作必须失败并显示 <code>KM_ERROR_INCOMPATIBLE_BLOCK_MODE</code>。</p>
+
+<h3 id="km_tag_caller_nonce">KM_TAG_CALLER_NONCE</h3>
+
+<p>用于指定调用程序可以为需要随机数的操作提供随机数。</p>
+
+<p>此标记为布尔值，因此可能的值为 true（如果此标记存在）和 false（如果此标记不存在）。</p>
+
+<p>此标记仅用于 AES 密钥，并且仅与 CBC、CTR 和 GCM 分块模式有关。如果此标记不存在，实现应拒绝执行向 <a href="#begin">begin</a> 提供 <a href="#km_tag_nonce">KM_TAG_NONCE</a> 的所有操作，并显示 <code>KM_ERROR_CALLER_NONCE_PROHIBITED</code>。</p>
+
+<p>此标记不可重复使用。</p>
+
+<h3 id="km_tag_min_mac_length">KM_TAG_MIN_MAC_LENGTH</h3>
+
+<p>此标记是支持 GCM 模式的 HMAC 密钥和 AES 密钥所必需的标记，用于指定可通过相应密钥请求或验证的 MAC 的最小长度。</p>
+
+<p>此标记的值是 MAC 的最小长度（以位数计）。这个值必须是 8 的倍数。对于 HMAC 密钥，这个值不得小于 64。对于 GCM 密钥，这个值必须介于 96 到 128 之间。</p>
+
+<h3 id="km_tag_rsa_public_exponent">KM_TAG_RSA_PUBLIC_EXPONENT</h3>
+
+<p>用于为 RSA 密钥对指定公开指数的值。此标记仅与 RSA 密钥有关，而且是所有 RSA 密钥都必需的标记。</p>
+
+<p>此标记的值是一个 64 位的未签名整数，并且必须符合 RSA 公开指数方面的要求。由于这个值是由调用程序指定的，因此无法由实现来选择。这个值必须是质数。Trustlet 必须要支持 2^16+1 这个值，而且最好还支持其他合理的值，尤其是 3。如果未指定指数或指定的指数不受支持，密钥生成操作必须失败并显示 <code>KM_ERROR_INVALID_ARGUMENT</code>。</p>
+
+<p>此标记不可重复使用。</p>
+
+<h3 id="km_tag_blob_usage_requirements">KM_TAG_BLOB_USAGE_REQUIREMENTS</h3>
+
+<p>用于指定必须满足哪些系统环境条件才能使用生成的密钥。</p>
+
+<p>可能的值是通过以下枚举定义的：</p>
+
+<pre>
+typedef enum {
+    KM_BLOB_STANDALONE = 0,
+    KM_BLOB_REQUIRES_FILE_SYSTEM = 1,
+} keymaster_key_blob_usage_requirements_t;
+</pre>
+
+<p>可以在密钥生成期间指定此标记，以便要求只有在指定条件下才可以使用生成的密钥。此标记必须要和密钥特性一起返回（通过 <a href="#generate_key">generate_key</a> 和 <a href="#get_key_characteristics">get_key_characteristics</a>）。如果调用程序指定了 <code>KM_TAG_BLOB_USAGE_REQUIREMENTS</code>（值为 <code>KM_BLOB_STANDALONE</code>），Trustlet 必须返回一个可在没有文件系统支持的情况下使用的密钥 Blob。这对于具有已加密磁盘的设备至关重要：在使用 Keymaster 密钥解密磁盘之前，此类设备的文件系统可能一直无法使用。</p>
+
+<p>此标记不可重复使用。</p>
+
+<h3 id="km_tag_bootloader_only">KM_TAG_BOOTLOADER_ONLY</h3>
+
+<p>用于指定只有引导加载程序能够使用相应密钥。</p>
+
+<p>此标记为布尔值，因此可能的值为 true（如果此标记存在）和 false（如果此标记不存在）。</p>
+
+<p>尝试从 Android 系统使用带有 <code>KM_TAG_BOOTLOADER_ONLY</code> 标记的密钥时，操作必须失败并显示 <code>KM_ERROR_INVALID_KEY_BLOB</code>。</p>
+
+<p>此标记不可重复使用。</p>
+
+<h3 id="km_tag_active_datetime">KM_TAG_ACTIVE_DATETIME</h3>
+
+<p>用于指定相应密钥变为有效状态的日期和时间。在此之前，尝试使用相应密钥时，操作必须失败并显示 <code>KM_ERROR_KEY_NOT_YET_VALID</code>。</p>
+
+<p>此标记的值是一个 64 位的整数，表示距 1970 年 1 月 1 日的毫秒数。</p>
+
+<p>此标记不可重复使用。</p>
+
+<h3 id="km_tag_origination_expire_datetime">KM_TAG_ORIGINATION_EXPIRE_DATETIME</h3>
+
+<p>用于指定相应密钥无法再用于签名和加密目的的过期日期和时间。如果向 <a href="#begin">begin</a> 提供的目的是 <a href="#km_tag_purpose">KM_PURPOSE_SIGN</a> 或 <a href="#km_tag_purpose">KM_PURPOSE_ENCRYPT</a>，那么在此之后，尝试使用相应密钥时，操作必须失败并显示 <code>KM_ERROR_KEY_EXPIRED</code>。</p>
+
+<p>此标记的值是一个 64 位的整数，表示距 1970 年 1 月 1 日的毫秒数。</p>
+
+<p>此标记不可重复使用。</p>
+
+<h3 id="km_tag_usage_expire_datetime">KM_TAG_USAGE_EXPIRE_DATETIME</h3>
+
+<p>用于指定相应密钥无法再用于验证和解密目的的过期日期和时间。如果向 <a href="#begin">begin</a> 提供的目的是 <a href="#km_tag_purpose">KM_PURPOSE_VERIFY</a> 或 <a href="#km_tag_purpose">KM_PURPOSE DECRYPT</a>，那么在此之后，尝试使用相应密钥时，操作必须失败并显示 <code>KM_ERROR_KEY_EXPIRED</code>。</p>
+
+<p>此标记的值是一个 64 位的整数，表示距 1970 年 1 月 1 日的毫秒数。</p>
+
+<p>此标记不可重复使用。</p>
+
+<h3 id="km_tag_min_seconds_between_ops">KM_TAG_MIN_SECONDS_BETWEEN_OPS</h3>
+
+<p>用于指定至少必须间隔多长时间才能再次将密钥用于允许的操作。在不限制密钥使用次数可能会给暴力破解攻击以可乘之机的环境中，可以使用此标记来限制密钥的使用次数。</p>
+
+<p>此标记的值是一个 32 位的整数，表示允许的操作之间间隔的秒数。</p>
+
+<p>当有操作使用带有此标记的某个密钥时，计时器应在 <a href="#finish">finish</a> 或 <a href="#abort">abort</a> 调用期间启动。在计时器表明通过 <code>KM_TAG_MIN_SECONDS_BETWEEN_OPS</code> 指定的间隔时间已过去之前收到的所有 <a href="#begin">begin</a> 调用都必须失败并显示 <code>KM_ERROR_KEY_RATE_LIMIT_EXCEEDED</code>。这项要求意味着 Trustlet 必须要为带有此标记的密钥维护一份计时器表格。由于 Keymaster 内存的大小通常有限制，因此该表格可以具有固定的最大大小，并且当该表格被占满时，如果有操作尝试使用带有此标记的密钥，Keymaster 可以使这些操作失败。该表格必须能够容纳至少 32 个使用中的密钥，而且当密钥最小使用间隔到期时，必须主动重复使用该表格中的位置。如果某项操作因该表格已被占满而失败，Keymaster 应返回 <code>KM_ERROR_TOO_MANY_OPERATIONS</code>。</p>
+
+<p>此标记不可重复使用。</p>
+
+<h3 id="km_tag_max_uses_per_boot">KM_TAG_MAX_USES_PER_BOOT</h3>
+
+<p>用于指定在两次系统重启之间可以使用相应密钥的最大次数。这是另一种限制密钥使用次数的机制。</p>
+
+<p>此标记的值是一个 32 位的整数，表示在每次系统启动后可以使用相应密钥的次数。</p>
+
+<p>当有操作使用带有此标记的某个密钥时，与该密钥关联的计数器应在 <a href="#begin">begin</a> 调用期间递增。当密钥计数器超出此标记的值后，所有尝试使用该密钥的后续操作都必须失败并显示 <code>KM_ERROR_MAX_OPS_EXCEEDED</code>，直到设备重启为止。这项要求意味着 Trustlet 必须要为带有此标记的密钥维护一份使用次数计数器表格。由于 Keymaster 内存的大小通常有限制，因此该表格可以具有固定的最大大小，并且当该表格被占满时，如果有操作尝试使用带有此标记的密钥，Keymaster 可以使这些操作失败。该表格必须能够容纳至少 16 个密钥。如果某项操作因该表格已被占满而失败，Keymaster 应返回 <code>KM_ERROR_TOO_MANY_OPERATIONS</code>。</p>
+
+<p>此标记不可重复使用。</p>
+
+<h3 id="km_tag_user_secure_id">KM_TAG_USER_SECURE_ID</h3>
+
+<p>用于指定只能在某个安全的用户身份验证状态下使用相应密钥。此标记与 <a href="#km_tag_no_auth_required">KM_TAG_NO_AUTH_REQUIRED</a> 互斥。</p>
+
+<p>此标记的值是一个 64 位的整数，用于指定在通过 <a href="#km_tag_auth_token">KM_TAG_AUTH_TOKEN</a> 向 <a href="#begin">begin</a> 提供的身份验证令牌中必须存在哪个身份验证政策状态值，身份验证程序才会授权使用相应密钥。如果在调用 <a href="#begin">begin</a> 时未提供身份验证令牌，或提供的身份验证令牌没有匹配的政策状态值，但所用密钥带有此标记，该调用必须失败。</p>
+
+<p>此标记可重复使用。如果提供的值中有任何一个与身份验证令牌中的任何政策状态值一致，身份验证程序即会授权使用相应密钥。否则，操作必须失败并显示 <code>KM_ERROR_KEY_USER_NOT_AUTHENTICATED</code>。</p>
+
+<h3 id="km_tag_no_auth_required">KM_TAG_NO_AUTH_REQUIRED</h3>
+
+<p>用于指定无需进行身份验证即可使用相应密钥。此标记与 <a href="#km_tag_user_secure_id">KM_TAG_USER_SECURE_ID</a> 互斥。</p>
+
+<p>此标记为布尔值，因此可能的值为 true（如果此标记存在）和 false（如果此标记不存在）。</p>
+
+<p>此标记不可重复使用。</p>
+
+<h3 id="km_tag_user_auth_type">KM_TAG_USER_AUTH_TYPE</h3>
+
+<p>用于指定可以使用哪些类型的用户身份验证程序来授权使用相应密钥。请求 Keymaster 执行所用密钥带有此标记的操作时，必须要为 Keymaster 提供一个身份验证令牌，并且该令牌的 <code>authenticator_type</code> 字段必须与此标记中的值一致。准确来说就是，<code>(ntoh(token.authenticator_type) &amp;
+auth_type_tag_value) != 0</code> 必须为 true，其中 <code>ntoh</code> 是一个函数，用于将按网络字节序保存的整数转换成按主机字节序保存的整数，而 <code>auth_type_tag_value</code> 是此标记的值。</p>
+
+<p>此标记的值是以下枚举值的位掩码（32 位整数）：</p>
+
+<pre>
+typedef enum {
+    HW_AUTH_NONE = 0,
+    HW_AUTH_PASSWORD = 1 &lt;&lt; 0,
+    HW_AUTH_FINGERPRINT = 1 &lt;&lt; 1,
+    // Additional entries should be powers of 2.
+    HW_AUTH_ANY = UINT32_MAX,
+} hw_authenticator_type_t;
+</pre>
+
+<p>此标记不可重复使用。</p>
+
+<h3 id="km_tag_auth_timeout">KM_TAG_AUTH_TIMEOUT</h3>
+
+<p>用于指定授权在多长时间内使用相应密钥（以秒数计，从通过身份验证开始算起）。如果 <a href="#km_tag_user_secure_id">KM_TAG_USER_SECURE_ID</a> 存在而此标记不存在，那么每次使用相应密钥时都需要通过身份验证（要详细了解各项操作的身份验证流程，请参阅 <a href="#begin">begin</a>）。</p>
+
+<p>此标记的值是一个 32 位的整数，用于指定可在多长时间内使用相应密钥（以秒数计，从使用通过 <a href="#km_tag_mac_length">KM_TAG_USER_AUTH_TYPE</a> 指定的身份验证方法对通过 <a href="#km_tag_user_secure_id">KM_TAG_USER_SECURE_ID</a> 指定的用户成功进行身份验证开始算起）。</p>
+
+<p>此标记不可重复使用。</p>
+
+<h3 id="km_tag_all_applications">KM_TAG_ALL_APPLICATIONS</h3>
+
+<p>预留标记，供将来使用。</p>
+
+<p>此标记不可重复使用。</p>
+
+<h3 id="km_tag_application_id">KM_TAG_APPLICATION_ID</h3>
+
+<p>当提供给 <a href="#generate_key">generate_key</a> 或 <a href="#import_key">import_key</a> 时，此标记用于指定使用相应密钥时必须要提供的数据。具体来说就是，调用 <a href="#export_key">export_key</a> 和 <a href="#get_key_characteristics">get_key_characteristics</a> 时必须要在 <code>client_id</code> 参数中提供相同的值，而调用 <a href="#begin">begin</a> 时则必须要提供此标记以及相同的相关数据（作为 <code>in_params</code> 集的一部分）。如果未收到正确的数据，函数必须返回 <code>KM_ERROR_INVALID_KEY_BLOB</code>。</p>
+
+<p><i></i>此标记的内容必须要以加密形式绑定到相应密钥，这意味着，如果有不轨人士有权访问安全域的所有机密内容，但无权访问此标记的内容，必须要确保他们无法解密相应密钥（在不对此标记的内容进行暴力破解攻击的情况下）。</p>
+
+<p>此标记的值是一个 Blob（任意长度的字节数数组）。</p>
+
+<p>此标记不可重复使用。</p>
+
+<h3 id="km_tag_application_data">KM_TAG_APPLICATION_DATA</h3>
+
+<p>当提供给 <a href="#generate_key">generate_key</a> 或 <a href="#import_key">import_key</a> 时，此标记用于指定使用相应密钥时必须要提供的数据。具体来说就是，调用 <a href="#export_key">export_key</a> 和 <a href="#get_key_characteristics">get_key_characteristics</a> 时必须要在 <code>client_id</code> 参数中提供相同的值，而调用 <a href="#begin">begin</a> 时则必须要提供此标记以及相同的相关数据（作为 <code>in_params</code> 集的一部分）。如果未收到正确的数据，函数必须返回 <code>KM_ERROR_INVALID_KEY_BLOB</code>。</p>
+
+<p><i></i>此标记的内容必须要以加密形式绑定到相应密钥，这意味着，如果有不轨人士有权访问安全域的所有机密内容，但无权访问此标记的内容，必须要确保他们无法解密相应密钥（在不对此标记的内容进行暴力破解攻击的情况下）。</p>
+
+<p>此标记的值是一个 Blob（任意长度的字节数数组）。</p>
+
+<p>此标记不可重复使用。</p>
+
+<h3 id="km_tag_creation_datetime">KM_TAG_CREATION_DATETIME</h3>
+
+<p>用于指定相应密钥的创建日期和时间（以距 1970 年 1 月 1 日的毫秒数计）。此标记为可选标记，仅供参考。</p>
+
+<p>此标记不可重复使用。</p>
+
+<h3 id="km_tag_origin">KM_TAG_ORIGIN</h3>
+
+<p>用于指定相应密钥是在哪里创建的（如果知道）。在生成或导入密钥期间可以不指定此标记，但此标记必须要由 Trustlet 添加到密钥特性中。</p>
+
+<p>可能的值是在 <code>keymaster_origin_t</code> 中定义的：</p>
+
+<pre>
+typedef enum {
+    KM_ORIGIN_GENERATED = 0,
+    KM_ORIGIN_IMPORTED = 2,
+    KM_ORIGIN_UNKNOWN = 3,
+} keymaster_key_origin_t
+</pre>
+
+<p>此标记的值的完整含义不仅取决于值本身，还取决于值是位于由硬件强制执行的特性列表中，还是位于由软件强制执行的特性列表中。</p>
+
+<p><code>KM_ORIGIN_GENERATED</code> 表示相应密钥是由 Keymaster 生成的。如果它位于由硬件强制执行的列表中，那么相应密钥是在安全硬件中生成的，并且已永久绑定到硬件。如果它位于由软件强制执行的列表中，那么相应密钥是在 SoftKeymaster 中生成的，并且没有绑定到硬件。</p>
+
+<p><code>KM_ORIGIN_IMPORTED</code> 表示相应密钥是在 Keymaster 之外生成的，并且导入到了 Keymaster 中。如果它位于由硬件强制执行的列表中，那么相应密钥已永久绑定到硬件，不过可能存在位于安全硬件之外的副本。如果它位于由软件强制执行的列表中，那么相应密钥已导入到 SoftKeymaster 中，并且没有绑定到硬件。</p>
+
+<p><code>KM_ORIGIN_UNKNOWN</code> 应当仅出现在由硬件强制执行的列表中。它表示相应密钥已绑定到硬件，但不知道相应密钥原本就是在安全硬件中生成的，还是导入的。只有在使用 keymaster0 硬件模拟 keymaster1 服务时，才会出现这种情况。</p>
+
+<p>此标记不可重复使用。</p>
+
+<h3 id="km_tag_rollback_resistant">KM_TAG_ROLLBACK_RESISTANT</h3>
+
+<p>用于表明相应密钥可抗回滚，也就是说，当通过 <a href="#delete_key">delete_key</a> 或 <a href="#delete_all_keys">delete_all_keys</a> 删除相应密钥后，可保证相应密钥已被永久删除且无法再使用。如果密钥不带此标记，那么在被删除后，可能能够从备份中恢复。</p>
+
+<p>此标记为布尔值，因此可能的值为 true（如果此标记存在）和 false（如果此标记不存在）。</p>
+
+<p>此标记不可重复使用。</p>
+
+<h3 id="km_tag_root_of_trust">KM_TAG_ROOT_OF_TRUST</h3>
+
+<p>用于指定“信任根”，即经过验证的启动程序在验证操作系统是否已启动时使用的键（如果有）。在任何情况下，都不可以通过密钥特性将此标记提供给 Keymaster，也不可以通过密钥特性从 Keymaster 返回此标记。</p>
+
+<h3 id="km_tag_associated_data">KM_TAG_ASSOCIATED_DATA</h3>
+
+<p>用于提供进行 AES-GCM 加密或解密时使用的“相关数据”。可以将此标记提供给 <a href="#update">update</a>，以便指定在计算 GCM 标记时使用的未加密/解密的数据。</p>
+
+<p>此标记的值是一个 Blob（任意长度的字节数数组）。</p>
+
+<p>此标记不可重复使用。</p>
+
+<h3 id="km_tag_nonce">KM_TAG_NONCE</h3>
+
+<p>用于提供或返回进行 AES GCM、CBC 或 CTR 加密/解密时使用的随机数或初始化矢量 (IV)。在加密和解密操作期间，可以将此标记提供给 <a href="#begin">begin</a>。仅当相应密钥带有 <a href="#km_tag_caller_nonce">KM_TAG_CALLER_NONCE</a> 时，才可以将此标记提供给 <a href="#begin">begin</a>。如果调用程序未提供此标记，Keymaster 将随机生成适当的随机数或 IV 并通过 begin 将其返回。</p>
+
+<p>此标记的值是一个 Blob（任意长度的字节数数组）。所允许的长度取决于模式：GCM 随机数的长度为 12 个字节；CBC IV 和 CTR IV 的长度为 16 个字节。</p>
+
+<p>此标记不可重复使用。</p>
+
+<h3 id="km_tag_auth_token">KM_TAG_AUTH_TOKEN</h3>
+
+<p>用于向 <a href="#begin">begin</a>、<a href="#update">update</a> 或 <a href="#finish">finish</a> 提供身份验证令牌（请参阅“身份验证”页面），以便向要求用户通过身份验证的密钥操作（密钥带有 <a href="#km_tag_user_secure_id">KM_TAG_USER_SECURE_ID</a>）证明相应用户已通过身份验证。</p>
+
+<p>此标记的值是一个包含 <code>hw_auth_token_t</code> 结构的 Blob。</p>
+
+<p>此标记不可重复使用。</p>
+
+<h3 id="km_tag_mac_length">KM_TAG_MAC_LENGTH</h3>
+
+<p>用于提供 MAC 或 GCM 身份验证标记的请求长度（以位数计）。</p>
+
+<p>此标记的值是 MAC 长度（以位数计）。这个值必须是 8 的倍数，并且不得小于与相应密钥关联的 <a href="#km_tag_min_mac_length">KM_TAG_MIN_MAC_LENGTH</a> 的值。</p>
+
+<h2 id="functions">函数</h2>
+
+<h3 id="deprecated_functions">已弃用的函数</h3>
+
+<p>虽然以下函数位于 <code>keymaster1_device_t</code> 定义中，但不应实现这些函数。这些函数的指针应设为 <code>NULL</code>：</p>
+
+<ul>
+  <li><code>generate_keypair</code>
+  </li><li><code>import_keypair</code>
+  </li><li><code>get_keypair_public</code>
+  </li><li><code>delete_keypair</code>
+  </li><li><code>delete_all</code>
+  </li><li><code>sign_data</code>
+  </li><li><code>verify_data</code>
+</li></ul>
+
+<h3 id="general_implementation_guidelines">常规实现准则</h3>
+
+<p>以下准则适用于 API 中的所有函数。</p>
+
+<h4 id="input_pointer_parameters">输入指针参数</h4>
+
+<p>进行指定调用时不使用的输入指针参数可以是 <code>NULL</code>。调用程序无需提供占位符。例如，某些密钥类型和模式可能不会使用 <a href="#begin">begin</a> 的 <code>in_params</code> 参数中的任何值，因此调用程序可以将 <code>in_params</code> 设为 <code>NULL</code> 或提供一个空的参数集。调用程序也可以提供不使用的参数，而 Keymaster 方法不得发出错误。</p>
+
+<p>如果所需的输入参数为 NULL，Keymaster 方法应返回 <code>KM_ERROR_UNEXPECTED_NULL_POINTER</code>。</p>
+
+<h4 id="output_pointer_parameters">输出指针参数</h4>
+
+<p>与输入指针参数类似，不使用的输出指针参数可以是 <code>NULL</code>。如果某个方法需要在某个输出参数中返回数据，但发现该参数为 <code>NULL</code>，则应返回 <code>KM_ERROR_OUTPUT_PARAMETER_NULL</code>。</p>
+
+<h4 id="api_misuse">API 滥用</h4>
+
+<p>调用程序可以通过多种方式提出虽然不合理或很荒谬但技术上并没有错误的请求。在这种情况下，keymaster1 实现无需失败或发出诊断。实现不应诊断以下情况：使用过小的密钥、指定不相关的输入参数、重复使用 IV 或随机数、生成密钥时未指定目的（因此生成的密钥没有用处），以及类似情况。但必须诊断以下情况：缺少必需的参数、指定无效的必需参数，以及类似错误。</p>
+
+<p>应用、框架和 Android Keystore 需负责确保对 Keymaster 模块的调用是合理的，而且是有用的。</p>
+
+<h3 id="get_supported_algorithms">get_supported_algorithms</h3>
+
+<p>用于返回一个列表，其中包含 Keymaster 硬件实现支持的算法。如果是软件实现，则必须返回一个空列表；如果是混合实现，则必须返回一个仅包含硬件支持的算法的列表。</p>
+
+<p>keymaster1 实现必须要支持 RSA、EC、AES 和 HMAC。</p>
+
+<h3 id="get_supported_block_modes">get_supported_block_modes</h3>
+
+<p>用于返回一个列表，其中包含对于指定的算法和目的，Keymaster 硬件实现支持的 AES 分块模式。</p>
+
+<p>对于不是分块加密算法的 RSA、EC 和 HMAC，无论是任何有效目的，此方法都必须返回一个空列表。如果目的无效，则应导致此方法返回 <code>KM_ERROR_INVALID_PURPOSE</code>。</p>
+
+<p>keymaster1 实现必须要支持使用 ECB、CBC、CTR 和 GCM 进行 AES 加密和解密。</p>
+
+<h3 id="get_supported_padding_modes">get_supported_padding_modes</h3>
+
+<p>用于返回一个列表，其中包含对于指定的算法和目的，Keymaster 硬件实现支持的填充模式。</p>
+
+<p>HMAC 和 EC 并没有填充这一概念，因此针对所有有效目的，此方法都必须返回一个空列表。如果目的无效，则应导致此方法返回 <code>KM_ERROR_INVALID_PURPOSE</code>。</p>
+
+<p>对于 RSA，keymaster1 实现必须要支持：</p>
+
+<ul>
+  <li>非填充式加密、解密、签名和验证。对于非填充式加密和签名，如果消息比公开模数短，实现必须要在消息左侧填充零来补齐。对于非填充式解密和验证，输入长度必须与公开模数的大小一致。
+  </li><li>PKCS#1 v1.5 加密和签名填充模式</li><li>盐最小长度为 20 的 PSS</li><li>OAEP</li></ul>
+
+<p>对于采用 ECB 和 CBC 模式的 AES 算法，keymaster1 实现必须要支持无填充和 PKCS#7 填充。CTR 和 GCM 模式必须仅支持无填充。</p>
+
+<h3 id="get_supported_digests">get_supported_digests</h3>
+
+<p>用于返回一个列表，其中包含对于指定的算法和目的，Keymaster 硬件实现支持的摘要模式。</p>
+
+<p>任何 AES 模式都不支持摘要，也不需要摘要，因此无论是任何有效目的，此方法都必须返回一个空列表。</p>
+
+<p>keymaster1 实现可以只实现一部分已定义的摘要，但必须要提供 SHA-256。强烈建议 keymaster1 实现提供 MD5、SHA1、SHA-224、SHA-256、SHA384 和 SHA512（完整的已定义摘要集）。</p>
+
+<h3 id="get_supported_import_formats">get_supported_import_formats</h3>
+
+<p>用于返回一个列表，其中包含指定算法的 Keymaster 硬件实现支持的导入格式。</p>
+
+<p>keymaster1 实现必须要支持 PKCS#8 格式（无密码保护），以便导入 RSA 密钥对和 EC 密钥对，并且必须要支持以原始格式导入 AES 密钥材料和 HMAC 密钥材料。</p>
+
+<h3 id="get_supported_export_formats">get_supported_export_formats</h3>
+
+<p>用于返回一个列表，其中包含指定算法的 Keymaster 硬件实现支持的导出格式。</p>
+
+<p>keymaster1 实现必须要支持 X.509 格式，以便导出 RSA 公钥和 EC 公钥。不得支持导出私钥或非对称密钥。</p>
+
+<h3 id="add_rng_entropy">add_rng_entropy</h3>
+
+<p>用于将调用程序提供的熵添加到 keymaster1 实现生成随机数（在密钥中使用）、IV 以及其他内容时使用的池中。</p>
+
+<p>Keymaster1 实现必须将收到的熵<strong>安全地</strong>混合到所使用的池中，该池中必须还要包含由硬件随机数生成器在内部生成的熵。混合操作必须具有以下特性：即使攻击者能够完全控制通过 <code>add_rng_entropy</code> 提供的位数或硬件生成的位数（但不能同时控制这两者），他们能够预测出通过熵池生成的位数的概率也不得超过 ½。</p>
+
+<p>尝试估算内部池中的熵的 keymaster1 实现必须假定通过 <code>add_rng_entropy</code> 提供的数据不包含熵。</p>
+
+<h3 id="generate_key">generate_key</h3>
+
+<p>用于生成一个新的加密密钥，同时指定将永久绑定到该密钥的关联授权。keymaster1 实现必须能够确保无法通过任何与生成密钥时指定的授权不一致的方式使用相应密钥。对于安全硬件无法强制执行的授权，安全硬件的义务仅限于确保与相应密钥关联的无法强制执行的授权不能被修改，以便每次调用 <a href="#get_key_characteristics">get_key_characteristics</a> 时都会返回原始值。此外，通过 <code>generate_key</code> 返回的特性必须将授权正确地分配到由硬件强制执行的列表和由软件强制执行的列表中。如需更多详细信息，请参阅 <a href="#get_key_characteristics">get_key_characteristics</a>。</p>
+
+<p>必须要向 <code>generate_key</code> 提供的参数取决于要生成的密钥的类型。这一部分将概括介绍每种类型的密钥必需的标记以及允许使用的标记。<a href="#km_tag_algorithm">KM_TAG_ALGORITHM</a> 始终为必需的标记，用于指定类型。</p>
+
+<h4 id="rsa_keys">RSA 密钥</h4>
+
+<p>以下参数是生成 RSA 密钥时必需的参数。</p>
+
+<ul>
+  <li><a href="#km_tag_key_size">KM_TAG_KEY_SIZE</a> 用于指定公开模数的大小（以位数计）。如果缺少此参数，方法必须返回 <code>KM_ERROR_UNSUPPORTED_KEY_SIZE</code>。必须要支持 1024、2048、3072 和 4096，最好还支持为 8 的倍数的所有密钥大小。
+  </li><li><a href="#km_tag_rsa_public_exponent">KM_TAG_RSA_PUBLIC_EXPONENT</a> 用于指定 RSA 公开指数的值。如果缺少此参数，方法必须返回 <code>KM_ERROR_INVALID_ARGUMENT</code>。实现必须要支持 3 和 65537，最好还支持不超过 2^64 的所有质数值。
+</li></ul>
+
+<p>以下参数不是生成 RSA 密钥时必需的参数，但如果在缺少这些参数的情况下生成 RSA 密钥，生成的密钥将无法使用。如果缺少这些参数，<code>generate_key</code> 函数不应返回错误。</p>
+
+<ul>
+  <li><a href="#km_tag_purpose">KM_TAG_PURPOSE</a> 用于指定允许的目的。对于 RSA 密钥，必须要支持采用任意组合的所有目的。
+  </li><li><a href="#km_tag_digest">KM_TAG_DIGEST</a> 用于指定可与新密钥配合使用的摘要算法。不支持任何摘要算法的实现必须要接受包含不受支持的摘要的密钥生成请求。不受支持的摘要应被放入“由软件强制执行”的列表内返回的密钥特性中。这是因为相应密钥能够与其他摘要配合使用，但添加摘要将在软件中进行。然后，将调用硬件按 <code>KM_DIGEST_NONE</code> 摘要算法执行相应操作。</li><li><a href="#km_tag_padding">KM_TAG_PADDING</a> 用于指定可与新密钥配合使用的填充模式。如果未指定任何不受支持的摘要算法，不支持任何摘要算法的实现必须将 <code>KM_PAD_RSA_PSS</code> 和 <code>KM_PAD_RSA_OAEP</code> 放入由软件强制执行的密钥特性列表中。
+</li></ul>
+
+<h4 id="ecdsa_keys">ECDSA 密钥</h4>
+
+<p>只有 <a href="#km_tag_key_size">KM_TAG_KEY_SIZE</a> 是生成 ECDSA 密钥时必需的参数。此参数用于选择 EC 组。实现必须要支持 224、256、384 和 521，这些值分别表示 NIST p-224、p-256、p-384 和 p521 曲线。</p>
+
+<p>为了使生成的 ECDSA 密钥可以使用，还需要 <a href="#km_tag_digest">KM_TAG_DIGEST</a>，但此参数不是生成 ECDSA 密钥时必需的参数。</p>
+
+<h4 id="aes_keys">AES 密钥</h4>
+
+<p>只有 <a href="#km_tag_key_size">KM_TAG_KEY_SIZE</a> 是生成 AES 密钥时必需的参数。如果缺少此参数，方法必须返回 <code>KM_ERROR_UNSUPPORTED_KEY_SIZE</code>。必须要支持 128 和 256。建议支持 192 位 AES 密钥。</p>
+
+<p>以下参数仅与 AES 密钥有关，但它们并不是生成 AES 密钥时必需的参数：</p>
+
+<ul>
+  <li><code>KM_TAG_BLOCK_MODE</code> 用于指定可与新密钥配合使用的分块模式。
+  </li><li><code>KM_TAG_PADDING</code> 用于指定可以使用的填充模式。此参数仅与 ECB 和 CBC 模式有关。
+</li></ul>
+
+<p>如果指定的是 GCM 分块模式，则必须要提供 <a href="#km_tag_min_mac_length">KM_TAG_MIN_MAC_LENGTH</a>。如果缺少此参数，方法必须返回 <code>KM_ERROR_MISSING_MIN_MAC_LENGTH</code>。此标记的值必须是 8 的倍数，并且必须介于 96 到 128 之间。</p>
+
+<h4 id="hmac_keys">HMAC 密钥</h4>
+
+<p>以下参数是生成 HMAC 密钥时必需的参数：</p>
+
+<ul>
+  <li><a href="#km_tag_key_size">KM_TAG_KEY_SIZE</a> 用于指定密钥大小（以位数计）。不得支持小于 64 以及不是 8 的倍数的值。必须要支持介于 64 到 512 之间并且是 8 的倍数的值。可以支持更大的值。
+  </li><li><a href="#km_tag_min_mac_length">KM_TAG_MIN_MAC_LENGTH</a> 用于指定可通过相应密钥生成或验证的 MAC 的最小长度。此参数的值必须是 8 的倍数，并且不得小于 64。
+  </li><li><a href="#km_tag_digest">KM_TAG_DIGEST</a> 用于指定相应密钥的摘要算法。必须且只能指定一种摘要，否则返回 <code>KM_ERROR_UNSUPPORTED_DIGEST</code>。如果 Trustlet 不支持指定的摘要，则返回 <code>KM_ERROR_UNSUPPORTED_DIGEST</code>。</li></ul>
+
+<h4 id="key_characteristics">密钥特性</h4>
+
+<p>如果特性参数为非 NULL 值，<code>generate_key</code> 必须返回新生成密钥的特性（适当地划分到由硬件强制执行的列表和由软件强制执行的列表中）。要了解哪些特性会划分到哪个列表中，请参阅 <a href="#get_key_characteristics">get_key_characteristics</a>。返回的特性必须要包含为生成密钥而指定的所有参数，<a href="#km_tag_application_id">KM_TAG_APPLICATION_ID</a> 和 <a href="#km_tag_application_data">KM_TAG_APPLICATION_DATA</a> 除外。如果这两个标记包含在密钥参数中，则必须要将其从返回的特性中移除；必须要确保无法通过查看返回的密钥 Blob 找出这两个标记的值。不过，这两个标记必须要以加密形式绑定到密钥 Blob，以便在使用相应密钥时，如果未提供正确的值，使用将会失败。同样，<a href="#km_tag_root_of_trust">KM_TAG_ROOT_OF_TRUST</a> 也必须要以加密形式绑定到相应密钥，但在生成或导入密钥期间可以不指定此标记，并且在任何情况下都不得返回此标记。</p>
+
+<p>除了收到的标记外，Trustlet 还必须要添加 <a href="#km_tag_origin">KM_TAG_ORIGIN</a>（值为 <code>KM_ORIGIN_GENERATED</code>）；如果相应密钥可抗回滚，还要添加 <a href="#km_tag_rollback_resistant">KM_TAG_ROLLBACK_RESISTANT</a>。</p>
+
+<h4 id="rollback_resistance">抗回滚</h4>
+
+<p>抗回滚意味着，相应密钥通过 <a href="#delete_key">delete_key</a> 或 <a href="#delete_all_keys">delete_all_keys</a> 被删除后，安全硬件将保证它绝对无法再使用。不采用抗回滚的实现通常会将生成或导入的密钥材料作为密钥 Blob（一种经过加密和身份验证的形式）返回给调用程序。当 Keystore 删除密钥 Blob 后，相应密钥将会消失，但之前已设法获取密钥材料的攻击者可能能够将相应密钥材料恢复到设备上。</p>
+
+<p>如果安全硬件保证被删除的密钥以后无法被恢复，那么相应密钥便可抗回滚。安全硬件通常是通过将额外的密钥元数据存储在攻击者无法操控的可信位置来做到这一点。在移动设备上，用于实现这一点的机制通常为 Replay Protected Memory Block (RPMB)。由于可创建的密钥数量基本上没有限制，而用于抗回滚的可信存储空间的大小可能有限制，因此即使无法为新密钥提供抗回滚功能，此方法也必须可以成功。在这种情况下，不得将 <a href="#km_tag_rollback_resistant">KM_TAG_ROLLBACK_RESISTANT</a> 添加到密钥特性中。</p>
+
+<h3 id="get_key_characteristics">get_key_characteristics</h3>
+
+<p>用于返回与收到的密钥关联的参数和授权，并且返回的参数和授权会划分为两组：一组由硬件强制执行，一组由软件强制执行。此处的说明同样适用于通过 <a href="#generate_key">generate_key</a> 和 <a href="#import_key">import_key</a> 返回的密钥特性列表。</p>
+
+<p>如果在密钥生成或导入期间提供了 <code>KM_TAG_APPLICATION_ID</code>，则必须要在 <code>client_id</code> 参数中为此方法提供相同的值。否则，此方法必须返回 <code>KM_ERROR_INVALID_KEY_BLOB</code>。同样，如果在生成或导入密钥期间提供了 <code>KM_TAG_APPLICATION_DATA </code>，则必须要在 <code>app_data</code> 参数中为此方法提供相同的值。</p>
+
+<p>此方法返回的特性完整地说明了指定密钥的类型和用法。</p>
+
+<p>要确定某个指定标记是属于由硬件强制执行的列表，还是属于由软件强制执行的列表，一般规则是：如果该标记的含义完全由安全硬件来保证，则属于由硬件强制执行的列表，否则属于由软件强制执行的列表。下面列出了可能无法明确确定到底属于哪个列表的具体标记：</p>
+
+<ul>
+  <li><a href="#km_tag_algorithm">KM_TAG_ALGORITHM</a>、<a href="#km_tag_key_size">KM_TAG_KEY_SIZE</a> 和 <a href="#km_tag_rsa_public_exponent">KM_TAG_RSA_PUBLIC_EXPONENT</a> 是密钥的固有属性。任何由硬件来保障安全的密钥都将位于由硬件强制执行的列表中，这是因为诸如“此 RSA 密钥材料仅用作 RSA 密钥”之类的声明由硬件强制执行，原因是硬件将不会以任何其他方式使用相应密钥，而软件无权访问密钥材料并且根本无法使用相应密钥。
+  </li><li>由安全硬件支持的 <a href="#km_tag_digest">KM_TAG_DIGEST</a> 值将位于由硬件支持的列表中。不受支持的摘要则位于由软件支持的列表中。
+  </li><li><a href="#km_tag_padding">KM_TAG_PADDING</a> 的值通常位于由硬件支持的列表中，但如果存在某种特定的填充模式必须要由软件来强制执行的可能性，那么这些值将位于由软件强制执行的列表中。对于允许使用不是由安全硬件支持的摘要算法进行 PSS 或 OAEP 填充的 RSA 密钥，则存在这种可能性。
+  </li><li>仅当用户身份验证由硬件强制执行时，<a href="#km_tag_user_secure_id">KM_TAG_USER_SECURE_ID</a> 和 <a href="#km_tag_mac_length">KM_TAG_USER_AUTH_TYPE</a> 才由硬件强制执行。要使用户身份验证由硬件强制执行，Keymaster Trustlet 和相关身份验证 Trustlet 都必须是安全的，并且必须共用一个用于签署和验证身份验证令牌的 HMAC 密钥。有关详情，请参阅“身份验证”页面。
+  </li><li><a href="#km_tag_active_datetime">KM_TAG_ACTIVE_DATETIME</a>、<a href="#km_tag_origination_expire_datetime">KM_TAG_ORIGINATION_EXPIRE_DATETIME</a> 和 <a href="#km_tag_usage_expire_datetime">KM_TAG_USAGE_EXPIRE_DATETIME</a> 标记要求能够访问可验证的正确挂钟。大多数安全硬件将只能访问由非安全操作系统提供的时间信息，这意味着这些标记由软件强制执行。
+  </li><li>对于绑定到硬件的密钥，<a href="#km_tag_origin">KM_TAG_ORIGIN</a> 始终位于硬件列表中。如果此标记出现在硬件列表中，更高的层级便可据此确定相应密钥是由硬件支持的密钥。
+</li></ul>
+
+<h3 id="import_key">import_key</h3>
+
+<p>用于将密钥材料导入到 Keymaster 硬件中。密钥定义参数和输出特性的处理方式与 <code>generate_key</code> 相同，但存在以下例外情况：</p>
+
+<ul>
+  <li><a href="#km_tag_key_size">KM_TAG_KEY_SIZE</a> 和 <a href="#km_tag_rsa_public_exponent">KM_TAG_RSA_PUBLIC_EXPONENT</a>（仅适用于 RSA 密钥）不是输入参数中必需的标记。如果未收到这两个标记，Trustlet 必须根据收到的密钥材料推导出这两个标记的值，并将适当的标记和值添加到密钥特性中。如果收到了这两个参数，Trustlet 必须根据密钥材料对其进行验证。如果收到的值与密钥材料中的值不一致，此方法必须返回 <code>KM_ERROR_IMPORT_PARAMETER_MISMATCH</code>。</li><li>返回的 <a href="#km_tag_origin">KM_TAG_ORIGIN</a> 必须要具有 <code>KM_ORIGIN_IMPORTED</code> 这个值。</li></ul>
+
+<h3 id="export_key">export_key</h3>
+
+<p>用于从 Keymaster RSA 密钥对或 EC 密钥对中导出公钥。</p>
+
+<p>如果在密钥生成或导入期间提供了 <code>KM_TAG_APPLICATION_ID</code>，则必须要在 <code>client_id</code> 参数中为此方法提供相同的值。否则，此方法必须返回 <code>KM_ERROR_INVALID_KEY_BLOB</code>。同样，如果在生成或导入密钥期间提供了 <code>KM_TAG_APPLICATION_DATA</code>，则必须要在 <code>app_data</code> 参数中为此方法提供相同的值。</p>
+
+<h3 id="delete_key">delete_key</h3>
+
+<p>用于删除收到的密钥。此方法为可选方法，可能只能由提供抗回滚功能的 Keymaster 模块来实现。</p>
+
+<h3 id="delete_all_keys">delete_all_keys</h3>
+
+<p>用于删除所有密钥。此方法为可选方法，可能只能由提供抗回滚功能的 Keymaster 模块来实现。</p>
+
+<h3 id="begin">begin</h3>
+
+<p>用于开始使用指定的密钥和参数（视情况而定）针对指定的目的进行加密操作，并返回与 <a href="#update">update</a> 和 <a href="#finish">finish</a> 配合使用以完成操作的操作句柄。该操作句柄还会在经过身份验证的操作中用作“质询”令牌，并且对于此类操作，该操作句柄必须包含在身份验证令牌的 <code>challenge</code> 字段中。</p>
+
+<p>Keymaster 实现必须要支持至少 16 个并行操作。Keystore 最多使用 15 个，留一个给 vold 用于对密码进行加密。当 Keystore 有 15 个操作正在进行（已调用 <code>begin</code>，但尚未调用 <code>finish</code> 或 <code>abort</code>）时，如果收到开始第 16 个操作的请求，它将对最近使用最少的操作调用 <code>abort</code>，以便将进行中的操作减少到 14 个，然后再调用 <code>begin</code> 来开始执行新收到的操作请求。
+
+</p><p>如果在密钥生成或导入期间指定了 <a href="#km_tag_application_id">KM_TAG_APPLICATION_ID</a> 或 <a href="#km_tag_application_data">KM_TAG_APPLICATION_DATA</a>，那么调用 <code>begin</code> 时必须要包含这两个标记以及最初在此方法的 <code>in_params</code> 参数中指定的值。</p>
+
+<h4 id="authorization_enforcement">密钥授权强制执行</h4>
+
+<p>在执行此方法期间，如果实现将以下密钥授权放入到了“由硬件强制执行的”特性中，并且相应操作不是公钥操作，那么这些授权必须要由 Trustlet 来强制执行。即使不符合授权要求，也必须要允许公钥操作（即使用 RSA 或 EC 密钥进行的 <code>KM_PURPOSE_ENCRYPT</code> 和 <code>KM_PURPOSE_VERIFY</code>）成功完成。</p>
+
+<ul>
+  <li><a href="#km_tag_purpose">KM_TAG_PURPOSE</a> 要求为此方法指定的目的必须要与密钥授权中的某个目的一致，除非请求的操作是公钥操作，即密钥是 RSA 密钥或 EC 密钥，目的是 <code>KM_PURPOSE_ENCRYPT</code> 或 <code>KM_PURPOSE_VERIFY</code>。请注意，<code>KM_PURPOSE_ENCRYPT</code> 对 EC 密钥无效。在这种情况下，begin 应该返回 <code>KM_ERROR_UNSUPPORTED_PURPOSE</code>。
+  </li><li><a href="#km_tag_active_datetime">KM_TAG_ACTIVE_DATETIME</a> 要求与可信 UTC 时间源进行比较。如果当前日期和时间早于此标记的值，方法必须返回 <code>KM_ERROR_KEY_NOT_YET_VALID</code>。</li><li><a href="#km_tag_origination_expire_datetime">KM_TAG_ORIGINATION_EXPIRE_DATETIME</a> 要求与可信 UTC 时间源进行比较。如果当前日期和时间晚于此标记的值，并且目的是 <code>KM_PURPOSE_ENCRYPT</code> 或 <code>KM_PURPOSE_SIGN</code>，方法必须返回 <code>KM_ERROR_KEY_EXPIRED</code>。</li><li><a href="#km_tag_usage_expire_datetime">KM_TAG_USAGE_EXPIRE_DATETIME</a> 要求与可信 UTC 时间源进行比较。如果当前日期和时间晚于此标记的值，并且目的是 <code>KM_PURPOSE_DECRYPT</code> 或 <code>KM_PURPOSE_VERIFY</code>，方法必须返回 <code>KM_ERROR_KEY_EXPIRED</code>。</li><li><a href="#km_tag_min_seconds_between_ops">KM_TAG_MIN_SECONDS_BETWEEN_OPS</a> 要求与指明相应密钥上次使用时间的可信相对计时器进行比较。如果上次使用时间加上此标记的值后小于当前时间，方法必须返回 <code>KM_ERROR_KEY_RATE_LIMIT_EXCEEDED</code>。要查看重要的实现要求，请参阅标记说明。
+  </li><li><a href="#km_tag_max_uses_per_boot">KM_TAG_MAX_USES_PER_BOOT</a> 要求与用于跟踪自系统启动以来相应密钥使用次数的安全计数器进行比较。如果已使用次数超出此标记的值，方法必须返回 <code>KM_ERROR_KEY_MAX_OPS_EXCEEDED</code>。</li><li>仅当相应密钥还有 <a href="#km_tag_auth_timeout">KM_TAG_AUTH_TIMEOUT</a> 时，<a href="#km_tag_user_secure_id">KM_TAG_USER_SECURE_ID</a> 才会由此方法强制执行。如果相应密钥同时具有这两个标记，此方法必须要已在 <code>in_params</code> 中收到 <a href="#km_tag_auth_token">KM_TAG_AUTH_TOKEN</a>，并且该令牌必须有效，也就是说，HMAC 字段可正确验证。此外，相应密钥必须要有至少一个 <a href="#km_tag_user_secure_id">KM_TAG_USER_SECURE_ID</a> 值与令牌中至少一个安全 ID 值一致。最后，相应密钥还必须要有 <a href="#km_tag_mac_length">KM_TAG_USER_AUTH_TYPE</a>，而且此标记必须要与令牌中的身份验证类型一致。如果这些要求中有任何一个不符合，方法必须返回 <code>KM_ERROR_KEY_USER_NOT_AUTHENTICATED</code>。</li><li><a href="#km_tag_caller_nonce">KM_TAG_CALLER_NONCE</a> 允许调用程序指定随机数或初始化矢量 (IV)。如果相应密钥没有此标记，但调用程序为此方法提供了 <a href="#km_tag_nonce">KM_TAG_NONCE</a>，则必须返回 <code>KM_ERROR_CALLER_NONCE_PROHIBITED</code>。
+  </li><li><a href="#km_tag_bootloader_only">KM_TAG_BOOTLOADER_ONLY</a> 用于指定相应密钥只能由引导加载程序使用。如果在引导加载程序执行完毕后调用此方法，并且提供的是仅限引导加载程序使用的密钥，则必须返回 <code>KM_ERROR_INVALID_KEY_BLOB</code>。</li></ul>
+
+<h4 id="rsa_keys">RSA 密钥</h4>
+
+<p>执行任何 RSA 密钥操作时，都必须要在 <code>in_params</code> 中指定一种且只能指定一种填充模式。如果未指定或指定了多次，方法必须返回 <code>KM_ERROR_UNSUPPORTED_PADDING_MODE</code>。</p>
+
+<p>RSA 签名和验证操作需要摘要，正如使用 OAEP 填充模式进行 RSA 加密和解密操作时一样。对于这些情况，调用程序必须要在 <code>in_params</code> 中指定一种且只能指定一种摘要。如果未指定或指定了多次，方法必须返回 <code>KM_ERROR_UNSUPPORTED_DIGEST</code>。</p>
+
+<p>私钥操作（<code>KM_PURPOSE_DECYPT</code> 和 <code>KM_PURPOSE_SIGN</code>）要求摘要和填充获得授权，也就是说，指定的值必须要在密钥授权中。否则，方法必须视情况返回 <code>KM_ERROR_INCOMPATIBLE_DIGEST</code> 或 <code>KM_ERROR_INCOMPATIBLE_PADDING</code>。公钥操作（<code>KM_PURPOSE_ENCRYPT</code> 和 <code>KM_PURPOSE_VERIFY</code>）可以使用未经授权的摘要或填充。</p>
+
+<p>除了 <code>KM_PAD_NONE</code> 之外，所有 RSA 填充模式都仅适用于特定目的。具体来说就是，<code>KM_PAD_RSA_PKCS1_1_5_SIGN</code> 和 <code>KM_PAD_RSA_PSS</code> 仅支持签名和验证，而 <code>KM_PAD_RSA_PKCS1_1_1_5_ENCRYPT</code> 和 <code>KM_PAD_RSA_OAEP</code> 仅支持加密和解密。如果指定的模式不支持指定的目的，方法必须返回 <code>KM_ERROR_UNSUPPORTED_PADDING_MODE</code>。</p>
+
+<p>填充模式与摘要之间存在以下非常重要的相互关系：</p>
+
+<ul>
+
+  <li><code>KM_PAD_NONE</code> 表示将执行“原始”RSA 操作。如果是进行签名或验证，必须要指定 <code>KM_DIGEST_NONE</code> 这种摘要。如果是进行非填充式加密或解密，则不需要摘要。
+
+  </li><li><code>KM_PAD_RSA_PKCS1_1_5_SIGN</code> 填充需要摘要。摘要可以是 <code>KM_DIGEST_NONE</code>，在这种情况下，Keymaster 实现将无法构建适当的 PKCS#1 v1.5 签名结构，因为它无法添加 DigestInfo 结构。不过，实现必须要构建 <code>0x00 || 0x01 || PS || 0x00 || M</code>，其中 M 是收到的消息，PS 是填充字符串。RSA 密钥的大小必须要比消息至少多 11 个字节，否则方法必须返回 <code>KM_ERROR_INVALID_INPUT_LENGTH</code>。</li><li><code>KM_PAD_RSA_PKCS1_1_1_5_ENCRYPT</code> 填充不需要摘要。</li><li><code>KM_PAD_RSA_PSS</code> 填充需要摘要，并且摘要不能是 <code>KM_DIGEST_NONE</code>。如果指定的是 <code>KM_DIGEST_NONE</code>，方法必须返回 <code>KM_ERROR_INCOMPATIBLE_DIGEST</code>。此外，RSA 密钥的大小必须要比摘要的输出大小至少多 22 个字节。否则，方法必须返回 <code>KM_ERROR_INCOMPATIBLE_DIGEST</code>。</li><li><code>KM_PAD_RSA_OAEP</code> 填充需要摘要，并且摘要不能是 <code>KM_DIGEST_NONE</code>。如果指定的是 <code>KM_DIGEST_NONE</code>，方法必须返回 <code>KM_ERROR_INCOMPATIBLE_DIGEST</code>。</li></ul>
+
+<h4 id="ec_keys">EC 密钥</h4>
+
+<p>执行任何 EC 密钥操作时，都必须要在 <code>in_params</code> 中指定一种且只能指定一种填充模式。如果未指定或指定了多次，则返回 <code>KM_ERROR_UNSUPPORTED_PADDING_MODE</code>。</p>
+
+<p>私钥操作 (<code>KM_PURPOSE_SIGN</code>) 要求摘要获得授权，也就是说，指定的值必须要在密钥授权中。否则返回 <code>KM_ERROR_INCOMPATIBLE_DIGEST</code>。公钥操作 (<code>KM_PURPOSE_VERIFY</code>) 可以使用未经授权的摘要或填充。</p>
+
+<h4 id="aes_keys">AES 密钥</h4>
+
+<p>执行 AES 密钥操作时，必须要在 <code>in_params</code> 中指定一种且只能指定一种分块模式和填充模式。如果有任何一项未指定或指定了多次，则返回 <code>KM_ERROR_UNSUPPORTED_BLOCK_MODE</code> 或 <code>KM_ERROR_UNSUPPORTED_PADDING_MODE</code>。指定的模式必须要已通过相应密钥授权。否则，方法必须返回 <code>KM_ERROR_INCOMPATIBLE_BLOCK_MODE</code> 或 <code>KM_ERROR_INCOMPATIBLE_PADDING_MODE</code>。</p>
+
+<p>如果分块模式是 <code>KM_MODE_GCM</code>，则必须要在 <code>in_params</code> 中指定 <code>KM_TAG_MAC_LENGTH</code>。指定的值必须是 8 的倍数，并且不得大于 128，也不得小于密钥授权中 <code>KM_TAG_MIN_MAC_LENGTH</code> 的值。如果 MAC 长度大于 128 或不是 8 的倍数，则返回 <code>KM_ERROR_UNSUPPORTED_MAC_LENGTH</code>。如果 MAC 长度小于密钥最小长度，则返回 <code>KM_ERROR_INVALID_MAC_LENGTH</code>。</p>
+
+<p>如果分块模式是 <code>KM_MODE_GCM</code> 或 <code>KM_MODE_CTR</code>，那么指定的填充模式必须是 <code>KM_PAD_NONE</code>。如果分块模式是 <code>KM_MODE_ECB</code> 或 <code>KM_MODE_CBC</code>，那么指定的填充模式可以是 <code>KM_PAD_NONE</code> 或 <code>KM_PAD_PKCS7</code>。如果填充模式不符合这些要求，则返回 <code>KM_ERROR_INCOMPATIBLE_PADDING_MODE</code>。</p>
+
+<p>如果分块模式是 <code>KM_MODE_CBC</code>、<code>KM_MODE_CTR</code> 或 <code>KM_MODE_GCM</code>，则需要初始化矢量或随机数。在大多数情况下，调用程序都不应提供 IV 或随机数，而 Keymaster 实现必须要生成一个随机 IV 或随机数，并通过 <code>out_params</code> 中的 <a href="#km_tag_nonce">KM_TAG_NONCE</a> 将其返回。CBC IV 和 CTR IV 均为 16 个字节。GCM 随机数为 12 个字节。如果密钥授权包含 <a href="#km_tag_caller_nonce">KM_TAG_CALLER_NONCE</a>，那么调用程序可以通过 <code>in_params</code> 中的 <a href="#km_tag_nonce">KM_TAG_NONCE</a> 提供 IV/随机数。如果在 <a href="#km_tag_caller_nonce">KM_TAG_CALLER_NONCE</a> 未获得授权时提供了随机数，则返回 <code>KM_ERROR_CALLER_NONCE_PROHIBITED</code>。如果在 <a href="#km_tag_caller_nonce">KM_TAG_CALLER_NONCE</a> 获得了授权的情况下未提供随机数，则生成一个随机 IV/随机数。</p>
+
+<h4 id="hmac_keys">HMAC 密钥</h4>
+
+<p>执行 HMAC 密钥操作时，必须要在 <code>in_params</code> 中指定 <code>KM_TAG_MAC_LENGTH</code>。指定的值必须是 8 的倍数，并且不得大于摘要长度，也不得小于密钥授权中 <code>KM_TAG_MIN_MAC_LENGTH</code> 的值。如果 MAC 长度大于摘要长度或不是 8 的倍数，则返回 <code>KM_ERROR_UNSUPPORTED_MAC_LENGTH</code>。如果 MAC 长度小于密钥最小长度，则返回 <code>KM_ERROR_INVALID_MAC_LENGTH</code>。</p>
+
+<h3 id="update">update</h3>
+
+<p>用于提供要在通过 <a href="#begin">begin</a> 开始且正在进行的操作中处理的数据。操作是通过 <code>operation_handle</code> 参数指定的。</p>
+
+<p>为了更灵活地处理缓冲区，此方法的实现可以选择不消耗完收到的数据。调用程序负责执行循环操作，以便在后续调用中馈送其余数据。必须要在 <code>input_consumed</code> 参数中返回所消耗的输入数据量。实现必须始终消耗至少一个字节，除非相应操作无法再接受更多字节；如果收到了零个以上的字节，但消耗了零字节，调用程序会将此视为错误并中止相应操作。</p>
+
+<p>实现还可以选择返回多少数据（作为 update 的结果）。这仅与加密和解密操作有关，因为在调用 <a href="#finish">finish</a> 之前，签名和验证操作不会返回任何数据。建议尽早返回数据，而不是缓冲数据。</p>
+
+<h4 id="error_handling">错误处理</h4>
+
+<p>如果此方法返回除 <code>KM_ERROR_OK</code> 之外的错误代码，那么相应操作将被中止，操作句柄也必须变为无效。如果以后再将该句柄与此方法、<a href="#finish">finish</a> 或 <a href="#abort">abort</a> 配合使用，都必须返回 <code>KM_ERROR_INVALID_OPERATION_HANDLE</code>。</p>
+
+<h4 id="authorization_enforcement">密钥授权强制执行</h4>
+
+<p>密钥授权强制执行主要在 <a href="#begin">begin</a> 中进行。不过，密钥存在以下情况时例外：</p>
+
+<ul>
+  <li>有一个或多个 <a href="#km_tag_user_secure_id">KM_TAG_USER_SECURE_ID</a>，并且</li><li>没有 <a href="#km_tag_auth_timeout">KM_TAG_AUTH_TIMEOUT</a>
+</li></ul>
+
+<p>在这种情况下，密钥需要针对各项操作的授权，并且 update 方法必须要在 <code>in_params</code> 参数中收到 <a href="#km_tag_auth_token">KM_TAG_AUTH_TOKEN</a>。该令牌必须有效（HMAC 必须验证），必须包含匹配的安全用户 ID，必须与密钥的 <a href="#km_tag_mac_length">KM_TAG_USER_AUTH_TYPE</a> 匹配，并且必须包含质询字段中当前操作的操作句柄。如果不符合这些要求，则返回 <code>KM_ERROR_KEY_USER_NOT_AUTHENTICATED</code>。</p>
+
+<p>调用程序必须要在每次调用 <a href="#update">update</a> 和 <a href="#finish">finish</a> 时提供身份验证令牌。实现只需对该令牌验证一次（如果它倾向于这么做）。</p>
+
+<h4 id="rsa_keys">RSA 密钥</h4>
+
+<p>对于使用 <code>KM_DIGEST_NONE</code> 的签名和验证操作，此方法必须要在单次 update 中接受要签署或验证的整个分块。此方法不能只消耗分块的一部分。不过，如果调用程序选择在多次 update 中提供数据，此方法仍必须要在多次 update 中接受相应数据。如果调用程序提供的要签署的数据多于可以消耗的数据（数据长度超出 RSA 密钥大小），则返回 <code>KM_ERROR_INVALID_INPUT_LENGTH</code>。</p>
+
+<h4 id="ecdsa_keys">ECDSA 密钥</h4>
+
+<p>对于使用 <code>KM_DIGEST_NONE</code> 的签名和验证操作，此方法必须要在单次 update 中接受要签署或验证的整个分块。此方法不能只消耗分块的一部分。</p>
+
+<p>不过，如果调用程序选择在多次 update 中提供数据，此方法仍必须要在多次 update 中接受相应数据。如果调用程序提供的要签署的数据多于可以消耗的数据，则应以静默方式截断这些数据。（这与处理在类似 RSA 操作中提供的超量数据不同，因为此方法与旧版客户端兼容。）</p>
+
+<h4 id="aes_keys">AES 密钥</h4>
+
+<p>AES GCM 模式支持通过 <code>in_params</code> 参数中的 <a href="#km_tag_associated_data">KM_TAG_ASSOCIATED_DATA</a> 标记提供的“相关身份验证数据”。可以在重复调用（如果数据太大而无法在单个分块中发送，那么重复调用非常重要）中提供相关数据，但必须始终先于要加密或解密的数据提供。update 调用可以同时接收相关数据以及要加密/解密的数据，但后续 update 中不得包含相关数据。如果调用程序已在某次调用 update 时提供了要加密/解密的数据，若再次向 update 调用提供相关数据，则返回 <code>KM_ERROR_INVALID_TAG</code>。</p>
+
+<p>对于 GCM 加密，此标记会通过 <a href="#finish">finish</a> 附加到密文中。在解密期间，向上一次 update 调用提供的数据的最后 <code>KM_TAG_MAC_LENGTH</code> 个字节就是此标记。由于 <a href="#update">update</a> 的指定调用无法得知自己是否为最后一次调用，因此它必须处理除标记长度之外的所有数据，并缓冲可能的标记数据以便在调用 <a href="#finish">finish</a> 期间进行处理。</p>
+
+<h3 id="finish">finish</h3>
+
+<p>用于完成通过 <a href="#begin">begin</a> 开始且正在进行的操作，负责处理通过 <a href="#update">update</a> 提供的所有尚未处理的数据。</p>
+
+<p>此方法是操作期间调用的最后一个方法，因此必须返回所有处理后的数据。</p>
+
+<p>无论是成功完成还是返回错误，此方法都会结束相应操作，从而使收到的操作句柄无效。如果以后再将该句柄与此方法、<a href="#update">update</a> 或 <a href="#abort">abort</a> 配合使用，都必须返回 <code>KM_ERROR_INVALID_OPERATION_HANDLE</code>。</p>
+
+<p>签名操作将返回签名作为输出。验证操作将接受 <code>signature</code> 参数中的签名，并且不会返回任何输出。</p>
+
+<h4 id="authorization_enforcement">密钥授权强制执行</h4>
+
+<p>密钥授权强制执行主要在 <a href="#begin">begin</a> 中进行。不过，密钥存在以下情况时例外：</p>
+
+<ul>
+  <li>有一个或多个 <a href="#km_tag_user_secure_id">KM_TAG_USER_SECURE_ID</a>，并且</li><li>没有 <a href="#km_tag_auth_timeout">KM_TAG_AUTH_TIMEOUT</a>
+</li></ul>
+
+<p>在这种情况下，密钥需要针对各项操作的授权，并且 update 方法必须要在 <code>in_params</code> 参数中收到 <a href="#km_tag_auth_token">KM_TAG_AUTH_TOKEN</a>。该令牌必须有效（HMAC 必须验证），必须包含匹配的安全用户 ID，必须与密钥的 <a href="#km_tag_mac_length">KM_TAG_USER_AUTH_TYPE</a> 匹配，并且必须包含质询字段中当前操作的操作句柄。如果不符合这些要求，则返回 <code>KM_ERROR_KEY_USER_NOT_AUTHENTICATED</code>。</p>
+
+<p>调用程序必须要在每次调用 <a href="#update">update</a> 和 <a href="#finish">finish</a> 时提供身份验证令牌。实现只需对该令牌验证一次（如果它倾向于这么做）。</p>
+
+<h4 id="rsa_keys">RSA 密钥</h4>
+
+<p>有一些附加要求，具体取决于填充模式：</p>
+
+<ul>
+  <li><strong>KM_PAD_NONE</strong>：对于非填充式签名和加密操作，如果收到的数据比密钥短，那么在签名/加密之前，必须要在数据左侧填充零来补齐。如果数据与密钥一样长度，但数值较大，则返回 <code>KM_ERROR_INVALID_ARGUMENT</code>。对于验证和解密操作，数据必须与密钥一样长。否则返回 <code>KM_ERROR_INVALID_INPUT_LENGTH.</code>
+  </li><li><strong>KM_PAD_RSA_PSS</strong>：对于 PSS 填充式签名操作，PSS 盐不得短于 20 个字节，并且必须是随机生成的。盐可以更长；参考实现使用的是长度最大的盐。调用 <a href="#begin">begin</a> 时在 <code>input_params</code> 中使用 <a href="#km_tag_digest">KM_TAG_DIGEST</a> 指定的摘要将用作 PSS 摘要算法，而 SHA1 将用作 MGF1 摘要算法。
+  </li><li><strong>KM_PAD_RSA_OAEP</strong>：调用 <a href="#begin">begin</a> 时在 <code>input_params</code> 中使用 <a href="#km_tag_digest">KM_TAG_DIGEST</a> 指定的摘要将用作 OAEP 摘要算法，而 SHA1 将用作 MGF1 摘要算法。
+</li></ul>
+
+<h4 id="ecdsa_keys">ECDSA 密钥</h4>
+
+<p>如果为非填充式签名或验证操作提供的数据太长，则要将其截断。</p>
+
+<h4 id="aes_keys">AES 密钥</h4>
+
+<p>有一些附加要求，具体取决于分块模式：</p>
+
+<ul>
+  <li><strong>KM_MODE_ECB</strong> 或 <strong>KM_MODE_CBC</strong>：如果填充模式是 <code>KM_PAD_NONE</code>，并且数据长度不是 AES 分块大小的倍数，则返回 <code>KM_ERROR_INVALID_INPUT_LENGTH</code>。如果填充模式是 <code>KM_PAD_PKCS7</code>，则按照 PKCS#7 规范填充数据。请注意，PKCS#7 要求，如果数据长度是分块长度的倍数，则必须要添加一个额外的填充分块。
+  </li><li><strong>KM_MODE_GCM</strong>：在加密期间，处理所有明文之后，会计算此标记（<a href="#km_tag_mac_length">KM_TAG_MAC_LENGTH</a> 个字节）并将其附加到返回的密文。在解密期间，会将最后 <a href="#km_tag_mac_length">KM_TAG_MAC_LENGTH</a> 个字节作为标记处理。如果标记验证失败，则返回 <code>KM_ERROR_VERIFICATION_FAILED</code>。</li></ul>
+
+<h3 id="abort">abort</h3>
+
+<p>用于中止正在进行的操作。在调用 abort 之后，如果后续再将收到的操作句柄与 <a href="#update">update</a>、<a href="#finish">finish</a> 或 <a href="#abort">abort</a> 配合使用，则返回 <code>KM_ERROR_INVALID_OPERATION_HANDLE</code>。</p>
+
+</body></html>

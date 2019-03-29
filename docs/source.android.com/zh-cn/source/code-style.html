@@ -1,0 +1,461 @@
+<html devsite><head>
+    <title>面向贡献者的代码样式指南</title>
+    <meta name="project_path" value="/_project.yaml"/>
+    <meta name="book_path" value="/_book.yaml"/>
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+<p>以下代码样式都是应严格遵守的规则（而非指南或建议）。如果所贡献的 Android 代码没有遵守以下规则，我们通常不会接受此类代码。<em></em>我们知道，并非所有的现有代码都遵守了这些规则，但我们希望所有新代码都能遵守这些规则。</p>
+
+<h2 id="java-language-rules">Java 语言规则</h2>
+<p>Android 遵循标准 Java 编码规范以及下文所述的其他规则。</p>
+
+<h3 id="dont-ignore-exceptions">请勿忽略异常</h3>
+<p>开发者可能会倾向于编写完全忽略异常的代码，例如：</p>
+<pre><code>void setServerPort(String value) {
+    try {
+        serverPort = Integer.parseInt(value);
+    } catch (NumberFormatException e) { }
+}
+</code></pre>
+<p>千万不要这样做。虽然您可能认为自己的代码永远不会遇到这种错误，或者无需费心处理这种错误，但像上例那样忽略异常会在您的代码中埋下隐患，这种错误总有一天会被他人触发。您必须有原则地处理代码中的每个异常；具体处理方式因情况而异。</p>
+<p><em>无论何时，只要遇到空的 catch 子句，就应该保持警惕。当然，在某些时候，空的 catch 语句确实没什么问题，但至少你得想一想。在 Java 中，你怎么小心都不为过。</em>-<a href="http://www.artima.com/intv/solid4.html">James Gosling</a></p>
+<p>可接受的替代方案（按优先顺序排列）包括：</p>
+<ul>
+<li>将异常抛给方法调用者。
+<pre><code>void setServerPort(String value) throws NumberFormatException {
+    serverPort = Integer.parseInt(value);
+}
+</code></pre>
+</li>
+<li>抛出一个适合您的抽象级别的新异常。
+<pre><code>void setServerPort(String value) throws ConfigurationException {
+    try {
+        serverPort = Integer.parseInt(value);
+    } catch (NumberFormatException e) {
+        throw new ConfigurationException("Port " + value + " is not valid.");
+    }
+}
+</code></pre>
+</li>
+<li>妥善处理错误，并替换 catch {} 块中的相应值。
+<pre><code>/** Set port. If value is not a valid number, 80 is substituted. */
+
+void setServerPort(String value) {
+    try {
+        serverPort = Integer.parseInt(value);
+    } catch (NumberFormatException e) {
+        serverPort = 80;  // default port for server
+    }
+}
+</code></pre>
+</li>
+<li>捕获异常并抛出一个新的 <code>RuntimeException</code>。这样做比较危险，因此请仅在下述情况下采用这种方案：您确定，如果发生此错误，最适当的处理方式就是让应用崩溃。
+<pre><code>/** Set port. If value is not a valid number, die. */
+
+void setServerPort(String value) {
+    try {
+        serverPort = Integer.parseInt(value);
+    } catch (NumberFormatException e) {
+        throw new RuntimeException("port " + value " is invalid, ", e);
+    }
+}
+</code></pre>
+<p class="note"><strong>注意</strong>：原始异常会传递到 RuntimeException 的构造函数。如果您的代码必须采用 Java 1.3 进行编译，则必须忽略表示原因的异常。</p>
+</li>
+<li>最后一种方案：如果您确信忽略异常是合适的处理方式，那么您可以忽略异常，但您必须添加备注以充分说明理由：<pre><code>/** If value is not a valid number, original port number is used. */
+void setServerPort(String value) {
+    try {
+        serverPort = Integer.parseInt(value);
+    } catch (NumberFormatException e) {
+        // Method is documented to just ignore invalid user input.
+        // serverPort will just be unchanged.
+    }
+}
+</code></pre>
+</li>
+</ul>
+
+<h3 id="dont-catch-generic-exception">请勿捕获常规异常</h3>
+<p>在捕获异常时，开发者可能会为了偷懒而倾向于采用以下处理方式：</p>
+<pre><code>try {
+    someComplicatedIOFunction();        // may throw IOException
+    someComplicatedParsingFunction();   // may throw ParsingException
+    someComplicatedSecurityFunction();  // may throw SecurityException
+    // phew, made it all the way
+} catch (Exception e) {                 // I'll just catch all exceptions
+    handleError();                      // with one generic handler!
+}
+</code></pre>
+<p>千万不要这样做。几乎所有情况下都不适合捕获常规异常或 Throwable（最好不要捕获 Throwable，因为它包含 Error 异常）。这样做非常危险，因为这意味着系统会在处理应用级错误期间捕获到您从未预料到的异常（包括 ClassCastException 之类的 RuntimeException）。它掩盖了代码的故障处理属性，也就是说，如果有人在您所调用的代码中添加了一种新类型的异常，编译器不会帮助您意识到您需要采取不同的方式来处理该错误。在大多数情况下，您不应以相同的方式处理不同类型的异常。</p>
+<p>这条规则的特例是：在测试代码和顶级代码中，您希望捕获所有类型的错误（以防它们显示在界面中或者以便一直进行批处理作业）。在这些情况下，您可以捕获常规异常（或 Throwable）并适当地处理错误。但在这样做之前，请务必三思，然后添加备注以说明为何在此处执行这类操作是安全之举。</p>
+<p>捕获常规异常的替代方案：</p>
+<ul>
+<li>
+<p>在单个 try 之后将每个异常作为单独的 catch 块分别进行捕获。这样做可能显得比较笨拙，但仍比捕获所有异常更可取。请注意，不要在 catch 块中过多地重复使用代码。</p></li><p></p>
+
+<li>
+<p>通过多个 try 块重构您的代码，使得错误处理过程更精细。从解析中分离出 IO，然后分别处理每种情况下的错误。</p>
+</li>
+<li>
+<p>重新抛出异常。很多时候，您无需在该级别捕获异常，只需让相应方法抛出异常即可。</p>
+</li>
+</ul>
+<p>请谨记：异常是您的朋友！当编译器抱怨您没有捕获异常时，别闷闷不乐！您应该微笑：因为编译器让您能够更加轻松地捕获代码中的运行时错误。</p>
+<h3 id="dont-use-finalizers">请勿使用终结器</h3>
+<p>终结器可以在对象被垃圾回收器回收时执行一段代码。虽然终结器非常便于进行资源清理（尤其是外部资源），但并不能保证终结器何时被调用（甚至根本不会被调用）。</p>
+<p>Android 不使用终结器。在大多数情况下，您可以通过良好的异常处理流程实现终结器功能。如果您的确需要终结器，请定义一个 close() 方法（或类似方法），并注明需要调用该方法的确切时间（有关示例，请参阅 InputStream）。这种情况下，可以（但并非必须）在终结器中输出简短的日志消息，前提是不会输出大量日志消息。</p>
+
+<h3 id="fully-qualify-imports">完全合格的导入</h3>
+<p>当您想要使用 foo 包中的 Bar 类时，可以使用以下两种方式导入：</p>
+<ul>
+<li><code>import foo.*;</code>
+<p>可能会减少 import 语句的数量。</p></li>
+<li><code>import foo.Bar;</code>
+<p>明确指出实际使用了哪些类，而且代码对于维护者来说更易读。</p></li></ul>
+<p>使用 <code>import foo.Bar;</code> 导入所有 Android 代码。在 Java 标准库（<code>java.util.*</code>、<code>java.io.*</code> 等）和单元测试代码 (<code>junit.framework.*</code>) 中创建显式异常。</p>
+
+<h2 id="java-library-rules">Java 库规则</h2>
+<p>使用 Android 的 Java 库和工具需要遵守相关规范。在某些情况下，具体规范发生了一些重大变化，旧代码可能使用的是已弃用的模式或库。使用此类代码时，可以继续遵循现有样式。不过，在创建新组件时，请不要再使用已弃用的库。</p>
+
+<h2 id="java-style-rules">Java 样式规则</h2>
+
+<h3 id="use-javadoc-standard-comments">使用 Javadoc 标准备注</h3>
+<p>每个文件都应该在顶部放置版权声明，其后是 package 和 import 语句（各个块之间用空行分隔），最后是类或接口声明。在 Javadoc 备注中说明类或接口的作用。</p>
+<pre><code>/*
+ * Copyright (C) 2015 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.android.internal.foo;
+
+import android.os.Blah;
+import android.view.Yada;
+
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
+/**
+ * Does X and Y and provides an abstraction for Z.
+ */
+
+public class Foo {
+    ...
+}
+</code></pre>
+<p><em></em>您编写的每个类和重要的公开方法都必须包含 Javadoc 备注，至少用一句话说明类或方法的用途。句式应以第三人称描述性动词开头。</p>
+<p>示例：</p>
+<pre><code>/** Returns the correctly rounded positive square root of a double value. */
+static double sqrt(double a) {
+    ...
+}
+</code></pre>
+<p>或</p>
+<pre><code>/**
+ * Constructs a new String by converting the specified array of
+ * bytes using the platform's default character encoding.
+ */
+public String(byte[] bytes) {
+    ...
+}
+</code></pre>
+<p>对于普通的 get 和 set 方法（如 <code>setFoo()</code>），您无需编写 Javadoc，要写也不过是“设置 Foo”。如果该方法执行更复杂的操作（例如强制实施约束条件或具有重大副作用），那么您必须添加备注。如果属性“Foo”的意思不明确，您也应该添加备注。
+</p><p>您所编写的每一种方法（无论是公开方法还是其他方法）都将受益于 Javadoc。公开方法是 API 的一部分，因此需要 Javadoc。Android 目前并不强制要求采用特定样式来编写 Javadoc 备注，但建议您参照<a href="http://www.oracle.com/technetwork/java/javase/documentation/index-137868.html">如何为 Javadoc 工具编写文档备注</a>中的说明。</p>
+
+<h3 id="write-short-methods">编写简短方法</h3>
+<p>在可行的情况下，尽量编写短小精炼的方法。我们了解，有些情况下较长的方法是恰当的，因此对方法的代码长度没有做出硬性限制。如果某个方法的代码超出 40 行，请考虑是否可以在不破坏程序结构的前提下对其拆解。</p>
+
+<h3 id="define-fields-in-standard-places">在标准位置定义字段</h3>
+<p>在文件的顶部或者在使用它们的方法之前定义字段。</p>
+
+<h3 id="limit-variable-scope">限制变量的作用域</h3>
+<p>尽可能缩小局部变量的作用域。这样做有助于提高代码的可读性和可维护性，并降低出错的可能性。每个变量应该在包含变量所有使用场合的最内层的块中进行声明。</p>
+<p>局部变量应该在首次使用时声明。几乎每个局部变量声明都应该包含一个初始化程序。如果您还没有足够的信息来合理地初始化某个变量，请推迟到信息充足时再进行声明。</p>
+<p>try-catch 语句是例外情况。如果通过一个会抛出受检异常的方法的返回值来初始化变量，则必须在 try 块中进行初始化。如果该值必须在 try 块之外使用，那么您必须在 try 块之前对其进行声明，因为它在 try 块中尚无法合理地初始化：</p>
+<pre><code>// Instantiate class cl, which represents some sort of Set
+Set s = null;
+try {
+    s = (Set) cl.newInstance();
+} catch(IllegalAccessException e) {
+    throw new IllegalArgumentException(cl + " not accessible");
+} catch(InstantiationException e) {
+    throw new IllegalArgumentException(cl + " not instantiable");
+}
+
+// Exercise the set
+s.addAll(Arrays.asList(args));
+</code></pre>
+<p>不过，即使是这种情况，也可以通过将 try-catch 块封装在某个方法中来避免：</p>
+<pre><code>Set createSet(Class cl) {
+    // Instantiate class cl, which represents some sort of Set
+    try {
+        return (Set) cl.newInstance();
+    } catch(IllegalAccessException e) {
+        throw new IllegalArgumentException(cl + " not accessible");
+    } catch(InstantiationException e) {
+        throw new IllegalArgumentException(cl + " not instantiable");
+    }
+}
+
+...
+
+// Exercise the set
+Set s = createSet(cl);
+s.addAll(Arrays.asList(args));
+</code></pre>
+<p>循环变量应该在 for 语句本身中进行声明，除非有令人信服的理由不这么做：</p>
+<pre><code>for (int i = 0; i &lt; n; i++) {
+    doSomething(i);
+}
+</code></pre>
+<p>和</p>
+<pre><code>for (Iterator i = c.iterator(); i.hasNext(); ) {
+    doSomethingElse(i.next());
+}
+</code></pre>
+
+<h3 id="order-import-statements">为 import 语句排序</h3>
+<p>import 语句的顺序为：</p>
+<ol>
+<li>
+<p>导入 Android 包</p>
+</li>
+<li>
+<p>导入第三方包（<code>com</code>、<code>junit</code>、<code>net</code>、<code>org</code>）</p>
+</li>
+<li>
+<p><code>java</code> 和 <code>javax</code></p>
+</li>
+</ol>
+<p>要完全符合 IDE 设置，导入顺序应为：</p>
+<ul>
+<li>
+<p>每个分组内按字母顺序排序，其中大写字母开头的语句位于小写字母开头的语句前面（例如 Z 在 a 前面）。</p>
+</li>
+<li>
+<p>每个主要分组（<code>android</code>、<code>com</code>、<code>junit</code>、<code>net</code>、<code>org</code>、<code>java</code>、<code>javax</code>）之间用空行隔开。</p>
+</li>
+</ul>
+<p>最初对于语句顺序并没有样式要求，这意味着 IDE 经常会改变顺序，或者 IDE 开发者必须停用自动导入管理功能并手动维护导入语句。这样相当不方便。当提及 Java 样式时，开发者们喜欢的样式五花八门，最终针对 Android 简单归结为“选择一种兼容一致的排序方式”。因此我们选择了一种样式，更新了样式指南，并让 IDE 遵循该指南。我们希望 IDE 用户在编写代码时，系统对所有软件包的导入都符合此模式，无需再进行额外的工程处理。</p>
+<p>这种样式是按以下原则选取的：</p>
+<ul>
+<li>
+<p>用户希望先看到的导入往往位于顶部 (<code>android</code>)。</p>
+</li>
+<li>
+<p>用户最不希望看到的导入往往位于底部 (<code>java</code>)。</p>
+</li>
+<li>
+<p>用户可以轻松遵循的样式。</p>
+</li>
+<li>
+<p>IDE 可以遵循的样式。</p>
+</li>
+</ul>
+<p>静态导入的使用和位置一直都存在争议。有些人希望静态导入穿插在其他导入语句之间，而有些人更希望其位于其他所有导入语句的上方或下方。此外，我们还没有确定如何让所有 IDE 都使用同一种顺序。由于许多人认为这个问题不太重要，因此您只需在保持一致的前提下自行决定即可。</p>
+
+<h3 id="use-spaces-for-indentation">使用空格缩进</h3>
+<p>我们使用四 (4) 个空格来缩进块，而不要使用制表符。如果您有疑问，请与周围的代码保持一致。</p>
+<p>我们使用八 (8) 个空格来缩进自动换行，包括函数调用和赋值。正确示例如下：</p>
+<pre><code>Instrument i =
+        someLongExpression(that, wouldNotFit, on, one, line);
+</code></pre>
+<p>错误示例如下：</p>
+<pre><code>Instrument i =
+    someLongExpression(that, wouldNotFit, on, one, line);
+</code></pre>
+
+<h3 id="follow-field-naming-conventions">遵循字段命名规范</h3>
+<ul>
+<li>
+<p>非公开且非静态字段的名称以 m 开头。</p>
+</li>
+<li>
+<p>静态字段的名称以 s 开头。</p>
+</li>
+<li>
+<p>其他字段以小写字母开头。</p>
+</li>
+<li>
+<p>公开静态 final 字段（常量）为全部大写并用下划线连接 (ALL_CAPS_WITH_UNDERSCORES)。</p>
+</li>
+</ul>
+<p>例如：</p>
+<pre><code>public class MyClass {
+    public static final int SOME_CONSTANT = 42;
+    public int publicField;
+    private static MyClass sSingleton;
+    int mPackagePrivate;
+    private int mPrivate;
+    protected int mProtected;
+}
+</code></pre>
+<h3 id="use-standard-brace-style">使用标准大括号样式</h3>
+<p>左大括号不单独占一行，与其前面的代码位于同一行：</p>
+<pre><code>class MyClass {
+    int func() {
+        if (something) {
+            // ...
+        } else if (somethingElse) {
+            // ...
+        } else {
+            // ...
+        }
+    }
+}
+</code></pre>
+<p>我们需要在条件语句周围添加大括号。例外情况：如果整个条件语句（条件和主体）适合放在同一行，那么您可以（但不是必须）将其全部放在一行上。例如，我们接受以下样式：</p>
+<pre><code>if (condition) {
+    body();
+}
+</code></pre>
+<p>同样也接受以下样式：</p>
+<pre><code>if (condition) body();
+</code></pre>
+<p>但不接受以下样式：</p>
+<pre><code>if (condition)
+    body();  // bad!
+</code></pre>
+
+<h3 id="limit-line-length">限制代码行长度</h3>
+<p>您的代码中每一行文本的长度都应该不超过 100 个字符。<em></em>虽然关于此规则存在很多争论，但最终决定仍是以 100 个字符为上限，不过存在以下例外情况：</p>
+<ul>
+<li>如果备注行包含长度超过 100 个字符的示例命令或文字网址，那么为了便于剪切和粘贴，该行可以超过 100 个字符。</li>
+<li>导入语句行可以超出此限制，因为用户很少会看到它们（这也简化了工具编写流程）。</li>
+</ul>
+
+<h3 id="use-standard-java-annotations">使用标准 Java 注释</h3>
+<p>注释应该位于同一语言元素的其他修饰符之前。简单的标记注释（例如 @Override）可以与语言元素列在同一行。如果有多个注释或参数化注释，则应各占一行并按字母顺序排列。</p>
+<p>Java 中 3 个预定义注释的 Android 标准做法如下：</p>
+<ul>
+<li><code>@Deprecated</code>：在不建议使用注释元素时，必须使用 @Deprecated 注释。如果您使用 @Deprecated 注释，则还必须为其添加 @deprecated Javadoc 标记，并且该标记应该指定一个替代实现方案。另外请注意，@Deprecated 方法应该仍然可以使用。<em></em>如果您看到带有 @deprecated Javadoc 标记的旧代码，请添加 @Deprecated 注释。
+</li>
+<li><code>@Override</code>：当某个方法替换了超类中的声明或实现时，必须使用 @Override 注释。例如，如果您使用 @inheritdocs Javadoc 标记，并且派生于某个类（而非接口），则必须再为方法添加 @Override 注释，说明该方法替换了父类的方法。</li>
+<li><code>@SuppressWarnings</code>：@SuppressWarnings 注释应该仅在无法消除警告的情况下使用。<em></em>如果某个警告通过了“无法消除”测试，则必须使用 @SuppressWarnings 注释，以确保所有警告都会反映出代码中的实际问题。
+<p>当需要 @SuppressWarnings 注释时，必须在前面添加一个 TODO 备注，用于说明“无法消除”情况。这通常会标识出是哪个违规类使用了糟糕的接口。例如：</p>
+<pre><code>// TODO: The third-party class com.third.useful.Utility.rotate() needs generics
+@SuppressWarnings("generic-cast")
+List&lt;String&gt; blix = Utility.rotate(blax);
+</code></pre>
+<p>当需要 @SuppressWarnings 注释时，您应该重构代码以分离出需要使用该注释的软件元素。</p>
+</li>
+</ul>
+
+<h3 id="treat-acronyms-as-words">将首字母缩写词视为字词</h3>
+<p>在为变量、方法和类命名时，请将首字母缩写词和缩写形式视为字词，使名称更具可读性：</p>
+<table>
+<thead>
+<tr>
+<th>良好</th>
+<th>不佳</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>XmlHttpRequest</td>
+<td>XMLHTTPRequest</td>
+</tr>
+<tr>
+<td>getCustomerId</td>
+<td>getCustomerID</td>
+</tr>
+<tr>
+<td>class Html</td>
+<td>class HTML</td>
+</tr>
+<tr>
+<td>String url</td>
+<td>String URL</td>
+</tr>
+<tr>
+<td>long id</td>
+<td>long ID</td>
+</tr>
+</tbody>
+</table>
+<p>由于 JDK 和 Android 代码库在首字母缩写词上非常不一致，几乎也不可能与周围的代码保持一致。因此，请务必将首字母缩写词视为字词。</p>
+
+<h3 id="use-todo-comments">使用 TODO 备注</h3>
+<p>为代码使用 TODO 备注是短期的临时解决方案，或者说足够好但并不完美。TODO 备注应该以全部大写的字符串 TODO 开头，后跟一个冒号：</p>
+<pre><code>// TODO: Remove this code after the UrlTable2 has been checked in.
+</code></pre>
+<p>和</p>
+<pre><code>// TODO: Change this to use a flag instead of a constant.
+</code></pre>
+<p>如果您的 TODO 采用“在未来的某个日期做某事”的形式，请确保在其中包含一个非常具体的日期（“在 2005 年 11 月前修复”）或者一个非常具体的事件（“在所有生产环境合成器都可处理 V7 协议后移除此代码”）。</p>
+
+<h3 id="log-sparingly">谨慎使用日志记录</h3>
+<p>虽然日志记录非常有必要，但对性能却有明显的负面影响，如果不能保持一定程度的简洁性，就会迅速失去其实用性。日志记录工具提供以下 5 种不同级别的日志记录：</p>
+<ul>
+<li><code>ERROR</code>：在出现极其严重的情况时使用。例如，某些事件会导致用户可见的后果，如果不明确删除某些数据、卸载应用、清除数据分区或重写整个设备（或更糟），则无法恢复。系统一直会记录此级别的日志。一般情况下，最好向统计信息收集服务器报告能够说明 ERROR 级别的一些日志记录情况的问题。</li>
+<li><code>WARNING</code>：在出现比较严重和意外的情况时使用。例如，某些事件会导致用户可见的后果，但是通过执行某些明确的操作（从等待或重启应用，一直到重新下载新版应用或重新启动设备）可在不丢失数据的情况下恢复。系统一直会记录此级别的日志。可以考虑向统计信息收集服务器报告能够说明 WARNING 级别的一些日志记录情况的问题。</li>
+<li><code>INFORMATIVE:</code>用于记录大多数人感兴趣的信息。例如，当检测到某种情况会造成广泛的影响时，尽管不一定是错误，系统也会记录下来。这种情况应该仅由一个被视为该领域最具权威性的模块来记录（避免由非权威组件重复记录）。系统一直会记录此级别的日志。
+</li>
+<li><code>DEBUG</code>：用于进一步记录设备上发生的可能与调查和调试意外行为相关的情况。您应该只记录收集有关组件的足够信息所需的信息。如果您的调试日志是主要日志，那么您可能应采用 VERBOSE 级别的日志记录。
+<p>系统会记录此级别的日志（即使在发布版本中），并且周围要有 <code>if (LOCAL_LOG)</code> 或 <code>if (LOCAL_LOGD)</code> 块，其中 <code>LOCAL_LOG[D]</code> 在您的类或子组件中定义。这样一来，系统有可能停用所有此类日志记录。因此，<code>if (LOCAL_LOG)</code> 块中不得包含有效逻辑。为日志编译的所有字符串也需要放在 <code>if
+(LOCAL_LOG)</code> 块中。如果日志记录调用会导致字符串编译在 <code>if (LOCAL_LOG)</code> 块之外发生，则不应将其重构为方法调用。</p>
+<p>有些代码仍然在使用 <code>if (localLOGV)</code>。虽然名称并不规范，但也可接受。</p>
+</li>
+<li><code>VERBOSE</code>：用于记录其他所有信息。系统仅针对调试版本记录此级别的日志，并且周围要有 <code>if (LOCAL_LOGV)</code> 块（或同类块），以便能够默认编译。所有字符串编译都将从发布版本中删除，并且需要在 <code>if (LOCAL_LOGV)</code> 块中显示。
+</li>
+</ul>
+<p><em>注意事项：</em> </p>
+<ul>
+<li>在指定模块中，除了 VERBOSE 级别之外，一个错误应该只报告一次（如果可能的话）。在模块内的单个函数调用链中，只有最内层的函数应当返回错误，同一模块中的调用者只能添加一些明显有助于隔离问题的日志记录。</li>
+<li>在一个模块链中，除了 VERBOSE 级别之外，当较低级别的模块检测到来自较高级别模块的无效数据时，低级模块应该只在 DEBUG 日志中记录该情况，并且仅当该日志提供的信息对调用者来说无法获取时进行记录。具体来说，当抛出异常（异常中应该会包含所有相关信息）或者所记录的所有信息都包含在错误代码中时，则不需要记录此类情况。这在框架和应用之间的交互中尤为重要，而且由第三方应用造成的情况经过框架妥善处理后，不应该触发高于 DEBUG 级别的日志记录。应该触发 INFORMATIVE 级别或更高级别日志记录的唯一情况是，模块或应用在其自身级别或更低级别检测到错误。</li>
+<li>当事实证明某些日志记录可能会发生多次时，最好实施一种频率限制机制来防止出现具有相同（或非常相似）信息的大量重复日志副本。</li>
+<li>失去网络连接属于完全在预期之内的常见情况，没必要记录下来。如果失去网络连接后导致在应用内出现某种后果，则应该记录为 DEBUG 或 VERBOSE 级别（具体取决于后果是否足够严重以及足够意外，足以记录在发布版本中）。</li>
+<li>如果在第三方应用可访问或代表第三方应用的文件系统上拥有完整的文件系统，则不应该记录高于 INFORMATIVE 级别的日志。</li>
+<li>来自任何不受信任来源（包括共享存储空间中的任何文件或通过任何网络连接获取的数据）的无效数据被视为符合预期，在被检测到无效时不应触发高于 DEBUG 级别的任何日志记录（甚至应该尽可能地限制日志记录）。</li>
+<li>请注意，在对 String 使用 <code>+</code> 运算符时，它会隐式创建一个具有默认缓冲区（大小为 16 个字符）的 <code>StringBuilder</code>，还可能会创建其他临时 String 对象。例如，显式创建 StringBuilder 并不比依赖默认的“+”运算符成本更高（实际上可能更高效）。请注意，即使没有读取日志信息，调用 <code>Log.v()</code> 的代码也会在发布版本中进行编译和执行，包括编译字符串。</li>
+<li>任何供其他人阅读并且在发布版本中提供的日志记录都应当简洁明了、合理易懂。这包括一直到 DEBUG 级别的所有日志记录。</li>
+<li>在内容有意义的情况下尽可能使日志记录在一行之内。一行长度在 80 到 100 个字符内是完全可以接受的，应当尽可能避免长度超过 130 或 160 个字符（包括标记的长度）。</li>
+<li>绝不能使用高于 VERBOSE 级别的日志记录报告成功事件。</li>
+<li>用于诊断难以重现的问题的临时日志记录应采用 DEBUG 或 VERBOSE 级别，并且应当包裹在 if 块中，以便在编译期间将其完全停用。</li>
+<li>请务必谨慎，避免在日志中泄露安全方面的信息。应避免提供个人信息，且必须避免提供有关受保护内容的信息。这在编写框架代码时尤为重要，因为事先无法轻易得知哪些是个人信息或受保护的内容，哪些不是。</li>
+<li>请勿使用 <code>System.out.println()</code>（或针对原生代码使用 <code>printf()</code>）。System.out 和 System.err 会重定向到 /dev/null，因此您的 print 语句不会产生可见效果。不过，为这些调用编译的所有字符串仍会得以执行。</li>
+<li><em>日志记录的黄金法则是，您的日志不一定要将其他日志排挤出缓冲区，正如其他日志不会这样对您的日志一样。</em></li>
+</ul>
+
+<h3 id="be-consistent">保持一致</h3>
+<p>总而言之：保持一致。如果您正在修改代码，请花几分钟时间看一下周围的代码并确定其样式。如果该代码在 if 语句周围使用空格，那么您也应该这样做。如果代码备注的周围是用星号组成的小方框，您也应该将备注放在这样的小方框内。</p>
+<p>制定样式规范的目的是整理出通用的编码词汇表，以便人们可以专注于您所说的内容，而不是您表达的方式。我们在此提出整体样式规则，让用户都知道这一词汇表，但局部样式也很重要。如果您添加到文件的代码看起来与其周围的现有代码明显不同，那么当读者读到此处时，这些代码会打乱他们的节奏。请尽量避免这种情况。</p>
+
+<h2 id="javatests-style-rules">Javatests 样式规则</h2>
+<p>请遵循测试方法的命名规范，并使用下划线将被测试的内容与被测试的具体情况区分开来。这种样式可让您更容易看出正在测试的情况。例如：</p>
+<pre><code>testMethod_specificCase1 testMethod_specificCase2
+
+void testIsDistinguishable_protanopia() {
+    ColorMatcher colorMatcher = new ColorMatcher(PROTANOPIA)
+    assertFalse(colorMatcher.isDistinguishable(Color.RED, Color.BLACK))
+    assertTrue(colorMatcher.isDistinguishable(Color.X, Color.Y))
+}
+</code></pre>
+
+</body></html>

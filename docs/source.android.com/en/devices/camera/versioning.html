@@ -1,0 +1,436 @@
+<html devsite>
+  <head>
+    <title>Camera Version Support</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>This page details version differences in Camera HALs, APIs, and associated
+Android Compatibility Test Suite (CTS) tests. It also covers several
+architectural changes made to harden and secure the camera framework in Android
+7.0 and the updates vendors must make to support these changes in their camera
+implementations.</p>
+
+<h2 id=glossary>Terminology</h2>
+
+<p>The following terms are used on this page:</p>
+
+<dl>
+
+<dt>Camera API1</dt>
+<dd>The app-level camera framework on Android 4.4 and earlier devices, exposed
+through the <code>android.hardware.Camera</code> class.</dd>
+
+<dt>Camera API2</dt>
+<dd>The app-level camera framework on Android 5.0 and later devices, exposed
+through the<code> android.hardware.camera2</code> package.</dd>
+
+<dt>Camera HAL</dt>
+<dd>The camera module layer implemented by SoC vendors. The app-level public
+frameworks are built on top of the camera HAL.</dd>
+
+<dt>Camera HAL3.1</dt>
+<dd>Version of the camera device HAL released with Android 4.4.</dd>
+
+<dt>Camera HAL3.2</dt>
+<dd>Version of the camera device HAL released with Android 5.0.</dd>
+
+<dt>Camera API1 CTS</dt>
+<dd>Set of camera Compatibility Test Suite (CTS) tests that run on top of Camera
+API1.</dd>
+
+<dt>Camera API2 CTS</dt>
+<dd>Additional set of camera CTS tests that run on top of Camera API2.</dd>
+
+</dl>
+
+
+<h2 id=camera_apis>Camera APIs</h2>
+<p>Android includes the following camera APIs.</p>
+
+<h3 id=camera_api1>Camera API1</h3>
+
+<p>Android 5.0 deprecated Camera API1, which continues to be phased out as new
+platform development focuses on Camera API2. However, the phase-out period will
+be lengthy, and Android releases will continue to support Camera API1 apps for
+some time. Specifically, support continues for:</p>
+
+<ul>
+<li><em>Camera API1 interfaces for apps</em>. Camera apps built on top of Camera
+API1 should work as they do on devices running earlier Android release versions.
+</li>
+<li><em>Camera HAL versions</em>. Includes support for Camera HAL1.0.</li>
+</ul>
+
+<h3 id=camera_api2>Camera API2</h3>
+
+<p>The Camera API2 framework exposes lower-level camera control to the app,
+including efficient zero-copy burst/streaming flows and per-frame controls of
+exposure, gain, white balance gains, color conversion, denoising, sharpening,
+and more. For details, watch the
+<a href="https://www.youtube.com/watch?v=92fgcUNCHic&feature=youtu.be&t=29m50s">Google
+I/O video overview</a>.</p>
+
+<p>Android 5.0 and later includes Camera API2; however, devices running Android
+5.0 and later may not support all Camera API2 features. The
+<code>android.info.supportedHardwareLevel</code> property that apps can query
+through the Camera API2 interfaces reports one of the following support
+levels:</p>
+
+<ul>
+<li><code>LEGACY</code>. These devices expose capabilities to apps through the
+Camera API2 interfaces that are approximately the same capabilities as those
+exposed to apps through the Camera API1 interfaces. The legacy frameworks code
+conceptually translates Camera API2 calls into Camera API1 calls; legacy devices
+do not support Camera API2 features such as per-frame controls.</li>
+<li><code>FULL</code>. These devices support all of major capabilities of Camera
+API2 and must use Camera HAL 3.2 or later and Android 5.0 or later.</li>
+<li><code>LIMITED</code>. These devices support some Camera API2 capabilities
+(but not all) and must use Camera HAL 3.2 or later.</li>
+</ul>
+
+<p>Individual capabilities are exposed via the
+<code>android.request.availableCapabilities</code> property in the Camera API2
+interfaces. <code>FULL</code> devices require the <code>MANUAL_SENSOR</code> and
+<code>MANUAL_POST_PROCESSING</code> capabilities, among others. The
+<code>RAW</code> capability is optional even for <code>FULL</code> devices.
+<code>LIMITED</code> devices can advertise any subset of these capabilities,
+including none of them. However, the <code>BACKWARD_COMPATIBLE</code> capability
+must always be defined.</p>
+
+<p>The supported hardware level of the device, as well as the specific Camera
+API2 capabilities it supports, are available as the following feature flags to
+allow Google Play filtering of Camera API2 camera apps.</p>
+
+<ul>
+  <li><code>android.hardware.camera.hardware_level.full</code>
+  <li><code>android.hardware.camera.capability.raw</code>
+  <li><code>android.hardware.camera.capability.manual_sensor</code>
+  <li><code>android.hardware.camera.capability.manual_post_processing</code>
+</ul>
+
+<h2 id=cts_requirements>CTS requirements</h2>
+
+<p>Devices running Android 5.0 and later must pass the Camera API1 CTS, Camera
+API2 CTS, and CTS Verifier camera tests.</p>
+
+<p>Devices that do not feature a Camera HAL3.2 implementation and are not
+capable of supporting the full Camera API2 interfaces must still pass the Camera
+API2 CTS tests. However, the device will be running in Camera API2
+<code>LEGACY</code> mode (in which the Camera API2 calls are conceptually mapped
+to Camera API1 calls) so any Camera API2 CTS tests related to features or
+capabilities beyond Camera API1 will be automatically skipped.</p>
+
+<p>On legacy devices, Camera API2 CTS tests that are not skipped use the
+existing public Camera API1 interfaces and capabilities with no new
+requirements. Bugs that are exposed (and which cause a Camera API2 CTS failure)
+are bugs already present in the device’s existing Camera HAL, and thus would
+be found by existing Camera API1 apps. We do not expect many bugs of this nature
+(however, any such bugs must be fixed to pass the Camera API2 CTS tests).</p>
+
+<h2 id=hardening>Camera framework hardening</h2>
+
+<p>To harden media and camera framework security, Android 7.0 moves camera
+service out of mediaserver. Vendors may need to make changes in the camera HAL
+depending on the API and HAL versions in use. The following sections detail
+architectural changes in AP1 and AP2 for HAL1 and HAL3, as well as general
+requirements.</p>
+
+<h3 id=hardening_api1>Architectural changes for API1</h3>
+<p>API1 video recording may assume camera and video encoder live in the same
+process. When using API1 on:</p>
+
+<ul>
+<li>HAL3, where camera service uses BufferQueue to pass buffers between
+processes, <strong>no vendor update</strong> is necessary.
+<p><img src="images/ape_camera_n_api1_hal3.png" alt="Android 7.0 camera and media
+stack in API1 on HAL3" id="figure1" /></p>
+<p class="img-caption"><strong>Figure 1. </strong>Android 7.0 camera and media
+stack in API1 on HAL3.</p>
+</li>
+<li>HAL1, which supports passing metadata in video buffers, <strong>vendors must
+update the HAL to use kMetadataBufferTypeNativeHandleSource</strong>.
+(<code>kMetadataBufferTypeCameraSource</code> is no longer supported in Android
+7.0.)
+<p><img src="images/ape_camera_n_api1_hal1.png" alt="Android 7.0 camera and media
+stack in API1 on HAL1" id="figure1" /></p>
+<p class="img-caption"><strong>Figure 2. </strong>Android 7.0 camera and media
+stack in API1 on HAL1.</p>
+</li>
+</ul>
+
+<h3 id=hardening_api2>Architectural changes for API2</h3>
+<p>For API2 on HAL1 or HAL3, BufferQueue passes buffers so those paths continue
+to work. The Android 7.0 architecture for API2 on:</p>
+
+<ul>
+<li>HAL1 is not affected by the cameraservice move, and <strong>no vendor
+update</strong> is necessary.</li>
+<li>HAL3 <em>is</em> affected, but <strong>no vendor update</strong> is
+necessary:
+<p><img src="images/ape_camera_n_api2_hal3.png" alt="Android 7.0 camera and
+media stack in API2 on HAL2" id="figure1" /></p>
+<p class="img-caption"><strong>Figure 3. </strong>Android 7.0 camera and media
+stack in API2 on HAL3.</p>
+</li>
+</ul>
+
+<h3 id=hardening_general>Additional requirements</h3>
+<p>The architectural changes made for hardening media and camera framework
+security include the following additional device requirements.</p>
+
+<ul>
+<li><strong>General</strong>. Devices require additional bandwidth due to IPC,
+which may affect time-sensitive camera use cases such as high-speed video
+recording. Vendors can measure actual impact by running
+<code>android.hardware.camera2.cts.PerformanceTest</code> and the Google Camera
+App for 120/240 FPS high speed video recording. Devices also require a small
+amount of additional RAM to create the new process.</li>
+<li><strong>Pass metadata in video buffers</strong>(<em>HAL1 only</em>). If HAL1
+stores metadata instead of real YUV frame data in video buffers, the HAL must
+use <code>kMetadataBufferTypeNativeHandleSource</code> as the metadata buffer
+type and pass <code>VideoNativeHandleMetadata</code> in video buffers.
+(<code>kMetadataBufferTypeCameraSource</code> is no longer supported on Android
+7.0.) With <code>VideoNativeHandleMetadata</code>, camera and media frameworks
+are able to pass the video buffers between processes by serializing and
+deserializing the native handles properly.</li>
+<li><strong>Buffer handle address does not always store the same buffer</strong>
+(<em>HAL3 only</em>). For each capture request, HAL3 gets addresses of buffer
+handles. HAL cannot use the addresses to identify buffers because the addresses
+may store another buffer handle after HAL returns the buffer. You must update
+the HAL to use buffer handles to identify the buffers. For example: HAL receives
+a buffer handle address A, which stores buffer handle A. After HAL returns
+buffer handle A, buffer handle address A may store buffer handle B next time the
+HAL receives it.</li>
+<li><strong>Update SELinux policies for cameraserver</strong>. If
+device-specific SELinux policies give mediaserver permissions to run the camera,
+you must update the SELinux policies to give cameraserver proper permissions. We
+do not encourage replicating the mediaserver's SELinux policies for cameraserver
+(as mediaserver and cameraserver generally require different resources in the
+system). Cameraserver should have only the permissions needed to perform camera
+functionalities and any unnecessary camera-related permissions in mediaserver
+should be removed.</p>
+
+<h3 id=hardening_validation>Validation</h3>
+<p>For all devices that include a camera and run Android 7.0, verify the
+implementation by running Android 7.0 CTS. Although Android 7.0 does not include
+new CTS tests that verify camera service changes, existing CTS tests will fail
+if you have not made the updates indicated above.</p>
+
+<h2 id="version-history">Camera HAL version history</h2>
+<p>For a list of tests available for evaluating the Android Camera HAL, see the
+<a href="/compatibility/cts/camera-hal.html">Camera HAL Testing
+Checklist</a>.</p>
+
+<h3 id="34">3.4</h3>
+
+<p>Minor additions to supported metadata and changes to data_space support:</p>
+
+<ul>
+<li>Add <code>ANDROID_SENSOR_OPAQUE_RAW_SIZE</code> static metadata as mandatory
+if <code>RAW_OPAQUE</code> format is supported.</li>
+<li>Add <code>ANDROID_CONTROL_POST_RAW_SENSITIVITY_BOOST_RANGE</code> static
+metadata as mandatory if any RAW format is supported.</li>
+<li>Switch <code>camera3_stream_t data_space</code> field to a more flexible
+definition, using the version 0 definition of dataspace encoding.</li>
+<li>General metadata additions which are available to use for HALv3.2 or newer:
+  <ul>
+  <li>
+  <a href="https://developer.android.com/reference/android/hardware/camera2/CameraMetadata.html#INFO_SUPPORTED_HARDWARE_LEVEL_3"><code>ANDROID_INFO_SUPPORTED_HARDWARE_LEVEL_3</code>
+  </a></li>
+  <li><code>ANDROID_CONTROL_POST_RAW_SENSITIVITY_BOOST</code></li>
+  <li><code>ANDROID_CONTROL_POST_RAW_SENSITIVITY_BOOST_RANGE</code></li>
+  <li><code>ANDROID_SENSOR_DYNAMIC_BLACK_LEVEL</code></li>
+  <li><code>ANDROID_SENSOR_DYNAMIC_WHITE_LEVEL</code></li>
+  <li><code>ANDROID_SENSOR_OPAQUE_RAW_SIZE</code></li>
+  <li><code>ANDROID_SENSOR_OPTICAL_BLACK_REGIONS</code></li>
+  </ul>
+  <li>
+</ul>
+
+<h3 id="33">3.3</h3>
+
+<p>Minor revision of expanded-capability HAL:</p>
+
+<ul>
+  <li>OPAQUE and YUV reprocessing API updates.</li>
+  <li>Basic support for depth output buffers.</li>
+  <li>Addition of <code>data_space</code> field to
+  <code>camera3_stream_t</code>.</li>
+  <li>Addition of rotation field to <code>camera3_stream_t</code>.</li>
+  <li>Addition of camera3 stream configuration operation mode to
+  <code>camera3_stream_configuration_t</code>.</li>
+</ul>
+
+<h3 id="32">3.2</h3>
+
+<p>Minor revision of expanded-capability HAL:</p>
+
+<ul>
+<li>Deprecates <code>get_metadata_vendor_tag_ops</code>. Use
+<code>get_vendor_tag_ops</code> in <code>camera_common.h</code> instead.</li>
+<li>Deprecates <code>register_stream_buffers</code>. All gralloc buffers
+provided by framework to HAL in <code>process_capture_request</code> may be new
+at any time.</li>
+<li>Add partial result support. <code>process_capture_result</code> may be
+called multiple times with a subset of the available results before the full
+result is available.</li>
+<li>Add manual template to <code>camera3_request_template</code>. Applications
+may use this template to control the capture settings directly.</li>
+<li>Rework the bidirectional and input stream specifications.</li>
+<li>Change the input buffer return path. The buffer is returned in
+<code>process_capture_result</code> instead of
+<code>process_capture_request</code>.</li>
+</ul>
+
+<h3 id="31">3.1</h3>
+
+<p>Minor revision of expanded-capability HAL:</p>
+
+<ul>
+<li><code>configure_streams</code> passes consumer usage flags to the HAL.</li>
+<li>flush call to drop all in-flight requests/buffers as fast as possible.</li>
+</ul>
+
+<h3 id="30">3.0</h3>
+
+<p>First revision of expanded-capability HAL:</p>
+
+<ul>
+<li>Major version change since the ABI is completely different. No change to the
+required hardware capabilities or operational model from 2.0.</li>
+<li>Reworked input request and stream queue interfaces: Framework calls into HAL
+with next request and stream buffers already dequeued. Sync framework support
+is included, necessary for efficient implementations.</li>
+<li>Moved triggers into requests, most notifications into results.</li>
+<li>Consolidated all callbacks into framework into one structure, and all setup
+methods into a single <code>initialize()</code> call.</li>
+<li>Made stream configuration into a single call to simplify stream management.
+Bidirectional streams replace STREAM_FROM_STREAM construct.</li>
+<li>Limited mode semantics for older/limited hardware devices.</li>
+</ul>
+
+<h3 id="20">2.0</h3>
+
+<p>Initial release of expanded-capability HAL (Android 4.2) [camera2.h]:</p>
+
+<ul>
+<li>Sufficient for implementing existing <code>android.hardware.Camera</code>
+API.</li>
+<li>Allows for ZSL queue in camera service layer.</li>
+<li>Not tested for any new features such as manual capture control, Bayer RAW
+capture, reprocessing of RAW data, etc.</li>
+</ul>
+
+<h3 id="10">1.0</strong></h3>
+
+<p>Initial Android camera HAL (Android 4.0) [camera.h]:</p>
+
+<ul>
+<li>Converted from C++ CameraHardwareInterface abstraction layer.</li>
+<li>Supports <code>android.hardware.Camera</code> API.</li>
+</ul>
+
+<h2 id=module_version>Camera module version history</h2>
+
+<p>This section contains module versioning information for the Camera hardware
+module, based on <code>camera_module_t.common.module_api_version</code>. The two
+most significant hex digits represent the major version, and the two least
+significant represent the minor version.</p>
+
+<h3 id="24">2_4</h3>
+
+<p>This camera module version adds the following API changes:</p>
+
+<ol>
+ <li><em>Torch mode support</em>. The framework can turn on torch mode for any
+ camera device that has a flash unit, without opening a camera device. The
+ camera device has a higher priority accessing the flash unit than the camera
+ module; opening a camera device will turn off the torch if it had been enabled
+ through the module interface. When there are any resource conflicts, such as
+ <code>open()</code> is called to open a camera device, the camera HAL module
+ must notify the framework through the torch mode status callback that the torch
+ mode has been turned off.</li>
+
+ <li><em>External camera (e.g. USB hot-plug camera) support</em>. The API
+ updates specify the camera static info is available only when camera is
+ connected and ready to use for external hot-plug cameras. Calls to get static
+ info will be invalid calls when camera status is not
+ <code>CAMERA_DEVICE_STATUS_PRESENT</code>. The framework counts solely on
+ device status change callbacks to manage the available external camera list.
+ </li>
+
+ <li><em>Camera arbitration hints</em>. Adds support for explicitly indicating
+ the number of camera devices that can be simultaneously opened and used. To
+ specify valid combinations of devices, the <code>resource_cost</code> and
+ <code>conflicting_devices</code> fields should always be set in the
+ <code>camera_info</code> structure returned by the <code>get_camera_info</code>
+ call.</li>
+
+ <li><em>Module initialization method</em>. Called by the camera service
+ after the HAL module is loaded to allow for one-time initialization of the HAL.
+ It is called before any other module methods are invoked.</li>
+</ol>
+
+<h3 id="23">2_3</h3>
+
+<p>This camera module version adds open legacy camera HAL device support.
+ The framework can use it to open the camera device as lower device HAL version
+ HAL device if the same device can support multiple device API versions.
+ The standard hardware module open call (common.methods->open) continues
+ to open the camera device with the latest supported version, which is
+ also the version listed in <code>camera_info_t.device_version</code>.</p>
+
+<h3 id="22">2_2</h3>
+
+<p>This camera module version adds vendor tag support from the module, and
+deprecates the old <code>vendor_tag_query_ops</code> that were previously only
+accessible with a device open.</p>
+
+<h3 id="21">2_1</h3>
+
+<p>This camera module version adds support for asynchronous callbacks to the
+framework from the camera HAL module, which is used to notify the framework
+about changes to the camera module state. Modules that provide a valid
+<code>set_callbacks()</code> method must report at least this version number.</p>
+
+<h3 id="20">2_0</h3>
+
+<p>Camera modules that report this version number implement the second version
+of the camera module HAL interface. Camera devices openable through this
+module may support either version 1.0 or version 2.0 of the camera device
+HAL interface. The <code>device_version</code> field of camera_info is always
+valid; the <code>static_camera_characteristics</code> field of
+<code>camera_info</code> is valid if the <code>device_version</code> field is
+2.0 or higher.</p>
+
+<h3 id="10">1_0</h3>
+
+<p>Camera modules that report these version numbers implement the initial
+camera module HAL interface. All camera devices openable through this
+module support only version 1 of the camera device HAL. The
+<code>device_version</code> and <code>static_camera_characteristics</code>
+fields of <code>camera_info</code> are not valid. Only the
+<code>android.hardware.Camera</code> API can be supported by this module and its
+devices.</p>
+
+  </body>
+</html>

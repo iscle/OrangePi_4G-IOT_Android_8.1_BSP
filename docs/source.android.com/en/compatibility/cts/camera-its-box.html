@@ -1,0 +1,245 @@
+<html devsite>
+  <head>
+    <title>Camera ITS-in-a-Box</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>Android Camera Image Test Suite (ITS) is part of Android Compatibility Test
+Suite (CTS) Verifier and includes tests that verify image content. As of CTS
+7.0_r8, CTS Verifier supports ITS test automation via Camera ITS-in-a-box;
+support for manual tests continues to ensure coverage for all Android device
+form factors.</p>
+
+<p>ITS-in-a-box brings the following benefits:</p>
+<ul>
+<li><strong>Automation</strong>. No human intervention is needed during the
+test.</li>
+<li><strong>Reduced testing time</strong>. Parallel testing of front/back camera
+cuts
+testing cycle time by 50%.</li>
+<li><strong>Easier troubleshooting</strong>. Consistency of test environment
+leads to fewer setup errors and increases reproducibility.</li>
+<li><strong>Efficiency</strong>. Ability to retry for individual Camera/Scene
+improves test execution efficiency.</li>
+</ul>
+
+<h2 id=get-started>Getting started</h2>
+<p>ITS-in-a-box consists of a plastic box that is laser cut from computer-aided
+design (CAD) drawings, a chart tablet, and a device under test (DUT). To get
+started with the Camera ITS-in-a-box:</p>
+<ol>
+<li><a href="camera_its_iab_tech_drawings.zip">Download the technical
+drawings</a>.</li>
+<li><a href="camera-its-box-assembly.html">Build the box</a>.</li>
+<li><a href="#configure-tablet">Configure a tablet</a> with Camera ITS
+software.</li>
+<li><a href="#run-tests">Run tests</a>.</li>
+<li><a href="#get-results">Get results</a> from the DUT.</li>
+</ol>
+
+<h2 id=configure-tablet>Configuring the tablet</h2>
+<p>This section provides step-by-step instructions for setting up a Pixel C
+tablet for use with the CameraITS software.</p>
+
+<p class="note"><strong>Note:</strong> The CameraITS python scripts
+automatically set the following options on the tablet for you:
+<br><em>Settings > Display > Sleep > After 30 minutes of inactivity</em>
+<br><em>Adaptive brightness > OFF</em>
+</p>
+
+<ol>
+<li>Charge the tablet and power it on. If prompted to set up an account, skip it
+(CameraITS does not require any account paired with the tablet).</li>
+<li>Update the tablet to Android 7.0 or later (Android 6.x and earlier versions
+do not support CameraITS).</li>
+<li>Enable developer mode by going to <em>Settings > About tablet</em> and
+tapping <strong>Build number</strong> five times.</li>
+<li>Return to <em>Settings</em> and select <strong>Developer options</strong>.
+
+<table>
+<tr>
+<th>Enable options</th>
+<td>
+<ul>
+<li>On</li>
+<li>Stay awake</li>
+<li>USB debugging (This allows the host to run the tablet in debug mode. When you
+connect the tablet to the host for the first time, the tablet prompts you to
+"Allow USB debugging?" If the tablet does not display the debug prompt,
+disconnect then reconnect tablet.)</li>
+</ul>
+</td>
+</tr>
+<tr>
+<th>Disable options</th>
+<td>
+<ul>
+<li>Automatic system updates</li>
+<li>Verify apps over USB</li>
+</ul>
+</td>
+</tr>
+</table>
+</li>
+<li>Determine DUT and chart IDs by running <code>$ adb devices</code> to list
+available devices. To determine <code>device_id</code> and
+<code>chart_id</code>, plug and unplug devices and observe the devices that
+connect and disconnect.</li>
+<li>Perform three test runs to suppress hints and user prompts that can obscure
+charts on the tablet screen.
+<ol style=list-style-lower-alpha>
+<li>Position the tablet face-up on a table (do not attach the tablet to the back
+panel of the box)</li>
+<li>Run the following command:
+<pre class="devsite-terminal devsite-click-to-copy">
+python tools/run_all_tests.py device=$device_id camera=0 chart=$chart_id scenes=2,3
+</pre>
+Scenes 2 and 3 require the tablet to display an image, so the tablet prompts you
+to "Allow Drive to access photos, media, and files on your device?". Clear this
+prompt (and prevent future prompts) by pressing <strong>Allow</strong>.</li>
+<li>Run the command again. The tablet prompts you to "Keep a copy of this file?"
+and suggests Google Drive. Clear this prompt (and prevent future prompts) by
+pressing the Drive icon then <strong>Cancel</strong> for upload to drive.</li>
+<li>Finally, run <code>tools/run_all_tests.py</code> and confirm that scenes
+change automatically as script cycles through different scenes. While most
+tests will FAIL (as the camera is not pointed at the chart), you can verify the
+tablet correctly cycles through the scenes without displaying any prompts or
+other pop-ups on the screen.</li></ol></li></ol>
+
+<h2 id=run-tests>Running tests</h2>
+<p>Before running the ITS-in-a-box, ensure your test setup includes the following
+hardware and software:</p>
+<ul>
+<li>One (1) ITS-in-a-box</li>
+<li>One (1) Pixel C for displaying Scenes, S/N: 5811000011</li>
+<li>Two (2) DUTs that use the same build fingerprint and have the CTS Verifier
+7.0_8+ application installed. Example DUTs:
+
+<ul>
+<li>One (1) Pixel NOF26W for the back camera(0) testing, S/N: FA6BM0305016. To
+install the CTS Verifier app, unzip android-cts-verifier.zip then run
+<pre class="devsite-terminal devsite-click-to-copy">
+adb -s FA6BM0305016 install -r android-cts-verifier/CtsVerifier.apk
+</pre></li>
+<li>One (1) Pixel NOF26W for the front camera(1) testing, S/N: FA6BM0305439. To
+install the CTS Verifier app, unzip android-cts-verifier.zip then run
+<pre class="devsite-terminal devsite-click-to-copy">
+adb -s FA6BM0305439 install -r android-cts-verifier/CtsVerifier.apk
+</pre>
+</li>
+</ul>
+</li></ul>
+
+<h3 id=scenes-0-4>Running scenes 0-4</h3>
+<p>To run scenes 0-4 on the front and back camera in parallel:</p>
+<pre class="devsite-click-to-copy">
+<code class="devsite-terminal">cd android-cts-verifier/CameraITS</code>
+<code class="devsite-terminal">. build/envsetup.sh</code>
+<code class="devsite-terminal">python tools/run_parallel_tests.py device0=FA6BM0305016 device1=FA6BM0305439 chart=5811000011</code>
+</pre>
+
+<p>Examples:</p>
+<table>
+<tr>
+<td ><img src=/compatibility/cts/images/camera_its_cam0.png align="center"></td>
+<td align="center"><img src=/compatibility/cts/images/camera_its_cam0.png></td>
+</tr>
+<tr>
+<td align="center"><p class=caption><strong>Figure 1</strong>. Camera 0 S/N:
+FA6BM0305016</p>
+</td>
+<td align="center"><p class=caption><strong>Figure 2</strong>. Camera 1 S/N:
+FA6BM0305439</p>
+</td>
+</tr>
+</table>
+
+<h3 id=retry-scenes>Retrying scenes</h3>
+<p>You can retry scenes for both front and back cameras or a single camera:
+<ul>
+<li>To retry scenes on front and back cameras in parallel:
+<pre class="devsite-terminal devsite-click-to-copy">
+python tools/run_parallel_tests.py device0=FA6BM0305016 device1=FA6BM0305439 chart=5811000011 scenes=3,4
+</pre>
+</li>
+<li>To retry scenes on a single camera:
+<pre class="devsite-terminal devsite-click-to-copy">
+python tools/run_all_tests.py device=FA6BM0305016 chart=5811000011 camera=1 scenes=3,4
+</pre>
+</li>
+</ul>
+
+<h3 id=scenes-0-4>Running scene 5</h3>
+<p>Scene 5 requires special setup with specific lighting (for details, refer to
+CameraITS.pdf in the CTS Verifier download). You can run Scene 5 separately
+(outside of the box) to test two devices in parallel.</p>
+<ul>
+<li>To run Scene 5 on front and back cameras on two devices in parallel:
+<pre class="devsite-terminal devsite-click-to-copy">
+python tools/run_parallel_tests.py device0=FA6BM0305016 device1=FA6BM0305439 chart=5811000011 scenes=5
+</pre>
+<br><img src=/compatibility/cts/images/camera_its_scene5.png width="50%"><br>
+<strong>Figure 3</strong>. Camera scene 5.</li>
+<li>To run Scene 5 for front and back cameras on a single device:
+<pre class="devsite-click-to-copy">
+<code class="devsite-terminal">python tools/run_all_tests.py device=FA6BM0305016 camera=0 scenes=5</code>
+<code class="devsite-terminal">python tools/run_all_tests.py device=FA6BM0305016 camera=1 scenes=5</code>
+</pre></li>
+</ul>
+
+<h2 id=get-results>Getting results</h2>
+<p>You can view results during testing and save the completed results as a report.
+</p>
+<ul>
+<li><strong>View progress of running tests</strong>. The command
+<code>run_parallel_tests</code> prints results only after Camera-Scene tests
+have finished, so to view results during test execution you must use Android
+Device Monitor or <code>adb logcat</code> to verify progress and/or view
+screenshots.<br>
+<br>Example adb command:
+<pre class="devsite-terminal devsite-click-to-copy">
+adb -s FA6BM0305016 logcat -v time
+</pre>
+Example screenshots command:
+<pre class="devsite-click-to-copy">
+<code class="devsite-terminal">adb -s FA6BM0305016 shell screencap -p /sdcard/screencap.png</code>
+<code class="devsite-terminal">adb -s FA6BM0305016 pull /sdcard/screencap.png</code>
+<code class="devsite-terminal">display ./screencap.png</code>
+</pre></li>
+<li><strong>View results</strong>. To save Camera ITS results as a report:
+<ol>
+<li>Press <strong>Pass</strong> and save the report:
+<br><img src=/compatibility/cts/images/camera_its_results.png width="50%"><br>
+<strong>Figure 4</strong>. Camera ITS report.</li>
+<li>Pull reports from the device:
+<pre class="devsite-terminal devsite-click-to-copy">
+adb -s FA6BM0305016 pull /sdcard/verifierReports
+</pre>
+</li>
+<li>Unzip the report file and view the test_result.xml.
+<br><img src=/compatibility/cts/images/camera_its_reports.png><br>
+<strong>Figure 5</strong>. Camera ITS reports.<br></li>
+</ol>
+</li>
+</ul>
+  </body>
+</html>

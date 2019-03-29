@@ -1,0 +1,432 @@
+<html devsite>
+  <head>
+    <title>Nexus Security Bulletin - February 2016</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p><em>Published February 01, 2016 | Updated March 7, 2016</em></p>
+
+<p>We have released a security update to Nexus devices through an over-the-air
+(OTA) update as part of our Android Security Bulletin Monthly Release process.
+The Nexus firmware images have also been released to the
+<a href="https://developers.google.com/android/nexus/images">Google Developer site</a>.
+Builds LMY49G or later and Android M with Security Patch Level of February 1,
+2016 or later address these issues. Refer to the
+<a href="https://support.google.com/nexus/answer/4457705">Nexus documentation</a>
+for instructions on how to check the security patch level.</p>
+
+<p>Partners were notified about the issues described in the bulletin on January 4,
+2016 or earlier. Where applicable, source code patches for these issues have been
+released to the Android Open Source Project (AOSP) repository.</p>
+
+<p>The most severe of these issues is a Critical security vulnerability that could
+enable remote code execution on an affected device through multiple methods
+such as email, web browsing, and MMS when processing media files. The Remote Code
+Execution Vulnerability in Broadcom’s Wi-Fi driver is also Critical severity as
+it could allow remote code execution on an affected device while connected to
+the same network as the attacker. The
+<a href="/security/overview/updates-resources.html#severity">severity
+assessment</a> is based on the effect that exploiting the vulnerability would
+possibly have on an affected device, assuming the platform and service
+mitigations are disabled for development purposes or if successfully bypassed.</p>
+
+<p>We have had no reports of active customer exploitation of these newly reported
+issues. Refer to the <a href="#mitigations">Mitigations</a> section for details on the
+<a href="/security/enhancements/index.html">Android security platform protections</a>
+and service protections such as SafetyNet, which improve the security of the
+Android platform. We encourage all customers to accept these updates to their
+devices.</p>
+
+<h3 id=mitigations>Mitigations</h3>
+
+
+<p>This is a summary of the mitigations provided by the
+<a href="/security/enhancements/index.html">Android security platform</a> and
+service protections such as SafetyNet. These capabilities reduce the
+likelihood that security vulnerabilities could be successfully exploited on
+Android.</p>
+
+<ul>
+  <li> Exploitation for many issues on Android is made more difficult by enhancements
+in newer versions of the Android platform. We encourage all users to update to
+the latest version of Android where possible.
+  <li> The Android Security team is actively monitoring for abuse with Verify Apps and
+SafetyNet which will warn about potentially harmful applications about to be
+installed. Device rooting tools are prohibited within Google Play. To protect
+users who install applications from outside of Google Play, Verify Apps is
+enabled by default and will warn users about known rooting applications. Verify
+Apps attempts to identify and block installation of known malicious
+applications that exploit a privilege escalation vulnerability. If such an
+application has already been installed, Verify Apps will notify the user and
+attempt to remove any such applications.
+  <li> As appropriate, Google Hangouts and Messenger applications do not automatically
+pass media to processes such as mediaserver.
+</ul>
+
+<h3 id=acknowledgements>Acknowledgements</h3>
+
+
+<p>We would like to thank these researchers for their contributions:</p>
+
+<ul>
+  <li> Android and Chrome Security Team: CVE-2016-0809, CVE-2016-0810
+  <li> Broadgate Team: CVE-2016-0801, CVE-2015-0802
+  <li> Chiachih Wu (<a
+       href="https://twitter.com/chiachih_wu">@chiachih_wu</a>), Mingjian Zhou (<a
+       href="https://twitter.com/Mingjian_Zhou">@Mingjian_Zhou</a>), and Xuxian Jiang
+       of <a href="http://c0reteam.org">C0RE Team</a>, <a
+       href="http://www.360safe.com/">Qihoo 360</a>: CVE-2016-0804
+  <li> David Riley of the Google Pixel C Team: CVE-2016-0812
+  <li> Gengjia Chen (<a href="https://twitter.com/@chengjia4574">@chengjia4574</a>)
+       of Lab IceSword, Qihoo 360: CVE-2016-0805
+  <li> Qidan He (<a href="https://twitter.com/@Flanker_hqd">@Flanker_hqd</a>) of
+       KeenLab (<a href="https://twitter.com/keen_lab">@keen_lab</a>), Tencent: CVE-2016-0811
+  <li> Seven Shen (<a href="https://twitter.com/@lingtongshen">@lingtongshen</a>)
+       of Trend Micro (<a href="http://www.trendmicro.com">www.trendmicro.com</a>): CVE-2016-0803
+  <li> Weichao Sun (<a href="https://twitter.com/sunblate">@sunblate</a>) of Alibaba Inc: CVE-2016-0808
+  <li> Zach Riggle (<a href="https://twitter.com/@ebeip90">@ebeip90</a>) of the Android Security Team: CVE-2016-0807
+</ul>
+
+<h2 id=security_vulnerability_details>Security Vulnerability Details</h2>
+
+
+<p>In the sections below, we provide details for each of the security
+vulnerabilities that apply to the 2016-02-01 patch level.
+There is a description of the issue, a severity rationale, and a table
+with the CVE, associated bug, severity, affected versions, and date reported.
+When available, we will link the AOSP commit that addressed the issue to the
+bug ID. When multiple changes relate to a single bug, additional AOSP
+references are linked to numbers following the bug ID.</p>
+
+<h3 id=remote_code_execution_vulnerability_in_broadcom_wi-fi_driver>Remote Code Execution Vulnerability in Broadcom Wi-Fi Driver</h3>
+
+
+<p>Multiple remote execution vulnerabilities in the Broadcom Wi-Fi driver could
+allow a remote attacker to use specially crafted wireless control message
+packets to corrupt kernel memory in a way that leads to remote code execution
+in the context of the kernel. These vulnerabilities can be triggered when the
+attacker and the victim are associated with the same network. This issue is
+rated as a Critical severity due to the possibility of remote code execution in
+the context of the kernel without requiring user interaction.</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>Bugs</th>
+    <th>Severity</th>
+    <th>Updated versions</th>
+    <th>Date reported</th>
+ </tr>
+ <tr>
+    <td>CVE-2016-0801</td>
+    <td><a href="https://android.googlesource.com/kernel/msm/+/68cdc8df1cb6622980b791ce03e99c255c9888af%5E!">ANDROID-25662029</a><br />
+   <a href="https://android.googlesource.com/kernel/msm/+/68cdc8df1cb6622980b791ce03e99c255c9888af%5E!">ANDROID-25662233</a></td>
+    <td>Critical</td>
+    <td>4.4.4, 5.0, 5.1.1, 6.0, 6.0.1</td>
+    <td>Oct 25, 2015</td>
+ </tr>
+ <tr>
+    <td>CVE-2016-0802</td>
+    <td><a href="https://android.googlesource.com/kernel/msm/+/3fffc78f70dc101add8b82af878d53457713d005%5E%21/">ANDROID-25306181</a></td>
+    <td>Critical</td>
+    <td>4.4.4, 5.0, 5.1.1, 6.0, 6.0.1</td>
+    <td>Oct 26,2015</td>
+ </tr>
+</table>
+
+<h3 id=remote_code_execution_vulnerability_in_mediaserver>Remote Code Execution Vulnerability in Mediaserver</h3>
+
+<p>During media file and data processing of a specially crafted file,
+vulnerabilities in mediaserver could allow an attacker to cause memory
+corruption and remote code execution as the mediaserver process.</p>
+
+<p>The affected functionality is provided as a core part of the operating system
+and there are multiple applications that allow it to be reached with remote
+content, most notably MMS and browser playback of media.</p>
+
+<p>This issue is rated as a Critical severity due to the possibility of remote
+code execution within the context of the mediaserver service. The mediaserver
+service has access to audio and video streams as well as access to privileges
+that third-party apps cannot normally access.</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>Bugs with AOSP links</th>
+    <th>Severity</th>
+    <th>Updated versions</th>
+    <th>Date reported</th>
+ </tr>
+ <tr>
+    <td>CVE-2016-0803</td>
+    <td><a href="https://android.googlesource.com/platform%2Fframeworks%2Fav/+/50270d98e26fa18b20ca88216c3526667b724ba7">ANDROID-25812794</a></td>
+    <td>Critical</td>
+    <td>4.4.4, 5.0, 5.1.1, 6.0, 6.0.1</td>
+    <td>Nov 19, 2015</td>
+ </tr>
+ <tr>
+    <td>CVE-2016-0804</td>
+    <td><a href="https://android.googlesource.com/platform%2Fframeworks%2Fav/+/224858e719d045c8554856b12c4ab73d2375cf33">ANDROID-25070434</a></td>
+    <td>Critical</td>
+    <td>5.0, 5.1.1, 6.0, 6.0.1</td>
+    <td>Oct 12, 2015</td>
+ </tr>
+</table>
+
+
+<h3 id=elevation_of_privilege_vulnerability_in_qualcomm_performance_module>Elevation of Privilege Vulnerability in Qualcomm Performance Module</h3>
+
+
+<p>An elevation of privilege vulnerability in the performance event manager
+component for ARM processors from Qualcomm could enable a local malicious
+application to execute arbitrary code within the kernel. This issue is rated as
+a Critical severity due to the possibility of a local permanent device
+compromise and the device would possibly need to be repaired by re-flashing the
+operating system.</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>Bug</th>
+    <th>Severity</th>
+    <th>Updated versions</th>
+    <th>Date reported</th>
+ </tr>
+ <tr>
+    <td>CVE-2016-0805</td>
+    <td>ANDROID-25773204*</td>
+    <td>Critical</td>
+    <td>4.4.4, 5.0, 5.1.1, 6.0, 6.0.1</td>
+    <td>Nov 15, 2015</td>
+ </tr>
+</table>
+
+<p>* The patch for this issue is not in AOSP. The update is contained in the
+latest binary drivers for Nexus devices available from the <a href="https://developers.google.com/android/nexus/drivers">Google Developer site</a>.</p>
+
+<h3 id=elevation_of_privilege_vulnerability_in_qualcomm_wifi_driver>Elevation of Privilege Vulnerability in Qualcomm Wi-Fi Driver</h3>
+
+
+<p>There is a vulnerability in the Qualcomm Wi-Fi driver that could enable a local
+malicious application to execute arbitrary code within the context of the
+kernel. This issue is rated as a Critical severity due to the possibility of a
+local permanent device compromise and the device would possibly need to be
+repaired by re-flashing the operating system.</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>Bug</th>
+    <th>Severity</th>
+    <th>Updated versions</th>
+    <th>Date reported</th>
+ </tr>
+ <tr>
+    <td>CVE-2016-0806</td>
+    <td>ANDROID-25344453*</td>
+    <td>Critical</td>
+    <td>4.4.4, 5.0, 5.1.1, 6.0, 6.0.1</td>
+    <td>Nov 15, 2015</td>
+ </tr>
+</table>
+
+<p>* The patch for this issue is not in AOSP. The update is contained in the
+latest binary drivers for Nexus devices available from the <a href="https://developers.google.com/android/nexus/drivers">Google Developer site</a>.</p>
+
+<h3 id=elevation_of_privilege_vulnerability_in_the_debuggerd>Elevation of Privilege Vulnerability in the Debuggerd </h3>
+
+
+<p>An elevation of privilege vulnerability in the Debuggerd component could enable
+a local malicious application to execute arbitrary code within the device root
+context. This issue is rated as a Critical severity due to the possibility of a
+local permanent device compromise and the device would possibly need to be
+repaired by re-flashing the operating system.</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>Bug with AOSP link</th>
+    <th>Severity</th>
+    <th>Updated versions</th>
+    <th>Date reported</th>
+ </tr>
+ <tr>
+    <td>CVE-2016-0807</td>
+    <td><a href="https://android.googlesource.com/platform%2Fsystem%2Fcore/+/d917514bd6b270df431ea4e781a865764d406120">ANDROID-25187394</a></td>
+    <td>Critical</td>
+    <td>6.0 and 6.0.1</td>
+    <td>Google Internal</td>
+ </tr>
+</table>
+
+
+<h3 id=denial_of_service_vulnerability_in_minikin>Denial of Service Vulnerability in Minikin</h3>
+
+
+<p>A denial of service vulnerability in the Minikin library could allow a local
+attacker to temporarily block access to an affected device. An attacker could
+cause an untrusted font to be loaded and cause an overflow in the Minikin
+component which leads to a crash. This is rated as a high severity because
+Denial of Service leads to a continuous reboot loop.</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>Bug with AOSP link</th>
+    <th>Severity</th>
+    <th>Updated versions</th>
+    <th>Date reported</th>
+ </tr>
+ <tr>
+    <td>CVE-2016-0808</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/minikin/+/ed4c8d79153baab7f26562afb8930652dfbf853b">ANDROID-25645298</a></td>
+    <td>High</td>
+    <td>5.0, 5.1.1, 6.0, 6.0.1</td>
+    <td>Nov 3, 2015</td>
+ </tr>
+</table>
+
+
+<h3 id=elevation_of_privilege_vulnerability_in_wi-fi>Elevation of Privilege Vulnerability in Wi-Fi</h3>
+
+
+<p>An elevation of privilege vulnerability in the Wi-Fi component could enable a
+local malicious application to execute arbitrary code within the System
+context. A device is only vulnerable to this issue while in local proximity.
+This issue is rated as High severity because it could be used to gain “<a href="http://developer.android.com/guide/topics/manifest/permission-element.html#plevel">normal</a>” capabilities remotely. Generally, these permissions are accessible only to
+third-party applications installed locally.</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>Bug with AOSP link</th>
+    <th>Severity</th>
+    <th>Updated versions</th>
+    <th>Date reported</th>
+ </tr>
+ <tr>
+    <td>CVE-2016-0809</td>
+    <td><a href="https://android.googlesource.com/platform/hardware/broadcom/wlan/+/2c5a4fac8bc8198f6a2635ede776f8de40a0c3e1%5E%21/#F0">ANDROID-25753768</a></td>
+    <td>High</td>
+    <td>6.0, 6.0.1</td>
+    <td>Google Internal</td>
+ </tr>
+</table>
+
+
+<h3 id=elevation_of_privilege_vulnerability_in_mediaserver>Elevation of Privilege Vulnerability in Mediaserver </h3>
+
+
+<p>An elevation of privilege vulnerability in mediaserver could enable a local
+malicious application to execute arbitrary code within the context of an
+elevated system application. This issue is rated as High severity because it
+could be used to gain elevated capabilities, such as <a href="http://developer.android.com/guide/topics/manifest/permission-element.html#plevel">Signature</a> or <a href="http://developer.android.com/guide/topics/manifest/permission-element.html#plevel">SignatureOrSystem</a> permissions privileges, which are not accessible to a third-party application.</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>Bug with AOSP link</th>
+    <th>Severity</th>
+    <th>Updated versions</th>
+    <th>Date reported</th>
+ </tr>
+ <tr>
+    <td>CVE-2016-0810</td>
+    <td><a href="https://android.googlesource.com/platform%2Fframeworks%2Fav/+/19c47afbc402542720ddd280e1bbde3b2277b586">ANDROID-25781119</a></td>
+    <td>High</td>
+    <td>4.4.4, 5.0, 5.1.1, 6.0, 6.0.1</td>
+    <td>Google Internal</td>
+ </tr>
+</table>
+
+
+<h3 id=information_disclosure_vulnerability_in_libmediaplayerservice>Information Disclosure Vulnerability in libmediaplayerservice </h3>
+
+
+<p>An information disclosure vulnerability in libmediaplayerservice could permit a
+bypass of security measures in place to increase the difficulty of attackers
+exploiting the platform. These issues are rated as High severity because they
+could also be used to gain elevated capabilities, such as <a href="http://developer.android.com/guide/topics/manifest/permission-element.html#plevel">Signature</a> or <a href="http://developer.android.com/guide/topics/manifest/permission-element.html#plevel">SignatureOrSystem</a> permissions privileges, which are not accessible to third-party applications.</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>Bug with AOSP link</th>
+    <th>Severity</th>
+    <th>Updated versions</th>
+    <th>Date reported</th>
+ </tr>
+ <tr>
+    <td>CVE-2016-0811</td>
+    <td><a href="https://android.googlesource.com/platform%2Fframeworks%2Fav/+/22f824feac43d5758f9a70b77f2aca840ba62c3b">ANDROID-25800375</a></td>
+    <td>High</td>
+    <td>6.0, 6.0.1</td>
+    <td>Nov 16, 2015</td>
+ </tr>
+</table>
+
+
+<h3 id=elevation_of_privilege_vulnerability_in_setup_wizard>Elevation of Privilege Vulnerability in Setup Wizard</h3>
+
+
+<p>A vulnerability in the Setup Wizard could allow a malicious attacker to bypass
+the Factory Reset Protection and gain access to the device. This is rated as a
+Moderate severity because it potentially allows someone with physical access to
+a device to bypass the Factory Reset Protection, which enables an attacker to
+successfully reset a device, erasing all data.</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>Bugs with AOSP links</th>
+    <th>Severity</th>
+    <th>Updated versions</th>
+    <th>Date reported</th>
+ </tr>
+ <tr>
+    <td>CVE-2016-0812</td>
+    <td><a href="https://android.googlesource.com/platform%2Fframeworks%2Fbase/+/84669ca8de55d38073a0dcb01074233b0a417541">ANDROID-25229538</a></td>
+    <td>Moderate</td>
+    <td>5.1.1, 6.0</td>
+    <td>Google Internal</td>
+ </tr>
+ <tr>
+    <td>CVE-2016-0813</td>
+    <td><a href="https://android.googlesource.com/platform%2Fframeworks%2Fbase/+/16a76dadcc23a13223e9c2216dad1fe5cad7d6e1">ANDROID-25476219</a></td>
+    <td>Moderate</td>
+    <td>5.1.1, 6.0, 6.0.1</td>
+    <td>Google Internal</td>
+ </tr>
+</table>
+
+<h3 id=common_questions_and_answers>Common Questions and Answers</strong></h3>
+
+<p>This section reviews answers to common questions that may occur after reading
+this bulletin.</p>
+
+<p><strong>1. How do I determine if my device is updated to address these issues?</strong></p>
+
+<p>Builds LMY49G or later and Android 6.0 with Security Patch Level of February 1,
+2016 or later address these issues. Refer to the <a href="https://support.google.com/nexus/answer/4457705">Nexus documentation</a> for instructions on how to check the security patch level. Device
+manufacturers that include these updates should set the patch string level to:
+[ro.build.version.security_patch]:[2016-02-01]</p>
+
+<h2 id=revisions>Revisions</h2>
+
+
+<ul>
+  <li> February 01, 2016: Bulletin published.
+  <li> February 02, 2016:  Bulletin revised to include AOSP links.
+  <li> March 07, 2016: Bulletin revised to include additional AOSP links.
+
+  </body>
+</html>

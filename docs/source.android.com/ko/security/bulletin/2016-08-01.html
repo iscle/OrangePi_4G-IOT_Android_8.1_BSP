@@ -1,0 +1,2713 @@
+<html devsite>
+  <head>
+    <title>Android 보안 게시판— 2016년 8월</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p><em>2016년 8월 1일 게시됨 | 2016년 8월 2일 업데이트됨</em></p>
+<p>
+Android 보안 게시판은 Android 기기에 영향을 미치는 보안 취약성
+세부정보를 다룹니다. 게시판과 함께 무선 업데이트를 통해
+Nexus 기기 보안 업데이트가 출시되었습니다. 또한
+Nexus 펌웨어 이미지도 <a href="https://developers.google.com/android/nexus/images">Google 개발자 사이트</a>에
+출시되었습니다. 다음 문제는 2016년 8월 5일 보안 패치 수준 이상에서
+해결됩니다. 보안 패치 수준을 확인하는 방법을 알아보려면
+<a href="https://support.google.com/nexus/answer/4457705#nexus_devices">도움말</a>을 참조하세요.
+</p>
+<p>
+파트너에게는 게시판에 설명된 문제를 2016년 7월 6일 이전에
+통지했습니다. 해당하는 경우, 소스 코드 패치가 Android
+오픈소스 프로젝트(AOSP) 저장소에 배포되었습니다. 이
+게시판에는 AOSP 외부의 패치 링크도 포함되어 있습니다.
+</p>
+<p>
+이 중 가장 심각한 문제는 미디어 파일을 처리할 때
+이메일과 웹 탐색, MMS 등 여러 방법을 통해 대상 기기에서
+원격으로 코드를 실행할 수 있게 하는 심각한 보안 취약성입니다.
+</p>
+<p>
+실제 고객이 새로 보고된 이러한 문제로 인해 악용당했다는 신고는
+접수되지 않았습니다. SafetyNet과 같이 Android 플랫폼의 보안을 개선하는
+<a href="/security/enhancements/index.html">Android 보안 플랫폼 보호</a> 및
+서비스 보호 기능 관련 세부정보를 보려면
+<a href="#mitigations">Android 및 Google 서비스 완화</a> 섹션을 참조하세요.
+</p>
+<p>
+모든 고객은 기기에서 이 업데이트를 수락하는 것이 좋습니다.
+</p>
+<h2 id="announcements">공지사항</h2>
+<ul>
+<li>이 게시판에서는 Android 파트너가 모든 Android 기기에서
+유사하게 발생하는 취약성 문제를 빠르고 유연하게 해결하기 위한
+두 가지 보안 패치 수준 문자열이 포함되어 있습니다. 자세한 내용은 <a href="#common-questions-and-answers">일반적인 
+질문 및 답변</a>을 
+참조하세요.
+<ul>
+ <li><strong>2016-08-01</strong>: 부분 보안 패치 수준 문자열입니다. 이
+보안 패치 수준 문자열은 2016-08-01 및 이전의 모든 보안 패치
+수준 문자열에 해당하는 모든 문제가 해결되었음을 나타냅니다.</li>
+ <li><strong>2016-08-05</strong>: 전체 보안 패치 수준 문자열입니다. 이 보안 패치 수준
+문자열은 2016-08-01과 2016-08-05 및 이전의 모든 보안 패치 수준
+문자열에 해당하는 모든 문제가 해결되었음을 나타냅니다.</li>
+</ul>
+</li>
+<li>지원되는 Nexus 기기는 2016년 8월 5일 보안 패치 수준의 OTA 업데이트를 
+받게 됩니다.</li>
+</ul>
+
+<h2 id="security-vulnerability-summary">보안 취약성 요약</h2>
+<p>
+아래 표에는 보안 취약성 목록, 일반적인 취약성 및 노출 ID(CVE),
+평가된 심각도 및 Nexus 기기가 영향을 받는지 여부가
+포함되어 있습니다. <a href="/security/overview/updates-resources.html#severity">심각도 
+평가</a>는 개발 목적으로 플랫폼 및 서비스 완화를 
+사용할 수 없거나 우회에 성공한 경우 취약성 악용으로 
+인해 대상 기기가 받는 영향을 기준으로 합니다.
+</p>
+
+<h3 id="2016-08-01-security-patch-level-vulnerability-summary">2016-08-01 보안 패치 수준—취약성 요약</h3>
+<p>
+다음 문제는 2016년 8월 1일 보안 패치 수준 이상에서 해결됩니다.
+</p>
+<table>
+  <col width="55%">
+  <col width="20%">
+  <col width="13%">
+  <col width="12%">
+  <tr>
+   <th>문제</th>
+   <th>CVE</th>
+   <th>심각도</th>
+   <th>Nexus에 영향 여부</th>
+  </tr>
+  <tr>
+   <td>미디어 서버의 원격 코드 실행 취약성</td>
+   <td>CVE-2016-3819, CVE-2016-3820, CVE-2016-3821</td>
+   <td>심각</td>
+   <td>예</td>
+  </tr>
+  <tr>
+   <td>libjhead의 원격 코드 실행 취약성</td>
+   <td>CVE-2016-3822</td>
+   <td>높음</td>
+   <td>예</td>
+  </tr>
+  <tr>
+   <td>미디어 서버의 권한 승격 취약성</td>
+   <td>CVE-2016-3823, CVE-2016-3824, CVE-2016-3825, CVE-2016-3826</td>
+   <td>높음</td>
+   <td>예</td>
+  </tr>
+  <tr>
+   <td>미디어 서버의 서비스 거부(DoS) 취약성</td>
+   <td>CVE-2016-3827, CVE-2016-3828, CVE-2016-3829, CVE-2016-3830</td>
+   <td>높음</td>
+   <td>예</td>
+  </tr>
+  <tr>
+   <td>시스템 시계의 서비스 거부(DoS) 취약성</td>
+   <td>CVE-2016-3831</td>
+   <td>높음</td>
+   <td>예</td>
+  </tr>
+  <tr>
+   <td>프레임워크 API의 권한 승격 취약성 </td>
+   <td>CVE-2016-3832</td>
+   <td>보통</td>
+   <td>예</td>
+  </tr>
+  <tr>
+   <td>Shell의 권한 승격 취약성</td>
+   <td>CVE-2016-3833</td>
+   <td>보통</td>
+   <td>예</td>
+  </tr>
+  <tr>
+   <td>OpenSSL의 정보 공개 취약성</td>
+   <td>CVE-2016-2842</td>
+   <td>보통</td>
+   <td>아니요*</td>
+  </tr>
+  <tr>
+   <td>카메라 API의 정보 공개 취약성</td>
+   <td>CVE-2016-3834</td>
+   <td>보통</td>
+   <td>예</td>
+  </tr>
+  <tr>
+   <td>미디어 서버의 정보 공개 취약성</td>
+   <td>CVE-2016-3835</td>
+   <td>보통</td>
+   <td>예</td>
+  </tr>
+  <tr>
+   <td>SurfaceFlinger의 정보 공개 취약성</td>
+   <td>CVE-2016-3836</td>
+   <td>보통</td>
+   <td>예</td>
+  </tr>
+  <tr>
+   <td>Wi-Fi의 정보 공개 취약성</td>
+   <td>CVE-2016-3837</td>
+   <td>보통</td>
+   <td>예</td>
+  </tr>
+  <tr>
+   <td>시스템 UI의 서비스 거부(Dos) 취약성</td>
+   <td>CVE-2016-3838</td>
+   <td>보통</td>
+   <td>예</td>
+  </tr>
+  <tr>
+   <td>블루투스의 서비스 거부(DoS) 취약성</td>
+   <td>CVE-2016-3839</td>
+   <td>보통</td>
+   <td>예</td>
+  </tr>
+</table>
+<p>* 지원되는 Nexus 기기에 제공된 업데이트가 모두 설치되었다면 이러한
+취약성에 영향을 받지 않습니다.</p>
+
+<h3 id="2016-08-05-security-patch-level-vulnerability-summary">2016-08-05 보안 패치 수준—취약성 요약</h3>
+<p>
+2016-08-01의 모든 문제와 다음 문제는 2016년 8월 5일
+보안 패치 수준 이상에서 해결됩니다.
+</p>
+<table>
+  <col width="55%">
+  <col width="20%">
+  <col width="13%">
+  <col width="12%">
+  <tr>
+   <th>문제</th>
+   <th>CVE</th>
+   <th>심각도</th>
+   <th>Nexus에 영향 여부</th>
+  </tr>
+  <tr>
+   <td>Qualcomm Wi-Fi 드라이버의 원격 코드 실행 취약성</td>
+   <td>CVE-2014-9902</td>
+   <td>심각</td>
+   <td>예</td>
+  </tr>
+  <tr>
+   <td>Conscrypt의 원격 코드 실행 취약성</td>
+   <td>CVE-2016-3840</td>
+   <td>심각</td>
+   <td>예</td>
+  </tr>
+  <tr>
+   <td>Qualcomm 구성요소의 권한 승격 취약성</td>
+   <td>CVE-2014-9863, CVE-2014-9864, CVE-2014-9865, CVE-2014-9866,
+       CVE-2014-9867, CVE-2014-9868, CVE-2014-9869, CVE-2014-9870,
+       CVE-2014-9871, CVE-2014-9872, CVE-2014-9873, CVE-2014-9874,
+       CVE-2014-9875, CVE-2014-9876, CVE-2014-9877, CVE-2014-9878,
+       CVE-2014-9879, CVE-2014-9880, CVE-2014-9881, CVE-2014-9882,
+       CVE-2014-9883, CVE-2014-9884, CVE-2014-9885, CVE-2014-9886,
+       CVE-2014-9887, CVE-2014-9888, CVE-2014-9889, CVE-2014-9890,
+       CVE-2014-9891, CVE-2015-8937, CVE-2015-8938, CVE-2015-8939,
+       CVE-2015-8940, CVE-2015-8941, CVE-2015-8942, CVE-2015-8943</td>
+   <td>심각</td>
+   <td>예</td>
+  </tr>
+  <tr>
+   <td>커널 네트워크 구성요소의 권한 승격 취약성</td>
+   <td>CVE-2015-2686, CVE-2016-3841</td>
+   <td>심각</td>
+   <td>예</td>
+  </tr>
+  <tr>
+   <td>Qualcomm GPU 드라이버의 권한 승격 취약성</td>
+   <td>CVE-2016-2504, CVE-2016-3842</td>
+   <td>심각</td>
+   <td>예</td>
+  </tr>
+  <tr>
+   <td>Qualcomm 성능 구성요소의 권한 승격 취약성</td>
+   <td>CVE-2016-3843</td>
+   <td>심각</td>
+   <td>예</td>
+  </tr>
+  <tr>
+   <td>커널의 권한 승격 취약성</td>
+   <td>CVE-2016-3857</td>
+   <td>심각</td>
+   <td>예</td>
+  </tr>
+  <tr>
+   <td>커널 메모리 시스템의 권한 승격 취약성</td>
+   <td>CVE-2015-1593, CVE-2016-3672</td>
+   <td>높음</td>
+   <td>예</td>
+  </tr>
+  <tr>
+   <td>커널 사운드 구성요소의 권한 승격 취약성</td>
+   <td>CVE-2016-2544, CVE-2016-2546, CVE-2014-9904</td>
+   <td>높음</td>
+   <td>예</td>
+  </tr>
+  <tr>
+   <td>커널 파일 시스템의 권한 승격 취약성</td>
+   <td>CVE-2012-6701</td>
+   <td>높음</td>
+   <td>예</td>
+  </tr>
+  <tr>
+   <td>미디어 서버의 권한 승격 취약성</td>
+   <td>CVE-2016-3844</td>
+   <td>높음</td>
+   <td>예</td>
+  </tr>
+  <tr>
+   <td>커널 동영상 드라이버의 권한 승격 취약성</td>
+   <td>CVE-2016-3845</td>
+   <td>높음</td>
+   <td>예</td>
+  </tr>
+  <tr>
+   <td>직렬 주변기기 인터페이스 드라이버의 권한 승격 취약성</td>
+   <td>CVE-2016-3846</td>
+   <td>높음</td>
+   <td>예</td>
+  </tr>
+  <tr>
+   <td>NVIDIA 미디어 드라이버의 권한 승격 취약성</td>
+   <td>CVE-2016-3847, CVE-2016-3848</td>
+   <td>높음</td>
+   <td>예</td>
+  </tr>
+  <tr>
+   <td>ION 드라이버의 권한 승격 취약성</td>
+   <td>CVE-2016-3849</td>
+   <td>높음</td>
+   <td>예</td>
+  </tr>
+  <tr>
+   <td>Qualcomm 부트로더의 권한 승격 취약성</td>
+   <td>CVE-2016-3850</td>
+   <td>높음</td>
+   <td>예</td>
+  </tr>
+  <tr>
+   <td>커널 성능 하위 시스템의 권한 승격 취약성</td>
+   <td>CVE-2016-3843</td>
+   <td>높음</td>
+   <td>예</td>
+  </tr>
+  <tr>
+   <td>LG 전자 부트로더의 권한 승격 취약성</td>
+   <td>CVE-2016-3851</td>
+   <td>높음</td>
+   <td>예</td>
+  </tr>
+  <tr>
+   <td>Qualcomm 구성요소의 정보 공개 취약성</td>
+   <td>CVE-2014-9892, CVE-2014-9893 CVE-2014-9894, CVE-2014-9895 CVE-2014-9896,
+       CVE-2014-9897 CVE-2014-9898, CVE-2014-9899 CVE-2014-9900, CVE-2015-8944</td>
+   <td>높음</td>
+   <td>예</td>
+  </tr>
+  <tr>
+   <td>커널 스케줄러의 정보 공개 취약성</td>
+   <td>CVE-2014-9903</td>
+   <td>높음</td>
+   <td>예</td>
+  </tr>
+  <tr>
+   <td>MediaTek Wi-Fi 드라이버의 정보 공개 취약성</td>
+   <td>CVE-2016-3852</td>
+   <td>높음</td>
+   <td>예</td>
+  </tr>
+  <tr>
+   <td>USB 드라이버의 정보 공개 취약성</td>
+   <td>CVE-2016-4482</td>
+   <td>높음</td>
+   <td>예</td>
+  </tr>
+  <tr>
+   <td>Qualcomm 구성요소의 서비스 거부(DoS) 취약성</td>
+   <td>CVE-2014-9901</td>
+   <td>높음</td>
+   <td>예</td>
+  </tr>
+  <tr>
+   <td>Google Play 서비스의 권한 승격 취약성</td>
+   <td>CVE-2016-3853</td>
+   <td>보통</td>
+   <td>예</td>
+  </tr>
+  <tr>
+   <td>프레임워크 API의 권한 승격 취약성</td>
+   <td>CVE-2016-2497</td>
+   <td>보통</td>
+   <td>예</td>
+  </tr>
+  <tr>
+   <td>커널 네트워크 구성요소의 정보 공개 취약성</td>
+   <td>CVE-2016-4578</td>
+   <td>보통</td>
+   <td>예</td>
+  </tr>
+  <tr>
+   <td>커널 사운드 구성요소의 정보 공개 취약성</td>
+   <td>CVE-2016-4569, CVE-2016-4578</td>
+   <td>보통</td>
+   <td>예</td>
+  </tr>
+  <tr>
+   <td>Qualcomm 구성요소의 취약성</td>
+   <td>CVE-2016-3854, CVE-2016-3855, CVE-2016-2060</td>
+   <td>높음</td>
+   <td>아니요</td>
+  </tr>
+</table>
+<h2 id="mitigations">Android 및 Google 서비스 완화</h2>
+<p>
+다음은 SafetyNet과 같은 <a href="/security/enhancements/index.html">Android 보안 플랫폼</a> 및
+서비스 보호 기능에서 제공하는 완화에 대한 요약입니다.
+이러한 기능을 통해 Android에서 보안 취약성이 악용될 가능성을
+줄입니다.
+</p>
+<ul>
+<li>Android 플랫폼 최신 버전의 향상된 기능으로 Android의 여러 문제를
+악용하기가 더욱 어려워졌습니다. 가능하다면 모든 사용자는 최신 버전의 Android로
+업데이트하는 것이 좋습니다.</li>
+<li>Android 보안팀에서는 <a href="http://static.googleusercontent.com/media/source.android.com/en//security/reports/Google_Android_Security_PHA_classifications.pdf">유해할 수 있는 애플리케이션</a>이
+설치될 때 경고를 보내는 <a href="http://static.googleusercontent.com/media/source.android.com/en//security/reports/Google_Android_Security_2015_Report_Final.pdf">앱 인증 및 SafetyNet</a>을 사용하여
+악용사례를 적극적으로 모니터링합니다. 앱 인증은 <a href="http://www.android.com/gms">Google 모바일 서비스</a>가 적용된
+기기에서 기본적으로 사용 설정되어 있으며
+Google Play 외부에서 애플리케이션을 설치하는 사용자에게 특히 중요합니다. Google Play
+내에서 기기 루팅 도구는 금지되어 있지만
+사용자가 출처에 상관없이 루팅 애플리케이션을 설치하려 하면
+앱 인증이 경고를 표시합니다. 또한 앱 인증은
+권한 승격 취약성을 악용하는 것으로 알려진 악성 애플리케이션을
+식별하고 차단합니다. 이러한 애플리케이션이 이미 설치된 경우 앱 인증에서 사용자에게
+이를 알리고 감지된 애플리케이션을 삭제하려고 시도합니다.</li>
+<li>가능한 경우 Google 행아웃과 메신저 애플리케이션은 미디어 서버와 같은 프로세스에
+미디어를 자동으로 전달하지 않습니다.</li>
+</ul>
+<h2 id="acknowledgements">사사</h2>
+<p>
+참여해 주신 다음 연구원에게 감사드립니다.
+</p>
+<ul>
+<li>Google Chrome 보안팀의 Abhishek Arya, Oliver Chang, Martin Barbella: 
+CVE-2016-3821, CVE-2016-3837</li>
+<li>Check Point Software Technologies Ltd.의 Adam Donenfeld 외 다수:
+CVE-2016-2504</li>
+<li><a href="http://c0reteam.org">C0RE팀</a>의 Chiachih Wu(<a href="https://twitter.com/chiachih_wu">@chiachih_wu</a>),
+Mingjian Zhou(<a href="https://twitter.com/Mingjian_Zhou">@Mingjian_Zhou</a>),
+Xuxian Jiang: CVE-2016-3844</li>
+<li><a href="http://c0reteam.org">C0RE 팀</a>의 Chiachih Wu(<a href="https://twitter.com/chiachih_wu">@chiachih_wu</a>),
+Yuan-Tsung Lo(<a href="mailto:computernik@gmail.com">computernik@gmail.com)</a>, Xuxian Jiang
+: CVE-2016-3857</li>
+<li>Google의 David Benjamin, Kenny Root: CVE-2016-3840</li>
+<li><a href="http://jaq.alibaba.com">Alibaba 모바일 보안팀</a>의 Dawei Peng(<a href="http://weibo.com/u/5622360291">Vinc3nt4H</a>): CVE-2016-3822</li>
+<li>Tencent KeenLab(<a href="https://twitter.com/keen_lab">@keen_lab</a>)의 Di Shen(<a href="https://twitter.com/returnsme">@returnsme</a>): CVE-2016-3842</li>
+<li>Google의 Dianne Hackborn: CVE-2016-2497</li>
+<li>Google Dynamic Tools팀의 Dmitry Vyukov : CVE-2016-3841</li>
+<li><a href="http://www.360.com">Qihoo 360 Technology Co. Ltd</a> IceSword Lab의 Gengjia Chen(<a href="https://twitter.com/chengjia4574">@chengjia4574</a>),
+pjf (<a href="http://weibo.com/jfpan">weibo.com/jfpan</a>): CVE-2016-3852</li>
+<li><a href="http://www.360.com">Qihoo 360 Technology Co. Ltd</a>. Alpha팀의 Guang Gong (龚广)(<a href="https://twitter.com/oldfresher">@oldfresher</a>)
+: CVE-2016-3834</li>
+<li>Fortinet's FortiGuard Labs의 Kai Lu(<a href="https://twitter.com/K3vinLuSec">@K3vinLuSec</a>)
+: CVE-2016-3820</li>
+<li>Kandala Shivaram reddy, DS, Uppi: CVE-2016-3826</li>
+<li><a href="http://c0reteam.org">C0RE 팀</a>의 Mingjian Zhou(<a href="https://twitter.com/Mingjian_Zhou">@Mingjian_Zhou</a>), Chiachih Wu (<a href="https://twitter.com/chiachih_wu">@chiachih_wu</a>), Xuxian Jiang: CVE-2016-3823, CVE-2016-3835,
+CVE-2016-3824, CVE-2016-3825</li>
+<li>Tesla Motors 제품 보안팀의 Nathan Crandall(<a href="https://twitter.com/natecray">@natecray</a>)
+: CVE-2016-3847, CVE-2016-3848</li>
+<li>Alibaba Mobile Security Group의 Peng Xiao, Chengming Yang, Ning You, Chao Yang, Yang song: CVE-2016-3845</li>
+<li>Trend Micro의 Peter Pi(<a href="https://twitter.com/heisecode">@heisecode</a>): 
+CVE-2016-3849</li>
+<li><a href="http://www.wooyun.org/">WooYun TangLab</a>의 Qianwei Hu(<a href="mailto:rayxcp@gmail.com">rayxcp@gmail.com</a>): CVE-2016-3846</li>
+<li>Tencent KeenLab(<a href="https://twitter.com/keen_lab">@keen_lab</a>)의
+Qidan He(<a href="https://twitter.com/flanker_hqd">@flanker_hqd</a>):
+CVE-2016-3832</li>
+<li>Google의 Sharvil Nanavati: CVE-2016-3839</li>
+<li><a href="http://www.isti.tu-berlin.de/security_in_telecommunications">Security in Telecommunications</a>의 
+Shinjo Park(<a href="https://twitter.com/ad_ili_rai">@ad_ili_rai</a>)
+Altaf Shaik : CVE-2016-3831</li>
+<li>Tom Rootjunky: CVE-2016-3853</li>
+<li>Vasily Vasiliev: CVE-2016-3819</li>
+<li>Alibaba Inc의 Weichao Sun(<a href="https://twitter.com/sunblate">@sunblate</a>)
+: CVE-2016-3827, CVE-2016-3828, CVE-2016-3829</li>
+<li><a href="http://blog.trendmicro.com/trendlabs-security-intelligence/author/wishwu/">Trend Micro Inc</a>의 Wish Wu(<a href="http://weibo.com/wishlinux">吴潍浠</a>)
+(<a href="https://twitter.com/wish_wu">@wish_wu</a>): CVE-2016-3843</li>
+<li>Tencent's Xuanwu LAB의 Yongke Wang
+(<a href="https://twitter.com/rudykewang">@Rudykewang</a>): CVE-2016-3836</li>
+</ul>
+<p>
+CVE-2016-3843 등과 같은 취약성을 완화할 수 있도록
+플랫폼 수준 업데이트에 수고해주신 Copperhead Security의 Daniel Micay와 Google의 Jeff Vander Stoep, Yabin Cui에게 감사드립니다. 이번 완화는
+Grsecurity의 Brad Spengler의 작업을 기반으로 합니다.
+</p>
+<h2 id="2016-08-01-security-patch-level-security-vulnerability-details">
+2016-08-01 보안 패치 수준—보안 취약성 세부정보</h2>
+<p>
+다음 섹션에서는 위의 <a href="#2016-08-01-security-patch-level-vulnerability-summary">2016-08-01 보안 패치 수준—
+취약성 요약</a>에 나열된 각 취약성 세부정보를
+제공합니다. 여기에는 문제 설명, 심각도 근거 및
+CVE, 관련 참조, 심각도, 업데이트된 Nexus 기기,
+업데이트된 AOSP 버전(해당하는 경우), 신고된 날짜 등이 포함된 표가 제시됩니다. 가능한 경우
+AOSP 변경사항 목록과 같이 문제를 해결한 공개 변경사항을 버그 ID에
+연결합니다. 하나의 버그와 관련된 변경사항이 여러 개인 경우 추가
+참조가 버그 ID 다음에 오는 번호에 연결됩니다.
+</p>
+
+<h3 id="remote-code-execution-vulnerability-in-mediaserver">
+미디어 서버의 원격 코드 실행 취약성</h3>
+<p>
+미디어 서버의 원격 코드 실행 취약성으로 인해 특별히 제작된 파일을 사용하는
+공격자가 미디어 파일 및 데이터 처리 중에 메모리 손상을 일으킬 수
+있습니다. 이 문제는 미디어 서버 프로세스 내에서 원격 코드를 실행할 가능성으로 인해
+심각도 심각으로 평가됩니다. 미디어 서버 프로세스는
+오디오와 동영상 스트림뿐 아니라 타사 앱이 일반적으로
+액세스할 수 없는 권한에 액세스할 수 있습니다.
+</p>
+<p>
+문제의 기능은 운영체제의 핵심 부분이며, 여러 애플리케이션에서
+이 기능이 원격 콘텐츠, 특히 MMS와 미디어의 브라우저 재생에
+접근할 수 있게 허용합니다.
+</p>
+<table>
+  <col width="18%">
+  <col width="18%">
+  <col width="10%">
+  <col width="19%">
+  <col width="17%">
+  <col width="17%">
+  <tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>심각도</th>
+   <th>업데이트된 Nexus 기기</th>
+   <th>업데이트된 AOSP 버전</th>
+   <th>신고된 날짜</th>
+  </tr>
+  <tr>
+   <td>CVE-2016-3819</td>
+   <td><a href="https://android.googlesource.com/platform/frameworks/av/+/590d1729883f700ab905cdc9ad850f3ddd7e1f56">
+       A-28533562</a></td>
+   <td>심각</td>
+   <td>모든 Nexus</td>
+   <td>4.4.4, 5.0.2, 5.1.1, 6.0, 6.0.1</td>
+   <td>2016년 5월 2일</td>
+  </tr>
+  <tr>
+   <td>CVE-2016-3820</td>
+   <td><a href="https://android.googlesource.com/platform/external/libavc/+/a78887bcffbc2995cf9ed72e0697acf560875e9e">
+       A-28673410</a></td>
+   <td>심각</td>
+   <td>모든 Nexus</td>
+   <td>6.0, 6.0.1</td>
+   <td>2016년 5월 6일</td>
+  </tr>
+  <tr>
+   <td>CVE-2016-3821</td>
+   <td><a href="https://android.googlesource.com/platform/frameworks/av/+/42a25c46b844518ff0d0b920c20c519e1417be69">
+       A-28166152</a></td>
+   <td>심각</td>
+   <td>모든 Nexus</td>
+   <td>4.4.4, 5.0.2, 5.1.1, 6.0, 6.0.1</td>
+   <td>Google 사내용</td>
+  </tr>
+</table>
+
+<h3 id="remote-code-execution-vulnerability-in-libjhead">
+libjhead의 원격 코드 실행 취약성</h3>
+<p>
+libjhead의 원격 코드 실행 취약성으로 인해 특별히 제작된 파일을 사용하는
+공격자가 권한이 설정되지 않은 절차의 컨텍스트 내에서 임의의 코드를 실행할 수
+있습니다. 이 문제는 이 라이브러리를 사용하는 애플리케이션에서
+원격 코드 실행 가능성으로 인해 심각도 높음으로 평가됩니다.
+</p>
+<table>
+  <col width="18%">
+  <col width="18%">
+  <col width="10%">
+  <col width="19%">
+  <col width="17%">
+  <col width="17%">
+  <tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>심각도</th>
+   <th>업데이트된 Nexus 기기</th>
+   <th>업데이트된 AOSP 버전</th>
+   <th>신고된 날짜</th>
+  </tr>
+  <tr>
+   <td>CVE-2016-3822</td>
+   <td><a href="https://android.googlesource.com/platform/external/jhead/+/bae671597d47b9e5955c4cb742e468cebfd7ca6b">
+       A-28868315</a></td>
+   <td>높음</td>
+   <td>모든 Nexus</td>
+   <td>4.4.4, 5.0.2, 5.1.1, 6.0, 6.0.1</td>
+   <td>Google 사내용</td>
+  </tr>
+</table>
+
+<h3 id="elevation-of-privilege-vulnerability-in-mediaserver">
+미디어 서버의 권한 승격 취약성</h3>
+<p>
+미디어 서버의 권한 승격 취약성으로 인해 로컬 악성 애플리케이션이
+권한이 설정된 절차의 컨텍스트 내에서 임의의 코드를 실행할 수
+있습니다. 이 문제는 보통 타사 애플리케이션에 액세스할 수 없는 승격된
+권한으로의 로컬 액세스를 부여하는 데 사용될 수 있으므로 심각도 높음으로
+평가됩니다.
+</p>
+<table>
+  <col width="18%">
+  <col width="18%">
+  <col width="10%">
+  <col width="19%">
+  <col width="17%">
+  <col width="17%">
+  <tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>심각도</th>
+   <th>업데이트된 Nexus 기기</th>
+   <th>업데이트된 AOSP 버전</th>
+   <th>신고된 날짜</th>
+  </tr>
+  <tr>
+   <td>CVE-2016-3823</td>
+   <td><a href="https://android.googlesource.com/platform/hardware/qcom/media/+/7558d03e6498e970b761aa44fff6b2c659202d95">
+       A-28815329</a></td>
+   <td>높음</td>
+   <td>모든 Nexus</td>
+   <td>4.4.4, 5.0.2, 5.1.1, 6.0, 6.0.1</td>
+   <td>2016년 5월 17일</td>
+  </tr>
+  <tr>
+   <td>CVE-2016-3824</td>
+   <td><a href="https://android.googlesource.com/platform/frameworks/av/+/b351eabb428c7ca85a34513c64601f437923d576">
+       A-28816827</a></td>
+   <td>높음</td>
+   <td>모든 Nexus</td>
+   <td>4.4.4, 5.0.2, 5.1.1, 6.0, 6.0.1</td>
+   <td>2016년 5월 17일</td>
+  </tr>
+  <tr>
+   <td>CVE-2016-3825</td>
+   <td><a href="https://android.googlesource.com/platform/hardware/qcom/media/+/d575ecf607056d8e3328ef2eb56c52e98f81e87d">
+       A-28816964</a></td>
+   <td>높음</td>
+   <td>모든 Nexus</td>
+   <td>5.0.2, 5.1.1, 6.0, 6.0.1</td>
+   <td>2016년 5월 17일</td>
+  </tr>
+  <tr>
+   <td>CVE-2016-3826</td>
+   <td><a href="https://android.googlesource.com/platform/frameworks/av/+/9cd8c3289c91254b3955bd7347cf605d6fa032c6">
+       A-29251553</a></td>
+   <td>높음</td>
+   <td>모든 Nexus</td>
+   <td>4.4.4, 5.0.2, 5.1.1, 6.0, 6.0.1</td>
+   <td>2016년 6월 9일</td>
+  </tr>
+</table>
+
+<h3 id="denial-of-service-vulnerability-in-mediaserver">
+미디어 서버의 서비스 거부(DoS) 취약성</h3>
+<p>
+미디어 서버의 서비스 거부 취약성으로 인해 특별히 제작된 파일을 사용하는
+공격자가 기기를 지연시키거나 재부팅을 일으킬 수 있습니다. 이 문제는
+일시적인 원격 서비스 거부 가능성으로 인해 심각도 높음으로 평가됩니다.
+</p>
+<table>
+  <col width="18%">
+  <col width="18%">
+  <col width="10%">
+  <col width="19%">
+  <col width="17%">
+  <col width="17%">
+  <tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>심각도</th>
+   <th>업데이트된 Nexus 기기</th>
+   <th>업데이트된 AOSP 버전</th>
+   <th>신고된 날짜</th>
+  </tr>
+  <tr>
+   <td>CVE-2016-3827</td>
+   <td><a href="https://android.googlesource.com/platform/frameworks/av/+/a4567c66f4764442c6cb7b5c1858810194480fb5">
+       A-28816956</a></td>
+   <td>높음</td>
+   <td>모든 Nexus</td>
+   <td>6.0.1</td>
+   <td>2016년 5월 16일</td>
+  </tr>
+  <tr>
+   <td>CVE-2016-3828</td>
+   <td><a href="https://android.googlesource.com/platform/external/libavc/+/7554755536019e439433c515eeb44e701fb3bfb2">
+       A-28835995</a></td>
+   <td>높음</td>
+   <td>모든 Nexus</td>
+   <td>6.0, 6.0.1</td>
+   <td>2016년 5월 17일</td>
+  </tr>
+  <tr>
+   <td>CVE-2016-3829</td>
+   <td><a href="https://android.googlesource.com/platform/external/libavc/+/326fe991a4b7971e8aeaf4ac775491dd8abd85bb">
+       A-29023649</a></td>
+   <td>높음</td>
+   <td>모든 Nexus</td>
+   <td>6.0, 6.0.1</td>
+   <td>2016년 5월 27일</td>
+  </tr>
+  <tr>
+   <td>CVE-2016-3830</td>
+   <td><a href="https://android.googlesource.com/platform/frameworks/av/+/8e438e153f661e9df8db0ac41d587e940352df06">
+       A-29153599</a></td>
+   <td>높음</td>
+   <td>모든 Nexus</td>
+   <td>4.4.4, 5.0.2, 5.1.1, 6.0, 6.0.1</td>
+   <td>Google 사내용</td>
+  </tr>
+</table>
+
+<h3 id="denial-of-service-vulnerability-in-system-clock">
+시스템 시계의 서비스 거부(DoS) 취약성</h3>
+<p>
+시스템 시계의 서비스 거부 취약성으로 인해 원격 공격자가 기기를 
+다운시킬 수 있습니다. 이 문제는 일시적인 원격 서비스 거부 가능성으로 인해
+심각도 높음으로 평가됩니다.
+</p>
+<table>
+  <col width="18%">
+  <col width="18%">
+  <col width="10%">
+  <col width="19%">
+  <col width="17%">
+  <col width="17%">
+  <tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>심각도</th>
+   <th>업데이트된 Nexus 기기</th>
+   <th>업데이트된 AOSP 버전</th>
+   <th>신고된 날짜</th>
+  </tr>
+  <tr>
+   <td>CVE-2016-3831</td>
+   <td><a href="https://android.googlesource.com/platform/frameworks/opt/telephony/+/f47bc301ccbc5e6d8110afab5a1e9bac1d4ef058">
+       A-29083635</a></td>
+   <td>높음</td>
+   <td>모든 Nexus</td>
+   <td>4.4.4, 5.0.2, 5.1.1, 6.0, 6.0.1</td>
+   <td>2016년 5월 31일</td>
+  </tr>
+</table>
+
+<h3 id="elevation-of-privilege-vulnerability-in-framework-apis">
+프레임워크 API의 권한 승격 취약성</h3>
+<p>
+프레임워크 API의 권한 승격 취약성으로 인해 로컬 악성 애플리케이션이
+다른 애플리케이션의 애플리케이션 데이터를 분리하는 운영체제 보호를
+우회할 수 있습니다. 이 문제는 애플리케이션의 권한 수준을 벗어나는 데이터로의
+액세스를 부여하는 데 사용될 수 있으므로 심각도 보통으로 평가됩니다.
+</p>
+<table>
+  <col width="18%">
+  <col width="17%">
+  <col width="10%">
+  <col width="19%">
+  <col width="18%">
+  <col width="17%">
+  <tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>심각도</th>
+   <th>업데이트된 Nexus 기기</th>
+   <th>업데이트된 AOSP 버전</th>
+   <th>신고된 날짜</th>
+  </tr>
+  <tr>
+   <td>CVE-2016-3832</td>
+   <td><a href="https://android.googlesource.com/platform/frameworks/base/+/e7cf91a198de995c7440b3b64352effd2e309906">
+       A-28795098</a></td>
+   <td>보통</td>
+   <td>모든 Nexus</td>
+   <td>4.4.4, 5.0.2, 5.1.1, 6.0, 6.0.1</td>
+   <td>2016년 5월 15일</td>
+  </tr>
+</table>
+
+<h3 id="elevation-of-privilege-vulnerability-in-shell">
+Shell의 권한 승격 취약성</h3>
+<p>
+Shell의 권한 승격 취약성으로 인해 로컬 악성 애플리케이션이
+사용자 제한사항 등 기기 제약조건을 우회할 수 있습니다. 이 문제는
+사용자 권한을 로컬에서 우회할 수 있으므로 심각도 보통으로 평가됩니다.
+</p>
+<table>
+  <col width="18%">
+  <col width="17%">
+  <col width="10%">
+  <col width="19%">
+  <col width="17%">
+  <col width="18%">
+  <tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>심각도</th>
+   <th>업데이트된 Nexus 기기</th>
+   <th>업데이트된 AOSP 버전</th>
+   <th>신고된 날짜</th>
+  </tr>
+  <tr>
+   <td>CVE-2016-3833</td>
+   <td><a href="https://android.googlesource.com/platform/frameworks/base/+/01875b0274e74f97edf6b0d5c92de822e0555d03">
+       A-29189712</a>
+       [<a href="https://android.googlesource.com/platform/frameworks/base/+/4e4743a354e26467318b437892a9980eb9b8328a">2</a>]</td>
+   <td>보통</td>
+   <td>모든 Nexus</td>
+   <td>5.0.2, 5.1.1, 6.0, 6.0.1</td>
+   <td>Google 사내용</td>
+  </tr>
+</table>
+
+<h3 id="information-disclosure-vulnerability-in-openssl">
+OpenSSL의 정보 공개 취약성</h3>
+<p>
+OpenSSL의 정보 공개 취약성으로 인해 로컬 악성 애플리케이션이
+권한 수준을 벗어난 데이터에 액세스할 수 있습니다. 이 문제는
+권한 없이 민감한 데이터에 액세스하는 데 사용될 수
+있으므로 심각도 보통으로 평가됩니다.
+</p>
+<table>
+  <col width="18%">
+  <col width="18%">
+  <col width="10%">
+  <col width="19%">
+  <col width="17%">
+  <col width="17%">
+  <tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>심각도</th>
+   <th>업데이트된 Nexus 기기</th>
+   <th>업데이트된 AOSP 버전</th>
+   <th>신고된 날짜</th>
+  </tr>
+  <tr>
+   <td>CVE-2016-2842</td>
+   <td>A-29060514</td>
+   <td>없음*</td>
+   <td>모든 Nexus</td>
+   <td>4.4.4, 5.0.2, 5.1.1</td>
+   <td>2016년 3월 29일</td>
+  </tr>
+</table>
+<p>* 지원되는 Nexus 기기에 제공된 업데이트가 모두 설치되었다면 이러한
+취약성에 영향을 받지 않습니다.</p>
+
+<h3 id="information-disclosure-vulnerability-in-camera-apis">
+카메라 API의 정보 공개 취약성</h3>
+<p>
+카메라 API의 정보 공개 취약성으로 인해 로컬 악성 애플리케이션이
+권한 수준을 벗어난 데이터 구조에 액세스할 수 있습니다. 이 문제는
+권한 없이 민감한 데이터에 액세스하는 데 사용될 수
+있으므로 심각도 보통으로 평가됩니다.
+</p>
+<table>
+  <col width="18%">
+  <col width="17%">
+  <col width="10%">
+  <col width="19%">
+  <col width="18%">
+  <col width="17%">
+  <tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>심각도</th>
+   <th>업데이트된 Nexus 기기</th>
+   <th>업데이트된 AOSP 버전</th>
+   <th>신고된 날짜</th>
+  </tr>
+  <tr>
+   <td>CVE-2016-3834</td>
+   <td><a href="https://android.googlesource.com/platform/frameworks/av/+/1f24c730ab6ca5aff1e3137b340b8aeaeda4bdbc">
+       A-28466701</a></td>
+   <td>보통</td>
+   <td>모든 Nexus</td>
+   <td>4.4.4, 5.0.2, 5.1.1, 6.0, 6.0.1</td>
+   <td>2016년 4월 28일</td>
+  </tr>
+</table>
+
+<h3 id="information-disclosure-vulnerability-in-mediaserver">
+미디어 서버의 정보 공개 취약성</h3>
+<p>
+미디어 서버의 정보 공개 취약성으로 로컬 악성 애플리케이션이
+인해 권한 수준을 벗어난 데이터에 액세스할 수 있습니다. 이 문제는
+권한 없이 민감한 데이터에 액세스하는 데 사용될 수
+있으므로 심각도 보통으로 평가됩니다.
+</p>
+<table>
+  <col width="18%">
+  <col width="17%">
+  <col width="10%">
+  <col width="19%">
+  <col width="18%">
+  <col width="17%">
+  <tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>심각도</th>
+   <th>업데이트된 Nexus 기기</th>
+   <th>업데이트된 AOSP 버전</th>
+   <th>신고된 날짜</th>
+  </tr>
+  <tr>
+   <td>CVE-2016-3835</td>
+   <td><a href="https://android.googlesource.com/platform/hardware/qcom/media/+/7558d03e6498e970b761aa44fff6b2c659202d95">
+       A-28920116</a></td>
+   <td>보통</td>
+   <td>모든 Nexus</td>
+   <td>4.4.4, 5.0.2, 5.1.1, 6.0, 6.0.1</td>
+   <td>2016년 5월 23일</td>
+  </tr>
+</table>
+
+<h3 id="information-disclosure-vulnerability-in-surfaceflinger">
+SurfaceFlinger의 정보 공개 취약성</h3>
+<p>
+SurfaceFlinger 서비스의 정보 공개 취약성으로 인해 로컬 악성 애플리케이션이
+권한 수준을 벗어난 데이터에 액세스할 수 있습니다. 이 문제는 명시적인 사용자 권한 없이
+민감한 데이터에 액세스하는 데 사용될 수 있으므로 심각도 보통으로 평가됩니다.
+</p>
+<table>
+  <col width="18%">
+  <col width="18%">
+  <col width="10%">
+  <col width="19%">
+  <col width="17%">
+  <col width="17%">
+  <tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>심각도</th>
+   <th>업데이트된 Nexus 기기</th>
+   <th>업데이트된 AOSP 버전</th>
+   <th>신고된 날짜</th>
+  </tr>
+  <tr>
+   <td>CVE-2016-3836</td>
+   <td><a href="https://android.googlesource.com/platform/frameworks/native/+/3bcf0caa8cca9143443814b36676b3bae33a4368">
+       A-28592402</a></td>
+   <td>보통</td>
+   <td>모든 Nexus</td>
+   <td>5.0.2, 5.1.1, 6.0, 6.0.1</td>
+   <td>2016년 5월 4일</td>
+  </tr>
+</table>
+
+<h3 id="information-disclosure-vulnerability-in-wi-fi">
+Wi-Fi의 정보 공개 취약성</h3>
+<p>
+Wi-Fi의 정보 공개 취약성으로 인해 로컬 악성 애플리케이션이
+권한 수준을 벗어난 데이터에 액세스할 수 있습니다. 이 문제는 권한 없이
+민감한 데이터에 액세스하는 데 사용될 수 있으므로 심각도 보통으로 평가됩니다.
+</p>
+<table>
+  <col width="18%">
+  <col width="18%">
+  <col width="10%">
+  <col width="19%">
+  <col width="17%">
+  <col width="17%">
+  <tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>심각도</th>
+   <th>업데이트된 Nexus 기기</th>
+   <th>업데이트된 AOSP 버전</th>
+   <th>신고된 날짜</th>
+  </tr>
+  <tr>
+   <td>CVE-2016-3837</td>
+   <td><a href="https://android.googlesource.com/platform/frameworks/opt/net/wifi/+/a209ff12ba9617c10550678ff93d01fb72a33399">
+       A-28164077</a></td>
+   <td>보통</td>
+   <td>모든 Nexus</td>
+   <td>5.0.2, 5.1.1, 6.0, 6.0.1</td>
+   <td>Google 사내용</td>
+  </tr>
+</table>
+
+<h3 id="denial-of-service-vulnerability-in-system-ui">
+시스템 UI의 서비스 거부(Dos) 취약성</h3>
+<p>
+시스템 UI의 서비스 거부 취약성으로 인해 로컬 악성 애플리케이션이
+잠금 화면에서 119 전화를 걸지 못하게 할 수 있습니다. 이 문제는
+중요한 기능에 대한 원격 서비스 거부 가능성으로 인해 심각도 보통으로
+평가됩니다.
+</p>
+<table>
+  <col width="18%">
+  <col width="18%">
+  <col width="10%">
+  <col width="19%">
+  <col width="17%">
+  <col width="17%">
+  <tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>심각도</th>
+   <th>업데이트된 Nexus 기기</th>
+   <th>업데이트된 AOSP 버전</th>
+   <th>신고된 날짜</th>
+  </tr>
+  <tr>
+   <td>CVE-2016-3838</td>
+   <td><a href="https://android.googlesource.com/platform/frameworks/base/+/468651c86a8adb7aa56c708d2348e99022088af3">
+       A-28761672</a></td>
+   <td>보통</td>
+   <td>모든 Nexus</td>
+   <td>6.0, 6.0.1</td>
+   <td>Google 사내용</td>
+  </tr>
+</table>
+
+<h3 id="denial-of-service-vulnerability-in-bluetooth">
+블루투스의 서비스 거부(DoS) 취약성</h3>
+<p>
+블루투스의 서비스 거부 취약성으로 인해 로컬 악성 애플리케이션이
+블루투스 기기에서 119 전화를 걸지 못하게 할 수 있습니다. 이 문제는
+중요한 기능에 대한 원격 서비스 거부 가능성으로 인해 심각도 보통으로
+평가됩니다.
+</p>
+<table>
+  <col width="18%">
+  <col width="17%">
+  <col width="10%">
+  <col width="19%">
+  <col width="18%">
+  <col width="17%">
+  <tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>심각도</th>
+   <th>업데이트된 Nexus 기기</th>
+   <th>업데이트된 AOSP 버전</th>
+   <th>신고된 날짜</th>
+  </tr>
+  <tr>
+   <td>CVE-2016-3839</td>
+   <td><a href="https://android.googlesource.com/platform/system/bt/+/472271b153c5dc53c28beac55480a8d8434b2d5c">
+       A-28885210</a></td>
+   <td>보통</td>
+   <td>모든 Nexus</td>
+   <td>4.4.4, 5.0.2, 5.1.1, 6.0, 6.0.1</td>
+   <td>Google 사내용</td>
+  </tr>
+</table>
+<h2 id="2016-08-05-security-patch-level-vulnerability-details">
+2016-08-05 보안 패치 수준—취약성 세부정보</h2>
+<p>
+다음 섹션에서는 위의 <a href="#2016-08-05 보안 패치 수준—취약성 요약">2016-08-05 보안 패치 수준—
+취약성 요약</a>에 나열된 각 취약성 세부정보를
+제공합니다. 여기에는 문제 설명, 심각도 근거 및
+CVE, 관련 참조, 심각도, 업데이트된 Nexus 기기,
+업데이트된 AOSP 버전(해당하는 경우), 신고된 날짜 등이 포함된 표가 제시됩니다. 가능한 경우
+AOSP 변경사항 목록과 같이 문제를 해결한 공개 변경사항을 버그 ID에
+연결합니다. 하나의 버그와 관련된 변경사항이 여러 개인 경우 추가
+참조가 버그 ID 다음에 오는 번호에 연결됩니다.
+</p>
+
+<h3 id="remote-code-execution-vulnerability-in-qualcomm-wi-fi-driver">
+Qualcomm Wi-Fi 드라이버의 원격 코드 실행 취약성</h3>
+<p>
+Qualcomm Wi-Fi 드라이버의 권한 승격 취약성으로 인해 원격 공격자가
+커널 컨텍스트 내에서 임의의 코드를 실행할 수 있습니다.
+이 문제는 
+영구적인 로컬 기기 손상을 일으킬 가능성이 있으므로 심각도 심각으로
+평가됩니다.
+</p>
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>심각도</th>
+   <th>업데이트된 Nexus 기기</th>
+   <th>신고된 날짜</th>
+  </tr>
+  <tr>
+   <td>CVE-2014-9902</td>
+   <td>A-28668638
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la//platform/vendor/qcom-opensource/wlan/prima/commit/?id=3b1c44a3a7129dc25abe2c23543f6f66c59e8f50">
+QC-CR#553937</a><br>
+<a href="https://us.codeaurora.org/cgit/quic/la//platform/vendor/qcom-opensource/wlan/prima/commit/?id=3b1c44a3a7129dc25abe2c23543f6f66c59e8f50">
+QC-CR#553941</a>
+</p>
+</td>
+   <td>심각</td>
+   <td>Nexus 7(2013)</td>
+   <td>2014년 3월 31일</td>
+  </tr>
+</table>
+
+<h3 id="remote-code-execution-vulnerability-in-conscrypt">Conscrypt의
+원격 코드 실행 취약성</h3>
+<p>
+Conscrypt의 원격 권한 실행 취약성으로 인해 원격 공격자가 권한이 설정된
+절차의 컨텍스트 내에서 임의의 코드를 실행할 수 있습니다.
+이 문제는 원격 코드 실행 가능성으로 인해 심각도 심각으로 평가됩니다.
+</p>
+<table>
+  <col width="18%">
+  <col width="18%">
+  <col width="10%">
+  <col width="19%">
+  <col width="17%">
+  <col width="17%">
+  <tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>심각도</th>
+   <th>업데이트된 Nexus 기기</th>
+   <th>업데이트된 AOSP 버전</th>
+   <th>신고된 날짜</th>
+  </tr>
+  <tr>
+   <td>CVE-2016-3840</td>
+   <td><a href="https://android.googlesource.com/platform/external/conscrypt/+/5af5e93463f4333187e7e35f3bd2b846654aa214">
+       A-28751153</a></td>
+   <td>심각</td>
+   <td>모든 Nexus</td>
+   <td>4.4.4, 5.0.2, 5.1.1, 6.0, 6.0.1</td>
+   <td>Google 사내용</td>
+  </tr>
+</table>
+
+<h3 id="elevation-of-privilege-vulnerability-in-qualcomm-components">
+Qualcomm 구성요소의 권한 승격 취약성</h3>
+<p>
+아래 표에는 부트로더, 카메라 드라이버, 캐릭터 드라이브, 네트워크,
+사운드 드라이버 및 동영상 드라이버를 비롯한 Qualcomm 구성요소에
+영향을 주는 보안 취약성이 포함되어 있습니다.
+</p>
+<p>
+이 중 가장 심각한 문제는 로컬 악성 애플리케이션이 커널 컨텍스트 내에서
+임의의 코드를 실행하여 로컬 기기가 영구적으로 손상될 가능성이 있으므로
+심각도 심각으로 평가되며, 기기를 수리하려면 운영체제를 최신 버전으로
+업데이트해야 할 수도 있습니다.
+</p>
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>심각도</th>
+   <th>업데이트된 Nexus 기기</th>
+   <th>신고된 날짜</th>
+  </tr>
+  <tr>
+   <td>CVE-2014-9863</td>
+   <td>A-28768146
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la/kernel/msm-3.10/commit/?id=75eac48a48562f819f50eeff8369b296d89102d7">
+QC-CR#549470</a>
+</p>
+</td>
+   <td>심각</td>
+   <td>Nexus 5, Nexus 7(2013)</td>
+   <td>2014년 4월 30일</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9864</td>
+   <td>A-28747998
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la/kernel/msm/commit/?id=a1124defc680055e2f2a8c8e3da4a94ca2ec842e">
+QC-CR#561841</a>
+</p></td>
+   <td>높음</td>
+   <td>Nexus 5, Nexus 7(2013)</td>
+   <td>2014년 3월 27일</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9865</td>
+   <td>A-28748271
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la/kernel/msm-3.10/commit/?id=e65a876a155de945e306f2726f3a557415e6044e">
+QC-CR#550013</a>
+</p>
+</td>
+   <td>높음</td>
+   <td>Nexus 5, Nexus 7(2013)</td>
+   <td>2014년 3월 27일</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9866</td>
+   <td>A-28747684
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la/kernel/msm/commit/?id=8e6daae70422ad35146a87700e6634a747d1ff5d">
+QC-CR#511358</a>
+</p>
+</td>
+   <td>높음</td>
+   <td>Nexus 5, Nexus 7(2013)</td>
+   <td>2014년 3월 31일</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9867</td>
+   <td>A-28749629
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la/kernel/msm/commit/?id=322c518689a7f820165ca4c5d6b750b02ac34665">
+QC-CR#514702</a>
+</p>
+</td>
+   <td>높음</td>
+   <td>Nexus 5, Nexus 7(2013)</td>
+   <td>2014년 3월 31일</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9868</td>
+   <td>A-28749721
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la/kernel/msm/commit/?id=1f274b74c00187ba1c379971503f51944148b22f">
+QC-CR#511976</a>
+</p>
+</td>
+   <td>높음</td>
+   <td>Nexus 5, Nexus 7(2013)</td>
+   <td>2014년 3월 31일</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9869</td>
+   <td>A-28749728
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la/kernel/msm/commit/?id=8d1f7531ff379befc129a6447642061e87562bca">
+QC-CR#514711</a>
+[<a href="https://us.codeaurora.org/cgit/quic/la/kernel/msm/commit/?id=7a26934e4196b4aa61944081989189d59b108768">2</a>]
+</p>
+</td>
+   <td>높음</td>
+   <td>Nexus 5, Nexus 7(2013)</td>
+   <td>2014년 3월 31일</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9870</td>
+   <td>A-28749743
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la//kernel/msm/commit/?id=4f57652fcd2dce7741f1ac6dc0417e2f265cd1de">
+QC-CR#561044</a>
+</p>
+</td>
+   <td>높음</td>
+   <td>Nexus 5, Nexus 7(2013)</td>
+   <td>2014년 3월 31일</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9871</td>
+   <td>A-28749803
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la/kernel/msm/commit/?id=f615e40c706708f74cd826d5b19c63025f54c041">
+QC-CR#514717</a>
+</p>
+</td>
+   <td>높음</td>
+   <td>Nexus 5, Nexus 7(2013)</td>
+   <td>2014년 3월 31일</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9872</td>
+   <td>A-28750155
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la/kernel/msm/commit/?id=fc787ebd71fa231cc7dd2a0d5f2208da0527096a">
+QC-CR#590721</a>
+</p>
+</td>
+   <td>높음</td>
+   <td>Nexus 5</td>
+   <td>2014년 3월 31일</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9873</td>
+   <td>A-28750726
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la//kernel/msm/commit/?id=ef29ae1d40536fef7fb95e4d5bb5b6b57bdf9420">
+QC-CR#556860</a>
+</p>
+</td>
+   <td>높음</td>
+   <td>Nexus 5, Nexus 7(2013)</td>
+   <td>2014년 3월 31일</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9874</td>
+   <td>A-28751152
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la//kernel/msm/commit/?id=56ff68b1f93eaf22e5e0284648fd862dc08c9236">
+QC-CR#563086</a>
+</p>
+</td>
+   <td>높음</td>
+   <td>Nexus 5, Nexus 5X, Nexus 6P, Nexus 7(2013) </td>
+   <td>2014년 3월 31일</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9875</td>
+   <td>A-28767589
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la/kernel/msm/commit/?id=b77c694b88a994d077316c157168c710696f8805">
+QC-CR#483310</a>
+</p>
+</td>
+   <td>높음</td>
+   <td>Nexus 7(2013)</td>
+   <td>2014년 4월 30일</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9876</td>
+   <td>A-28767796
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la/kernel/msm/commit/?id=7efd393ca08ac74b2e3d2639b0ad77da139e9139">
+QC-CR#483408</a>
+</p>
+</td>
+   <td>높음</td>
+   <td>Nexus 5, Nexus 5X, Nexus 6, Nexus 6P, Nexus 7(2013)</td>
+   <td>2014년 4월 30일</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9877</td>
+   <td>A-28768281
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la/kernel/msm-3.10/commit/?id=f0c0112a6189747a3f24f20210157f9974477e03">
+QC-CR#547231</a>
+</p>
+</td>
+   <td>높음</td>
+   <td>Nexus 5, Nexus 7(2013)</td>
+   <td>2014년 4월 30일</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9878</td>
+   <td>A-28769208
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la/kernel/msm-3.10/commit/?id=96a62c1de93a44e6ca69514411baf4b3d67f6dee">
+QC-CR#547479</a>
+</p>
+</td>
+   <td>높음</td>
+   <td>Nexus 5</td>
+   <td>2014년 4월 30일</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9879</td>
+   <td>A-28769221
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la/kernel/msm/commit/?id=ecc8116e1befb3a764109f47ba0389434ddabbe4">
+QC-CR#524490</a>
+</p>
+</td>
+   <td>높음</td>
+   <td>Nexus 5</td>
+   <td>2014년 4월 30일</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9880</td>
+   <td>A-28769352
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la/kernel/msm/commit/?id=f2a3f5e63e15e97a66e8f5a300457378bcb89d9c">
+QC-CR#556356</a>
+</p>
+</td>
+   <td>높음</td>
+   <td>Nexus 7(2013)</td>
+   <td>2014년 4월 30일</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9881</td>
+   <td>A-28769368
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la/kernel/msm-3.10/commit/?id=ba3f404a10b3bb7e9c20440837df3cd35c5d0c4b">
+QC-CR#539008</a>
+</p>
+</td>
+   <td>높음</td>
+   <td>Nexus 7(2013)</td>
+   <td>2014년 4월 30일</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9882</td>
+   <td>A-28769546
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la/kernel/msm/commit/?id=3a4ebaac557a9e3fbcbab4561650abac8298a4d9">
+QC-CR#552329</a>
+[<a href="https://us.codeaurora.org/cgit/quic/la/kernel/msm/commit/?id=0f6afe815b1b3f920f3502be654c848bdfe5ef38">2</a>]</p>
+ </td>
+   <td>높음</td>
+   <td>Nexus 7(2013)</td>
+   <td>2014년 4월 30일</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9883</td>
+   <td>A-28769912
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la/kernel/msm/commit/?id=cbf79a67348e48557c0d0bb9bc58391b3f84bc46">
+QC-CR#565160</a>
+</p>
+</td>
+   <td>높음</td>
+   <td>Nexus 5, Nexus 7(2013)</td>
+   <td>2014년 4월 30일</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9884</td>
+   <td>A-28769920
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la/kernel/msm/commit/?id=f4948193c46f75e16d4382c4472485ab12b7bd17">
+QC-CR#580740</a>
+</p>
+</td>
+   <td>높음</td>
+   <td>Nexus 5, Nexus 7(2013)</td>
+   <td>2014년 4월 30일</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9885</td>
+   <td>A-28769959
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la/kernel/msm-3.10/commit/?id=a1d5a4cbd5aa8656bc23b40c7cc43941e10f89c3">
+QC-CR#562261</a>
+</p>
+</td>
+   <td>높음</td>
+   <td>Nexus 5</td>
+   <td>2014년 4월 30일</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9886</td>
+   <td>A-28815575
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la/kernel/msm-3.10/commit/?id=80be0e249c906704085d13d4ae446f73913fc225">
+QC-CR#555030</a>
+</p>
+</td>
+   <td>높음</td>
+   <td>Nexus 5, Nexus 7(2013)</td>
+   <td>2014년 4월 30일</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9887</td>
+   <td>A-28804057
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la//kernel/msm-3.10/commit/?id=b1bc773cf61265e0e3871b2e52bd6b3270ffc6c3">
+QC-CR#636633</a>
+</p>
+</td>
+   <td>높음</td>
+   <td>Nexus 5, Nexus 7(2013)</td>
+   <td>2014년 7월 3일</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9888</td>
+   <td>A-28803642
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la/kernel/msm/commit/?id=f044936caab337a4384fbfe64a4cbae33c7e22a1">
+QC-CR#642735</a>
+</p>
+</td>
+   <td>높음</td>
+   <td>Nexus 5, Nexus 7(2013)</td>
+   <td>2014년 8월 29일</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9889</td>
+   <td>A-28803645
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la/kernel/msm/commit?id=f4e2f2d4ef58c88340774099dff3324ec8baa24a">
+QC-CR#674712</a>
+</p></td>
+   <td>높음</td>
+   <td>Nexus 5</td>
+   <td>2014년 10월 31일</td>
+  </tr>
+  <tr>
+   <td>CVE-2015-8937</td>
+   <td>A-28803962
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la//kernel/msm-3.10/commit/?id=c66202b9288cc4ab1c38f7c928fa1005c285c170">
+QC-CR#770548</a>
+</p>
+</td>
+   <td>높음</td>
+   <td>Nexus 5, Nexus 6, Nexus 7(2013)</td>
+   <td>2015년 3월 31일</td>
+  </tr>
+  <tr>
+   <td>CVE-2015-8938</td>
+   <td>A-28804030
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la//kernel/msm-3.10/commit/?id=51c39420e3a49d1a7f05a77c64369b7623088238">
+QC-CR#766022</a></p></td>
+   <td>높음</td>
+   <td>Nexus 6</td>
+   <td>2015년 3월 31일</td>
+  </tr>
+  <tr>
+   <td>CVE-2015-8939</td>
+   <td>A-28398884
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la/kernel/msm/commit/?id=884cff808385788fa620833c7e2160a4b98a21da">
+QC-CR#779021</a></p></td>
+   <td>높음</td>
+   <td>Nexus 7(2013)</td>
+   <td>2015년 4월 30일</td>
+  </tr>
+  <tr>
+   <td>CVE-2015-8940</td>
+   <td>A-28813987
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la//kernel/msm-3.10/commit/?id=e13ebd727d161db7003be6756e61283dce85fa3b">
+QC-CR#792367</a></p></td>
+   <td>높음</td>
+   <td>Nexus 6</td>
+   <td>2015년 4월 30일</td>
+  </tr>
+  <tr>
+   <td>CVE-2015-8941</td>
+   <td>A-28814502
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la//kernel/msm-3.10/commit/?id=d4d4d1dd626b21e68e78395bab3382c1eb04877f">
+QC-CR#792473</a></p></td>
+   <td>높음</td>
+   <td>Nexus 6, Nexus 7(2013)</td>
+   <td>2015년 5월 29일</td>
+  </tr>
+  <tr>
+   <td>CVE-2015-8942</td>
+   <td>A-28814652
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la//kernel/msm-3.10/commit/?id=9ec380c06bbd79493828fcc3c876d8a53fd3369f">
+QC-CR#803246</a></p></td>
+   <td>높음</td>
+   <td>Nexus 6</td>
+   <td>2015년 6월 30일</td>
+  </tr>
+  <tr>
+   <td>CVE-2015-8943</td>
+   <td>A-28815158
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la//kernel/msm/commit/?id=ad376e4053b87bd58f62f45b6df2c5544bc21aee">
+QC-CR#794217</a></p>
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la//kernel/msm/commit/?id=ad376e4053b87bd58f62f45b6df2c5544bc21aee">
+QC-CR#836226</a></p></td>
+   <td>높음</td>
+   <td>Nexus 5</td>
+   <td>2015년 9월 11일</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9891</td>
+   <td>A-28749283
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la/kernel/msm-3.10/commit/?id=c10f03f191307f7114af89933f2d91b830150094">
+QC-CR#550061</a></p></td>
+   <td>보통</td>
+   <td>Nexus 5</td>
+   <td>2014년 3월 13일</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9890</td>
+   <td>A-28770207
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la//kernel/msm-3.10/commit/?id=14e0c8614d2715589583d8a95e33c422d110eb6f">
+QC-CR#529177</a></p></td>
+   <td>보통</td>
+   <td>Nexus 5, Nexus 7(2013)</td>
+   <td>2014년 6월 2일</td>
+  </tr>
+</table>
+
+<h3 id="elevation-of-privilege-vulnerability-in-kernel-networking-component">
+커널 네트워크 구성요소의 권한 승격 취약성</h3>
+<p>
+커널 네트워크 구성요소의 권한 승격 취약성으로 인해
+로컬 악성 애플리케이션이 커널 컨텍스트 내에서 임의의 코드를
+실행할 수 있습니다. 이 문제는 영구적인
+로컬 기기 손상을 일으킬 가능성이 있으므로 심각도 심각으로 평가되며,
+기기를 수리하려면 운영체제를 최신 버전으로 업데이트해야 할 수도 있습니다.
+</p>
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>심각도</th>
+   <th>업데이트된 Nexus 기기</th>
+   <th>신고된 날짜</th>
+  </tr>
+  <tr>
+   <td>CVE-2015-2686</td>
+   <td>A-28759139
+<p>
+<a href="http://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/commit/?id=4de930efc23b92ddf88ce91c405ee645fe6e27ea">
+업스트림 커널</a></p></td>
+   <td>심각</td>
+   <td>모든 Nexus</td>
+   <td>2015년 3월 23일</td>
+  </tr>
+  <tr>
+   <td>CVE-2016-3841</td>
+   <td>A-28746669
+<p>
+<a href="https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/commit/?id=45f6fad84cc305103b28d73482b344d7f5b76f39">
+업스트림 커널</a></p></td>
+   <td>심각</td>
+   <td>모든 Nexus</td>
+   <td>2015년 12월 3일</td>
+  </tr>
+</table>
+
+<h3 id="elevation-of-privilege-vulnerability-in-qualcomm-gpu-driver">
+Qualcomm GPU 드라이버의 권한 승격 취약성</h3>
+<p>
+Qualcomm GPU 드라이버의 권한 승격 취약성으로 인해
+로컬 악성 애플리케이션이 커널 컨텍스트 내에서 임의의 코드를
+실행할 수 있습니다. 이 문제는 영구적인
+로컬 기기 손상을 일으킬 가능성이 있으므로 심각도 심각으로 평가되며,
+기기를 수리하려면 운영체제를 최신 버전으로 업데이트해야 할 수도 있습니다.
+</p>
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>심각도</th>
+   <th>업데이트된 Nexus 기기</th>
+   <th>신고된 날짜</th>
+  </tr>
+  <tr>
+   <td>CVE-2016-2504</td>
+   <td>A-28026365
+       <p>QC-CR#1002974</p></td>
+   <td>심각</td>
+   <td>Nexus 5, Nexus 5X, Nexus 6, Nexus 6P, Nexus 7(2013)</td>
+   <td>2016년 4월 5일</td>
+  </tr>
+  <tr>
+   <td>CVE-2016-3842</td>
+   <td>A-28377352
+<p>
+  QC-CR#1002974</p></td>
+   <td>심각</td>
+   <td>Nexus 5X, Nexus 6, Nexus 6P</td>
+   <td>2016년 4월 25일</td>
+  </tr>
+</table>
+<p>
+* 이 문제를 해결하기 위한 패치는 공개되지 않습니다. 업데이트는
+<a href="https://developers.google.com/android/nexus/drivers">Google 개발자 사이트</a>에서 제공되는 Nexus 기기용 최신 바이너리
+드라이버에 포함되어 있습니다.
+</p>
+
+
+<h3 id="elevation-of-privilege-vulnerability-in-qualcomm-performance-component">
+Qualcomm 성능 구성요소의 권한 승격 취약성</h3>
+<p>
+Qualcomm 성능 구성요소의 권한 승격 취약성으로 인해
+로컬 악성 애플리케이션이 커널 컨텍스트 내에서 임의의 코드를
+실행할 수 있습니다. 이 문제는 영구적인
+로컬 기기 손상을 일으킬 가능성이 있으므로 심각도 심각으로 평가되며,
+기기를 수리하려면 운영체제를 최신 버전으로 업데이트해야 할 수도 있습니다.
+</p>
+<p class="note">
+<strong>참고:</strong> 이 게시판 A-29119870에 이 취약성을 완화하기 위해 제작된
+플랫폼 수준 업데이트가 있습니다.
+</p>
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>심각도</th>
+   <th>업데이트된 Nexus 기기</th>
+   <th>신고된 날짜</th>
+  </tr>
+  <tr>
+   <td>CVE-2016-3843</td>
+   <td>A-28086229*
+<p>
+  QC-CR#1011071</p></td>
+   <td>심각</td>
+   <td>Nexus 5X, Nexus 6P</td>
+   <td>2016년 4월 7일</td>
+  </tr>
+</table>
+<p>
+* 이 문제를 해결하기 위한 패치는 공개되지 않습니다. 업데이트는
+<a href="https://developers.google.com/android/nexus/drivers">Google 개발자 사이트</a>에서 제공되는 Nexus 기기용 최신 바이너리
+드라이버에 포함되어 있습니다.
+</p>
+
+<h3 id="elevation-of-privilege-vulnerability-in-kernel">
+커널의 권한 승격 취약성</h3>
+<p>
+커널의 권한 승격 취약성으로 인해 로컬 악성 애플리케이션이
+커널 컨텍스트 내에서 임의의 코드를 실행할 수
+있습니다. 이 문제는 영구적인
+로컬 기기 손상을 일으킬 가능성이 있으므로 심각도 심각으로 평가되며,
+기기를 수리하려면 운영체제를 최신 버전으로 업데이트해야 할 수도 있습니다.
+</p>
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>심각도</th>
+   <th>업데이트된 Nexus 기기</th>
+   <th>신고된 날짜</th>
+  </tr>
+  <tr>
+   <td>CVE-2016-3857</td>
+   <td>A-28522518*</td>
+   <td>심각</td>
+   <td>Nexus 7(2013)</td>
+   <td>2016년 5월 2일</td>
+  </tr>
+</table>
+<p>
+* 이 문제를 해결하기 위한 패치는 공개되지 않습니다. 업데이트는
+<a href="https://developers.google.com/android/nexus/drivers">Google 개발자 사이트</a>에서 제공되는 Nexus 기기용 최신 바이너리
+드라이버에 포함되어 있습니다.
+</p>
+
+<h3 id="elevation-of-privilege-vulnerability-in-kernel-memory-system">
+커널 메모리 시스템의 권한 승격 취약성</h3>
+<p>
+커널 메모리 시스템의 권한 승격 취약성으로 인해 로컬 악성 애플리케이션이
+커널 컨텍스트 내에서 임의의 코드를 실행할 수
+있습니다. 이 문제는 먼저 권한이 설정된 절차에 침투해야만 실행
+가능하므로 심각도 높음으로 평가됩니다.
+</p>
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>심각도</th>
+   <th>업데이트된 Nexus 기기</th>
+   <th>신고된 날짜</th>
+  </tr>
+  <tr>
+   <td>CVE-2015-1593</td>
+   <td>A-29577822
+<p>
+<a href="http://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/commit/?id=4e7c22d447bb6d7e37bfe39ff658486ae78e8d77">
+업스트림 커널</a></p></td>
+   <td>높음</td>
+   <td>Nexus Player</td>
+   <td>2015년 2월 13일</td>
+  </tr>
+  <tr>
+   <td>CVE-2016-3672</td>
+   <td>A-28763575
+<p>
+<a href="http://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/commit/?id=8b8addf891de8a00e4d39fc32f93f7c5eb8feceb">
+업스트림 커널</a></p></td>
+   <td>높음</td>
+   <td>Nexus Player</td>
+   <td>2016년 3월 25일</td>
+  </tr>
+</table>
+
+<h3 id="elevation-of-privilege-vulnerability-in-kernel-sound-component">
+커널 사운드 구성요소의 권한 승격 취약성</h3>
+<p>
+커널 사운드 구성요소의 권한 승격 취약성으로 인해
+로컬 악성 애플리케이션이 커널 컨텍스트 내에서 임의의 코드를
+실행할 수 있습니다. 이 문제는 먼저 권한이 설정된 절차에 침투해야만 실행
+가능하므로 심각도 높음으로 평가됩니다.
+</p>
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>심각도</th>
+   <th>업데이트된 Nexus 기기</th>
+   <th>신고된 날짜</th>
+  </tr>
+  <tr>
+   <td>CVE-2016-2544</td>
+   <td>A-28695438
+<p>
+<a href="http://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/commit/?id=3567eb6af614dac436c4b16a8d426f9faed639b3">
+업스트림 커널</a></p></td>
+   <td>높음</td>
+   <td>모든 Nexus</td>
+   <td>2016년 1월 19일</td>
+  </tr>
+  <tr>
+   <td>CVE-2016-2546</td>
+   <td>A-28694392
+<p>
+<a href="http://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/commit/?id=af368027a49a751d6ff4ee9e3f9961f35bb4fede">
+업스트림 커널</a></p></td>
+   <td>높음</td>
+   <td>Pixel C</td>
+   <td>2016년 1월 19일</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9904</td>
+   <td>A-28592007
+<p>
+<a href="https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/commit/?id=6217e5ede23285ddfee10d2e4ba0cc2d4c046205">
+업스트림 커널</a></p></td>
+   <td>높음</td>
+   <td>Nexus 5X, Nexus 6, Nexus 6P, Nexus 9, Nexus Player</td>
+   <td>2016년 5월 4일</td>
+  </tr>
+</table>
+
+<h3 id="elevation-of-privilege-vulnerability-in-kernel-file-system">
+커널 파일 시스템의 권한 승격 취약성</h3>
+<p>
+커널 파일 시스템의 권한 승격 취약성으로 인해 로컬 악성 애플리케이션이
+커널 컨텍스트 내에서 임의의 코드를 실행할 수
+있습니다. 이 문제는 먼저 권한이 설정된 절차에 침투해야만 실행
+가능하므로 심각도 높음으로 평가됩니다.
+</p>
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>심각도</th>
+   <th>업데이트된 Nexus 기기</th>
+   <th>신고된 날짜</th>
+  </tr>
+  <tr>
+   <td>CVE-2012-6701</td>
+   <td>A-28939037
+<p>
+<a href="http://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/commit/?id=a70b52ec1aaeaf60f4739edb1b422827cb6f3893">
+업스트림 커널</a></p></td>
+   <td>높음</td>
+   <td>Nexus 5, Nexus 7(2013)</td>
+   <td>2016년 3월 2일</td>
+  </tr>
+</table>
+
+<h3 id="elevation-of-privilege-vulnerability-in-mediaserver">
+미디어 서버의 권한 승격 취약성</h3>
+<p>
+미디어 서버의 권한 승격 취약성으로 인해 로컬 악성 애플리케이션이
+권한이 설정된 절차의 컨텍스트 내에서 임의의 코드를 실행할 수
+있습니다. 이 문제는 타사 애플리케이션이 액세스할 수 없는 승격된 권한으로의
+로컬 액세스를 부여하는 데 사용될 수 있으므로 심각도 높음으로 평가됩니다.
+</p>
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>심각도</th>
+   <th>업데이트된 Nexus 기기</th>
+   <th>신고된 날짜</th>
+  </tr>
+  <tr>
+   <td>CVE-2016-3844</td>
+   <td>A-28299517*
+<p>
+N-CVE-2016-3844</p></td>
+   <td>높음</td>
+   <td>Nexus 9, Pixel C</td>
+   <td>2016년 4월 19일</td>
+  </tr>
+</table>
+<p>
+* 이 문제를 해결하기 위한 패치는 공개되지 않습니다. 업데이트는
+<a href="https://developers.google.com/android/nexus/drivers">Google 개발자 사이트</a>에서 제공되는 Nexus 기기용 최신 바이너리
+드라이버에 포함되어 있습니다.
+</p>
+
+<h3>커널 동영상 드라이버의 권한 승격 취약성</h3>
+<p>
+커널 동영상 드라이버의 권한 승격 취약성으로 인해
+로컬 악성 애플리케이션이 커널 컨텍스트 내에서 임의의 코드를
+실행할 수 있습니다. 이 문제는 먼저 권한이 설정된 절차에 침투해야만 실행
+가능하므로 심각도 높음으로 평가됩니다.
+</p>
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>심각도</th>
+   <th>업데이트된 Nexus 기기</th>
+   <th>신고된 날짜</th>
+  </tr>
+  <tr>
+   <td>CVE-2016-3845</td>
+   <td>A-28399876*</td>
+   <td>높음</td>
+   <td>Nexus 5</td>
+   <td>2016년 4월 20일</td>
+  </tr>
+</table>
+<p>
+* 이 문제를 해결하기 위한 패치는 공개되지 않습니다. 업데이트는
+<a href="https://developers.google.com/android/nexus/drivers">Google 개발자 사이트</a>에서 제공되는 Nexus 기기용 최신 바이너리
+드라이버에 포함되어 있습니다.
+</p>
+
+<h3 id="elevation-of-privilege-vulnerability-in-serial-peripheral-interface-driver">
+직렬 주변기기 인터페이스 드라이버의 권한 승격 취약성</h3>
+<p>
+직렬 주변기기 인터페이스 드라이버의 권한 승격 취약성으로 인해
+로컬 악성 애플리케이션이 커널 컨텍스트 내에서 임의의 코드를 실행할 수
+있습니다. 이 문제는 먼저 권한이 설정된 절차에 침투해야만 실행
+가능하므로 심각도 높음으로 평가됩니다.
+</p>
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>심각도</th>
+   <th>업데이트된 Nexus 기기</th>
+   <th>신고된 날짜</th>
+  </tr>
+  <tr>
+   <td>CVE-2016-3846</td>
+   <td>A-28817378*</td>
+   <td>높음</td>
+   <td>Nexus 5X, Nexus 6P</td>
+   <td>2016년 5월 17일</td>
+  </tr>
+</table>
+<p>
+* 이 문제를 해결하기 위한 패치는 공개되지 않습니다. 업데이트는
+<a href="https://developers.google.com/android/nexus/drivers">Google 개발자 사이트</a>에서 제공되는 Nexus 기기용 최신 바이너리
+드라이버에 포함되어 있습니다.
+</p>
+
+<h3 id="elevation-of-privilege-vulnerability-in-nvidia-media-driver">
+NVIDIA 미디어 드라이버의 권한 승격 취약성</h3>
+<p>
+NVIDIA 미디어 드라이버의 권한 승격 취약성으로 인해
+로컬 악성 애플리케이션이 커널의 컨텍스트 내에서 임의의 코드를
+실행할 수 있습니다. 이 문제는 먼저 권한이 설정된 절차에 침투해야만 실행
+가능하므로 심각도 높음으로 평가됩니다.
+</p>
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>심각도</th>
+   <th>업데이트된 Nexus 기기</th>
+   <th>신고된 날짜</th>
+  </tr>
+  <tr>
+   <td>CVE-2016-3847</td>
+   <td>A-28871433*
+<p>
+N-CVE-2016-3847</p></td>
+   <td>높음</td>
+   <td>Nexus 9</td>
+   <td>2016년 5월 19일</td>
+  </tr>
+  <tr>
+   <td>CVE-2016-3848</td>
+   <td>A-28919417*
+<p>
+N-CVE-2016-3848</p></td>
+   <td>높음</td>
+   <td>Nexus 9</td>
+   <td>2016년 5월 19일</td>
+  </tr>
+</table>
+<p>
+* 이 문제를 해결하기 위한 패치는 공개되지 않습니다. 업데이트는
+<a href="https://developers.google.com/android/nexus/drivers">Google 개발자 사이트</a>에서 제공되는 Nexus 기기용 최신 바이너리
+드라이버에 포함되어 있습니다.
+</p>
+
+<h3 id="elevation-of-privilege-vulnerability-in-ion-driver">
+ION 드라이버의 권한 승격 취약성</h3>
+<p>
+ION 드라이버의 권한 승격 취약성으로 인해
+로컬 악성 애플리케이션이 커널의 컨텍스트 내에서 임의의 코드를
+실행할 수 있습니다. 이 문제는 먼저 권한이 설정된 절차에 침투해야만 실행
+가능하므로 심각도 높음으로 평가됩니다.
+</p>
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>심각도</th>
+   <th>업데이트된 Nexus 기기</th>
+   <th>신고된 날짜</th>
+  </tr>
+  <tr>
+   <td>CVE-2016-3849</td>
+   <td>A-28939740</td>
+   <td>높음</td>
+   <td>Pixel C</td>
+   <td>2016년 5월 24일</td>
+  </tr>
+</table>
+<p>
+* 이 문제를 해결하기 위한 패치는 공개되지 않습니다. 업데이트는
+<a href="https://developers.google.com/android/nexus/drivers">Google 개발자 사이트</a>에서 제공되는 Nexus 기기용 최신 바이너리
+드라이버에 포함되어 있습니다.
+</p>
+
+<h3 id="elevation-of-privilege-vulnerability-in-qualcomm-bootloader">Qualcomm 부트로더의 권한 승격 취약성</h3>
+<p>
+Qualcomm 부트로더의 권한 승격 취약성으로 인해
+로컬 악성 애플리케이션이 커널 컨텍스트 내에서 임의의 코드를
+실행할 수 있습니다. 이 문제는 먼저 권한이 설정된 절차에 침투해야만 실행
+가능하므로 심각도 높음으로 평가됩니다.
+</p>
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="26%">
+  <col width="17%">
+  <tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>심각도</th>
+   <th>업데이트된 Nexus 기기</th>
+   <th>신고된 날짜</th>
+  </tr>
+  <tr>
+   <td>CVE-2016-3850</td>
+   <td>A-27917291
+<p>
+<a href="https://source.codeaurora.org/quic/la/kernel/lk/commit/?id=030371d45a9dcda4d0cc3c76647e753a1cc1b782">
+QC-CR#945164</a></p></td>
+   <td>높음</td>
+   <td>Nexus 5, Nexus 5X, Nexus 6P, Nexus 7(2013) </td>
+   <td>2016년 3월 28일</td>
+  </tr>
+</table>
+
+<h3 id="elevation-of-privilege-vulnerability-in-kernel-performance">
+커널 성능 하위 시스템의 권한 승격 취약성</h3>
+<p>
+커널 성능 하위 시스템의 권한 승격 취약성으로 인해 로컬 악성 애플리케이션이
+커널 컨텍스트 내에서 임의의 코드를 실행할 수 있습니다. 이 문제는 공격자가 커널
+공격 표면을 악용할 수 있으므로 심각도 높음으로 평가됩니다.
+</p>
+<p class="note">
+<strong>참고:</strong> 이 플랫폼 수준 업데이트는 CVE-2016-3843(A-28086229)과 같은
+취약성을 완화하기 위해 제작되었습니다.
+</p>
+<table>
+  <col width="18%">
+  <col width="18%">
+  <col width="10%">
+  <col width="19%">
+  <col width="17%">
+  <col width="17%">
+  <tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>심각도</th>
+   <th>업데이트된 Nexus 기기</th>
+   <th>업데이트된 AOSP 버전</th>
+   <th>신고된 날짜</th>
+  </tr>
+  <tr>
+   <td>CVE-2016-3843</td>
+   <td>A-29119870*</td>
+   <td>높음</td>
+   <td>모든 Nexus</td>
+   <td>6.0, 6.1</td>
+   <td>Google 사내용</td>
+  </tr>
+</table>
+<p>
+* 이 문제를 해결하기 위한 패치는 공개되지 않습니다. 업데이트는
+<a href="https://developers.google.com/android/nexus/drivers">Google 개발자 사이트</a>에서 제공되는 Nexus 기기용 최신 바이너리
+드라이버에 포함되어 있습니다.
+</p>
+
+<h3 id="elevation-of-privilege-vulnerability-in-lg-electronics-bootloader">
+LG 전자 부트로더의 권한 승격 취약성</h3>
+<p>
+LG 전자 부트로더의 권한 승격 취약성으로 인해
+공격자가 커널 컨텍스트 내에서 임의의 코드를
+실행할 수 있습니다.
+이 문제는 먼저 권한이 설정된
+절차에 침투해야만 실행 가능하므로
+심각도 높음으로 평가됩니다.
+</p>
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>심각도</th>
+   <th>업데이트된 Nexus 기기</th>
+   <th>신고된 날짜</th>
+  </tr>
+  <tr>
+   <td>CVE-2016-3851</td>
+   <td>A-29189941*</td>
+   <td>높음</td>
+   <td>Nexus 5X</td>
+   <td>Google 사내용</td>
+  </tr>
+</table>
+<p>
+* 이 문제를 해결하기 위한 패치는 공개되지 않습니다. 업데이트는
+<a href="https://developers.google.com/android/nexus/drivers">Google 개발자 사이트</a>에서 제공되는 Nexus 기기용 최신 바이너리
+드라이버에 포함되어 있습니다.
+</p>
+
+<h3 id="information-disclosure-vulnerability-in-qualcomm-components">
+Qualcomm 구성요소의 정보 공개 취약성</h3>
+<p>
+아래 표에는 부트로더, 카메라 드라이버, 캐릭터 드라이버, 네트워크,
+사운드 드라이버 및 동영상 드라이버를 비롯한 Qualcomm 구성요소에
+영향을 주는 보안 취약성이 포함되어 있습니다.
+</p>
+<p>
+이 중 가장 심각한 문제는 로컬 악성 애플리케이션이 권한 수준을 벗어난
+민감한 데이터와 같은 데이터에 명시적인 사용자 권한 없이 액세스할 수
+있으므로 심각도 높음으로 평가됩니다.
+</p>
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>심각도</th>
+   <th>업데이트된 Nexus 기기</th>
+   <th>신고된 날짜</th>
+  </tr>
+  <tr>
+   <td>CVE-2014-9892</td>
+   <td>A-28770164
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la//kernel/msm-3.10/commit/?id=591b1f455c32206704cbcf426bb30911c260c33e">
+QC-CR#568717</a></p></td>
+   <td>높음</td>
+   <td>Nexus 5, Nexus 7(2013)</td>
+   <td>2014년 6월 2일</td>
+  </tr>
+  <tr>
+   <td>CVE-2015-8944</td>
+   <td>A-28814213
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la//kernel/msm-3.10/commit/?id=e758417e7c31b975c862aa55d0ceef28f3cc9104">
+QC-CR#786116</a></p></td>
+   <td>높음</td>
+   <td>Nexus 6, Nexus 7(2013)</td>
+   <td>2015년 4월 30일</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9893</td>
+   <td>A-28747914
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la/kernel/msm-3.10/commit/?id=bfc6eee5e30a0c20bc37495233506f4f0cc4991d">
+QC-CR#542223</a></p></td>
+   <td>보통</td>
+   <td>Nexus 5</td>
+   <td>2014년 3월 27일</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9894</td>
+   <td>A-28749708
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la/kernel/msm-3.10/commit/?id=83214431cd02674c70402b160b16b7427e28737f">
+QC-CR#545736</a></p></td>
+   <td>보통</td>
+   <td>Nexus 7(2013)</td>
+   <td>2014년 3월 31일</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9895</td>
+   <td>A-28750150
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la//kernel/msm/commit/?id=cc4b26575602e492efd986e9a6ffc4278cee53b5">
+QC-CR#570757</a></p></td>
+   <td>보통</td>
+   <td>Nexus 5, Nexus 7(2013)</td>
+   <td>2014년 3월 31일</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9896</td>
+   <td>A-28767593
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la/kernel/msm-3.10/commit/?id=89f2bcf1ac860b0b380e579e9a8764013f263a7d">
+QC-CR#551795</a></p></td>
+   <td>보통</td>
+   <td>Nexus 5, Nexus 7(2013)</td>
+   <td>2014년 4월 30일</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9897</td>
+   <td>A-28769856
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la/kernel/msm-3.10/commit/?id=46135d80765cb70a914f02a6e7b6abe64679ec86">
+QC-CR#563752</a></p></td>
+   <td>보통</td>
+   <td>Nexus 5</td>
+   <td>2014년 4월 30일</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9898</td>
+   <td>A-28814690
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la/kernel/msm-3.10/commit/?id=80be0e249c906704085d13d4ae446f73913fc225">
+QC-CR#554575</a></p></td>
+   <td>보통</td>
+   <td>Nexus 5, Nexus 7(2013)</td>
+   <td>2014년 4월 30일</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9899</td>
+   <td>A-28803909
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la//kernel/msm-3.10/commit/?id=8756624acb1e090b45baf07b2a8d0ebde114000e">
+QC-CR#547910</a></p></td>
+   <td>보통</td>
+   <td>Nexus 5</td>
+   <td>2014년 7월 3일</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9900</td>
+   <td>A-28803952
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la//kernel/msm-3.10/commit/?id=63c317dbee97983004dffdd9f742a20d17150071">
+QC-CR#570754</a></p></td>
+   <td>보통</td>
+   <td>Nexus 5, Nexus 7(2013)</td>
+   <td>2014년 8월 8일</td>
+  </tr>
+</table>
+
+<h3 id="information-disclosure-vulnerability-in-kernel-scheduler">
+커널 스케줄러의 정보 공개 취약성</h3>
+<p>
+커널 스케줄러의 정보 공개 취약성으로 인해 로컬 악성 애플리케이션이
+권한 수준을 벗어난 데이터에 액세스할 수 있습니다.
+이 문제는 명시적인 사용자 권한 없이 민감한 데이터에 액세스하는 데 사용될 수 있으므로
+심각도 높음으로 평가됩니다.
+</p>
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>심각도</th>
+   <th>업데이트된 Nexus 기기</th>
+   <th>신고된 날짜</th>
+  </tr>
+  <tr>
+   <td>CVE-2014-9903</td>
+   <td>A-28731691
+<p>
+<a href="https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/commit/?id=4efbc454ba68def5ef285b26ebfcfdb605b52755">
+업스트림 커널</a></p></td>
+   <td>높음</td>
+   <td>Nexus 5X, Nexus 6P</td>
+   <td>2014년 2월 21일</td>
+  </tr>
+</table>
+
+<h3 id="information-disclosure-vulnerability-in-mediatek-wi-fi-driver-device-specific">
+MediaTek Wi-Fi 드라이버의 정보 공개 취약성(기기별 문제)</h3>
+<p>
+MediaTek Wi-Fi 드라이버의 정보 공개 취약성으로 인해
+로컬 악성 애플리케이션이 권한 수준을 벗어난 데이터에
+액세스할 수 있습니다. 이 문제는 명시적인 사용자 권한 없이
+민감한 데이터에 액세스하는 데 사용될 수 있으므로 심각도 높음으로 평가됩니다.
+</p>
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>심각도</th>
+   <th>업데이트된 Nexus 기기</th>
+   <th>신고된 날짜</th>
+  </tr>
+  <tr>
+   <td>CVE-2016-3852</td>
+   <td>A-29141147*
+<p>
+  M-ALPS02751738</p></td>
+   <td>높음</td>
+   <td>Android One</td>
+   <td>2016년 4월 12일</td>
+  </tr>
+</table>
+<p>
+* 이 문제를 해결하기 위한 패치는 공개되지 않습니다. 업데이트는
+<a href="https://developers.google.com/android/nexus/drivers">Google 개발자 사이트</a>에서 제공되는 Nexus 기기용 최신 바이너리
+드라이버에 포함되어 있습니다.
+</p>
+
+<h3 id="information-disclosure-vulnerability-in-usb-driver">USB 드라이버의 정보 공개 취약성</h3>
+<p>
+USB 드라이버의 정보 공개 취약성으로 인해 로컬 악성 애플리케이션이
+권한 수준을 벗어난 데이터에 액세스할 수 있습니다. 이 문제는
+명시적인 사용자 권한 없이 민감한 데이터에 액세스하는 데 사용될 수 있으므로
+심각도 높음으로 평가됩니다.
+</p>
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>심각도</th>
+   <th>업데이트된 Nexus 기기</th>
+   <th>신고된 날짜</th>
+  </tr>
+  <tr>
+   <td>CVE-2016-4482</td>
+   <td>A-28619695
+<p>
+<a href="http://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/commit/?id=681fef8380eb818c0b845fca5d2ab1dcbab114ee">
+업스트림 커널</a></p></td>
+   <td>높음</td>
+   <td>모든 Nexus</td>
+   <td>2016년 5월 3일</td>
+  </tr>
+</table>
+
+<h3 id="denial-of-service-vulnerability-in-qualcomm-components">
+Qualcomm 구성요소의 서비스 거부(DoS) 취약성</h3>
+<p>
+아래 표에는 Wi-Fi 드라이버를 포함한 Qualcomm 구성요소에 영향을 주는
+보안 취약성이 포함되어 있습니다.
+</p>
+<p>
+이 중 가장 심각한 문제는 공격자가 일시적인 원격 서비스 거부를 통해
+기기를 지연시키거나 재부팅을 일으킬 수 있으므로 심각도 높음으로
+평가됩니다.
+</p>
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>심각도</th>
+   <th>업데이트된 Nexus 기기</th>
+   <th>신고된 날짜</th>
+  </tr>
+  <tr>
+   <td>CVE-2014-9901</td>
+   <td>A-28670333
+<p>
+<a href="https://us.codeaurora.org/cgit/quic/la//platform/vendor/qcom-opensource/wlan/prima/commit/?id=637f0f7931dd7265ac1c250dc2884d6389c66bde">
+QC-CR#548711</a></p></td>
+   <td>높음</td>
+   <td>Nexus 7(2013)</td>
+   <td>2014년 3월 31일</td>
+  </tr>
+</table>
+
+<h3 id="elevation-of-privilege-vulnerability-in-google-play-services">
+Google Play 서비스의 권한 승격 취약성</h3>
+<p>
+Google Play 서비스의 권한 승격 취약성으로 인해 로컬 공격자가
+초기화 보호 기능을 우회하여 기기에 액세스할 수 있습니다. 이 문제는
+초기화 보호 기능을 우회함으로써 기기가 재설정되고 모든 데이터가
+삭제될 수 있기 때문에 심각도 보통으로 평가됩니다.
+</p>
+<table>
+  <col width="18%">
+  <col width="18%">
+  <col width="10%">
+  <col width="19%">
+  <col width="17%">
+  <col width="17%">
+  <tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>심각도</th>
+   <th>업데이트된 Nexus 기기</th>
+   <th>업데이트된 AOSP 버전</th>
+   <th>신고된 날짜</th>
+  </tr>
+  <tr>
+   <td>CVE-2016-3853</td>
+   <td>A-26803208*</td>
+   <td>보통</td>
+   <td>모든 Nexus</td>
+   <td>없음</td>
+   <td>2016년 5월 4일</td>
+  </tr>
+</table>
+<p>
+* 이 문제를 해결하기 위한 패치는 공개되지 않습니다. 업데이트는
+<a href="https://developers.google.com/android/nexus/drivers">Google 개발자 사이트</a>에서 제공되는 Nexus 기기용 최신 바이너리
+드라이버에 포함되어 있습니다.
+</p>
+
+<h3 id="elevation-of-privilege-vulnerability-in-framework-apis-2">
+프레임워크 API의 권한 승격 취약성</h3>
+<p>
+프레임워크 API의 권한 승격 취약성으로 인해 사전 설치된 애플리케이션이
+애플리케이션을 업데이트할 때 사용자에게 알리지 않고 인텐트 필터
+우선순위를 높일 수 있습니다. 이 문제는 명시적인 사용자 권한 없이
+승격된 권한을 부여하는 데 사용될 수 있으므로 심각도 보통으로
+평가됩니다.
+</p>
+<table>
+  <col width="18%">
+  <col width="17%">
+  <col width="10%">
+  <col width="19%">
+  <col width="18%">
+  <col width="17%">
+  <tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>심각도</th>
+   <th>업데이트된 Nexus 기기</th>
+   <th>업데이트된 AOSP 버전</th>
+   <th>신고된 날짜</th>
+  </tr>
+  <tr>
+   <td>CVE-2016-2497</td>
+   <td><a href="https://android.googlesource.com/platform/frameworks/base/+/a75537b496e9df71c74c1d045ba5569631a16298">
+       A-27450489</a></td>
+   <td>보통</td>
+   <td>모든 Nexus</td>
+   <td>4.4.4, 5.0.2, 5.1.1, 6.0, 6.0.1</td>
+   <td>Google 사내용</td>
+  </tr>
+</table>
+
+<h3 id="information-disclosure-vulnerability-in-kernel-networking-component">
+커널 네트워크 구성요소의 정보 공개 취약성</h3>
+<p>
+커널 네트워크 구성요소의 정보 공개 취약성으로 인해 로컬 악성 애플리케이션이
+권한 수준을 벗어난 데이터에 액세스할 수 있습니다. 이 문제는 먼저 권한이 설정된 절차에 침투해야만
+실행 가능하므로 심각도 보통으로 평가됩니다.
+</p>
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>심각도</th>
+   <th>업데이트된 Nexus 기기</th>
+   <th>신고된 날짜</th>
+  </tr>
+  <tr>
+   <td>CVE-2016-4578</td>
+   <td>A-28620102
+<p>
+<a href="http://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/commit/?id=5f8e44741f9f216e33736ea4ec65ca9ac03036e6">
+업스트림 커널</a></p></td>
+   <td>보통</td>
+   <td>모든 Nexus</td>
+   <td>2016년 5월 3일</td>
+  </tr>
+</table>
+
+<h3 id="information-disclosure-vulnerability-in-kernel-sound-component">
+커널 사운드 구성요소의 정보 공개 취약성</h3>
+<p>
+커널 사운드 구성요소의 정보 공개 취약성으로 인해 로컬 악성 애플리케이션이
+권한 수준을 벗어난 데이터에 액세스할 수 있습니다. 이 문제는 먼저 권한이 설정된 절차에 침투해야만
+실행 가능하므로 심각도 보통으로 평가됩니다.
+</p>
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>심각도</th>
+   <th>업데이트된 Nexus 기기</th>
+   <th>신고된 날짜</th>
+  </tr>
+  <tr>
+   <td>CVE-2016-4569</td>
+   <td>A-28980557
+<p>
+<a href="http://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/commit/?id=cec8f96e49d9be372fdb0c3836dcf31ec71e457e">
+업스트림 커널</a></p></td>
+   <td>보통</td>
+   <td>모든 Nexus</td>
+   <td>2016년 5월 9일</td>
+  </tr>
+  <tr>
+   <td>CVE-2016-4578</td>
+   <td>A-28980217
+<p>
+<a href="http://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/commit/?id=e4ec8cc8039a7063e24204299b462bd1383184a5">
+업스트림 커널</a>
+[<a href="http://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/commit/?id=9a47e9cff994f37f7f0dbd9ae23740d0f64f9fe6">2</a>]</p></td>
+   <td>보통</td>
+   <td>모든 Nexus</td>
+   <td>2016년 5월 11일</td>
+  </tr>
+</table>
+
+<h3 id="vulnerabilities-in-qualcomm-components">
+Qualcomm 구성요소의 취약성</h3>
+<p>
+아래 표에는 부트로더, 카메라 드라이버, 캐릭터 드라이버, 네트워크,
+사운드 드라이버 및 동영상 드라이버를 비롯한 Qualcomm 구성요소에
+영향을 주는 보안 취약성이 포함되어 있습니다.
+</p>
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>심각도</th>
+   <th>업데이트된 Nexus 기기</th>
+   <th>신고된 날짜</th>
+  </tr>
+  <tr>
+   <td>CVE-2016-3854</td>
+   <td><a href="https://source.codeaurora.org/quic/la/kernel/msm/commit/?h=LA.AF.1.2.1_rb1.5&amp;id=cc96def76dfd18fba88575065b29f2ae9191fafa">
+   QC-CR#897326</a></td>
+   <td>높음</td>
+   <td>없음</td>
+   <td>2016년 2월</td>
+  </tr>
+  <tr>
+   <td>CVE-2016-3855</td>
+   <td><a href="https://source.codeaurora.org/quic/la/kernel/msm-3.10/commit/?id=ab3f46119ca10de87a11fe966b0723c48f27acd4">
+   QC-CR#990824</a></td>
+   <td>높음</td>
+   <td>없음</td>
+   <td>2016년 5월</td>
+  </tr>
+  <tr>
+   <td>CVE-2016-2060</td>
+   <td><a href="https://source.codeaurora.org/quic/la/platform/system/netd/commit/?id=e9925f5acb4401588e23ea8a27c3e318f71b5cf8">
+   QC-CR#959631</a>
+   <td>보통</td>
+   <td>없음</td>
+   <td>2016년 4월</td>
+  </tr>
+</table>
+<h2 id="common-questions-and-answers">일반적인 질문 및 답변</h2>
+<p>
+이 섹션에서는 게시판을 읽은 뒤 제기될 수 있는 일반적인 질문에 답변을 제시합니다.
+</p>
+<p>
+<strong>1. 내 기기가 업데이트되어 이 문제가 해결되었는지 어떻게 알 수 있나요?
+</strong>
+</p>
+<p>
+2016-08-01 보안 패치 문자열 수준과 관련된 모든 문제는 2016-08-01
+보안 패치 수준 이상에서 해결됩니다. 2016-08-05 보안 패치 문자열 수준과 관련된 모든 문제는 2016-08-05
+보안 패치 수준 이상에서 해결됩니다. 보안 패치 수준을 확인하는 방법은
+<a href="https://support.google.com/nexus/answer/4457705">고객센터</a>를 참조하세요. 이 업데이트를 포함하는
+기기 제조업체는 패치 문자열 수준을 다음과 같이 설정해야 합니다.
+[ro.build.version.security_patch]:[2016-08-01] 또는
+[ro.build.version.security_patch]:[2016-08-05]
+</p>
+<p>
+<strong>2. 이 게시판에 두 가지 보안 패치 수준 문자열이 있는 이유가 무엇인가요?</strong>
+</p>
+<p>
+이 게시판에서는 Android 파트너가 모든 Android 기기에서 유사하게
+발생하는 취약성 문제를 빠르고 유연하게 해결할 수 있도록
+두 가지 보안 패치 수준 문자열을 포함합니다. Android 파트너는
+이 게시판의 모든 문제를 수정하고 최신 보안 패치 수준 문자열을 사용하는 것이
+좋습니다.
+</p>
+<p>
+2016년 8월 5일 이후의 보안 패치 수준을 사용하는 기기는 이 보안 게시판과
+이전 게시판의 모든 관련 패치를 포함해야 합니다.
+</p>
+<p>
+2016년 8월 1일의 보안 패치 수준을 사용하는 기기는 이 보안 패치 수준과
+관련된 모든 문제와 이전 보안 게시판에 보고된 모든 문제의 수정사항을
+포함해야 합니다. 2016년 8월 1일의 보안 패치 수준을 사용하는 기기도
+2016년 8월 5일의 보안 패치 수준과 관련된 문제의 수정사항을
+포함할 수 있습니다.
+</p>
+<p>
+3<strong>. 문제 유형별로 영향을 받는 Nexus 기기를 어떻게 결정하나요?</strong>
+</p>
+<p>
+<a href="#2016-08-01-security-patch-level-security-vulnerability-details">2016-08-01</a> 및
+<a href="#2016-08-05-security-patch-level-vulnerability-details">2016-08-05</a> 보안 취약성 세부정보 섹션에서
+각각의 표에 문제 유형별로 업데이트된 대상 Nexus 기기를 표시하는
+'업데이트된 Nexus 기기' 열이 있습니다.
+이 열에는 다음과 같은 옵션이 있습니다.
+</p>
+<ul>
+<li><strong>모든 Nexus 기기</strong>: 문제가 모든 Nexus 기기에 영향을 미치는 경우
+표의 <em>업데이트된 Nexus 기기</em> 열에 '모든 Nexus'라고 표시됩니다.
+'모든 Nexus'는 
+다음과 같은 <a href="https://support.google.com/nexus/answer/4457705#nexus_devices">지원되는 기기</a>를
+포함합니다. Nexus 5, Nexus 5X, Nexus 6, Nexus 6P, Nexus 7(2013), Nexus 9,
+Android One, Nexus Player, Pixel C</li>
+<li><strong>일부 Nexus 기기</strong>: 문제가 영향을 미치지 않는 Nexus
+기기가 있는 경우, 영향을 받는 Nexus 기기가
+<em>업데이트된 Nexus 기기</em> 열에 표시됩니다.</li>
+<li><strong>Nexus 기기 해당없음</strong>: 문제가 Nexus 기기에 영향을 미치지 않는 경우
+표의 <em>업데이트된 Nexus 기기</em> 열에 '없음'이 표시됩니다.
+</li>
+</ul>
+<p>
+<strong>4. 참조 열의 항목이 매핑하는 대상은 무엇인가요?</strong>
+</p>
+<p>
+취약성 세부정보 표의 <em>참조</em> 열에 있는 항목은 참조 값이 속한
+조직을 나타내는 접두어를 포함할 수 있습니다. 이러한 접두어는
+다음과 같이 매핑됩니다.
+</p>
+<table>
+  <tr>
+   <th>접두어</th>
+   <th>참조 문서</th>
+  </tr>
+  <tr>
+   <td>A-</td>
+   <td>Android 버그 ID</td>
+  </tr>
+  <tr>
+   <td>QC-</td>
+   <td>Qualcomm 참조 번호</td>
+  </tr>
+  <tr>
+   <td>M-</td>
+   <td>MediaTek 참조 번호</td>
+  </tr>
+  <tr>
+   <td>N-</td>
+   <td>NVIDIA 참조 번호</td>
+  </tr>
+</table>
+<h2 id="revisions">버전</h2>
+
+<ul>
+  <li>2016년 8월 1일: 게시판에 게시됨</li>
+  <li>2016년 8월 2일: 게시판이 수정되어 AOSP 링크가 포함됨</li>
+</ul>
+
+  </body>
+</html>

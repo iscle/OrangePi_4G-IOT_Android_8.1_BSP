@@ -1,0 +1,129 @@
+<html devsite>
+  <head>
+    <title>Building Multiuser-Aware Apps</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>When a device supports <a href="multi-user.html">multiple users</a>, its apps must be made aware of these distinct users.</p>
+
+<p>Certain apps need to have some components run as singletons and can accept
+requests from any user. Only system apps can currently use this feature.</p>
+
+<p>This facility:</p>
+
+<ul>
+  <li>Conserves resources
+  <li>Arbitrates one or more shared resources across users
+  <li>Reduces network overhead by using a single server connection
+</ul>
+
+<p>See the diagram below for a depiction of permissions flow with multiple users.</p>
+
+<p><img src="/devices/tech/admin/images/multi-user-perms.png" alt="Multiple users permissions flow" />
+<p class="img-caption"><strong>Figure 1.</strong> Multiple users permissions</p>
+
+<h2 id=enabling_a_singleton_component>Enabling a singleton component</h2>
+
+<p>To identify an app as a singleton, Add <code>android:singleUser=”true”</code> to your service or provider in the Android manifest.</p>
+
+<p>The system will instantiate that component in the process running as user 0
+only. Any requests to connect to that provider or service from any user will be
+routed to the process in user 0. If this is the only component in your app,
+only one instance of your app will run.</p>
+
+<p>Activities in your package will still be launched in a separate process for
+each user, with the UID being in the UID range for that user (such as 1010034).</p>
+
+<h2 id=interacting_with_users>Interacting with users</h2>
+
+<h3 id=perms_required>Set permissions</h3>
+
+<p>These permissions are required</p>
+
+<pre class="devsite-click-to-copy">
+INTERACT_ACROSS_USERS (signature|system)
+INTERACT_ACROSS_USERS_FULL (signature)
+</pre>
+
+<h3 id=apis>Employ APIs</h3>
+
+<p>Use the following APIs to make apps aware of multiple users.</p>
+
+<ol>
+  <li> Extract the user handle from incoming Binder calls:
+  <ul>
+    <li> <code>int userHandle = UserHandle.getCallingUserId()</code>
+  </ul>
+  <li> Use new, protected APIs to start services, activities, broadcasts on a specific
+user:
+  <ul>
+    <li><code>Context.startActivityAsUser(Intent, UserHandle)</code>
+    <li><code>Context.bindServiceAsUser(Intent, …, UserHandle)</code>
+    <li><code>Context.sendBroadcastAsUser(Intent, … , UserHandle)</code>
+    <li><code>Context.startServiceAsUser(Intent, …, UserHandle)
+UserHandle</code> can be an explicit user or one of the special handles: <code>UserHandle.CURRENT</code> or <code>UserHandle.ALL</code>. <code>CURRENT</code> indicates the user that is currently in the foreground. You can use <code>ALL</code> when you want to send a broadcast to all users.
+  </ul>
+  <li>Communicate with components in your own app:
+<code>(INTERACT_ACROSS_USERS)</code>
+Or with components in other apps:
+<code>(INTERACT_ACROSS_USERS_FULL)</code>
+  <li>You may need to create proxy components that run in the user’s process that
+then access the <code>singleUser</code> component in user 0.
+  <li>Query users and their handles with the new <code>UserManager</code> system service:
+  <ul>
+    <li><code>UserManager.getUsers()</code>
+    <li><code>UserManager.getUserInfo()</code>
+    <li><code>UserManager.supportsMultipleUsers()</code>
+    <li><code>UserManager.getUserSerialNumber(int userHandle)</code> - a non-recycled number that corresponds to a user handle.
+    <li><code>UserManager.getUserHandle(int serialNumber)</code>
+    <li><code>UserManager.getUserProfiles() </code>- returns the collection of self and managed profiles, if any.
+  </ul>
+  <li>Register to listen to specific or all users and the callbacks with new APIs on
+ContentObserver, PackageMonitor, BroadcastReceiver that provide additional
+information about which user has caused the callback.
+</ol>
+
+<h3 id="work-profiles">Services in multiple users or profiles</h3>
+
+<p>Not all services need to run an instance in another user or work profile. If your system service
+only needs to run as user 0, disable the service's components when running under other users to
+help preserve resources. The following example shows how you might do this at your service's entry
+points:</p>
+
+<pre class="devsite-click-to-copy">
+// Add on all entry points such as boot_completed or other manifest-listed receivers and providers
+if (!UserManager.isSystemUser()) {
+    // Disable the service
+    ComponentName targetServiceName = new ComponentName(this, TargetService.class);
+    context.getPackageManager().setComponentEnabledSetting(
+        targetServiceName, COMPONENT_ENABLED_STATE_DISABLED, 0);
+}
+</pre>
+
+<p>The example could also use <code>PackageManager.setApplicationEnabledSetting()</code> to disable
+the entire app.</p>
+
+
+
+
+  </body>
+</html>

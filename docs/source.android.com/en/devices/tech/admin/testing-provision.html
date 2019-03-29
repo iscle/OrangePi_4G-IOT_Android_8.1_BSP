@@ -1,0 +1,350 @@
+<html devsite>
+  <head>
+    <title>Testing Device Provisioning</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>The Android for Work (AfW) Test Harness is a test suite for validating the
+AfW compatibility of Android devices. It includes support apps, test cases,
+configuration files, and a test runner (<code>afw-test-tradefed</code>) built on
+<code>cts-tradefed</code>. You should setup and run the AfW Test Harness after
+completing <a href="/devices/tech/admin/provision.html">Provisioning
+for Device Administration</a>.</p>
+
+<p class=note><strong>Note:</strong> Building and running the AfW Test Harness
+is similar to building and running the Android
+<a href="http://source.android.com/compatibility/cts/index.html">Compatibility
+Test Suite (CTS)</a>.</p>
+
+<h2 id=setup_env>Setting up a development environment</h2>
+<p>The development environment for the AfW Test Harness is similar to Android
+OS. Follow the steps in
+<a href="/source/requirements.html">Requirements</a> to set up a
+development machine.</p>
+
+<h2 id=download_source>Downloading source code</h2>
+<p>Download the AfW Test Harness source code using the steps in
+<a href="/source/downloading.html">Downloading the Source</a>. The AfW
+Test Harness source code is in the <code>./test/AfwTestHarness</code> project.
+The branch name determines the version of AfW Test Harness to download (each
+Android platform has a separate version of AfW Test Harness). For Android 7.0,
+the branch name is <code>afw-test-harness-nougat-dev</code>. To initialize
+the repo and download source code for this branch, use:</p>
+
+<pre class="devsite-click-to-copy">
+<code class="devsite-terminal">mkdir WORKING_DIRECTORY</code>
+<code class="devsite-terminal">cd WORKING_DIRECTORY</code>
+<code class="devsite-terminal">git config --global user.name "Your Name"</code>
+<code class="devsite-terminal">git config --global user.email "you@example.com"</code>
+<code class="devsite-terminal">repo init -u https://android.googlesource.com/platform/manifest -b afw-test-harness-nougat-dev</code>
+<code class="devsite-terminal">repo sync -j24</code>
+</pre>
+
+<p>To check out the source code for a different version, specify the branch with
+the corresponding tag. Available branches include:</p>
+
+<table>
+<tr>
+<th>Branch Name</th>
+<th>Supported Android Platform</th>
+</tr>
+<tr>
+<td>afw-test-harness-nougat-dev</td>
+<td>Android 7.0</td>
+</tr>
+<tr>
+<td>afw-test-harness-2.1</td>
+<td>Android 7.0</td>
+</tr>
+<tr>
+<td>afw-test-harness-marshmallow-dev</td>
+<td>Android 6.0</td>
+</tr>
+<tr>
+<td>afw-test-harness-1.5</td>
+<td>Android 6.0</td>
+</tr>
+</table>
+
+<p>Other dependency projects required to build the harness are also downloaded
+with the source code.</p>
+
+<h3 id=view_studio>Viewing in Android Studio</h3>
+<p>To view and edit AfW source code in Android Studio:</p>
+<ol>
+<li>Run the following commands
+<pre class="devsite-click-to-copy">
+<code class="devsite-terminal">make idegen</code>
+<code class="devsite-terminal">development/tools/idegen/idegen.sh</code>
+</pre>
+</li>
+<li>In Android Studio, open <code>android.ipr</code>.</li>
+</ol>
+
+<p>The AfW Test Harness source code is in <code>test/AfwTestHarness</code>.</p>
+
+<h2 id=config_harness>Configuring the AfW Test Harness</h2>
+<p>You can customize the harness by configuring
+<code>test/AfwTestHarness/afw-test.props</code>. To run the harness
+successfully, complete the following steps:</p>
+<ol>
+<li>Configure the Wi-Fi network in <code>afw-test.props</code> with the
+following properties:
+<pre class="devsite-click-to-copy">
+wifi_ssid
+wifi_password (optional)
+wifi_security_type (optional, available options are: NONE, WEP or WPA)
+</pre>
+</li>
+<li>Obtain at least one account from a domain that is bound to Test DPC as
+its device policy controller. Specify the details in <code>afw-test.props</code>
+with the following properties:
+<pre class="devsite-click-to-copy">
+work_account_username
+work_account_password
+</pre>
+<p>The AfW Test Harness uses Test DPC to test provisioning flows, so accounts
+<strong>must</strong> bind to Test DPC to run the test harness.</p>
+</li>
+</ol>
+
+<h2 id=build_harness>Building the AfW Test Harness</h2>
+<p>Initialize the build configuration using:</p>
+<pre class="devsite-click-to-copy">
+<code class="devsite-terminal">source build/envsetup.sh</code>
+<code class="devsite-terminal">lunch</code>
+</pre>
+
+<p>Select a device type and press <strong>Enter</strong>.</p>
+
+<p>Build the harness using:</p>
+<pre class="devsite-terminal devsite-click-to-copy">
+make afw-test-harness -j32
+</pre>
+<p>This creates a directory (<code>out/host/linux-x86/afw-th/android-cts</code>)
+with all necessary binaries, configuration files, and tools to run the test
+harness. This directory is also zipped into a file
+(<code>out/host/linux-x86/afw-th/android-afw-test-harness.zip</code>)
+for distribution.</p>
+
+<h2 id=run_harness>Running the AfW Test Harness</h2>
+<p>Use the following steps to run the AfW Test Harness:</p>
+<ol>
+<li>In your build environment, launch the test runner using:
+<pre class="devsite-terminal devsite-click-to-copy">
+afw-test-tradefed
+</pre>
+This starts the <code>cts-tf</code> console, loads test plans, test cases,
+and <code>afw-test.props</code> from
+<code>out/host/linux-x86/afw-th/android-cts</code>.</li>
+<li>From the unzipped folder of <code>android-afw-test-harness.zip</code>,
+launch the test runner using:
+<pre class="devsite-click-to-copy">
+cts-tf&gt; ./android‐cts/tools/afw-test‐tradefed
+</pre>
+This loads test plans, test cases, and <code>afw-test.props</code> from
+<code>android-cts</code> directory. Ensure
+<code>./android‐cts/repository/testcases/afw-test.props</code> has the work
+account and Wi-Fi configuration.</li>
+
+<li>Run a test plan. Each test plan is an XML file that contains a set of test
+packages from the <code>AfwTestHarness/tests</code> test package directory.
+Common plans include:
+
+<ul>
+<li><code><strong>afw-userdebug-build</strong></code>. Contains all test
+packages that require a userdebug build.</li>
+<li><code><strong>afw-user-build</strong></code>. Runs on a user build but
+requires the test device to be set up properly, including completing the initial
+setup and enabling USB debugging.</li>
+</ul>
+
+<br>To run the test plan <code>afw-userdebug-build</code>, use:
+<pre class="devsite-click-to-copy">
+cts-tf&gt; run cts --plan afw-userdebug-build
+</pre>
+To see all test plans, use the command <code>list plans</code>. To view plan
+definitions, refer to
+<code>out/host/linux-x86/afw-th/android-cts/repository/plans</code>.
+<br>
+</li>
+<li>Run a test package. To run a single test package, use
+<pre class="devsite-click-to-copy">
+cts-tf&gt; run cts --package com.android.afwtest.NfcProvisioning
+</pre>
+To view all packages, use the command <code>list packages</code>. For more
+options, use the command <code>run cts --help</code>.</li>
+</ol>
+
+<h2 id=debug_harness>Debugging the AfW Test Harness</h2>
+<p>Run all commands in the afw-test-tradefed console (<code>cts-tf</code>),
+which you can launch by running <code>afw-test-tradefed</code>.</p>
+<ul>
+
+<li>Display more information with the <code>-l INFO</code> or <code>-l
+DEBUG</code> flags. Example:
+<pre class="devsite-click-to-copy">
+cts-tf&gt; run cts ‐‐plan afw-userdebug-build -l DEBUG
+</pre>
+</li>
+
+<li>Run the test harness on a specific device with the <code>-s</code> flag.
+Example:
+<pre class="devsite-click-to-copy">
+cts-tf&gt; run cts ‐‐plan afw-userdebug-build -l DEBUG -s device_sn
+</pre>
+</li>
+
+<li>Run test harness on all connected devices with the
+<code>--all-devices</code> flag. Example:
+<pre class="devsite-click-to-copy">
+cts-tf&gt; run cts ‐‐plan afw-userdebug-build -l DEBUG --all-devices
+</pre>
+</li>
+
+<li>View current running executions using <code>list invocations</code> or
+<code>l i</code>.</li>
+
+<li>View summary of past test executions using <code>list results</code> or
+<code>l r</code>.</li>
+
+<li>View other <code>list</code> commands using <code>help list</code>.</li>
+
+<li>Monitor real-time logcat with filter using <code>afwtest</code>, then open
+another terminal and start logcat using: <code>adb logcat | grep afwtest</code>.
+After a test completes:
+<ul>
+<li>View logs in
+<code>out/host/linux-x86/afw-th/android-cts/repository/logs/<em>start-time</em></code>.
+The full device logcat and host log (<code>afw-test-tradefed</code> logs) are
+saved in separate zip files.</li>
+
+<li>Find relevant information by searching the device logcat for
+<strong>afwtest</strong>. Example: <code>zless
+out/host/linux-x86/afw-th/android-cts/repository/logs/<em>start-time</em>/device_logcat_<em>random-number</em>.zip
+| grep afwtest</code></li>
+
+<li>To view the full afw-test-tradefed log, use: <code>zless
+out/host/linux-x86/afw-th/android-cts/repository/logs/<em>start-time</em>/host_log_<em>random-number</em>.zip</code>
+</li>
+</ul>
+</li>
+<li>A test package automates an AfW provisioning flow by going through UI pages
+and recording a navigation log in the device logcat file for each page.
+Example: <code>afwtest.AutomationDriver:
+Navigating:com.android.afwtest.uiautomator.pages.gms.AddAccountPage</code>
+<br>UI pages for test package
+<code>com.android.afwtest.NfcProvisioning</code> include:<ul>
+<li>
+<code>com.android.afwtest.uiautomator.pages.managedprovisioning.NfcProvisioningPage</code>
+</li>
+<li><code>com.android.afwtest.uiautomator.pages.PageSkipper</code></li>
+<li><code>com.android.afwtest.uiautomator.pages.LandingPage</code></li>
+</ul>
+</li>
+<li>If a test failed during the provisioning process, logcat contains an error
+similar to:
+<pre class="devsite-click-to-copy">
+TestRunner: java.lang.RuntimeException: Failed to load page: com.android.afwtest.uiautomator.pages.packageinstaller.DeviceAccessPage
+</pre>
+This is typically caused by errors in a previous UI page or the page that
+failed to load, so try to find other error messages in logcat before this error,
+then try to reproduce it manually following the provisioning flow.</li>
+<li>If a test package fails:
+<ul>
+<li>A screenshot is saved to
+<code>out/host/linux-x86/afw-th/android-cts/repository/logs/<em>start-time</em></code>
+using the following syntax:
+<code>screenshot-test_<em>test_class_full_name</em>_<em>test_case_name</em>-<em>random_number</em>.png</code>.
+This information is also logged in the host log.</li>
+<li>A bug report is saved to
+<code>out/host/linux-x86/afw-th/android-cts/repository/logs/<em>start-time</em></code>
+as:
+<code>bug-<em>test_class_full_name</em>_<em>test_case_name</em>-<em>random_number</em>.zip</code>.
+</li>
+</ul>
+</li>
+<li>After all test packages execute, a screenshot is taken and saved to
+<code>out/host/linux-x86/afw-th/android-cts/repository/logs/<em>start-time</em></code>
+as: <code>screenshot-<em>random_number</em>.png</code>.
+This information is also logged in the host log.</li>
+</ul>
+
+<h2 id=faq>FAQ</h2>
+<p>For help with questions not answered below, contact
+<a href="mailto:afw-testharness-support@google.com">afw-testharness-support@google.com</a>.
+</p>
+
+<p><strong>Can I run test plan <code>afw-userdebug-build</code> on a device
+flashed with user build?</strong></p>
+<p><em>No. Test packages in the <code>afw-userdebug-build</code> plan factory
+reset the testing device before running the actual test flow and require
+<code>adb</code> debugging to be auto-enabled. With a user build,
+<code>adb</code> debugging can be enabled only by manually changing the
+setting in Developer options.</em></p>
+
+<p><strong>Can I run test plan <code>afw-user-build</code> on a device flashed
+with userdebug build?</strong></p>
+<p><em>Yes, but we recommend that you run this test plan on a user build.</em></p>
+
+<p><strong>Sometimes my test fails because UI loading takes too much time. How
+can I fix this?</strong></p>
+<p><em>Configure the <code>timeout_size</code> setting
+in <code>./android-cts/repository/testcases/afw-test.props</code>. Valid
+settings are: S, M, L, XL, XXL.</em></p>
+
+<p><strong>The test package
+<code>com.android.afwtest.NfcProvisioning</code> (or
+<code>SuwDoProvisioning</code>) fails on my device because the installed initial
+setup (i.e. Setup Wizard) shows customized UI (such as Term &amp; Conditions)
+after provisioning is complete. How can I skip this customized UI?</strong></p>
+<p><em>There should be minimal UI after the provisioning process. The test
+harness will automatically skip such UI if the UI has a button that has
+meaningful text or content description that contains any of the following words:
+Skip, Finish, Done, Accept, Agree, Next, Continue, or Proceed. Alternatively,
+you can define a button in <code>afw-test.props</code> to configure the test
+harness to skip your UI. Example:</em></p>
+<pre class="devsite-click-to-copy">
+oem_widgets=your_btn
+your_btn.text=your_customized_text
+your_btn.package=your_package
+your_btn.action=click
+</pre>
+<p><em>To define multiple widgets, separate using commas.</em></p>
+
+<p><strong>The test package
+<code>com.android.afwtest.NfcProvisioning</code> (or
+<code>SuwDoProvisioning</code>) failed and the last UI screen is "Verify your
+account." Why does this happen and how can I recover the testing device?
+</strong></p>
+<p><em>This failure occurs because the previous test package failed to clear
+Factory Reset Protection at the end of the test. You must manually enter the
+account to unlock the device.</em></p>
+
+<p><strong>My device needs more time to factory reset. Can I extend the factory
+reset timeout?</strong></p>
+<p><em>Yes. Configure the <code>factory_reset_timeout_min</code> setting in
+<code>afw-test.props</code>. Valid settings are in minutes; you can set to any
+number of minutes that works with your device.</em></p>
+
+  </body>
+</html>

@@ -1,0 +1,155 @@
+<html devsite><head>
+    <title>了解 64 位版本</title>
+    <meta name="project_path" value="/_project.yaml"/>
+    <meta name="book_path" value="/_book.yaml"/>
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+<h2 id="overview">概览</h2>
+
+<p>从编译系统的角度来看，最显著的变化是现可支持在一次编译中为两种目标 CPU 架构（64 位和 32 位）编译二进制文件。这也称为“多库编译”。<em></em></p>
+
+<p>对于本机静态库和共享库，编译系统设置了为两种架构编译二进制文件的规则。产品配置 (<code>PRODUCT_PACKAGES</code>) 与依赖关系图共同决定了编译哪些二进制文件并安装到系统映像中。</p>
+
+<p>对于可执行文件和应用，编译系统默认仅编译 64 位版本，但您可以使用一个全局 <code>BoardConfig.mk</code> 变量或针对特定模块的变量来替换此设置。</p>
+
+<p class="caution"><strong>注意</strong>：如果某个应用向其他 32 位或 64 位的应用公开一个 API，那么该应用必须在其清单中将 <code>android:multiarch</code> 属性的值设为 <code>true</code>，以避免可能出现的错误。</p>
+
+<h2 id="product_configuration">产品配置</h2>
+
+<p>在 <code>BoardConfig.mk</code> 中，我们添加了以下变量来配置第二个 CPU 架构和 ABI：</p>
+
+<pre class="prettyprint">
+TARGET_2ND_ARCH
+TARGET_2ND_ARCH_VARIANT
+TARGET_2ND_CPU_VARIANT
+TARGET_2ND_CPU_ABI
+TARGET_2ND_CPU_ABI2
+</pre>
+
+<p>您可以在 <code>build/target/board/generic_arm64/BoardConfig.mk</code> 中查看示例。</p>
+
+<p>如果您希望编译系统默认编译 32 位可执行文件和应用，请设置以下变量：</p>
+
+<pre class="prettyprint">
+TARGET_PREFER_32_BIT := true
+</pre>
+
+<p>不过，您可以在 <code>Android.mk</code> 中使用针对特定模块的变量来替换此设置。</p>
+
+<p>在多库编译中，<code>PRODUCT_PACKAGES</code> 中的模块名称同时涵盖了 32 位和 64 位二进制文件，只要这些名称是由编译系统定义的。对于通过依赖关系提取而来的库，只有在另一个 32 位库或可执行文件要求使用时，系统才会安装 32 位库。64 位库也遵循同样的规则。</p>
+
+<p>但是，<code>make</code> 命令行中的模块名称仅涵盖 64 位版本。例如，在运行 <code>lunch
+aosp_arm64-eng</code> 之后，<code>make libc</code> 仅编译 64 位库。要编译 32 位库，您需要运行 <code>make libc_32</code>。</p>
+
+<h2 id="module_definition_in_android_mk">Android.mk 中的模块定义</h2>
+
+<p>您可以使用 <code>LOCAL_MULTILIB</code> 变量来配置您是要编译 32 位还是 64 位架构，或是同时编译二者，并可以替换全局 <code>TARGET_PREFER_32_BIT</code> 变量。</p>
+
+<p>将 <code>LOCAL_MULTILIB</code> 设为以下任一值：</p>
+
+<ul>
+  <li>“both”（二者）：同时编译 32 位和 64 位架构。</li>
+  <li>“32”：仅编译 32 位架构。</li>
+  <li>“64”：仅编译 64 位架构。</li>
+  <li>“first”（第一个）：仅编译第一个架构（在 32 位设备中编译 32 位架构，在 64 位设备中编译 64 位架构）。</li>
+  <li>“”：默认值；编译系统根据模块类和其他 <code>LOCAL_</code> 变量（如 <code>LOCAL_MODULE_TARGET_ARCH</code>、<code>LOCAL_32_BIT_ONLY</code> 等）决定要编译哪种架构。</li>
+</ul>
+
+<p>在多库编译中，<code>ifeq $(TARGET_ARCH)</code> 等条件不再起作用。</p>
+
+<p>如果您想为某些特定架构编译模块，以下变量可为您提供帮助：</p>
+
+<ul>
+  <li><code>LOCAL_MODULE_TARGET_ARCH</code><br />该变量可设为一个架构列表，类似于“arm x86 arm64”。只有正在编译的架构位于该列表中，编译系统才会添加当前模块。</li>
+
+  <li><code>LOCAL_MODULE_UNSUPPORTED_TARGET_ARCH</code><br /><code>LOCAL_MODULE_TARGET_ARCH</code> 的相反变量。只有正在编译的架构不在相应列表中，编译系统才会添加当前模块。</li>
+</ul>
+
+<p>上述两个变量有两个小变体：</p>
+
+<ul>
+  <li><code>LOCAL_MODULE_TARGET_ARCH_WARN</code></li>
+  <li><code>LOCAL_MODULE_UNSUPPORTED_TARGET_ARCH_WARN</code></li>
+</ul>
+
+<p>如果当前模块由于架构受到这两个变量的限制而被跳过，编译系统将发出警告。</p>
+
+<p>要设置针对特定架构的编译标记，请使用针对特定架构的 <code>LOCAL_</code> 变量。针对特定架构的 <code>LOCAL_</code> 变量由普通 <code>LOCAL_</code> 变量加架构后缀构成，例如：</p>
+
+<ul>
+  <li> <code>LOCAL_SRC_FILES_arm, LOCAL_SRC_FILES_x86,</code>
+  </li><li> <code>LOCAL_CFLAGS_arm, LOCAL_CFLAGS_arm64,</code>
+  </li><li> <code>LOCAL_LDFLAGS_arm, LOCAL_LDFLAGS_arm64,</code>
+</li></ul>
+
+<p>只有当前正在为相应架构编译二进制文件时，才能使用这些变量。</p>
+
+<p>有时，根据当前正在为 32 位还是 64 位架构编译二进制文件来设置标记会更方便。在这种情况下，您可以使用带有 <code>_32</code> 或 <code>_64</code> 后缀的 <code>LOCAL_</code> 变量，例如：</p>
+
+<ul>
+  <li> <code>LOCAL_SRC_FILES_32, LOCAL_SRC_FILES_64,</code>
+  </li><li> <code>LOCAL_CFLAGS_32, LOCAL_CFLAGS_64,</code>
+  </li><li> <code>LOCAL_LDFLAGS_32, LOCAL_LDFLAGS_64,</code>
+</li></ul>
+
+<p>请注意，并非所有 <code>LOCAL_</code> 变量都支持针对特定架构的变体。如需了解此类变量的最新列表，请参阅 <code>build/core/clear_vars.mk</code>。</p>
+
+<h2 id="install_path">安装路径</h2>
+
+<p>在过去，您可以使用 <code>LOCAL_MODULE_PATH</code> 将库安装到默认位置以外的位置。例如：<code>LOCAL_MODULE_PATH :=
+$(TARGET_OUT_SHARED_LIBRARIES)/hw</code>。</p>
+
+<p>在多库编译中，请改用 <code>LOCAL_MODULE_RELATIVE_PATH</code>：</p>
+
+<pre class="prettyprint">
+LOCAL_MODULE_RELATIVE_PATH := hw
+</pre>
+
+<p>这样就可以将 64 位和 32 位库安装到正确的位置。</p>
+
+<p>如果您要将某个可执行文件编译为同时适用于 32 位和 64 位架构，则需要使用以下变量之一来区分安装路径：</p>
+
+<ul>
+  <li><code>LOCAL_MODULE_STEM_32, LOCAL_MODULE_STEM_64</code><br />指定已安装文件的名称。
+  </li><li><code>LOCAL_MODULE_PATH_32, LOCAL_MODULE_PATH_64</code><br />指定安装路径。
+</li></ul>
+
+<h2 id="generated_sources">生成的源代码</h2>
+
+<p>在多库编译中，在 <code>$(local-intermediates-dir)</code>（或通过明确的变量在 <code>$(intermediates-dir-for)
+</code> 中生成）中生成源代码文件这种方法会变得不再可靠。这是因为 32 位和 64 位版本都需要用到中间目录中生成的源代码，而 <code>$(local-intermediates-dir)</code> 仅指向两个中间目录中的一个。</p>
+
+<p>值得高兴的是，编译系统现在提供了一个适合多库编译的、用于生成源代码的专用中间目录。您可以调用 <code>
+$(local-generated-sources-dir)</code> 或 <code>$(generated-sources-dir-for)</code> 来获取该目录的路径。它们的用法与 <code>$(local-intermediates-dir)</code> 和 <code>$(intermediates-dir-for)</code> 类似。</p>
+
+<p>如果源代码文件在新的专用目录中生成并由 <code>LOCAL_GENERATED_SOURCES</code> 调用，那么就意味着它在多库编译中是同时为 32 位和 64 位架构编译的。</p>
+
+<h2 id="prebuilts">预编译</h2>
+
+<p>在多库编译中，您无法使用 <code>TARGET_ARCH</code>（或加上 <code>TARGET_2ND_ARCH</code>）来告知编译系统，预编译的二进制文件是以哪种架构为目标。请改用上述 <code>LOCAL_</code> 变量 <code>LOCAL_MODULE_TARGET_ARCH</code> 或 <code>LOCAL_MODULE_UNSUPPORTED_TARGET_ARCH</code>。</p>
+
+<p>利用这些变量，即使编译系统目前正在进行 64 位多库编译，也可以选择对应的 32 位预编译二进制文件。</p>
+
+<p>如果您想使用所选的架构来计算预编译二进制文件的源路径，则可以调用<code> $(get-prebuilt-src-arch)</code>。</p>
+
+<h2 id="dex-preopt">Dex-preopt</h2>
+
+<p>对于 64 位设备，我们会默认为启动映像及任何 Java 库同时生成 32 位和 64 位 odex 文件。对于 APK，我们默认仅为主要的 64 位架构生成 odex。如果某个应用将同时在 32 位和 64 位进程中启动，请使用 <code>LOCAL_MULTILIB := both</code> 确保同时生成 32 位和 64 位 odex 文件。该标记还会指示编译系统同时添加 32 位和 64 位 JNI 库（如果应用中包含任何此类库）。</p>
+
+</body></html>

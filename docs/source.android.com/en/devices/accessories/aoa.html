@@ -1,0 +1,194 @@
+<html devsite>
+  <head>
+    <title>Android Open Accessory Protocol 1.0</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+<p>Android USB accessories must adhere to the Android Open Accessory (AOA)
+protocol, which defines how an accessory detects and sets up communication with
+an Android-powered device. Accessories should carry out the following steps:</p>
+
+<ol>
+<li>Wait for and detect a connected device.</li>
+<li>Determine the device's accessory mode support.</li>
+<li>Attempt to start the device in accessory mode (if needed).</li>
+<li>If the device supports AOA, establish communication with the device.</li>
+</ol>
+
+<p>The following sections explain how to implement these steps.</p>
+
+<p class="note"><strong>Note:</strong> When developing a new accessory that
+connects to an Android device over USB, use
+<a href="aoa2.html">AOAv2</a>.</p>
+
+<h2 id="wait-for-and-detect-connected-devices">Wait for and detect connected
+devices</h2>
+
+<p>Accessories should continuously check for connected Android-powered devices.
+When a device is connected, the accessory should determine if the device
+supports accessory mode.</p>
+
+<h2 id="determine-accessory-mode-support">Determine accessory mode support</h2>
+
+<p>When an Android-powered device connects, it can be in one of three states:
+</p>
+
+<ul>
+<li>Supports Android accessory mode and is already in accessory mode.</li>
+<li>Supports Android accessory mode but it is not in accessory mode.</li>
+<li>Does not support Android accessory mode.</li>
+</ul>
+
+<p>During the initial connection, the accessory should check the vendor ID and
+product ID of the connected device's USB device descriptor. The vendor ID
+should match Google's ID (<code>0x18D1</code>). If the device is already in
+accessory mode, the product ID should be <code>0x2D00</code> or
+<code>0x2D01</code> and the accessory can
+<a href="#establish-communication-with-the-device">establish communication with
+the device</a> through bulk transfer endpoints using its own communication
+protocol (the device does not need to be started in accessory mode).</p>
+
+<p class="note"><strong>Note:</strong> <code>0x2D00</code> is reserved for
+Android-powered devices that support accessory mode. <code>0x2D01</code> is
+reserved for devices that support accessory mode as well as the Android Debug
+Bridge (ADB) protocol, which exposes a second interface with two bulk endpoints
+for ADB. You can use these endpoints for debugging the accessory application if
+you are simulating the accessory on a computer. In general, do not use this
+interface unless the accessory implements a passthrough to ADB on the device.
+</p>
+
+<p>If the vendor ID or the product ID found in USB device descriptor do not
+match expected values, the accessory cannot determine if the device supports
+Android accessory mode. The accessory should attempt to start the device in
+accessory mode (detailed below) to determine device support.</p>
+
+<h2 id="attempt-to-start-in-accessory-mode">Attempt to start in accessory
+mode</h2>
+
+<p>If the vendor and product IDs do not correspond to an Android-powered device
+in accessory mode, the accessory cannot discern whether the device supports (but
+is not in) accessory mode or if the device does not support accessory mode. This
+can occur because devices that support accessory mode (but are not in accessory
+mode) initially report the <em>device</em> manufacturer vendor and product IDs
+instead of the <em>AOA</em> vendor and product IDs.</p>
+
+<p>The accessory should try to start the device in accessory mode to determine
+if the device supports that mode:</p>
+
+<ol>
+  <li>Send a 51 control request ("Get Protocol") to determine if the device
+  supports the Android accessory protocol. If the device supports the protocol,
+  it returns a non-zero number that represents the supported protocol version.
+  The control request is on endpoint 0 with the following characteristics:
+
+<pre class="devsite-click-to-copy">
+requestType:    USB_DIR_IN | USB_TYPE_VENDOR
+request:        51
+value:          0
+index:          0
+data:           protocol version number (16 bits little endian sent from the
+                device to the accessory)
+</pre>
+  </li>
+
+  <li>If the device returns a supported protocol version, send a control request
+  with identifying string information to the device. This information allows the
+  device to determine an appropriate application for the accessory (or present a
+  URL to the user if an appropriate application does not exist). The control
+  request is on endpoint 0 (for each string ID) with the following
+  characteristics:
+
+<pre class="devsite-click-to-copy">
+requestType:    USB_DIR_OUT | USB_TYPE_VENDOR
+request:        52
+value:          0
+index:          string ID
+data            zero terminated UTF8 string sent from accessory to device
+</pre>
+
+  <p>The following string IDs are supported, with a maximum size of 256 bytes
+  for each string (must be zero-terminated with <code>\0</code>).</p>
+
+<pre class="devsite-click-to-copy">
+manufacturer name:  0
+model name:         1
+description:        2
+version:            3
+URI:                4
+serial number:      5
+</pre>
+  </li>
+
+  <li>Send a control request to ask the device to start in accessory mode. The
+  control request is on endpoint 0 with the following characteristics:
+
+<pre class="devsite-click-to-copy">
+requestType:    USB_DIR_OUT | USB_TYPE_VENDOR
+request:        53
+value:          0
+index:          0
+data:           none
+</pre>
+  </li>
+</ol>
+
+<p>After completing these steps, the accessory should wait for the connected USB
+device to re-introduce itself on the bus in accessory mode, then re-enumerate
+connected devices. The algorithm
+<a href="#determine-accessory-mode-support">determines accessory mode support</a>
+by checking the vendor and product IDs, which should be correct (e.g. correspond
+to Google's vendor and product IDs instead of the device manufacturer's IDs) if
+the device successfully switched to accessory mode. If IDs are correct, the
+accessory moves to <a href="#establish-communication-with-the-device">establish
+communication with the device</a>.</p>
+
+<p class="note"><strong>Note:</strong> AOA does not currently support
+simultaneous AOA and MTP connections. To switch from AOA to MTP, the accessory
+must first disconnect the USB device (either physically or in an electrically
+equivalent way) then reconnect using MTP.</p>
+
+<p>If any step fails, the accessory determines the device does not support
+Android accessory mode and waits for the next device to connect.</p>
+
+
+<h2 id="establish-communication-with-the-device">Establish communication with
+the device</h2>
+
+<p>If the accessory detects an Android-powered device in accessory mode, the
+accessory can query the device interface and endpoint descriptors to obtain the
+bulk endpoints for communicating with the device.</p>
+
+<p>The number of interfaces and bulk endpoints depends on the product ID. An
+Android-powered device with a product ID of:</p>
+
+<ul>
+<li><code>0x2D00</code> has one interface with two bulk endpoints for input and
+output communication.</li>
+<li><code>0x2D01</code> has two interfaces with two bulk endpoints each for
+input and output communication. The first interface handles standard
+communication and the second interface handles ADB communication. To use an
+interface, locate the first bulk input and output endpoints, set the
+device configuration to a value of 1 with a <code>SET_CONFIGURATION</code>
+(<code>0x09</code>) device request, then communicate using the endpoints.</li>
+</ul>
+
+  </body>
+</html>

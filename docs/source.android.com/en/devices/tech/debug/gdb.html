@@ -1,0 +1,141 @@
+<html devsite>
+  <head>
+    <title>Using GDB</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+<p>The GNU Project debugger (GDB) is a commonly used Unix debugger. This page
+details using <code>gdb</code> to debug Android apps and processes.</p>
+
+<h2 id=running>Debugging running apps or processes</h2>
+
+<p>To connect to an already-running app or native daemon, use
+<code>gdbclient</code> with a PID. For example, to debug the process with PID
+1234, run:</p>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+gdbclient 1234
+</pre>
+
+<p>The script sets up port forwarding, starts the appropriate
+<code>gdbserver</code> on the device, starts the appropriate <code>gdb</code> on
+the host, configures <code>gdb</code> to find symbols, and connects
+<code>gdb</code> to the remote <code>gdbserver</code>.</p>
+
+<h2 id=starts>Debugging native process startup</h2>
+
+<p>To debug a process as it starts, use <code>gdbserver</code> or
+<code>gdbserver64</code> (for 64-bit processes). For example:</p>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+adb shell gdbserver :5039 /system/bin/<var>MY_TEST_APP</var>
+</pre>
+
+<p>Example output:</p>
+<pre class="devsite-click-to-copy">
+Process <var>MY_TEST_APP</var> created; pid = 3460
+Listening on port 5039
+</pre>
+
+<p>Next, identify the application PID from the <code>gdbserver</code> output and
+use it in another terminal window:</p>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+gdbclient <var>APP_PID</var>
+</pre>
+
+<p>Finally, enter <strong>continue</strong> at the <code>gdb</code> prompt.</p>
+
+<p class="note"><strong>Note:</strong> If you specify the wrong
+<code>gdbserver</code>, you'll get an unhelpful error message (such as
+"<code>Reply contains invalid hex digit 59</code>").</p>
+
+<h2 id="app-startup">Debugging app startup</h2>
+
+<p>Sometimes you want to debug an app as it starts, such as when there's a crash
+and you want to step through code to see what happens <em>before</em> the crash.
+<a href="#running">Attaching</a> works in some cases, but in other cases is
+impossible because the app crashes before you can attach. The
+<code>logwrapper</code> approach (used for <code>strace</code> and
+<code>valgrind</code>) does not always work because the app might not have
+permissions to open a port, and <code>gdbserver</code> inherits that
+restriction.</p>
+
+<p>To debug app startup, use the developer options in Settings to instruct
+the app to wait for a Java debugger to attach:</p>
+
+<ol>
+<li>Go to <em>Settings > Developer options > Select debug app</em> and choose
+your app from the list, then press <strong>Wait for debugger</strong>.</li>
+
+<li>Start the app, either from the launcher or by using the command line to run:
+<pre class="devsite-terminal devsite-click-to-copy">
+am start -a android.intent.action.MAIN -n <var>APP_NAME</var>/.<var>APP_ACTIVITY</var>
+</pre></li>
+
+<li>Wait for the app to load and a dialog to appear telling you the app is
+waiting for a debugger.</li>
+
+<li>Attach <code>gdbserver</code>/<code>gdbclient</code> normally, set
+breakpoints, then continue the process.</li></ol>
+
+<p>To let the app actually run, attach a Java Debug Wire Protocol (JDWP)
+debugger such as Java Debugger (jdb):</p>
+<pre class="devsite-click-to-copy">
+<code class="devsite-terminal">adb forward tcp:12345 jdwp:<var>XXX</var>  # (Where XXX is the pid of the debugged process.)</code>
+<code class="devsite-terminal">jdb -attach localhost:12345</code>
+</pre>
+
+<h2 id=crash>Debugging apps or processes that crash</h2>
+
+<p>If you want <code>debuggerd</code> to suspend crashed processes so you can
+attach <code>gdb</code>, set the appropriate property:</p>
+
+<pre class="devsite-click-to-copy">
+# Android 7.0 Nougat and later.
+<code class="devsite-terminal">adb shell setprop debug.debuggerd.wait_for_gdb true</code>
+</pre>
+
+<pre class="devsite-click-to-copy">
+# Android 6.0 Marshmallow and earlier.
+<code class="devsite-terminal">adb shell setprop debug.db.uid 999999</code>
+</pre>
+
+<p>At the end of the usual crash output, <code>debuggerd</code> provides
+instructions on how to connect <code>gdb</code> using the command:
+<pre class="devsite-terminal devsite-click-to-copy">
+gdbclient <var>PID</var>
+</pre>
+
+
+<h2 id=symbols>Debugging without symbols</h2>
+
+<p>For 32-bit ARM, if you don’t have symbols, <code>gdb</code> can get confused
+about the instruction set it is disassembling (ARM or Thumb). To specify the
+instruction set chosen as the default when symbol information is missing, set
+the following property:</p>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+set arm fallback-mode arm  # or thumb
+</pre>
+
+  </body>
+</html>

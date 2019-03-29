@@ -1,0 +1,215 @@
+<html devsite>
+  <head>
+    <title>Media Framework Hardening</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>To improve device security, Android 7.0 breaks up the monolithic
+<code>mediaserver</code> process into multiple processes with permissions and
+capabilities restricted to only those required by each process. These changes
+mitigate media framework security vulnerabilities by:</p>
+<ul>
+<li>Splitting AV pipeline components into app-specific sandboxed processes.</li>
+<li>Enabling updatable media components (extractors, codecs, etc.).</li>
+</ul>
+
+<p>These changes also improve security for end users by significantly reducing
+the severity of most media-related security vulnerabilities, keeping end user
+devices and data safe.</p>
+
+<p>OEMs and SoC vendors need to update their HAL and framework changes to make
+them compatible with the new architecture. Specifically, because vendor-provided
+Android code often assumes everything runs in the same process, vendors must
+update their code to pass around native handles (<code>native_handle</code>)
+that have meaning across processes. For a reference implementation of changes
+related to media hardening, refer to <code>frameworks/av</code> and
+<code>frameworks/native</code>.</p>
+
+<h2 id=arch_changes>Architectural changes</h2>
+<p>Previous versions of Android used a single, monolithic
+<code>mediaserver</code> process with great many permissions (camera access,
+audio access, video driver access, file access, network access, etc.). Android
+7.0 splits the <code>mediaserver</code> process into several new processes that
+each require a much smaller set of permissions:</p>
+
+<p><img src="images/ape_media_split.png" alt="mediaserver hardening"></p>
+<p class="img-caption"><strong>Figure 1.</strong> Architecture changes for
+mediaserver hardening</p>
+
+<p>This new architecture ensures that even if a process is compromised,
+malicious code does not have access to the full set of permissions previously
+held by mediaserver. Processes are restricted by SElinux and seccomp policies.
+</p>
+
+<p class=note><strong>Note:</strong> Because of vendor dependencies, some codecs
+still run in the <code>mediaserver</code> and consequently grant
+<code>mediaserver</code> more permissions than necessary. Specifically, Widevine
+Classic continues to run in the <code>mediaserver</code> for Android 7.0.</p>
+
+<h3 id=mediaserver-changes>MediaServer changes</h3>
+<p>In Android 7.0, the <code>mediaserver</code> process exists for driving
+playback and recording, e.g. passing and synchronizing buffers between
+components and processes. Processes communicate through the standard Binder
+mechanism.</p>
+<p>In a standard local file playback session, the application passes a file
+descriptor (FD) to <code>mediaserver</code> (usually via the MediaPlayer Java
+API), and the <code>mediaserver</code>:</p>
+<ol>
+<li>Wraps the FD into a Binder DataSource object that is passed to the extractor
+process, which uses it to read from the file using Binder IPC. (The
+mediaextractor doesn't get the FD but instead makes Binder calls back to the
+<code>mediaserver</code> to get the data.)</li>
+<li>Examines the file, creates the appropriate extractor for the file type
+(e.g. MP3Extractor, or MPEG4Extractor), and returns a Binder interface for the
+extractor to the <code>mediaserver</code> process.</li>
+<li>Makes Binder IPC calls to the extractor to determine the type of data in the
+file (e.g. MP3 or H.264 data).</li>
+<li>Calls into the <code>mediacodec</code> process to create codecs of the
+required type; receives Binder interfaces for these codecs.</li>
+<li>Makes repeated Binder IPC calls to the extractor to read encoded samples,
+uses the Binder IPC to send encoded data to the <code>mediacodec</code> process
+for decoding, and receives decoded data.</li>
+</ol>
+<p>In some use cases, no codec is involved (such as an offloaded playback where
+encoded data is sent directly to the output device), or the codec may render the
+decoded data directly instead of returning a buffer of decoded data (video
+playback).</p>
+
+<h3 id=mediacodecservice_changes>MediaCodecService changes</h3>
+<p>The codec service is where encoders and decoders live. Due to vendor
+dependencies, not all codecs live in the codec process yet. In Android 7.0:</p>
+<ul>
+<li>Non-secure decoders and software encoders live in the codec process.</li>
+<li>Secure decoders and hardware encoders live in the <code>mediaserver</code>
+(unchanged).</li>
+</ul>
+
+<p>An application (or mediaserver) calls the codec process to create a codec of
+the required type, then calls that codec to pass in encoded data and retrieve
+decoded data (for decoding) or to pass in decoded data and retrieve encoded data
+(for encoding). Data transfer to and from codecs uses shared memory already, so
+that process is unchanged.</p>
+
+<h3 id=mediadrmserver_changes>MediaDrmServer changes</h3>
+<p>The DRM server is used when playing DRM-protected content, such as movies in
+Google Play Movies. It handles decrypting the encrypted data in a secure way,
+and as such has access to certificate and key storage and other sensitive
+components. Due to vendor dependencies, the DRM process is not used in all cases
+yet.</p>
+
+<h3 id=audioserver_changes>AudioServer changes</h3>
+<p>The AudioServer process hosts audio related components such as audio input
+and output, the policymanager service that determines audio routing, and FM
+radio service. For details on Audio changes and implementation guidance, see
+<a href="/devices/audio/implement.html">Implementing Audio</a>.</p>
+
+<h3 id=cameraserver_changes>CameraServer changes</h3>
+<p>The CameraServer controls the camera and is used when recording video to
+obtain video frames from the camera and then pass them to
+<code>mediaserver</code> for further handling. For details on changes and
+implementation guidance for CameraServer changes, refer to
+<a href="/devices/camera/versioning.html#hardening">Camera Framework
+Hardening</a>.</p>
+
+<h3 id=extractor_service_changes>ExtractorService changes</h3>
+<p>The extractor service hosts the <em>extractors</em>, components that parse
+the various file formats supported by the media framework. The extractor service
+is the least privileged of all the services&mdash;it can't read FDs so instead
+it makes calls onto a Binder interface (provided to it by the
+<code>mediaserver for</code> each playback session) to access files.</p>
+<p>An application (or <code>mediaserver</code>) makes a call to the extractor
+process to obtain an <code>IMediaExtractor</code>, calls that
+<code>IMediaExtractor</code> to obtain<code> IMediaSources</code> for the track
+contained in the file, and then calls <code>IMediaSources</code> to read data
+from them.</p>
+<p>To transfer the data between processes, the application (or
+<code>mediaserver</code>) includes the data in the reply-Parcel as part of the
+Binder transaction or uses shared memory:</p>
+
+<ul>
+<li>Using <strong>shared memory</strong> requires an extra Binder call to
+release the shared memory but is faster and uses less power for large buffers.
+</li>
+<li>Using <strong>in-Parcel</strong> requires extra copying but is faster and
+uses less power for buffers smaller than 64KB.</li>
+</ul>
+
+<h2 id=implementation>Implementation</h2>
+<p>To support the move of <code>MediaDrm</code> and <code>MediaCrypto</code>
+components into the new <code>mediadrmserver</code> process, vendors must change
+the allocation method for secure buffers to allow buffers to be shared between
+processes.</p>
+<p>In previous Android releases, secure buffers are allocated in
+<code>mediaserver</code> by <code>OMX::allocateBuffer</code> and used during
+decryption in the same process, as shown below:</p>
+
+<p><img src="images/ape_media_buffer_alloc_pren.png"></p>
+<p class="img-caption"><strong>Figure 2.</strong> Android 6.0 and lower buffer
+allocation in mediaserver.</p>
+
+<p>In Android 7.0, the buffer allocation process has changed to a new mechanism
+that provides flexibility while minimizing the impact on existing
+implementations. With <code>MediaDrm</code> and <code>MediaCrypto</code> stacks
+in the new <code>mediadrmserver</code> process, buffers are allocated
+differently and vendors must update the secure buffer handles so they can be
+transported across binder when <code>MediaCodec</code> invokes a decrypt
+operation on <code>MediaCrypto</code>.</p>
+
+<p><img src="images/ape_media_buffer_alloc_n.png"></p>
+<p class="img-caption"><strong>Figure 3.</strong> Android 7.0 and higher buffer
+allocation in mediaserver.</p>
+
+<h3 id=native_handles>Using native handles</h3>
+<p>The <code>OMX::allocateBuffer</code> must return a pointer to a
+<code>native_handle</code> struct, which contains file descriptors (FDs) and
+additional integer data. A <code>native_handle</code> has all of the advantages
+of using FDs, including existing binder support for
+serialization/deserialization, while allowing more flexibility for vendors who
+don't currently use FDs.</p>
+<p>Use <code>native_handle_create()</code> to allocate the native handle.
+Framework code takes ownership of the allocated <code>native_handle</code>
+struct and is responsible for releasing resources in both the process where
+the <code>native_handle</code> is originally allocated and in the process where
+it is deserialized. The framework releases native handles with
+<code>native_handle_close()</code> followed by
+<code>native_handle_delete()</code> and serializes/deserializes the
+<code>native_handle</code> using
+<code>Parcel::writeNativeHandle()/readNativeHandle()</code>.
+</p>
+<p>SoC vendors who use FDs to represent secure buffers can populate the FD in
+the <code>native_handle</code> with their FD. Vendors who don't use FDs can
+represent secure buffers using additional fields in the
+<code>native_buffer</code>.</p>
+
+<h3 id=decrypt_location>Setting decryption location</h3>
+<p>Vendors must update the OEMCrypto decrypt method that operates on the
+<code>native_handle</code> to perform any vendor-specific operations necessary
+to make the <code>native_handle</code> usable in the new process space (changes
+typically include updates to OEMCrypto libraries).</p>
+<p>As <code>allocateBuffer</code> is a standard OMX operation, Android 7.0
+includes a new OMX extension
+(<code>OMX.google.android.index.allocateNativeHandle</code>) to query for this
+support and an <code>OMX_SetParameter</code> call that notifies the OMX
+implementation it should use native handles.</p>
+
+  </body>
+</html>

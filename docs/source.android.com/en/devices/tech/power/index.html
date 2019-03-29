@@ -1,0 +1,85 @@
+<html devsite>
+  <head>
+    <title>Power Profiles for Android</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>Battery use information is derived from battery use statistics and power profile values.</p>
+
+<h2 id="usage-statistics">Battery use statistics</h2>
+
+<p>The framework automatically determines battery use statistics by tracking how long device
+components spend in different states. As components (Wi-Fi chipset, cellular radio, Bluetooth, GPS,
+display, CPU) change states (OFF/ON, idle/full power, low/high brightness, etc.), the controlling
+service reports to the framework BatteryStats service. BatteryStats collects information over time
+and stores it for use across reboots. The service doesn’t track battery current draw directly,
+but instead collects timing information that can be used to approximate battery
+consumption by different components.</p>
+
+<p>The framework gathers statistics using the following methods:</p>
+
+<ul>
+<li><strong>Push</strong>. Services aware of component changes push state changes to the
+BatteryStats service.</li>
+<li><strong>Pull</strong>. For components such as the CPU use by apps, the framework
+automatically pulls the data at transition points (such as starting or stopping an activity) to
+take a snapshot.</li>
+</ul>
+
+<p>Resource consumption is associated with the application using the resource. When multiple
+applications simultaneously use a resource (such as wakelocks that prevent the system from
+suspending), the framework spreads consumption across those applications, although not necessarily
+equally.</p>
+
+<p>To avoid losing use statistics for a shutdown event, which may indicate battery power
+consumption problems (i.e. shutdown occurs because the battery reached zero remaining capacity),
+the framework flashes statistics approximately every 30 minutes.</p>
+
+<p>Battery use statistics are handled entirely by the framework and do not require OEM
+modifications.</p>
+
+<h2 id="profile-values">Power profile values</h2>
+
+<p class="caution"><strong>Caution:</strong> Device manufacturers must provide a component power
+profile that defines the current consumption value for the component and the approximate battery
+drain caused by the component over time. This profile is defined in
+<a href="https://android.googlesource.com/platform/frameworks/base/+/master/core/res/res/xml/power_profile.xml">platform/frameworks/base/core/res/res/xml/power_profile.xml</a>.
+For guidance on these settings, see <a href="/devices/tech/power/values.html">Power Values</a>.</p>
+
+<p>Within a power profile, power consumption is specified in milliamps (mA) of current draw at a
+nominal voltage and can be a fractional value specified in microamps (uA). The value should be the
+mA consumed at the battery and not a value applicable to a power rail that does not correspond to
+current consumed from the battery.</p>
+
+<p>For example, a display power profile specifies the mA of current required to keep the display on
+at minimum brightness and at maximum brightness. To determine the power cost (i.e the battery
+drained by the display component) of keeping the display on, the framework tracks the time spent at
+each brightness level, then multiplies those time intervals by an interpolated display brightness
+cost.</p>
+
+<p>The framework also multiplies the CPU time for each application by the mA required to run the
+CPU at a specific speed. This calculation establishes a comparative ranking of how much battery an
+application consumes by executing CPU code (time as the foreground app and total time including
+background activity are reported separately).</p>
+
+  </body>
+</html>

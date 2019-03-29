@@ -1,0 +1,321 @@
+<html devsite>
+  <head>
+    <title>Implementing the Hardware Composer HAL</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+
+<p>The Hardware Composer HAL (HWC) is used by SurfaceFlinger to composite
+surfaces to the screen. The HWC abstracts objects such as overlays and 2D
+blitters and helps offload some work that would normally be done with OpenGL.</p>
+
+<p>Android 7.0 includes a new version of HWC (HWC2) used by SurfaceFlinger to
+talk to specialized window composition hardware. SurfaceFlinger contains a
+fallback path that uses the 3D graphics processor (GPU) to perform the task of
+window composition, but this path is not ideal for a couple of reasons:</p>
+
+<ul>
+  <li>Typically, GPUs are not optimized for this use case and may use more power
+  than necessary to perform composition.</li>
+  <li>Any time SurfaceFlinger is using the GPU for composition is time that
+  applications cannot use the processor for their own rendering, so it is
+  preferable to use specialized hardware for composition instead of the GPU
+  whenever possible.</li>
+</ul>
+
+<h2 id="guidance">General guidance</h2>
+
+<p>As the physical display hardware behind the Hardware Composer abstraction
+layer can vary from device to device, it's difficult to give recommendations on
+specific features. In general, use the following guidance:</p>
+
+<ul>
+  <li>The HWC should support at least four overlays (status bar, system bar,
+  application, and wallpaper/background).</li>
+  <li>Layers can be bigger than the screen, so the HWC should be able to handle
+  layers that are larger than the display (for example, a wallpaper).</li>
+  <li>Pre-multiplied per-pixel alpha blending and per-plane alpha blending
+  should be supported at the same time.</li>
+  <li>The HWC should be able to consume the same buffers the GPU, camera, and
+  video decoder are producing, so supporting some of the following
+  properties is helpful:
+  <ul>
+    <li>RGBA packing order</li>
+    <li>YUV formats</li>
+    <li>Tiling, swizzling, and stride properties</li>
+  </ul>
+  <li>To support protected content, a hardware path for protected video playback
+  must be present.</li>
+  </ul>
+
+<p>The general recommendation is to implement a non-operational HWC first; after
+the structure is complete, implement a simple algorithm to delegate composition
+to the HWC (for example, delegate only the first three or four surfaces to the
+overlay hardware of the HWC).</p>
+
+<p>Focus on optimization, such as intelligently selecting the surfaces to send
+to the overlay hardware that maximizes the load taken off of the GPU. Another
+optimization is to detect whether the screen is updating; if it isn't, delegate
+composition to OpenGL instead of the HWC to save power. When the screen updates
+again, continue to offload composition to the HWC.</p>
+
+<p>Prepare for common use cases, such as:</p>
+
+<ul>
+  <li>Full-screen games in portrait and landscape mode</li>
+  <li>Full-screen video with closed captioning and playback control</li>
+  <li>The home screen (compositing the status bar, system bar, application
+  window, and live wallpapers)</li>
+  <li>Protected video playback</li>
+  <li>Multiple display support</li>
+</ul>
+
+<p>These use cases should address regular, predictable uses rather than edge
+cases that are rarely encountered (otherwise, optimizations will have little
+benefit). Implementations must balance two competing goals: animation smoothness
+and interaction latency.</p>
+
+
+<h2 id="interface_activities">HWC2 interface activities</h2>
+
+<p>HWC2 provides a few primitives (layer, display) to represent composition work
+and its interaction with the display hardware.</p>
+<p>A <em>layer</em> is the most important unit of composition; every layer has a
+set of properties that define how it interacts with other layers. Property
+categories include the following:</p>
+
+<ul>
+<li><strong>Positional</strong>. Defines where the layer appears on its display.
+Includes information such as the positions of a layer's edges and its <em>Z
+order</em> relative to other layers (whether it should be in front of or behind
+other layers).</li>
+<li><strong>Content</strong>. Defines how content displayed on the layer should
+be presented within the bounds defined by the positional properties. Includes
+information such as crop (to expand a portion of the content to fill the bounds
+of the layer) and transform (to show rotated or flipped content).</li>
+<li><strong>Composition</strong>. Defines how the layer should be composited
+with other layers. Includes information such as blending mode and a layer-wide
+alpha value for
+<a href="https://en.wikipedia.org/wiki/Alpha_compositing#Alpha_blending">alpha
+compositing</a>.</li>
+<li><strong>Optimization</strong>. Provides information not strictly necessary
+to correctly composite the layer, but which can be used by the HWC device to
+optimize how it performs composition. Includes information such as the visible
+region of the layer and which portion of the layer has been updated since the
+previous frame.</li>
+</ul>
+
+<p>A <em>display</em> is another important unit of composition. Every layer can
+be present only on one display. A system can have multiple displays, and
+displays can be added or removed during normal system operations. This
+addition/removal can come at the request of the HWC device (typically in
+response to an external display being plugged into or removed from the device,
+called <em>hotplugging</em>), or at the request of the client, which permits the
+creation of <em>virtual displays</em> whose contents are rendered into an
+off-screen buffer instead of to a physical display.</p>
+<p>HWC2 provides functions to determine the properties of a given display, to
+switch between different configurations (e.g., 4k or 1080p resolution) and color
+modes (e.g., native color or true sRGB), and to turn the display on, off, or
+into a low-power mode if supported.</p>
+<p>In addition to layers and displays, HWC2 also provides control over the
+hardware vertical sync (VSYNC) signal along with a callback into the client to
+notify it of when a vsync event has occurred.</p>
+
+<h3 id="func_pointers">Function pointers</h3>
+<p>In this section and in HWC2 header comments, HWC interface functions are
+referred to by lowerCamelCase names that do not actually exist in the interface
+as named fields. Instead, almost every function is loaded by requesting a
+function pointer using <code>getFunction</code> provided by
+<code>hwc2_device_t</code>. For example, the function <code>createLayer</code>
+is a function pointer of type <code>HWC2_PFN_CREATE_LAYER</code>, which is
+returned when the enumerated value <code>HWC2_FUNCTION_CREATE_LAYER</code> is
+passed into <code>getFunction</code>.</p>
+<p>For detailed documentation on functions (including functions required for
+every HWC2 implementation), refer to the
+<a href="https://android.googlesource.com/platform/hardware/libhardware/+/master/include/hardware/hwcomposer2.h">HWC2 header</a>.</p>
+
+<h3 id="layer_display_handles">Layer and display handles</h3>
+<p>Layers and displays are manipulated by opaque handles.</p>
+<p>When SurfaceFlinger wants to create a new layer, it calls the
+<code>createLayer</code> function, which then returns an opaque handle of type
+<code>hwc2_layer_t</code>. From that point on, any time SurfaceFlinger wants to
+modify a property of that layer, it passes that <code>hwc2_layer_t</code> value
+into the appropriate modification function, along with any other information
+needed to make the modification. The <code>hwc2_layer_t</code> type was made
+large enough to be able to hold either a pointer or an index, and it will be
+treated as opaque by SurfaceFlinger to provide HWC implementers maximum
+flexibility.</p>
+<p>Most of the above also applies to display handles, though handles are created
+differently depending on whether they are hotplugged (where the handle is passed
+through the hotplug callback) or requested by the client as a virtual display
+(where the handle is returned from <code>createVirtualDisplay</code>).</p>
+
+<h2 id="display_comp_ops">Display composition operations</h2>
+<p>Once per hardware vsync, SurfaceFlinger wakes if it has new content to
+composite. This new content could be new image buffers from applications or just
+a change in the properties of one or more layers. When it wakes, it performs the
+following steps:</p>
+
+<ol>
+<li>Apply transactions, if present. Includes changes in the properties of layers
+specified by the window manager but not changes in the contents of layers (i.e.,
+graphic buffers from applications).</li>
+<li>Latch new graphic buffers (acquire their handles from their respective
+applications), if present.</li>
+<li>If step 1 or 2 resulted in a change to the display contents, perform a new
+composition (described below).</li>
+</ol>
+
+<p>Steps 1 and 2 have some nuances (such as deferred transactions and
+presentation timestamps) that are outside the scope of this section. However,
+step 3 involves the HWC interface and is detailed below.</p>
+<p>At the beginning of the composition process, SurfaceFlinger will create and
+destroy layers or modify layer state as applicable. It will also update the
+layers with their current contents, using calls such as
+<code>setLayerBuffer</code> or <code>setLayerColor</code>. After all layers have
+been updated, it will call <code>validateDisplay</code>, which tells the device
+to examine the state of the various layers and determine how composition will
+proceed. By default, SurfaceFlinger usually attempts to configure every layer
+such that it will be composited by the device, though there may be some
+circumstances where it will mandate that it be composited by the client.</p>
+<p>After the call to <code>validateDisplay</code>, SurfaceFlinger will follow up
+with a call to <code>getChangedCompositionTypes</code> to see if the device
+wants any of the layers' composition types changed before performing the actual
+composition. SurfaceFlinger may choose to:</p>
+
+<ul>
+<li>Change some of the layer composition types and re-validate the display.</li>
+</ul>
+
+<em><strong>OR</strong></em>
+
+<ul>
+<li>Call <code>acceptDisplayChanges</code>, which has the same effect as
+changing the composition types as requested by the device and re-validating
+without actually having to call <code>validateDisplay</code> again.</li>
+</ul>
+
+<p>In practice, SurfaceFlinger always takes the latter path (calling
+<code>acceptDisplayChanges</code>) though this behavior may change in the
+future.</p>
+<p>At this point, the behavior differs depending on whether any of the layers
+have been marked for client composition. If any (or all) layers have been marked
+for client composition, SurfaceFlinger will now composite all of those layers
+into the client target buffer. This buffer will be provided to the device using
+the <code>setClientTarget</code> call so that it may be either displayed
+directly on the screen or further composited with layers that have not been
+marked for client composition. If no layers have been marked for client
+composition, then the client composition step is bypassed.</p>
+<p>Finally, after all of the state has been validated and client composition has
+been performed if needed, SurfaceFlinger will call <code>presentDisplay</code>.
+This is the HWC device's cue to complete the composition process and display the
+final result.</p>
+
+<h2 id="multiple_displays">Multiple displays in Android 7.0</h2>
+<p>While the HWC2 interface is quite flexible when it comes to the number of
+displays in the system, the rest of the Android framework is not yet as
+flexible. When designing a HWC2 implementation intended for use on Android 7.0,
+there are some additional restrictions not present in the HWC definition itself:
+</p>
+
+<ul>
+<li>It is assumed that there is exactly one <em>primary</em> display; that is,
+that there is one physical display that will be hotplugged immediately during
+the initialization of the device (specifically after the hotplug callback is
+registered).</li>
+<li>In addition to the primary display, exactly one <em>external</em> display
+may be hotplugged during normal operation of the device.</li>
+</ul>
+
+<p>While the SurfaceFlinger operations described above are performed per-display
+(eventual goal is to be able to composite displays independently of each other),
+they are currently performed sequentially for all active displays, even if only
+the contents of one display are updated.</p>
+<p>For example, if only the external display is updated, the sequence is:</p>
+
+<pre class="devsite-click-to-copy">
+// Update state for internal display
+// Update state for external display
+validateDisplay(&lt;internal display&gt;)
+validateDisplay(&lt;external display&gt;)
+presentDisplay(&lt;internal display&gt;)
+presentDisplay(&lt;external display&gt;)
+</pre>
+
+
+<h2 id="sync_fences">Synchronization fences</h2>
+<p>Synchronization (sync) fences are a crucial aspect of the Android graphics
+system. Fences allow CPU work to proceed independently from concurrent GPU work,
+blocking only when there is a true dependency.</p>
+<p>For example, when an application submits a buffer that is being produced on
+the GPU, it will also submit a fence object; this fence signals only when the
+GPU has finished writing into the buffer. Since the only part of the system that
+truly needs the GPU write to have finished is the display hardware (the hardware
+abstracted by the HWC HAL), the graphics pipeline is able to pass this fence
+along with the buffer through SurfaceFlinger to the HWC device. Only immediately
+before that buffer would be displayed does the device need to actually check
+that the fence has signaled.</p>
+<p>Sync fences are integrated tightly into HWC2 and organized in the following
+categories:</p>
+
+<ol>
+<li>Acquire fences are passed along with input buffers to the
+<code>setLayerBuffer</code> and <code>setClientTarget</code> calls. These
+represent a pending write into the buffer and must signal before the HWC client
+or device attempts to read from the associated buffer to perform composition.
+</li>
+<li>Release fences are retrieved after the call to <code>presentDisplay</code>
+using the <code>getReleaseFences</code> call and are passed back to the
+application along with buffers that will be replaced during the next
+composition. These represent a pending read from the buffer, and must signal
+before the application attempts to write new contents into the buffer.</li>
+<li>Retire fences are returned, one per frame, as part of the call to
+<code>presentDisplay</code> and represent when the composition of this frame
+has completed, or alternately, when the composition result of the prior frame is
+no longer needed. For physical displays, this is when the current frame appears
+on the screen and can also be interpreted as the time after which it is safe to
+write to the client target buffer again (if applicable). For virtual displays,
+this is the time when it is safe to read from the output buffer.</li>
+</ol>
+
+<h3 id="hwc2_changes">Changes in HWC2</h3>
+<p>The meaning of sync fences in HWC 2.0 has changed significantly relative to
+previous versions of the HAL.</p>
+<p>In HWC v1.x, the release and retire fences were speculative. A release fence
+for a buffer or a retire fence for the display retrieved in frame N would not
+signal any sooner than frame N + 1. In other words, the meaning of the fence
+was "the content of the buffer you provided for frame N is no longer needed."
+This is speculative because in theory SurfaceFlinger may not run again after
+frame N for an indeterminate period of time, which would leave those fences
+unsignaled for the same period.</p>
+<p>In HWC 2.0, release and retire fences are non-speculative. A release or
+retire fence retrieved in frame N will signal as soon as the content of the
+associated buffers replaces the contents of the buffers from frame N - 1, or in
+other words, the meaning of the fence is "the content of the buffer you provided
+for frame N has now replaced the previous content." This is non-speculative,
+since this fence should signal shortly after <code>presentDisplay</code> is
+called as soon as the hardware presents this frame's content.</p>
+<p>For implementation details, refer to the
+<a href="https://android.googlesource.com/platform/hardware/libhardware/+/master/include/hardware/hwcomposer2.h">HWC2 header</a>.</p>
+
+  </body>
+</html>

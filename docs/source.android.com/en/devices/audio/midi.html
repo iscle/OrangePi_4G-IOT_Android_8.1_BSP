@@ -1,0 +1,179 @@
+<html devsite>
+  <head>
+    <title>MIDI</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>
+<a href="http://en.wikipedia.org/wiki/MIDI">MIDI</a> (Musical Instrument Digital Interface)
+is a standard protocol for inter-connecting computers with musical instruments, stage lighting,
+and other time-oriented media.
+</p>
+
+<p>
+Strictly speaking, MIDI is unrelated to audio. But since MIDI is commonly used with
+music, this article is placed in the audio section.
+</p>
+
+<h2 id="transports">Transports</h2>
+
+<p>
+The physical <a href="http://en.wikipedia.org/wiki/Transport_layer">transport layer</a>
+specified in original MIDI 1.0 is a current loop with
+<a href="http://en.wikipedia.org/wiki/DIN_connector">5-pin DIN</a> connector.
+</p>
+
+<p>
+Since MIDI 1.0, additional transports have been defined, including MIDI over USB
+and a proposed draft for MIDI over
+<a href="http://en.wikipedia.org/wiki/Bluetooth_low_energy">Bluetooth Low Energy</a> (BLE).
+</p>
+
+<h2 id="for-android">MIDI for Android</h2>
+
+<p>
+Android 3.1 and later support
+<a href="http://en.wikipedia.org/wiki/USB_On-The-Go">USB On-The-Go</a>,
+which permits an Android device to act as USB host to drive USB
+peripherals. The USB host mode APIs introduced in Android 3.1 permit
+developers to implement MIDI over USB at the application level, but until
+recently there have been no built-in platform APIs for MIDI.
+</p>
+
+<p>
+Beginning with the Android 6.0 (Marshmallow) release, device makers can enable optional MIDI support in the platform.
+Android directly supports USB, draft BLE, and virtual (inter-app) transports.
+Android indirectly supports MIDI 1.0 via an external adapter.
+</p>
+
+<p>
+For details on application programming with the new MIDI APIs, see the
+<a href="https://developer.android.com/reference/android/media/midi/package-summary.html"><code>android.media.midi</code></a>
+package.
+</p>
+
+<p>
+The remainder of this article discusses how an Android device maker can
+enable MIDI support in the platform.
+</p>
+
+<h2 id="transport">Enabling transports</h2>
+
+<p>
+The implementation depends on ALSA for USB host mode and USB peripheral mode transports.
+ALSA is not used for the BLE and virtual transports.
+</p>
+
+<h3 id="usb-host">USB host mode</h3>
+
+<p>
+To enable MIDI for USB host mode, first support USB host mode in general, and
+then enable <code>CONFIG_SND_RAWMIDI</code> and <code>CONFIG_SND_USB_MIDI</code> in your kernel configuration.
+See <a href="/devices/tech/config/kernel.html">Android Kernel Configuration.</a>
+</p>
+
+<p>
+The MIDI over USB transport is formally defined by the
+<a href="http://www.usb.org/developers/docs/devclass_docs/midi10.pdf">
+Universal Serial Bus Device Class Definition for MIDI Devices Release 1.0 Nov 1, 1999</a>
+standard published by the
+<a href="http://www.usb.org/">USB Implementers Forum, Inc</a>.
+</p>
+
+<h3 id="usb-peripheral">USB peripheral mode</h3>
+
+<p>
+To enable MIDI for USB peripheral mode, you may need to apply patches
+to your Linux kernel to integrate the
+<code>drivers/usb/gadget/f_midi.c</code> into the USB gadget
+driver. As of this writing, these patches are available for Linux kernel version
+3.10. These patches have not yet been updated for
+<a href="http://en.wikipedia.org/wiki/Configfs">ConfigFs</a>
+(a new architecture
+for USB gadget drivers), nor are they merged at upstream
+<a href="http://kernel.org">kernel.org</a>.
+</p>
+
+<p>
+The patches are shown in commit order for the kernel tree at project <code>kernel/common</code>
+branch <code>android-3.10</code>:
+</p>
+<ol>
+<li><a href="https://android-review.googlesource.com/#/c/127450/">https://android-review.googlesource.com/#/c/127450/</a></li>
+<li><a href="https://android-review.googlesource.com/#/c/127452/">https://android-review.googlesource.com/#/c/127452/</a></li>
+<li><a href="https://android-review.googlesource.com/#/c/143714/">https://android-review.googlesource.com/#/c/143714/</a></li>
+</ol>
+
+<p>
+In addition, the end user must also check the box for MIDI
+in the <em>Settings / Developer options / Networking / Select USB Configuration</em> dialog,
+or by pulling down from the top of screen while attached
+to the USB host, selecting entry "USB for ...", and then choosing <strong>MIDI</strong>.
+</p>
+
+<h3 id="ble">BLE</h3>
+
+<p>
+MIDI over BLE is always enabled, provided the device supports BLE.
+As this transport is in draft status, it is subject to change.
+</p>
+
+<h3 id="virtual">Virtual (inter-app)</h3>
+
+<p>
+The virtual (inter-app) transport is always enabled.
+</p>
+
+<h2 id="claim-feature">Claiming the feature</h2>
+
+<p>
+Applications can screen for the presence of MIDI support using the
+<code>android.software.midi</code> feature.
+</p>
+
+<p>
+To claim MIDI support, add this line to your <code>device.mk</code>:
+</p>
+<pre class="devsite-click-to-copy">
+PRODUCT_COPY_FILES += \
+frameworks/native/data/etc/android.software.midi.xml:system/etc/permissions/android.software.midi.xml
+</pre>
+
+<p>
+See the
+<a href="/compatibility/android-cdd.pdf">Android Compatibility Definition Document (CDD)</a>
+for information
+on requirements to claim the feature.
+</p>
+
+<h2 id="hostDebugging">Debugging while in host mode</h2>
+
+<p>
+While in USB host mode, Android Debug Bridge (adb) debugging over USB is unavailable.
+See section <a href="http://developer.android.com/tools/help/adb.html#wireless">Wireless usage</a>
+of
+<a href="http://developer.android.com/tools/help/adb.html">Android Debug Bridge</a>
+for an alternative.
+</p>
+
+  </body>
+</html>

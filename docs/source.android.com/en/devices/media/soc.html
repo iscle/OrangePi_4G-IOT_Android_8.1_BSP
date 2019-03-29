@@ -1,0 +1,76 @@
+<html devsite>
+  <head>
+    <title>SoC Vendor Dependencies for Media Resource Manager</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>This document is intended to help system on chip vendors (SoCs) properly
+implement support for priority, operating rate and the hooks needed for Android
+media resource manager.</p>
+
+<h2 id=1_omx_errorinsufficientresources>1. OMX_ErrorInsufficientResources</h2>
+
+<p>The codec component should return
+<code>OMX_ErrorInsufficientResources</code> on <code>GetHandle</code>,
+<code>Init</code>, <code>UseBuffer</code>, <code>AllocateBuffer</code> or a
+state transition if the failure is due to insufficient resource. The error code
+will be used by the media resource manager as the indicator to potentially
+preempt media resource from other lower priority process.</p>
+
+<p>An Android Compatibility Test Suite (CTS) test exists to allocate, configure
+and start each codec repeatedly until <code>catching
+OMX_ErrorInsufficientResources</code> (pass) or any other error (fail).</p>
+
+<h2 id=2_omx_indexconfigpriority>2. OMX_IndexConfigPriority</h2>
+
+<p>This configuration lets the application describe desired codec priority.</p>
+
+<p>The associated value is an integer. Higher value means lower priority.
+Currently, only two levels are supported:</p>
+
+<ul>
+  <li>0: realtime priority - meaning that the codec shall support the given
+performance configuration (e.g. framerate) at realtime. This will only be used
+by media playback, capture, and possibly by realtime communication scenarios if
+best effort performance is not suitable.</li>
+  <li>1: non-realtime priority (best effort). This is the default value.</li>
+</ul>
+
+<p>Vendor is suggested to use this as a hint used at codec configuration and
+resource planning - to understand the realtime requirements of the application.</p>
+
+<p>Don’t assume realtime priority unless it is configured to 0.</p>
+
+<h2 id=3_omx_indexconfigoperatingrate>3. OMX_IndexConfigOperatingRate</h2>
+
+<p>This configuration lets the application describe operating frame rate for
+video or sample rate for audio at which the codec will need to operate.</p>
+
+<p>This is used for cases like high-speed/slow-motion video capture, where the
+video encoder format contains the target playback rate (e.g. 30fps), but the
+component must be able to handle the high operating capture rate (e.g. 240fps).</p>
+
+<p>This rate should be used for resource planning and setting the operating
+points.</p>
+
+  </body>
+</html>

@@ -1,0 +1,222 @@
+<html devsite>
+  <head>
+    <title>Contributors to Audio Latency</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>
+  This page focuses on the contributors to output latency,
+  but a similar discussion applies to input latency.
+</p>
+<p>
+  Assuming the analog circuitry does not contribute significantly, then the major
+  surface-level contributors to audio latency are the following:
+</p>
+
+<ul>
+  <li>Application</li>
+  <li>Total number of buffers in pipeline</li>
+  <li>Size of each buffer, in frames</li>
+  <li>Additional latency after the app processor, such as from a DSP</li>
+</ul>
+
+<p>
+  As accurate as the above list of contributors may be, it is also misleading.
+  The reason is that buffer count and buffer size are more of an
+  <em>effect</em> than a <em>cause</em>.  What usually happens is that
+  a given buffer scheme is implemented and tested, but during testing, an audio
+  underrun or overrun is heard as a "click" or "pop."  To compensate, the
+  system designer then increases buffer sizes or buffer counts.
+  This has the desired result of eliminating the underruns or overruns, but it also
+  has the undesired side effect of increasing latency.
+  For more information about buffer sizes, see the video
+  <a href="https://youtu.be/PnDK17zP9BI">Audio latency: buffer sizes</a>.
+
+</p>
+
+<p>
+  A better approach is to understand the causes of the
+  underruns and overruns, and then correct those.  This eliminates the
+  audible artifacts and may permit even smaller or fewer buffers
+  and thus reduce latency.
+</p>
+
+<p>
+  In our experience, the most common causes of underruns and overruns include:
+</p>
+<ul>
+  <li>Linux CFS (Completely Fair Scheduler)</li>
+  <li>high-priority threads with SCHED_FIFO scheduling</li>
+  <li>priority inversion</li>
+  <li>long scheduling latency</li>
+  <li>long-running interrupt handlers</li>
+  <li>long interrupt disable time</li>
+  <li>power management</li>
+  <li>security kernels</li>
+</ul>
+
+<h3 id="linuxCfs">Linux CFS and SCHED_FIFO scheduling</h3>
+<p>
+  The Linux CFS is designed to be fair to competing workloads sharing a common CPU
+  resource. This fairness is represented by a per-thread <em>nice</em> parameter.
+  The nice value ranges from -19 (least nice, or most CPU time allocated)
+  to 20 (nicest, or least CPU time allocated). In general, all threads with a given
+  nice value receive approximately equal CPU time and threads with a
+  numerically lower nice value should expect to
+  receive more CPU time. However, CFS is "fair" only over relatively long
+  periods of observation. Over short-term observation windows,
+  CFS may allocate the CPU resource in unexpected ways. For example, it
+  may take the CPU away from a thread with numerically low niceness
+  onto a thread with a numerically high niceness.  In the case of audio,
+  this can result in an underrun or overrun.
+</p>
+
+<p>
+  The obvious solution is to avoid CFS for high-performance audio
+  threads. Beginning with Android 4.1, such threads now use the
+  <code>SCHED_FIFO</code> scheduling policy rather than the <code>SCHED_NORMAL</code> (also called
+  <code>SCHED_OTHER</code>) scheduling policy implemented by CFS.
+</p>
+
+<h3 id="schedFifo">SCHED_FIFO priorities</h3>
+<p>
+  Though the high-performance audio threads now use <code>SCHED_FIFO</code>, they
+  are still susceptible to other higher priority <code>SCHED_FIFO</code> threads.
+  These are typically kernel worker threads, but there may also be a few
+  non-audio user threads with policy <code>SCHED_FIFO</code>. The available <code>SCHED_FIFO</code>
+  priorities range from 1 to 99.  The audio threads run at priority
+  2 or 3.  This leaves priority 1 available for lower priority threads,
+  and priorities 4 to 99 for higher priority threads.  We recommend
+  you use priority 1 whenever possible, and reserve priorities 4 to 99 for
+  those threads that are guaranteed to complete within a bounded amount
+  of time, execute with a period shorter than the period of audio threads,
+  and are known to not interfere with scheduling of audio threads.
+</p>
+
+<h3 id="rms">Rate-monotonic scheduling</h3>
+<p>
+  For more information on the theory of assignment of fixed priorities,
+  see the Wikipedia article
+  <a href="http://en.wikipedia.org/wiki/Rate-monotonic_scheduling">Rate-monotonic scheduling</a> (RMS).
+  A key point is that fixed priorities should be allocated strictly based on period,
+  with higher priorities assigned to threads of shorter periods, not based on perceived "importance."
+  Non-periodic threads may be modeled as periodic threads, using the maximum frequency of execution
+  and maximum computation per execution.  If a non-periodic thread cannot be modeled as
+  a periodic thread (for example it could execute with unbounded frequency or unbounded computation
+  per execution), then it should not be assigned a fixed priority as that would be incompatible
+  with the scheduling of true periodic threads.
+</p>
+
+<h3 id="priorityInversion">Priority inversion</h3>
+<p>
+  <a href="http://en.wikipedia.org/wiki/Priority_inversion">Priority inversion</a>
+  is a classic failure mode of real-time systems,
+  where a higher-priority task is blocked for an unbounded time waiting
+  for a lower-priority task to release a resource such as (shared
+  state protected by) a
+  <a href="http://en.wikipedia.org/wiki/Mutual_exclusion">mutex</a>.
+  See the article "<a href="avoiding_pi.html">Avoiding priority inversion</a>" for techniques to
+  mitigate it.
+</p>
+
+<h3 id="schedLatency">Scheduling latency</h3>
+<p>
+  Scheduling latency is the time between when a thread becomes
+  ready to run and when the resulting context switch completes so that the
+  thread actually runs on a CPU. The shorter the latency the better, and
+  anything over two milliseconds causes problems for audio. Long scheduling
+  latency is most likely to occur during mode transitions, such as
+  bringing up or shutting down a CPU, switching between a security kernel
+  and the normal kernel, switching from full power to low-power mode,
+  or adjusting the CPU clock frequency and voltage.
+</p>
+
+<h3 id="interrupts">Interrupts</h3>
+<p>
+  In many designs, CPU 0 services all external interrupts.  So a
+  long-running interrupt handler may delay other interrupts, in particular
+  audio direct memory access (DMA) completion interrupts. Design interrupt handlers
+  to finish quickly and defer lengthy work to a thread (preferably
+  a CFS thread or <code>SCHED_FIFO</code> thread of priority 1).
+</p>
+
+<p>
+  Equivalently, disabling interrupts on CPU 0 for a long period
+  has the same result of delaying the servicing of audio interrupts.
+  Long interrupt disable times typically happen while waiting for a kernel
+  <i>spin lock</i>.  Review these spin locks to ensure they are bounded.
+</p>
+
+<h3 id="power">Power, performance, and thermal management</h3>
+<p>
+  <a href="http://en.wikipedia.org/wiki/Power_management">Power management</a>
+  is a broad term that encompasses efforts to monitor
+  and reduce power consumption while optimizing performance.
+  <a href="http://en.wikipedia.org/wiki/Thermal_management_of_electronic_devices_and_systems">Thermal management</a>
+  and <a href="http://en.wikipedia.org/wiki/Computer_cooling">computer cooling</a>
+  are similar but seek to measure and control heat to avoid damage due to excess heat.
+  In the Linux kernel, the CPU
+  <a href="http://en.wikipedia.org/wiki/Governor_%28device%29">governor</a>
+  is responsible for low-level policy, while user mode configures high-level policy.
+  Techniques used include:
+</p>
+
+<ul>
+  <li>dynamic voltage scaling</li>
+  <li>dynamic frequency scaling</li>
+  <li>dynamic core enabling</li>
+  <li>cluster switching</li>
+  <li>power gating</li>
+  <li>hotplug (hotswap)</li>
+  <li>various sleep modes (halt, stop, idle, suspend, etc.)</li>
+  <li>process migration</li>
+  <li><a href="http://en.wikipedia.org/wiki/Processor_affinity">processor affinity</a></li>
+</ul>
+
+<p>
+  Some management operations can result in "work stoppages" or
+  times during which there is no useful work performed by the application processor.
+  These work stoppages can interfere with audio, so such management should be designed
+  for an acceptable worst-case work stoppage while audio is active.
+  Of course, when thermal runaway is imminent, avoiding permanent damage
+  is more important than audio!
+</p>
+
+<h3 id="security">Security kernels</h3>
+<p>
+  A <a href="http://en.wikipedia.org/wiki/Security_kernel">security kernel</a> for
+  <a href="http://en.wikipedia.org/wiki/Digital_rights_management">Digital rights management</a>
+  (DRM) may run on the same application processor core(s) as those used
+  for the main operating system kernel and application code.  Any time
+  during which a security kernel operation is active on a core is effectively a
+  stoppage of ordinary work that would normally run on that core.
+  In particular, this may include audio work.  By its nature, the internal
+  behavior of a security kernel is inscrutable from higher-level layers, and thus
+  any performance anomalies caused by a security kernel are especially
+  pernicious.  For example, security kernel operations do not typically appear in
+  context switch traces.  We call this "dark time" &mdash; time that elapses
+  yet cannot be observed.  Security kernels should be designed for an
+  acceptable worst-case work stoppage while audio is active.
+</p>
+
+  </body>
+</html>

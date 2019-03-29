@@ -1,0 +1,231 @@
+<html devsite>
+  <head>
+    <title>Vehicle Properties</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+<p>The vehicle HAL interface defines the properties OEMs can implement and
+contains property metadata (for example, whether the property is an int and
+which change modes are allowed). The vehicle HAL interface is based on accessing
+(read, write, subscribe) a property, which is an abstraction for a specific
+function.</p>
+
+<h2 id=interfaces>HAL interfaces</h2>
+<p>The vehicle HAL uses the following interfaces:</p>
+<ul>
+<li><code>vehicle_prop_config_t const *(*list_properties)(..., int*
+num_properties)</code>
+<br>List configuration of all properties supported by the vehicle HAL. Only
+supported properties are used by vehicle network service.
+</li>
+<li><code>(*get)(..., vehicle_prop_value_t *data)</code>
+<br>Read the current value of the property. For zoned property, each zone may
+have different value.</li>
+<li><code>(*set)(..., const vehicle_prop_value_t *data)</code>
+<br>Write a value to property. Result of write is defined per property.</li>
+<li><code>(*subscribe)(..., int32_t prop, float sample_rate, int32_t
+zones)</code>
+<ul>
+<li>Start monitoring a property value change. For zoned property, subscription
+applies to requested zones. Zones = 0 is used to request all zones supported.
+</li>
+<li>Vehicle HAL should call separate callback when the property's value changes
+(=on change) or in const interval (=continuous type).</li>
+</ul></li>
+<li><code>(*release_memory_from_get)(struct vehicle_hw_device* device,
+vehicle_prop_value_t *data)</code>
+<br>Release memory allocated from get call.</li>
+</ul>
+
+<p>The vehicle HAL uses the following callback interfaces:</p>
+<ul>
+<li><code>(*vehicle_event_callback_fn)(const vehicle_prop_value_t
+*event_data)</code>
+<br>Notifies vehicle property's value change. Should be done only for
+subscribed properties.</li>
+<li><code>(*vehicle_error_callback_fn)(int32_t error_code, int32_t property,
+int32_t operation)</code>
+<br>Return global vehicle HAL level error or error per property. Global error
+causes HAL restart, which can lead to restarting other components (including
+applications).</li>
+</ul>
+
+<h2 id=properties>Vehicle properties</h2>
+<p>Properties can be read-only, write-only (used to pass information to vehicle
+HAL level), or read and write (support of most properties is optional). Each
+property is uniquely identified by an int32 key and has a predefined type
+(<code>value_type</code>):</p>
+
+<ul>
+<li><code>INT32</code> (and array), <code>INT64</code>, <code>BOOLEAN</code>,
+<code>FLOAT</code> (and array), string, bytes.</li>
+<li>Zoned type has zone in addition to value.</li>
+</ul>
+
+<h2 id-=zone_type>Zone types</h2>
+<p>The vehicle HAL defines three zone types:</p>
+<ul>
+<li><code>vehicle_zone</code>
+<br>Zone based on rows.</li>
+<li><code>vehicle_seat</code>
+<br>Zone based on seats.</li>
+<li><code>vehicle_window</code>
+<br>Zone based on windows.</li>
+</ul>
+<p>Each zoned property should use pre-defined zone type. If necessary, you can
+use a custom zone type for each property (for details, see
+<a href=#prop_custom>Handling custom properties</a>).</p>
+
+<h2 id=prop_config>Configuring a property</h2>
+<p>Use <code>vehicle_prop_config_t</code> to provide configuration information
+for each property. Information includes:</p>
+<ul>
+<li><code>access</code> (r, w, rw)</li>
+<li><code>change_mode</code> (represents how property is monitored: on change vs
+continuous)</li>
+<li><code>min_value</code> (int32, float, int64), <code>max_value</code> (int32,
+float, int64)</li>
+<li><code>min_sample_rate</code>, <code>max_sample_rate</code></li>
+<li><code>permission_model</code></li>
+<li><code>prop</code> (Property ID, int)</li>
+<li><code>value_type</code></li>
+<li><code>zone_flags</code> (represents supported zones as bit flags)</li>
+</ul>
+<p>In addition, some properties have specific configuration flags to represent
+capability.</p>
+
+<h2 id=zone_prop>Handling zone properties</h2>
+<p>A zoned property is equivalent to a collection of multiple properties where
+each sub property is accessible by specified zone value.</p>
+<ul>
+<li><code>get</code> call for zoned property always includes zone in request, so
+only the current value for the requested zone should be returned.</li>
+<li><code>set</code> call for zoned property always includes zone in request, so
+only the requested zone should be changed.</li>
+<li><code>subscribe</code> call includes flags of all zones subscribed. Events
+from un-subscribed zones should not be reported.</li>
+</ul>
+
+<h3 id=get>Get calls</h3>
+<p>During initialization, the value for the property may not be available yet as
+the matching vehicle network message has not yet been received. In such cases,
+the <code>get</code> call should return <code>-EAGAIN</code>. Some properties
+(such as HVAC) have separate on/off power property. Calling <code>get</code> for
+such a property (when powered off) should return a special value
+<code>(VEHICLE_INT_OUT_OF_RANGE_OFF/VEHICLE_FLOAT_OUT_OF_RANGE_OFF)</code>
+rather than returning an error.</p>
+<p>In addition, some properties (such as HVAC temperature) can have a value to
+indicate it is in max power mode rather than in specific temperature value. In
+such cases, use special values to represent such state.</p>
+<ul>
+<li>VEHICLE_INT_OUT_OF_RANGE_MAX/MIN</li>
+<li>VEHICLE_FLOAT_OUT_OF_RANGE_MAX/MIN</li>
+</ul>
+
+<p>Example: get HVAC Temperature</p>
+<img src="../images/vehicle_hvac_get.png" alt="Vehicle HAL get HVAC example">
+<p class="img-caption"><strong>Figure 1</strong>. Get HVAC temperature (CS =
+CarService, VNS = VehicleNetworkService, VHAL = Vehicle HAL)</p>
+
+<h3 id=set>Set calls</h3>
+<p>A <code>set</code> call is an asynchronous operation involving event
+notification after a requested change is made. In a typical operation, a
+<code>set</code> call leads to making a change request across vehicle network.
+When the change is performed by the electronic control unit (ECU) owning the
+property, the updated value is returned through vehicle network and the vehicle
+HAL sends an updated value as an event to vehicle network service (VNS).</p>
+<p>Some <code>set</code> calls may require initial data to be ready but during
+initialization, such data may not be available yet. In such cases, the
+<code>set</code> call should return <code>-EAGAIN</code>. Some properties with
+separate power on /off should return <code>-ESHUTDOWN</code> when the property
+is powered off and set cannot be done.</p>
+<p>Until <code>set</code> is made effective, <code>get</code> does not
+necessarily return the same value as what is set. The exception is a property
+with change mode of <code>VEHICLE_PROP_CHANGE_MODE_ON_SET.</code> This property
+notifies change only when it is set by external component outside Android (for
+example, clock properties such as <code>VEHICLE_PROPERTY_UNIX_TIME</code>).</p>
+
+<p>Example: set HVAC Temperature</p>
+<img src="../images/vehicle_hvac_set.png" alt="Vehicle HAL set HVAC example">
+<p class="img-caption"><strong>Figure 2</strong>. Set HVAC temperature (CD =
+CarService, VNS = VehicleNetworkService, VHAL = Vehicle HAL)</p>
+
+<h2 id=prop_custom>Handling custom properties</h2>
+<p>To support partner-specific needs, the vehicle HAL allows custom properties
+that are restricted to system apps. Use the following guidelines when working
+with custom properties:</p>
+<ul>
+<li>Key should be in [<code>VEHICLE_PROPERTY_CUSTOM_START,
+VEHICLE_PROPERTY_CUSTOM_END</code>] range. Other ranges are reserved for future
+extension; using such ranges can cause conflicts in future Android releases.</li>
+<li>Use only defined <code>value_type</code>. BYTES type allows passing raw
+data, so this is enough in most cases. Sending big data frequently through
+custom properties can slow down the whole vehicle network access, so be careful
+when you add a big payload.</li>
+<li>Add access policy into <code>vendor_vns_policy.xml</code> (otherwise, all
+access will be rejected).</li>
+<li>Access via <code>VendorExtensionManager</code> (for Java components) or
+via Vehicle Network Service API (for native). Do not modify other car APIs as it
+can lead to compatibility issues in the future.</li>
+</ul>
+
+<h2 id=prop_hvac>Handling HVAC properties</h2>
+<p>You can use the vehicle HAL to control HVAC by setting HVAC-related
+properties. Most HVAC properties are zoned properties, but a few are non-zoned
+(global) properties. Example properties defined include:</p>
+<ul>
+<li><code>VEHICLE_PROPERTY_HVAC_TEMPERATURE_SET</code>
+<br>Set temperature per zone.</li>
+<li><code>VEHICLE_PROPERTY_HVAC_RECIRC_ON</code>
+<br>Control recirculation per zone).</li>
+</ul>
+<p>For full list of HVAC properties, search for
+<code>VEHICLE_PROPERTY_HVAC_*</code> in <code>vehicle.h</code>.</p>
+
+<h2 id=prop_sensor>Handling sensor properties</h2>
+<p>Vehicle HAL sensor properties represent real sensor data or policy
+information such as driving status. Some sensor information (such as driving
+status and day/night mode) is accessible by any app without restriction as the
+data is mandatory to build a safe vehicle application. Other sensor information
+(such as vehicle speed) is more sensitive and requires specific permissions that
+users can manage.</p>
+<p>Supported sensor properties include:</p>
+<ul>
+<li><code>DRIVING_STATUS</code>
+<br>Should support. Represents allowed operations in the current driving state.
+This information is used to block unsafe applications while driving.</li>
+<li><code>NIGHT_MODE</code>
+<br>Should support. Determines day/night mode of display.</li>
+<li><code>GEAR_SELECTION/CURRENT_GEAR</code>
+<br>Gear selected by driver vs. actual gear.</li>
+<li><code>VEHICLE_SPEED</code>
+<br>Vehicle speed. Protected with permission.</li>
+<li><code>ODOMETER</code>
+<br>Current odometer reading. Protected with permission.
+</li>
+<li><code>FUEL_LEVEL</code>
+<br>Current fuel level in %.</li>
+<li><code>FUEL_LEVEL_LOW</code>
+<br>Fuel level is low or not (boolean).</li>
+</ul>
+
+  </body>
+</html>

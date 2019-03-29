@@ -1,0 +1,90 @@
+<html devsite>
+  <head>
+    <title>Verified Boot</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>Android 4.4 and later supports verified boot through the optional
+device-mapper-verity (dm-verity) kernel feature, which provides transparent
+integrity checking of block devices. dm-verity helps prevent persistent rootkits
+that can hold onto root privileges and compromise devices. This
+feature helps Android users be sure when booting a device it is in the same
+state as when it was last used.</p>
+
+<p>Clever malware with root privileges can hide from detection programs and
+otherwise mask themselves. The rooting software can do this because it is often
+more privileged than the detectors, enabling the software to "lie" to the
+detection programs.</p>
+
+<p>The dm-verity feature lets you look at a block device, the underlying storage
+layer of the file system, and determine if it matches its expected
+configuration. It does this using a cryptographic hash tree. For every block
+(typically 4k), there is a SHA256 hash.</p>
+
+<p>Because the hash values are stored in a tree of pages, only the top-level
+"root" hash must be trusted to verify the rest of the tree. The ability to
+modify any of the blocks would be equivalent to breaking the cryptographic hash.
+See the following diagram for a depiction of this structure.</p>
+
+<img src="../images/dm-verity-hash-table.png" alt="dm-verity-hash-table" id="figure1"/>
+<p class="img-caption">
+  <strong>Figure 1.</strong> dm-verity hash table
+</p>
+
+<p>A public key is included on the boot partition, which must be verified
+externally by the OEM. That key is used to verify the signature for that hash
+and confirm the device's system partition is protected and unchanged.</p>
+
+<h2 id="prerequisites">Prerequisites</h2>
+
+<h3 id="verified-boot">Establishing a verified boot flow</h3>
+<p>To greatly reduce the risk of compromise, verify the kernel using a key
+burned into the device. For details, see <a href="verified-boot.html">Verifying
+boot</a>.</p>
+
+<h3 id="block-otas">Switching to block-oriented OTAs</h3>
+<p>To enable dm-verity for a device, you must use block-based over-the-air
+(OTA) updates to ensure all devices use the same system partition. For details,
+see <a href="/devices/tech/ota/block.html">Block-Based OTAs</a>.</p>
+
+<h3 id="config-dm-verity">Configuring dm-verity</h3>
+
+<p>After switching to block-oriented OTAs, incorporate the latest Android kernel
+or use a stock upstream kernel and enable dm-verity support by including the
+relevant configuration option <code>CONFIG_DM_VERITY</code>.</p>
+
+<p>When using the Android kernel, dm-verity is turned on when the kernel is
+built. For details, see <a href="dm-verity.html">Implementing dm-verity</a>.</p>
+
+<h2 id="supporting-docs">Supporting documentation</h2>
+<p><a href="verified-boot.html">Verifying Boot</a><br/>
+<a href="/devices/tech/ota/block.html">Block-Based OTA</a><br/>
+<a href="dm-verity.html">Implementing dm-verity</a><br/>
+<a href="https://gitlab.com/cryptsetup/cryptsetup/wikis/DMVerity">cryptsetup -
+dm-verity: device-mapper block integrity checking target</a><br/>
+<a href="http://www.chromium.org/chromium-os/chromiumos-design-docs/verified-boot">The
+Chromium Projects - Verified Boot</a><br/>
+<a
+href="http://git.kernel.org/?p=linux/kernel/git/torvalds/linux-2.6.git;a=blob;f=Documentation/device-mapper/verity.txt">Linux Kernel Documentation: verity.txt</a></p>
+
+  </body>
+</html>

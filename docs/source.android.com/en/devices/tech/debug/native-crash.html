@@ -1,0 +1,567 @@
+<html devsite>
+  <head>
+    <title>Diagnosing Native Crashes</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>
+If you've never seen a native crash before, start with
+<a href="/devices/tech/debug/index.html">Debugging Native Android
+Platform Code</a>.
+</p>
+
+<h2 id=crashtypes>Types of native crash</h2>
+<p>
+The sections below detail the most common kinds of native crash. Each includes
+an example chunk of <code>debuggerd</code> output, with the key evidence that helps you
+distinguish that specific kind of crash highlighted in orange italic text.
+</p>
+<h3 id=abort>Abort</h3>
+<p>
+Aborts are interesting because they're deliberate. There are many different ways
+to abort (including calling <code><a
+href="http://man7.org/linux/man-pages/man3/abort.3.html">abort(3)</a></code>,
+failing an <code><a
+href="http://man7.org/linux/man-pages/man3/assert.3.html">assert(3)</a></code>,
+using one of the Android-specific fatal logging types), but they all involve
+calling <code>abort</code>. A call to <code>abort</code> basically signals the
+calling thread with SIGABRT, so a frame showing "abort" in <code>libc.so</code>
+plus SIGABRT are the things to look for in the <code>debuggerd</code> output to
+recognize this case.</p>
+
+<p>
+As mentioned above, there may be an explicit "abort message" line. But you
+should also look in the <code>logcat</code> output to see what this thread logged before
+deliberately killing itself, because the basic abort primitive doesn't accept a
+message.
+</p>
+<p>
+Older versions of Android (especially on 32-bit ARM) followed a convoluted path
+between the original abort call (frame 4 here) and the actual sending of the
+signal (frame 0 here):
+</p>
+<pre class="devsite-click-to-copy">
+pid: 1656, tid: 1656, name: crasher  >>> crasher <<<
+signal 6 (<i style="color:Orange">SIGABRT</i>), code -6 (SI_TKILL), fault addr --------
+<i style="color:Orange">Abort message</i>: 'some_file.c:123: some_function: assertion "false" failed'
+    r0 00000000  r1 00000678  r2 00000006  r3 f70b6dc8
+    r4 f70b6dd0  r5 f70b6d80  r6 00000002  r7 0000010c
+    r8 ffffffed  r9 00000000  sl 00000000  fp ff96ae1c
+    ip 00000006  sp ff96ad18  lr f700ced5  pc f700dc98  cpsr 400b0010
+backtrace:
+    #00 pc 00042c98  /system/lib/libc.so (tgkill+12)
+    #01 pc 00041ed1  /system/lib/libc.so (pthread_kill+32)
+    #02 pc 0001bb87  /system/lib/libc.so (raise+10)
+    #03 pc 00018cad  /system/lib/libc.so (__libc_android_abort+34)
+    #04 pc 000168e8  /system/lib/<i style="color:Orange">libc.so</i> (<i style="color:Orange">abort</i>+4)
+    #05 pc 0001a78f  /system/lib/libc.so (__libc_fatal+16)
+    #06 pc 00018d35  /system/lib/libc.so (__assert2+20)
+    #07 pc 00000f21  /system/xbin/crasher
+    #08 pc 00016795  /system/lib/libc.so (__libc_init+44)
+    #09 pc 00000abc  /system/xbin/crasher
+</pre>
+<p>
+More recent versions call <code><a
+href="http://man7.org/linux/man-pages/man2/tgkill.2.html">tgkill(2)</a></code>
+directly from <code>abort</code>, so there are fewer stack frames for you to
+skip over before you get to the interesting frames:</p>
+
+<pre class="devsite-click-to-copy">
+pid: 25301, tid: 25301, name: crasher  >>> crasher <<<
+signal 6 (SIGABRT), code -6 (SI_TKILL), fault addr --------
+    r0 00000000  r1 000062d5  r2 00000006  r3 00000008
+    r4 ffa09dd8  r5 000062d5  r6 000062d5  r7 0000010c
+    r8 00000000  r9 00000000  sl 00000000  fp ffa09f0c
+    ip 00000000  sp ffa09dc8  lr eac63ce3  pc eac93f0c  cpsr 000d0010
+backtrace:
+    #00 pc 00049f0c  /system/lib/libc.so (tgkill+12)
+    #01 pc 00019cdf  /system/lib/libc.so (abort+50)
+    #02 pc 000012db  /system/xbin/crasher (maybe_abort+26)
+    #03 pc 000015b7  /system/xbin/crasher (do_action+414)
+    #04 pc 000020d5  /system/xbin/crasher (main+100)
+    #05 pc 000177a1  /system/lib/libc.so (__libc_init+48)
+    #06 pc 000010e4  /system/xbin/crasher (_start+96)
+</pre>
+<p>
+You can reproduce an instance of this type of crash using: <code>crasher
+abort</code>
+</p>
+<h3 id=nullpointer>Pure null pointer dereference</h3>
+<p>
+This is the classic native crash, and although it's just a special case of the
+next crash type, it's worth mentioning separately because it usually requires
+the least thought.
+</p>
+<p>
+In the example below, even though the crashing function is in
+<code>libc.so</code>, because the string functions just operate on the pointers
+they're given, you can infer that <code><a
+href="http://man7.org/linux/man-pages/man3/strlen.3.html">strlen(3)</a></code>
+was called with a null pointer; and this crash should go straight to the author
+of the calling code. In this case, frame #01 is the bad caller.
+</p>
+
+<pre class="devsite-click-to-copy">
+pid: 25326, tid: 25326, name: crasher  >>> crasher <<<
+signal 11 (<i style="color:Orange">SIGSEGV</i>), code 1 (SEGV_MAPERR), <i style="color:Orange">fault addr 0x0</i>
+    r0 00000000  r1 00000000  r2 00004c00  r3 00000000
+    r4 ab088071  r5 fff92b34  r6 00000002  r7 fff92b40
+    r8 00000000  r9 00000000  sl 00000000  fp fff92b2c
+    ip ab08cfc4  sp fff92a08  lr ab087a93  pc efb78988  cpsr 600d0030
+
+backtrace:
+    #00 pc 00019988  /system/lib/libc.so (strlen+71)
+    #01 pc 00001a8f  /system/xbin/crasher (strlen_null+22)
+    #02 pc 000017cd  /system/xbin/crasher (do_action+948)
+    #03 pc 000020d5  /system/xbin/crasher (main+100)
+    #04 pc 000177a1  /system/lib/libc.so (__libc_init+48)
+    #05 pc 000010e4  /system/xbin/crasher (_start+96)
+</pre>
+<p>
+You can reproduce an instance of this type of crash using: <code>crasher
+strlen-NULL</code>
+</p>
+<h3 id=lowaddress>Low-address null pointer dereference</h3>
+<p>
+In many cases the fault address won't be 0, but some other low number. Two- or
+three-digit addresses in particular are very common, whereas a six-digit address
+is almost certainly not a null pointer dereference&#8212that would require a 1MiB
+offset. This usually occurs when you have code that dereferences a null pointer
+as if it was a valid struct. Common functions are <code><a
+href="http://man7.org/linux/man-pages/man3/fprintf.3.html">fprintf(3)</a></code>
+(or any other function taking a FILE*) and <code><a
+href="http://man7.org/linux/man-pages/man3/readdir.3.html">readdir(3)</a></code>,
+because code often fails to check that the <code><a
+href="http://man7.org/linux/man-pages/man3/fopen.3.html">fopen(3)</a></code> or
+<code><a
+href="http://man7.org/linux/man-pages/man3/opendir.3.html">opendir(3)</a></code>
+call actually succeeded first.
+</p>
+
+<p>
+Here's an example of <code>readdir</code>:
+</p>
+
+<pre class="devsite-click-to-copy">
+pid: 25405, tid: 25405, name: crasher  >>> crasher <<<
+signal 11 (<i style="color:Orange">SIGSEGV</i>), code 1 (SEGV_MAPERR), <i style="color:Orange">fault addr 0xc</i>
+    r0 0000000c  r1 00000000  r2 00000000  r3 3d5f0000
+    r4 00000000  r5 0000000c  r6 00000002  r7 ff8618f0
+    r8 00000000  r9 00000000  sl 00000000  fp ff8618dc
+    ip edaa6834  sp ff8617a8  lr eda34a1f  pc eda618f6  cpsr 600d0030
+
+backtrace:
+    #00 pc 000478f6  /system/lib/libc.so (pthread_mutex_lock+1)
+    #01 pc 0001aa1b  /system/lib/libc.so (readdir+10)
+    #02 pc 00001b35  /system/xbin/crasher (readdir_null+20)
+    #03 pc 00001815  /system/xbin/crasher (do_action+976)
+    #04 pc 000021e5  /system/xbin/crasher (main+100)
+    #05 pc 000177a1  /system/lib/libc.so (__libc_init+48)
+    #06 pc 00001110  /system/xbin/crasher (_start+96)
+</pre>
+<p>
+Here the direct cause of the crash is that <code><a
+href="http://man7.org/linux/man-pages/man3/pthread_mutex_lock.3p.html">pthread_mutex_lock(3)</a></code>
+has tried to access address 0xc (frame 0). But the first thing
+<code>pthread_mutex_lock</code> does is dereference the <code>state</code>
+element of the <code>pthread_mutex_t*</code> it was given. If you look at the
+source, you can see that element is at offset 0 in the struct, which tells you
+that <code>pthread_mutex_lock</code> was given the invalid pointer 0xc. From the
+frame 1 you can see that it was given that pointer by <code>readdir</code>,
+which extracts the <code>mutex_</code> field from the <code>DIR*</code> it's
+given. Looking at that structure, you can see that <code>mutex_</code> is at
+offset <code>sizeof(int) + sizeof(size_t) + sizeof(dirent*)</code> into
+<code>struct DIR</code>, which on a 32-bit device is 4 + 4 + 4 = 12 = 0xc, so
+you found the bug: <code>readdir</code> was passed a null pointer by the caller.
+At this point you can paste the stack into the stack tool to find out
+<em>where</em> in logcat this happened.</p>
+
+<pre class="prettyprint">
+  struct DIR {
+    int fd_;
+    size_t available_bytes_;
+    dirent* next_;
+    pthread_mutex_t mutex_;
+    dirent buff_[15];
+    long current_pos_;
+  };
+</pre>
+<p>
+In most cases you can actually skip this analysis. A sufficiently low fault
+address usually means you can just skip any <code>libc.so</code> frames in the
+stack and directly accuse the calling code. But not always, and this is how you
+would present a compelling case.
+</p>
+<p>
+You can reproduce instances of this kind of crash using: <code>crasher
+fprintf-NULL</code> or <code>crasher readdir-NULL</code>
+</p>
+<h3 id=fortify>FORTIFY failure</h3>
+<p>
+A FORTIFY failure is a special case of an abort that occurs when the C library
+detects a problem that might lead to a security vulnerability. Many C library
+functions are <em>fortified</em>; they take an extra argument that tells them how large
+a buffer actually is and check at run time whether the operation you're trying
+to perform actually fits. Here's an example where the code tries to
+<code>read(fd, buf, 32)</code> into a buffer that's actually only 10 bytes
+long...
+</p>
+<pre class="devsite-click-to-copy">
+pid: 25579, tid: 25579, name: crasher  >>> crasher <<<
+signal 6 (SIGABRT), code -6 (SI_TKILL), fault addr --------
+Abort message: '<i style="color:Orange">FORTIFY: read: prevented 32-byte write into 10-byte buffer'</i>
+    r0 00000000  r1 000063eb  r2 00000006  r3 00000008
+    r4 ff96f350  r5 000063eb  r6 000063eb  r7 0000010c
+    r8 00000000  r9 00000000  sl 00000000  fp ff96f49c
+    ip 00000000  sp ff96f340  lr ee83ece3  pc ee86ef0c  cpsr 000d0010
+
+backtrace:
+    #00 pc 00049f0c  /system/lib/libc.so (tgkill+12)
+    #01 pc 00019cdf  /system/lib/libc.so (abort+50)
+    #02 pc 0001e197  /system/lib/libc.so (<i style="color:Orange">__fortify_fatal</i>+30)
+    #03 pc 0001baf9  /system/lib/libc.so (__read_chk+48)
+    #04 pc 0000165b  /system/xbin/crasher (do_action+534)
+    #05 pc 000021e5  /system/xbin/crasher (main+100)
+    #06 pc 000177a1  /system/lib/libc.so (__libc_init+48)
+    #07 pc 00001110  /system/xbin/crasher (_start+96)
+</pre>
+<p>
+You can reproduce an instance of this type of crash using: <code>crasher
+fortify</code>
+</p>
+<h3 id=stackcorruption>Stack corruption detected by -fstack-protector</h3>
+<p>
+The compiler's <code>-fstack-protector</code> option inserts checks into
+functions with on-stack buffers to guard against buffer overruns. This option is
+on by default for platform code but not for apps. When this option is enabled,
+the compiler adds instructions to the <a
+href="https://en.wikipedia.org/wiki/Function_prologue">function prologue</a> to
+write a random value just past the last local on the stack and to the function
+epilogue to read it back and check that it's not changed. If that value changed,
+it was overwritten by a buffer overrun, so the epilogue calls
+<code>__stack_chk_fail</code> to log a message and abort.
+</p>
+<pre class="devsite-click-to-copy">
+pid: 26717, tid: 26717, name: crasher  >>> crasher <<<
+signal 6 (SIGABRT), code -6 (SI_TKILL), fault addr --------
+<i style="color:Orange">Abort message: 'stack corruption detected'</i>
+    r0 00000000  r1 0000685d  r2 00000006  r3 00000008
+    r4 ffd516d8  r5 0000685d  r6 0000685d  r7 0000010c
+    r8 00000000  r9 00000000  sl 00000000  fp ffd518bc
+    ip 00000000  sp ffd516c8  lr ee63ece3  pc ee66ef0c  cpsr 000e0010
+
+backtrace:
+    #00 pc 00049f0c  /system/lib/libc.so (tgkill+12)
+    #01 pc 00019cdf  /system/lib/libc.so (abort+50)
+    #02 pc 0001e07d  /system/lib/libc.so (__libc_fatal+24)
+    #03 pc 0004863f  /system/lib/libc.so (<i style="color:Orange">__stack_chk_fail</i>+6)
+    #04 pc 000013ed  /system/xbin/crasher (smash_stack+76)
+    #05 pc 00001591  /system/xbin/crasher (do_action+280)
+    #06 pc 00002219  /system/xbin/crasher (main+100)
+    #07 pc 000177a1  /system/lib/libc.so (__libc_init+48)
+    #08 pc 00001144  /system/xbin/crasher (_start+96)
+</pre>
+<p>
+You can distinguish this from other kinds of abort by the presence of
+<code>__stack_chk_fail</code> in the backtrace and the specific abort message.
+</p>
+<p>
+You can reproduce an instance of this type of crash using: <code>crasher
+smash-stack</code>
+</p>
+
+<h2 id=crashdump>Crash dumps</h2>
+
+<p>If you don't have a specific crash that you're investigating right now,
+the platform source includes a tool for testing <code>debuggerd</code> called crasher. If
+you <code>mm</code> in <code>system/core/debuggerd/</code> you'll get both a <code>crasher</code>
+and a <code>crasher64</code> on your path (the latter allowing you to test
+64-bit crashes). Crasher can crash in a large number of interesting ways based
+on the command line arguments you provide. Use <code>crasher --help</code>
+to see the currently supported selection.</p>
+
+<p>To introduce the different pieces in a crash dump, let's work through this example crash dump:</p>
+
+<pre class="devsite-click-to-copy">
+*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+Build fingerprint: 'Android/aosp_flounder/flounder:5.1.51/AOSP/enh08201009:eng/test-keys'
+Revision: '0'
+ABI: 'arm'
+pid: 1656, tid: 1656, name: crasher  &gt;&gt;&gt; crasher &lt;&lt;&lt;
+signal 6 (SIGABRT), code -6 (SI_TKILL), fault addr --------
+Abort message: 'some_file.c:123: some_function: assertion "false" failed'
+    r0 00000000  r1 00000678  r2 00000006  r3 f70b6dc8
+    r4 f70b6dd0  r5 f70b6d80  r6 00000002  r7 0000010c
+    r8 ffffffed  r9 00000000  sl 00000000  fp ff96ae1c
+    ip 00000006  sp ff96ad18  lr f700ced5  pc f700dc98  cpsr 400b0010
+backtrace:
+    #00 pc 00042c98  /system/lib/libc.so (tgkill+12)
+    #01 pc 00041ed1  /system/lib/libc.so (pthread_kill+32)
+    #02 pc 0001bb87  /system/lib/libc.so (raise+10)
+    #03 pc 00018cad  /system/lib/libc.so (__libc_android_abort+34)
+    #04 pc 000168e8  /system/lib/libc.so (abort+4)
+    #05 pc 0001a78f  /system/lib/libc.so (__libc_fatal+16)
+    #06 pc 00018d35  /system/lib/libc.so (__assert2+20)
+    #07 pc 00000f21  /system/xbin/crasher
+    #08 pc 00016795  /system/lib/libc.so (__libc_init+44)
+    #09 pc 00000abc  /system/xbin/crasher
+Tombstone written to: /data/tombstones/tombstone_06
+*** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+</pre>
+
+<p>The line of asterisks with spaces is helpful if you're searching a log
+for native crashes. The string "*** ***" rarely shows up in logs other than
+at the beginning of a native crash.</p>
+
+<pre class="devsite-click-to-copy">
+Build fingerprint:
+'Android/aosp_flounder/flounder:5.1.51/AOSP/enh08201009:eng/test-keys'
+</pre>
+
+<p>The fingerprint lets you identify exactly which build the crash occurred
+on. This is exactly the same as the <code>ro.build.fingerprint</code> system property.</p>
+
+<pre class="devsite-click-to-copy">
+Revision: '0'
+</pre>
+
+<p>The revision refers to the hardware rather than the software. This is
+usually unused but can be useful to help you automatically ignore bugs known
+to be caused by bad hardware. This is exactly the same as the <code>ro.revision</code>
+system property.</p>
+
+<pre class="devsite-click-to-copy">
+ABI: 'arm'
+</pre>
+
+<p>The ABI is one of arm, arm64, mips, mips64, x86, or x86-64. This is
+mostly useful for the <code>stack</code> script mentioned above, so that it knows
+what toolchain to use.</p>
+
+<pre class="devsite-click-to-copy">
+pid: 1656, tid: 1656, name: crasher &gt;&gt;&gt; crasher &lt;&lt;&lt;
+</pre>
+
+<p>This line identifies the specific thread in the process that crashed. In
+this case, it was the process' main thread, so the process ID and thread
+ID match. The first name is the thread name, and the name surrounded by
+&gt;&gt;&gt; and &lt;&lt;&lt; is the process name. For an app, the process name
+is typically the fully-qualified package name (such as com.facebook.katana),
+which is useful when filing bugs or trying to find the app in Google Play. The
+pid and tid can also be useful in finding the relevant log lines preceding
+the crash.</p>
+
+<pre class="devsite-click-to-copy">
+signal 6 (SIGABRT), code -6 (SI_TKILL), fault addr --------
+</pre>
+
+<p>This line tells you which signal (SIGABRT) was received, and more about
+how it was received (SI_TKILL). The signals reported by <code>debuggerd</code> are SIGABRT,
+SIGBUS, SIGFPE, SIGILL, SIGSEGV, and SIGTRAP. The signal-specific codes vary
+based on the specific signal.</p>
+
+<pre class="devsite-click-to-copy">
+Abort message: 'some_file.c:123: some_function: assertion "false" failed'
+</pre>
+
+<p>Not all crashes will have an abort message line, but aborts will. This
+is automatically gathered from the last line of fatal logcat output for
+this pid/tid, and in the case of a deliberate abort is likely to give an
+explanation of why the program killed itself.</p>
+
+<pre class="devsite-click-to-copy">
+r0 00000000 r1 00000678 r2 00000006 r3 f70b6dc8
+r4 f70b6dd0 r5 f70b6d80 r6 00000002 r7 0000010c
+r8 ffffffed r9 00000000 sl 00000000 fp ff96ae1c
+ip 00000006 sp ff96ad18 lr f700ced5 pc f700dc98 cpsr 400b0010
+</pre>
+
+<p>The register dump shows the content of the CPU registers at the time the
+signal was received. (This section varies wildly between ABIs.) How useful
+these are will depend on the exact crash.</p>
+
+<pre class="devsite-click-to-copy">
+backtrace:
+    #00 pc 00042c98 /system/lib/libc.so (tgkill+12)
+    #01 pc 00041ed1 /system/lib/libc.so (pthread_kill+32)
+    #02 pc 0001bb87 /system/lib/libc.so (raise+10)
+    #03 pc 00018cad /system/lib/libc.so (__libc_android_abort+34)
+    #04 pc 000168e8 /system/lib/libc.so (abort+4)
+    #05 pc 0001a78f /system/lib/libc.so (__libc_fatal+16)
+    #06 pc 00018d35 /system/lib/libc.so (__assert2+20)
+    #07 pc 00000f21 /system/xbin/crasher
+    #08 pc 00016795 /system/lib/libc.so (__libc_init+44)
+    #09 pc 00000abc /system/xbin/crasher
+</pre>
+
+<p>The backtrace shows you where in the code we were at the time of
+crash. The first column is the frame number (matching gdb's style where
+the deepest frame is 0). The PC values are relative to the location of the
+shared library rather than absolute addresses. The next column is the name
+of the mapped region (which is usually a shared library or executable, but
+might not be for, say, JIT-compiled code). Finally, if symbols are available,
+the symbol that the PC value corresponds to is shown, along with the offset
+into that symbol in bytes. You can use this in conjunction with <code>objdump(1)</code>
+to find the corresponding assembler instruction.</p>
+
+<h2 id=tombstones>Tombstones</h2>
+
+<pre class="devsite-click-to-copy">
+Tombstone written to: /data/tombstones/tombstone_06
+</pre>
+
+<p>This tells you where <code>debuggerd</code> wrote extra information.
+<code>debuggerd</code> will keep up to 10 tombstones, cycling through
+the numbers 00 to 09 and overwriting existing tombstones as necessary.</p>
+
+<p>The tombstone contains the same information as the crash dump, plus a
+few extras. For example, it includes backtraces for <i>all</i> threads (not
+just the crashing thread), the floating point registers, raw stack dumps,
+and memory dumps around the addresses in registers. Most usefully it also
+includes a full memory map (similar to <code>/proc/<i>pid</i>/maps</code>). Here's an
+annotated example from a 32-bit ARM process crash:</p>
+
+<pre class="devsite-click-to-copy">
+memory map: (fault address prefixed with ---&gt;)
+---&gt;ab15f000-ab162fff r-x 0 4000 /system/xbin/crasher (BuildId:
+b9527db01b5cf8f5402f899f64b9b121)
+</pre>
+
+<p>There are two things to note here. The first is that this line is prefixed
+with "---&gt;". The maps are most useful when your crash isn't just a null
+pointer dereference. If the fault address is small, it's probably some variant
+of a null pointer dereference. Otherwise looking at the maps around the fault
+address can often give you a clue as to what happened. Some possible issues
+that can be recognized by looking at the maps include:</p>
+
+<ul>
+<li>Reads/writes past the end of a block of memory.</li>
+<li>Reads/writes before the beginning of a block of memory.</li>
+<li>Attempts to execute non-code.</li>
+<li>Running off the end of a stack.</li>
+<li>Attempts to write to code (as in the example above).</li>
+</ul>
+
+<p>The second thing to note is that executables and shared libraries files
+will show the BuildId (if present) in Android M and later, so you can see
+exactly which version of your code crashed. (Platform binaries include a
+BuildId by default since Android M. NDK r12 and later automatically pass
+<code>-Wl,--build-id</code> to the linker too.)</p>
+
+<pre class="devsite-click-to-copy">
+ab163000-ab163fff r--      3000      1000  /system/xbin/crasher
+ab164000-ab164fff rw-         0      1000
+f6c80000-f6d7ffff rw-         0    100000  [anon:libc_malloc]
+</pre>
+
+<p>On Android the heap isn't necessarily a single region. Heap regions will
+be labeled <code>[anon:libc_malloc]</code>.</p>
+
+<pre class="devsite-click-to-copy">
+f6d82000-f6da1fff r--         0     20000  /dev/__properties__/u:object_r:logd_prop:s0
+f6da2000-f6dc1fff r--         0     20000  /dev/__properties__/u:object_r:default_prop:s0
+f6dc2000-f6de1fff r--         0     20000  /dev/__properties__/u:object_r:logd_prop:s0
+f6de2000-f6de5fff r-x         0      4000  /system/lib/libnetd_client.so (BuildId: 08020aa06ed48cf9f6971861abf06c9d)
+f6de6000-f6de6fff r--      3000      1000  /system/lib/libnetd_client.so
+f6de7000-f6de7fff rw-      4000      1000  /system/lib/libnetd_client.so
+f6dec000-f6e74fff r-x         0     89000  /system/lib/libc++.so (BuildId: 8f1f2be4b37d7067d366543fafececa2) (load base 0x2000)
+f6e75000-f6e75fff ---         0      1000
+f6e76000-f6e79fff r--     89000      4000  /system/lib/libc++.so
+f6e7a000-f6e7afff rw-     8d000      1000  /system/lib/libc++.so
+f6e7b000-f6e7bfff rw-         0      1000  [anon:.bss]
+f6e7c000-f6efdfff r-x         0     82000  /system/lib/libc.so (BuildId: d189b369d1aafe11feb7014d411bb9c3)
+f6efe000-f6f01fff r--     81000      4000  /system/lib/libc.so
+f6f02000-f6f03fff rw-     85000      2000  /system/lib/libc.so
+f6f04000-f6f04fff rw-         0      1000  [anon:.bss]
+f6f05000-f6f05fff r--         0      1000  [anon:.bss]
+f6f06000-f6f0bfff rw-         0      6000  [anon:.bss]
+f6f0c000-f6f21fff r-x         0     16000  /system/lib/libcutils.so (BuildId: d6d68a419dadd645ca852cd339f89741)
+f6f22000-f6f22fff r--     15000      1000  /system/lib/libcutils.so
+f6f23000-f6f23fff rw-     16000      1000  /system/lib/libcutils.so
+f6f24000-f6f31fff r-x         0      e000  /system/lib/liblog.so (BuildId: e4d30918d1b1028a1ba23d2ab72536fc)
+f6f32000-f6f32fff r--      d000      1000  /system/lib/liblog.so
+f6f33000-f6f33fff rw-      e000      1000  /system/lib/liblog.so
+</pre>
+
+<p>Typically a shared library will have three adjacent entries. One will be
+readable and executable (code), one will be read-only (read-only
+data), and one will be read-write (mutable data). The first column
+shows the address ranges for the mapping, the second column the permissions
+(in the usual Unix <code>ls(1)</code> style), the third column the offset into the file
+(in hex), the fourth column the size of the region (in hex), and the fifth
+column the file (or other region name).</p>
+
+<pre class="devsite-click-to-copy">
+f6f34000-f6f53fff r-x         0     20000  /system/lib/libm.so (BuildId: 76ba45dcd9247e60227200976a02c69b)
+f6f54000-f6f54fff ---         0      1000
+f6f55000-f6f55fff r--     20000      1000  /system/lib/libm.so
+f6f56000-f6f56fff rw-     21000      1000  /system/lib/libm.so
+f6f58000-f6f58fff rw-         0      1000
+f6f59000-f6f78fff r--         0     20000  /dev/__properties__/u:object_r:default_prop:s0
+f6f79000-f6f98fff r--         0     20000  /dev/__properties__/properties_serial
+f6f99000-f6f99fff rw-         0      1000  [anon:linker_alloc_vector]
+f6f9a000-f6f9afff r--         0      1000  [anon:atexit handlers]
+f6f9b000-f6fbafff r--         0     20000  /dev/__properties__/properties_serial
+f6fbb000-f6fbbfff rw-         0      1000  [anon:linker_alloc_vector]
+f6fbc000-f6fbcfff rw-         0      1000  [anon:linker_alloc_small_objects]
+f6fbd000-f6fbdfff rw-         0      1000  [anon:linker_alloc_vector]
+f6fbe000-f6fbffff rw-         0      2000  [anon:linker_alloc]
+f6fc0000-f6fc0fff r--         0      1000  [anon:linker_alloc]
+f6fc1000-f6fc1fff rw-         0      1000  [anon:linker_alloc_lob]
+f6fc2000-f6fc2fff r--         0      1000  [anon:linker_alloc]
+f6fc3000-f6fc3fff rw-         0      1000  [anon:linker_alloc_vector]
+f6fc4000-f6fc4fff rw-         0      1000  [anon:linker_alloc_small_objects]
+f6fc5000-f6fc5fff rw-         0      1000  [anon:linker_alloc_vector]
+f6fc6000-f6fc6fff rw-         0      1000  [anon:linker_alloc_small_objects]
+f6fc7000-f6fc7fff rw-         0      1000  [anon:arc4random _rsx structure]
+f6fc8000-f6fc8fff rw-         0      1000  [anon:arc4random _rs structure]
+f6fc9000-f6fc9fff r--         0      1000  [anon:atexit handlers]
+f6fca000-f6fcafff ---         0      1000  [anon:thread signal stack guard page]
+</pre>
+
+<p>
+Note that since Android 5.0 (Lollipop), the C library names most of its anonymous mapped
+regions so there are fewer mystery regions.
+</p>
+
+<pre class="devsite-click-to-copy">
+f6fcb000-f6fccfff rw- 0 2000 [stack:5081]
+</pre>
+
+<p>
+Regions named <code>[stack:<i>tid</i>]</code> are the stacks for the given threads.
+</p>
+
+<pre class="devsite-click-to-copy">
+f6fcd000-f702afff r-x         0     5e000  /system/bin/linker (BuildId: 84f1316198deee0591c8ac7f158f28b7)
+f702b000-f702cfff r--     5d000      2000  /system/bin/linker
+f702d000-f702dfff rw-     5f000      1000  /system/bin/linker
+f702e000-f702ffff rw-         0      2000
+f7030000-f7030fff r--         0      1000
+f7031000-f7032fff rw-         0      2000
+ffcd7000-ffcf7fff rw-         0     21000
+ffff0000-ffff0fff r-x         0      1000  [vectors]
+</pre>
+
+<p>Whether you see <code>[vector]</code> or <code>[vdso]</code> depends on the architecture. ARM uses [vector], while all other architectures use <a href="http://man7.org/linux/man-pages/man7/vdso.7.html">[vdso].</a></p>
+  </body>
+</html>

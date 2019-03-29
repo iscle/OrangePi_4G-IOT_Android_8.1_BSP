@@ -1,0 +1,166 @@
+<html devsite><head>
+    <title>身份验证</title>
+    <meta name="project_path" value="/_project.yaml"/>
+    <meta name="book_path" value="/_book.yaml"/>
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+<h2 id="overview">概述</h2>
+
+<p>Android 6.0 中引入了通过用户身份验证把关的加密密钥的概念。为了实现这一概念，需要两种关键组件协同运作。一种是加密密钥存储和服务提供程序，用于存储加密密钥并提供基于加密密钥的标准加密例程。另一种是任意数量的用户身份验证程序，用于证明相应用户存在并/或已成功通过身份验证。</p>
+
+<p>Android 中的加密密钥存储功能由 Keystore 服务和 Keymaster 提供。（另请参阅由 Keystore 服务提供支持的框架级 <a href="https://developer.android.com/training/articles/keystore.html">Android Keystore 系统</a>的相关信息。）对于 Android 6.0，两个受支持的身份验证组件是 Gatekeeper（用于 PIN 码/解锁图案/密码身份验证）和 Fingerprint（用于指纹身份验证）。这两个组件会通过已经过身份验证的渠道与 Keystore 服务沟通身份验证状态。</p>
+
+<ul>
+  <li><strong><a href="/security/keystore/index.html">由硬件支持的 Keystore</a>：</strong>加密服务（其中包括由硬件支持的密钥存储加密服务），可能包括可信执行环境 (TEE)。</li>
+  <li><strong><a href="gatekeeper.html">Gatekeeper</a>：</strong> 用于进行 PIN 码、解锁图案和密码身份验证的组件。</li>
+  <li><strong><a href="fingerprint-hal.html">Fingerprint</a>：</strong> 用于进行指纹身份验证的组件。</li>
+</ul>
+
+<h2 id="architecture">架构</h2>
+
+<p>Gatekeeper 和 Fingerprint 组件能够与 Keystore 及其他组件协同运作，以便支持使用由硬件支持的<a href="#authentication_token_format">身份验证令牌</a>（以下称为“AuthToken”）。</p>
+
+<h3 id="enrollment">注册</h3>
+
+<p>在设备恢复出厂设置后首次启动时，所有身份验证程序均会做好接受用户进行凭据注册的准备。</p>
+
+<p>用户必须先通过 Gatekeeper 注册 PIN 码/解锁图案/密码。这项初始注册会创建一个随机生成的 64 位用户 SID（用户安全标识符，下文中对此进行了介绍），该用户 SID 将用作用户的标识符以及用户加密材料的绑定令牌。该用户 SID 会以加密形式绑定到用户的密码。如下文中详细介绍的，成功通过 Gatekeeper 的身份验证后，将会为相应密码生成包含用户 SID 的 AuthToken。</p>
+
+<p>用户要更改凭据时，必须提供现有凭据。如果现有凭据成功通过验证，与现有凭据关联的用户 SID 将转移到新凭据。这让用户在更改凭据后能够继续访问自己的密钥。如果用户未提供现有凭据，系统会为其注册一个新凭据，其中包含一个完全随机的用户 SID。用户可以访问设备，但会永久丢失基于旧用户 SID 创建的密钥。这种情况称为“不可信注册”。</p>
+
+<p>请注意，在一般情况下，Android 框架不允许进行不可信注册，因此大多数用户根本看不到此功能。不过，如果设备管理员或攻击者强制重置密码，则可能会导致发生这种情况。</p>
+
+<h3 id="authentication">身份验证</h3>
+
+<p>现在，用户已设置凭据并收到了用户 SID，接下来就可以开始进行身份验证了。</p>
+
+<p>在下图中，用户提供 PIN 码、解锁图案、密码或指纹后，身份验证过程便开始了。所有 TEE 组件都共用一个密钥来验证对方的消息。</p>
+
+<img src="../images/authentication-flow.png" alt="身份验证流程" id="figure1"/>
+<p class="img-caption"><strong>图 1. </strong> 身份验证流程</p>
+
+<p>以下步骤中的数字对应于上图中的数字，并包括对 Android 操作系统和 TEE 操作系统的引用：</p>
+
+<ol>
+  <li>用户提供 PIN 码、解锁图案、密码或指纹。<code>LockSettingsService</code> 或 <code>FingerprintService</code> 通过 Binder 向 Android 操作系统中的 Gatekeeperd 或 fingerprintd 守护进程发出请求。请注意，在指纹请求发出后，会异步发生指纹身份验证。
+  </li><li>该步骤涉及 <strong></strong>Gatekeeperd（下方选项 1）<strong>或</strong> fingerprintd（下方选项 2），具体取决于用户提供的是 PIN 码/解锁图案/密码还是指纹。
+  <ul>
+    <li>Gatekeeperd 守护进程将在第 1 步中收到的 PIN 码、解锁图案或密码哈希发送到它在 TEE 内的副本 (Gatekeeper)。如果 TEE 内的身份验证成功，TEE 内的 Gatekeeper 会将包含相应用户 SID 并且已使用 AuthToken HMAC 密钥签名的 AuthToken 发送到它在 Android 操作系统中的副本。</li><li>或者，监听指纹事件的 fingerprintd 守护进程将在第 1 步中收到的数据发送到它在 TEE 内的副本 (Fingerprint)。如果 TEE 内的身份验证成功，TEE 内的 Fingerprint 会将已使用 AuthToken HMAC 密钥签名的 AuthToken 发送到它在 Android 操作系统中的副本。</li></ul>
+  </li><li>Gatekeeperd 或 fingerprintd 守护进程收到经过签名的 AuthToken，并通过 Keystore 服务 Binder 接口的扩展程序将 AuthToken 传递到 Keystore 服务。此外，Gatekeeperd 会在设备被重新锁定以及设备密码发生变化时通知 Keystore 服务。
+  </li><li>Keystore 服务将从 Gatekeeperd 和 fingerprintd 收到的 AuthToken 传递给 Keymaster，以便使用与 Gatekeeper 和 Fingerprint Trustlet 共用的密钥验证 AuthToken。Keymaster 会将令牌中的时间戳视为最后一次身份验证的时间，并根据该时间戳做出密钥发布决定（以允许应用使用相应密钥）。
+</li></ol>
+
+<p class="note"><strong>注意</strong>：每当设备重新启动时，AuthToken 都会作废。</p>
+
+<h2 id="authentication_token_format">身份验证令牌格式</h2>
+
+<p>要共用令牌并在各种语言和组件之间实现兼容性，必须遵循 <a href="https://android.googlesource.com/platform/hardware/libhardware/+/master/include/hardware/hw_auth_token.h"><code>hw_auth_token.h</code></a> 文件中说明的 AuthToken 格式。请参阅以下文件：</p>
+<pre>
+hardware/libhardware/include/hardware/hw_auth_token.h
+</pre>
+
+<p>下表中定义了一个简单序列化协议的必填字段。这些字段具有固定的大小。</p>
+
+<p>字段说明位于该表下方。</p>
+<table>
+ <tbody><tr>
+    <th><strong>字段</strong></th>
+    <th><strong>类型</strong></th>
+    <th><strong>必填还是选填</strong></th>
+ </tr>
+ <tr>
+    <td>AuthToken 版本</td>
+    <td>1 个字节</td>
+    <td>必填</td>
+ </tr>
+ <tr>
+    <td>质询</td>
+    <td>64 位未签名整数</td>
+    <td>选填</td>
+ </tr>
+ <tr>
+    <td>用户 SID</td>
+    <td>64 位未签名整数</td>
+    <td>必填</td>
+ </tr>
+ <tr>
+    <td>身份验证程序 ID</td>
+    <td>64 位未签名整数，按网络字节序保存</td>
+    <td>选填</td>
+ </tr>
+ <tr>
+    <td>身份验证程序类型</td>
+    <td>32 位未签名整数，按网络字节序保存</td>
+    <td>必填</td>
+ </tr>
+ <tr>
+    <td>时间戳</td>
+    <td>64 位未签名整数，按网络字节序保存</td>
+    <td>必填</td>
+ </tr>
+ <tr>
+    <td>AuthToken HMAC 密钥 (SHA-256)</td>
+    <td>256 位 Blob</td>
+    <td>必填</td>
+ </tr>
+</tbody></table>
+
+<h3 id="field_descriptions">字段说明</h3>
+
+<p>本部分对上方 AuthToken 表中的各个字段进行了说明。</p>
+
+<p><strong>AuthToken 版本</strong>：下方所有字段的组代码。</p>
+
+<p><strong>质询</strong>：一个随机整数，用于防范重放攻击。通常是所请求的加密操作的 ID，目前可供交易指纹授权使用。如果质询存在，AuthToken 仅对包含相应质询的加密操作有效。</p>
+
+<p><strong>用户 SID</strong>：不重复的用户标识符，以加密形式绑定到与设备身份验证关联的所有密钥。如需更多信息，请参阅 Gatekeeper 页面。</p>
+
+<p><strong>身份验证程序 ID (ASID)</strong>：绑定到特定身份验证程序政策时使用的标识符。所有身份验证程序都有自己的 ASID 值，它们可以根据自己的要求更改该值。</p>
+
+<p><strong>身份验证程序类型</strong>：Gatekeeper 或 Fingerprint，如下所示：</p>
+<table>
+ <tbody><tr>
+    <th><strong>身份验证程序类型</strong></th>
+    <th><strong>身份验证程序名称</strong></th>
+ </tr>
+ <tr>
+    <td>0x00</td>
+    <td>Gatekeeper</td>
+ </tr>
+ <tr>
+    <td>0x01</td>
+    <td>Fingerprint</td>
+ </tr>
+</tbody></table>
+
+<p><strong>时间戳</strong>：自最近一次系统启动以来已经过的时间（以毫秒数计）。</p>
+
+<p><strong>AuthToken HMAC 密钥</strong>：除 HMAC 字段以外所有字段的已加密 SHA-256 MAC。</p>
+
+<h2 id="device_boot_flow">设备启动流程</h2>
+
+<p>设备每次启动时，都必须生成 AuthToken HMAC 密钥并与所有 TEE 组件（Gatekeeper、Fingerprint 和 Keymaster）共用该密钥。因此，设备每次重新启动时都必须随机生成 HMAC 密钥，以便加强对重放攻击的防范力度。</p>
+
+<p>关于与所有组件共用此 HMAC 密钥的协议是一项依赖于平台的实现功能。<strong>在任何情况下都不能</strong>将该密钥设为可在 TEE 以外获得。因此，如果 TEE 操作系统缺少内部进程间通信 (IPC) 机制，并且 TEE 需要通过不可信操作系统传输数据，那么传输操作必须通过安全的密钥交换协议进行。</p>
+
+<p>与 Android 并排运行的 <a href="/security/trusty/index.html">Trusty</a> 操作系统就是一种 TEE，不过也可以使用其他 TEE。Trusty 使用内部 IPC 系统在 Keymaster 和 Fingerprint 或 Gatekeeper 之间直接进行通信。HMAC 密钥单独保存在 Keymaster 内。Fingerprint 和 Gatekeeper 会在每次使用该密钥时向 Keymaster 请求该密钥，而不会保留或缓存该密钥的值。</p>
+
+<p>请注意，TEE 中的小程序之间不会进行任何通信，因为 IPC 基础架构中缺少部分 TEE。这还使得 Keystore 服务因知晓系统内的身份验证表而能够快速拒绝注定会失败的请求，从而避免向 TEE 发送会占用大量处理能力的 IPC。</p>
+
+</body></html>

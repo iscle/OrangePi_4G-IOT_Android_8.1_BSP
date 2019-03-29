@@ -1,0 +1,383 @@
+<html devsite>
+  <head>
+    <title>Application security</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<h2 id="elements-of-applications">Elements of Applications</h2>
+<p>Android provides an open source platform and application environment for mobile
+  devices. The core operating system is based on the Linux kernel. Android
+  applications are most often written in the Java programming language and run in
+  the Dalvik virtual machine. However, applications can also be written in native
+  code. Applications are installed from a single file with the .apk file
+  extension.</p>
+<p>The main Android application building blocks are:</p>
+<ul>
+  <li>
+    <p><strong>AndroidManifest.xml</strong>: The <a
+      href="https://developer.android.com/guide/topics/manifest/manifest-intro.html">AndroidManifest.xml</a>
+      file is the control file that tells the system what to do with
+      all the top-level components (specifically activities, services, broadcast
+      receivers, and content providers described below) in an application. This also
+      specifies which permissions are required.</p>
+  </li>
+  <li>
+    <p><strong>Activities</strong>: An <a
+      href="https://developer.android.com/guide/topics/fundamentals/activities.html">Activity</a>
+      is, generally, the code for a single, user-focused task.  It usually
+      includes displaying a UI to the user, but it does not have to -- some
+      Activities never display UIs.  Typically, one of the application's Activities
+      is the entry point to an application.</p>
+  </li>
+  <li>
+    <p><strong>Services</strong>: A <a
+      href="https://developer.android.com/guide/topics/fundamentals/services.html">Service</a>
+      is a body of code that runs in the background. It can run in its own
+      process, or in the context of another application's process. Other components "bind" to
+      a Service and invoke methods on it via remote procedure calls. An example of a
+      Service is a media player: even when the user quits the media-selection UI, the
+      user probably still intends for music to keep playing. A Service keeps the
+      music going even when the UI has completed.</p>
+  </li>
+  <li>
+    <p><strong>Broadcast Receiver</strong>: A <a
+      href="https://developer.android.com/reference/android/content/BroadcastReceiver.html">BroadcastReceiver</a>
+      is an object that is instantiated when an IPC mechanism
+      known as an <a
+        href="https://developer.android.com/reference/android/content/Intent.html">Intent</a>
+      is issued by the operating system or another application.  An application
+      may register a receiver for the low battery message, for example, and
+      change its behavior based on that information.</p>
+  </li>
+</ul>
+<h2 id="the-android-permission-model-accessing-protected-apis">The Android Permission Model: Accessing Protected APIs</h2>
+<p>All applications on Android run in an <a
+href="/security/overview/kernel-security#the-application-sandbox">Application Sandbox</a>.
+  By default, an Android application can only access a limited range of system
+  resources. The system manages Android application access to resources that, if
+  used incorrectly or maliciously, could adversely impact the user experience,
+  the network, or data on the device.</p>
+<p>These restrictions are implemented in a variety of different forms.  Some
+  capabilities are restricted by an intentional lack of APIs to the sensitive
+  functionality (e.g. there is no Android API for directly manipulating the SIM
+  card).  In some instances, separation of roles provides a security measure, as
+  with the per-application isolation of storage. In other instances, the
+  sensitive APIs are intended for use by trusted applications and protected
+  through a security mechanism known as Permissions.</p>
+<p>These protected APIs include:</p>
+<ul>
+  <li>Camera functions</li>
+  <li>Location data (GPS)</li>
+  <li>Bluetooth functions</li>
+  <li>Telephony functions</li>
+  <li>SMS/MMS functions</li>
+  <li>Network/data connections</li>
+</ul>
+<p>These resources are only accessible through the operating system.  To make use
+  of the protected APIs on the device, an application must define the
+  capabilities it needs in its manifest.  When preparing to install an
+  application, the system displays a dialog to the user that indicates the
+  permissions requested and asks whether to continue the installation.  If the
+  user continues with the installation, the system accepts that the user has
+  granted all of the requested permissions. The user can not grant or deny
+  individual permissions -- the user must grant or deny all of the requested
+  permissions as a block.</p>
+<p>Once granted, the permissions are applied to the application as long as it is
+  installed.  To avoid user confusion, the system does not notify the user again
+  of the permissions granted to the application, and applications that are
+  included in the core operating system or bundled by an OEM do not request
+  permissions from the user. Permissions are removed if an application is
+  uninstalled, so a subsequent re-installation will again result in display of
+  permissions.</p>
+<p>Within the device settings, users are able to view permissions for applications
+  they have previously installed. Users can also turn off some functionality
+  globally when they choose, such as disabling GPS, radio, or wi-fi.</p>
+<p>In the event that an application attempts to use a protected feature which has
+  not been declared in the application's manifest, the permission failure will
+  typically result in a security exception being thrown back to the application.
+  Protected API permission checks are enforced at the lowest possible level to
+  prevent circumvention. An example of the user messaging when an application is
+  installed while requesting access to protected APIs is shown in <em>Figure 2</em>.</p>
+<p>The system default permissions are described at <a href="https://developer.android.com/reference/android/Manifest.permission.html">https://developer.android.com/reference/android/Manifest.permission.html</a>.
+  Applications may declare their own permissions for other applications to use.
+  Such permissions are not listed in the above location.</p>
+<p>When defining a permission a protectionLevel attribute tells the system how the
+  user is to be informed of applications requiring the permission, or who is
+  allowed to hold a permission. Details on creating and using application
+  specific permissions are described at <a href="https://develo
+per.android.com/guide/topics/security/security.html">https://developer.android.com/guide/topics/security/security.html</a>.</p>
+<p>There are some device capabilities, such as the ability to send SMS broadcast
+  intents, that are not available to third-party applications, but that may be
+  used by applications pre-installed by the OEM. These permissions use the
+  signatureOrSystem permission.</p>
+<h2 id="how-users-understand-third-party-applications">How Users Understand Third-Party Applications</h2>
+<p>Android strives to make it clear to users when they are interacting with
+  third-party applications and inform the user of the capabilities those
+  applications have.  Prior to installation of any application, the user is shown
+  a clear message about the different permissions the application is requesting.
+  After install, the user is not prompted again to confirm any permissions.</p>
+<p>There are many reasons to show permissions immediately prior to installation
+  time. This is when user is actively reviewing information about the
+  application, developer, and functionality to determine whether it matches their
+  needs and expectations.  It is also important that they have not yet
+  established a mental or financial commitment to the app, and can easily compare
+  the application to other alternative applications.</p>
+<p>Some other platforms use a different approach to user notification, requesting
+  permission at the start of each session or while applications are in use. The
+  vision of Android is to have users switching seamlessly between applications at
+  will. Providing confirmations each time would slow down the user and prevent
+  Android from delivering a great user experience. Having the user review
+  permissions at install time gives the user the option to not install the
+  application if they feel uncomfortable.</p>
+<p>Also, many user interface studies have shown that over-prompting the user
+  causes the user to start saying "OK" to any dialog that is shown. One of
+  Android's security goals is to effectively convey important security
+  information to the user, which cannot be done using dialogs that the user will
+  be trained to ignore. By presenting the important information once, and only
+  when it is important, the user is more likely to think about what they are
+  agreeing to.</p>
+<p>Some platforms choose not to show any information at all about application
+  functionality. That approach prevents users from easily understanding and
+  discussing application capabilities. While it is not possible for all users to
+  always make fully informed decisions, the Android permissions model makes
+  information about applications easily accessible to a wide range of users.  For
+  example, unexpected permissions requests can prompt more sophisticated users to
+  ask critical questions about application functionality and share their concerns
+  in places such as <a href="htts://play.google.com">Google Play</a> where they
+  are visible to all users.</p>
+<table>
+  <tr>
+    <td><strong>Permissions at Application Install -- Google Maps</strong></td>
+    <td><strong>Permissions of an Installed Application -- Gmail</strong></td>
+  </tr>
+  <tr>
+    <td><img alt="Permissions at Application Install -- Google Maps" width=250
+src="../images/image_install.png" /></td>
+    <td><img alt="Permissions of an Installed Application -- Gmail" width=250
+src="../images/image_gmail_installed.png" id="figure1" /></td>
+  </tr>
+</table>
+<p class="img-caption">
+  <strong>Figure 1.</strong> Display of permissions for applications
+</p>
+<h2 id="interprocess-communication">Interprocess Communication</h2>
+<p>Processes can communicate using any of the traditional UNIX-type mechanisms.
+  Examples include the filesystem, local sockets, or signals. However, the Linux
+  permissions still apply.</p>
+<p>Android also provides new IPC mechanisms:</p>
+<ul>
+  <li>
+    <p><strong>Binder</strong>: A lightweight capability-based remote procedure call mechanism
+      designed for high performance when performing in-process and cross-process
+      calls. Binder is implemented using a custom Linux driver. See <a href="https://developer
+.android.com/reference/android/os/Binder.html">https://developer.android.com/reference/android/os/Binder.html</a>.</p>
+  </li>
+  <li>
+    <p><strong>Services</strong>: Services (discussed above) can provide interfaces directly
+      accessible using binder.</p>
+  </li>
+  <li>
+    <p><strong>Intents</strong>: An Intent is a simple message object that represents an
+      "intention" to do something. For example, if your application wants to display
+      a web page, it expresses its "Intent" to view the URL by creating an Intent
+      instance and handing it off to the system. The system locates some other piece
+      of code (in this case, the Browser) that knows how to handle that Intent, and
+      runs it. Intents can also be used to broadcast interesting events (such as a
+      notification) system-wide. See
+      <a href="https://developer.android.com/reference/android/content/Intent.html">https://developer.android.com/reference/android/content/Intent.html</a>.</p>
+  </li>
+  <li>
+    <p><strong>ContentProviders</strong>: A ContentProvider is a data storehouse that provides
+      access to data on the device; the classic example is the ContentProvider that
+      is used to access the user's list of contacts. An application can access data
+      that other applications have exposed via a ContentProvider, and an application
+      can also define its own ContentProviders to expose data of its own. See <a href="https://developer.android.com/reference/android/content/ContentProvider.html">https://developer.android.com/reference/android/content/ContentProvider.html</a>.</p>
+  </li>
+</ul>
+<p>While it is possible to implement IPC using other mechanisms such as network
+  sockets or world-writable files, these are the recommended Android IPC
+  frameworks. Android developers will be encouraged to use best practices around
+  securing users' data and avoiding the introduction of security vulnerabilities.</p>
+<h2 id="cost-sensitive-apis">Cost-Sensitive APIs</h2>
+<p>A cost sensitive API is any function that might generate a cost for the user or
+  the network. The Android platform has placed cost sensitive APIs in the list of
+  protected APIs controlled by the OS. The user will have to grant explicit
+  permission to third-party applications requesting use of cost sensitive APIs.
+  These APIs include:</p>
+<ul>
+  <li>Telephony</li>
+  <li>SMS/MMS</li>
+  <li>Network/Data</li>
+  <li>In-App Billing</li>
+  <li>NFC Access</li>
+</ul>
+<p> Android 4.2 adds further control on the use of SMS. Android will provide a
+  notification if an application attempts to send SMS to a short code that uses
+  premium services which might cause additional charges.  The user can choose
+  whether to allow the application to send the message or block it. </p>
+<h2 id="sim-card-access">SIM Card Access</h2>
+<p>Low level access to the SIM card is not available to third-party apps. The OS
+  handles all communications with the SIM card including access to personal
+  information (contacts) on the SIM card memory. Applications also cannot access
+  AT commands, as these are managed exclusively by the Radio Interface Layer
+  (RIL). The RIL provides no high level APIs for these commands.</p>
+<h2 id="personal-information">Personal Information</h2>
+<p>Android has placed APIs that provide access to user data into the set of
+  protected APIs.  With normal usage, Android devices will also accumulate user
+  data within third-party applications installed by users.   Applications that
+  choose to share this information can use Android OS permission checks to
+  protect the data from third-party applications.</p>
+<img alt="Access to sensitive user data available only through protected
+APIs" src="../images/permissions_check.png" id="figure2" />
+<p class="img-caption">
+  <strong>Figure 2.</strong> Access to sensitive user data is available only through protected APIs
+</p>
+<p>System content providers that are likely to contain personal or personally
+  identifiable information such as contacts and calendar have been created with
+  clearly identified permissions. This granularity provides the user with clear
+  indication of the types of information that may be provided to the application.
+  During installation, a third-party application may request permission to
+  access these resources.  If permission is granted, the application can be
+  installed and will have access to the data requested at any time when it is
+  installed.</p>
+<p>Any applications which collect personal information will, by default, have that
+  data restricted only to the specific application.  If an application chooses to
+  make the data available to other applications though IPC, the application
+  granting access can apply permissions to the IPC mechanism that are enforced by
+  the operating system.</p>
+<h2 id="sensitive-data-input-devices">Sensitive Data Input Devices</h2>
+<p>Android devices frequently provide sensitive data input devices that allow
+  applications to interact with the surrounding environment, such as camera,
+  microphone or GPS.  For a third-party application to access these devices, it
+  must first be explicitly provided access by the user through the use of Android
+  OS Permissions.  Upon installation, the installer will prompt the user
+  requesting permission to the sensor by name.</p>
+<p>If an application wants to know the user's location, the application requires a
+  permission to access the user's location. Upon installation, the installer will
+  prompt the user asking if the application can access the user's location. At
+  any time, if the user does not want any application to access their location,
+  then the user can run the "Settings" application, go to "Location &amp; Security",
+  and uncheck the "Use wireless networks" and "Enable GPS satellites". This will
+  disable location based services for all applications on the user's device.</p>
+<h2 id="device-metadata">Device Metadata</h2>
+<p>Android also strives to restrict access to data that is not intrinsically
+  sensitive, but may indirectly reveal characteristics about the user, user
+  preferences, and the manner in which they use a device.</p>
+<p>By default applications do not have access to operating system logs,
+  browser history, phone number, or hardware / network identification
+  information.  If an application requests access to this information at install
+  time, the installer will prompt the user asking if the application can access
+  the information. If the user does not grant access, the application will not be
+  installed.</p>
+<h2 id="certificate-authorities">Certificate authorities</h2>
+<p>
+Android includes a set of installed system Certificate Authorities, which are
+trusted system-wide. Prior to Android 7.0, device manufacturers could modify the
+set of CAs shipped on their devices. However, devices running 7.0 and above will
+have a uniform set of system CAs as modification by device manufacturers is no
+longer permitted.
+</p>
+<p>
+To be added as a new public CA to the Android stock set, the CA must complete
+the <a href="https://wiki.mozilla.org/CA:How_to_apply">Mozilla CA Inclusion
+Process</a> and then file a feature request against Android (<a
+href="https://code.google.com/p/android/issues/entry">https://code.google.com/p/android/issues/entry</a>)
+to have the CA added to the stock Android CA set in the <a
+href="https://android.googlesource.com/">Android Open Source Project</a>
+(AOSP).
+</p>
+<p>
+There are still CAs that are device-specific and should not be included in the
+core set of AOSP CAs, like carriers’ private CAs that may be needed to securely
+access components of the carrier’s infrastructure, such as SMS/MMS gateways.
+Device manufacturers are encouraged to include the private CAs only in the
+components/apps that need to trust these CAs. See <a
+href="https://developer.android.com/preview/features/security-config.html">Network
+Security Configuration</a> for more details.
+</p>
+<h2 id="application-signing">Application Signing</h2>
+<p><a href="/security/apksigning/index.html">Code signing</a>
+  allows developers to identify the author of the application and to
+  update their application without creating complicated interfaces and
+  permissions. Every application that is run on the Android platform must be
+  signed by the developer.  Applications that attempt to install without being
+  signed will rejected by either Google Play or the package installer on
+  the Android device.</p>
+<p>On Google Play, application signing bridges the trust Google has with the
+  developer and the trust the developer has with their application.  Developers
+  know their application is provided, unmodified to the Android device; and
+  developers can be held accountable for behavior of their application.</p>
+<p>On Android, application signing is the first step to placing an application in
+  its Application Sandbox. The signed application certificate defines which user
+  id is associated with which application; different applications run under
+  different user IDs. Application signing ensures that one application cannot
+  access any other application except through well-defined IPC.</p>
+<p>When an application (APK file) is installed onto an Android device, the Package
+  Manager verifies that the APK has been properly signed with the certificate
+  included in that APK.  If the certificate (or, more accurately, the public key
+  in the certificate) matches the key used to sign any other APK on the device,
+  the new APK has the option to specify in the manifest that it will share a UID
+  with the other similarly-signed APKs.</p>
+<p>Applications can be signed by a third-party (OEM, operator, alternative market)
+  or self-signed. Android provides code signing using self-signed certificates
+  that developers can generate without external assistance or permission.
+  Applications do not have to be signed by a central authority. Android currently
+  does not perform CA verification for application certificates.</p>
+<p>Applications are also able to declare security permissions at the Signature
+  protection level, restricting access only to applications signed with the same
+  key while maintaining distinct UIDs and Application Sandboxes. A closer
+  relationship with a shared Application Sandbox is allowed via the <a href="https://developer.android.com/guide/topics/manifest/manifest-element.html#uid">shared UID
+    feature</a> where two or more applications signed with same developer key can
+  declare a shared UID in their manifest.</p>
+<h2 id="app-verification">Application Verification</h2>
+<p> Android 4.2 and later support application verification. Users can choose to
+  enable “Verify Apps" and have applications evaluated by an application verifier
+  prior to installation.  App verification can alert the user if they try to
+  install an app that might be harmful; if an application is especially bad, it
+  can block installation. </p>
+<h2 id="digital-rights-management">Digital Rights Management</h2>
+<p>The Android platform provides an extensible DRM framework that lets
+  applications manage rights-protected content according to the license
+  constraints that are associated with the content. The DRM framework supports
+  many DRM schemes; which DRM schemes a device supports is left to the device
+  manufacturer.</p>
+<p>The <a href="https://developer.android.com/reference/android/drm/package-summary.html">Android DRM
+  framework</a> is implemented in two architectural layers (see figure below):</p>
+<ul>
+  <li>
+    <p>A DRM framework API, which is exposed to applications through the Android
+      application framework and runs through the Dalvik VM for standard applications.</p>
+  </li>
+  <li>
+    <p>A native code DRM manager, which implements the DRM framework and exposes an
+      interface for DRM plug-ins (agents) to handle rights management and decryption
+      for various DRM schemes</p>
+  </li>
+</ul>
+<p><img alt="Architecture of Digital Rights Management on Android
+platform" src="/devices/images/ape_fwk_drm_2.png" id="figure3" /></p>
+<p class="img-caption">
+  <strong>Figure 3.</strong> Architecture of Digital Rights Management on Android platform
+</p>
+
+  </body>
+</html>

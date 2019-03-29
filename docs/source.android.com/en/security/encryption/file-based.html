@@ -1,0 +1,509 @@
+<html devsite>
+  <head>
+    <title>File-Based Encryption</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>
+Android 7.0 and later supports file-based encryption (FBE). File-based
+encryption allows different files to be encrypted with different keys that can
+be unlocked independently.
+</p>
+<p>
+This article describes how to enable file-based encryption on new devices
+and how system applications can be updated to take full advantage of the new
+Direct Boot APIs and offer users the best, most secure experience possible.
+</p>
+
+<p class="warning"><strong>Warning:</strong> File-based encryption cannot
+currently be used together with <a
+href="/devices/storage/adoptable.html">adoptable storage</a>. On devices using
+file-based encryption, new storage media (such as an SD card) must be used as
+<a href="/devices/storage/traditional.html">traditional storage</a>.</p>
+
+<h2 id="direct-boot">Direct Boot</h2>
+<p>
+File-based encryption enables a new feature introduced in Android 7.0 called <a
+href="https://developer.android.com/training/articles/direct-boot.html">Direct
+Boot</a>. Direct Boot allows encrypted devices to boot straight to the lock
+screen. Previously, on encrypted devices using <a href="full-disk.html">full-disk
+encryption</a> (FDE), users needed to provide credentials before any data could
+be accessed, preventing the phone from performing all but the most basic of
+operations. For example, alarms could not operate, accessibility services were
+unavailable, and phones could not receive calls but were limited to only basic
+emergency dialer operations.
+</p>
+<p>
+With the introduction of file-based encryption (FBE) and new APIs to make
+applications aware of encryption, it is possible for these apps to operate
+within a limited context. This can happen before users have provided their
+credentials while still protecting private user information.
+</p>
+<p>
+On an FBE-enabled device, each user of the device has two storage locations
+available to applications:
+</p>
+<ul>
+  <li>Credential Encrypted (CE) storage, which is the default storage location
+      and only available after the user has unlocked the device.</li>
+  <li>Device Encrypted (DE) storage, which is a storage location available both
+      during Direct Boot mode and after the user has unlocked the device.</li>
+</ul>
+<p>
+This separation makes work profiles more secure because it allows more than one
+user to be protected at a time as the encryption is no longer based solely on a
+boot time password.
+</p>
+<p>
+The Direct Boot API allows encryption-aware applications to access each of these
+areas. There are changes to the application lifecycle to accommodate the need to
+notify applications when a user’s CE storage is <em>unlocked</em> in response to
+first entering credentials at the lock screen, or in the case of work profile
+providing a
+<a href="https://developer.android.com/about/versions/nougat/android-7.0.html#android_for_work">work
+challenge</a>. Devices running Android 7.0 must support these new APIs and
+lifecycles regardless of whether or not they implement FBE. Although, without
+FBE, DE and CE storage will always be in the unlocked state.
+</p>
+<p>
+A complete implementation of file-based encryption on an Ext4 file system is
+provided in the Android Open Source Project (AOSP) and needs only be enabled on
+devices that meet the requirements. Manufacturers electing to use FBE may wish
+to explore ways of optimizing the feature based on the system on chip (SoC)
+used.
+</p>
+<p>
+All the necessary packages in AOSP have been updated to be direct-boot aware.
+However, where device manufacturers use customized versions of these apps, they
+will want to ensure at a minimum there are direct-boot aware packages providing
+the following services:
+</p>
+
+<ul>
+<li>Telephony Services and Dialer
+<li>Input method for entering passwords into the lock screen
+</ul>
+
+<h2 id="examples-and-source">Examples and source</h2>
+
+<p>
+Android provides a reference implementation of file-based encryption, in which
+vold (<a href="https://android.googlesource.com/platform/system/vold/">system/vold</a>)
+provides the functionality for managing storage devices and
+volumes on Android. The addition of FBE provides vold with several new commands
+to support key management for the CE and DE keys of multiple users. In addition
+to the core changes to use the <a href="#kernel-support">ext4 Encryption</a>
+capabilities in kernel many system packages including the lockscreen and the
+SystemUI have been modified to support the FBE and Direct Boot features. These
+include:
+</p>
+
+<ul>
+<li>AOSP Dialer (packages/apps/Dialer)
+<li>Desk Clock (packages/apps/DeskClock)
+<li>LatinIME (packages/inputmethods/LatinIME)*
+<li>Settings App (packages/apps/Settings)*
+<li>SystemUI (frameworks/base/packages/SystemUI)*</li></ul>
+<p>
+<em>* System applications that use the <code><a
+href="#supporting-direct-boot-in-system-applications">defaultToDeviceProtectedStorage</a></code>
+manifest attribute</em>
+</p>
+<p>
+More examples of applications and services that are encryption aware can be
+found by running the command <code>mangrep directBootAware</code> in the
+frameworks or packages directory of the AOSP
+source tree.
+</p>
+<h2 id="dependencies">Dependencies</h2>
+<p>
+To use the AOSP implementation of FBE securely, a device needs to meet the
+following dependencies:
+</p>
+
+<ul>
+<li><strong>Kernel Support</strong> for ext4 encryption (Kernel config option:
+EXT4_FS_ENCRYPTION)
+<li><strong><a
+href="/security/keystore/index.html">Keymaster
+Support</a></strong> with a HAL version 1.0 or 2.0. There is no support for
+Keymaster 0.3 as that does not provide that necessary capabilities or assure
+sufficient protection for encryption keys.
+<li><strong>Keymaster/<a
+href="/security/keystore/index.html">Keystore</a> and
+Gatekeeper</strong> must be implemented in a <a
+href="/security/trusty/index.html">Trusted Execution
+Environment</a> (TEE) to provide protection for the DE keys so that an
+unauthorized OS (custom OS flashed onto the device) cannot simply request the
+DE keys.
+<li><strong>Encryption performance</strong> in the kernel of at least 50MB/s
+using AES XTS to ensure a good user experience.
+<li><strong>Hardware Root of Trust</strong> and <strong>Verified Boot</strong>
+bound to the keymaster initialisation is required to ensure that Device
+Encryption credentials are not accessible by an unauthorized operating
+system.</li>
+</ul>
+
+<p class="note">
+<strong>Note</strong>: Storage policies are applied to a folder and all of its
+subfolders. Manufacturers should limit the contents that go unencrypted to the
+OTA folder and the folder that holds the key that decrypts the system. Most
+contents should reside in credential-encrypted storage rather than
+device-encrypted storage.
+</p>
+
+<h2 id="implementation">Implementation</h2>
+<p>
+First and foremost, apps such as alarm clocks, phone, accessibility features
+should be made android:directBootAware according to <a
+href="https://developer.android.com/training/articles/direct-boot.html">Direct
+Boot</a> developer documentation.
+</p>
+<h3 id="kernel-support">Kernel Support</h3>
+<p>
+The AOSP implementation of file-based encryption uses the ext4 encryption
+features in the Linux 4.4 kernel. The recommended solution is to use a kernel
+based on 4.4 or later. Ext4 encryption has also been backported to a 3.10 kernel
+in the Android common repositories and for the supported Nexus kernels.
+</p>
+<p>
+The android-3.10.y branch in the AOSP kernel/common git repository may
+provide a good starting point for device manufacturers that want to import this
+capability into their own device kernels. However, it is necessary to apply
+the most recent patches from the latest stable Linux kernel (currently <a
+href="https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/log/?id=refs/tags/v4.6">linux-4.6</a>)
+of the ext4 and jbd2 projects. The Nexus device kernels already include many of
+these patches.
+</p>
+<table>
+  <tr>
+   <th>Device</th>
+   <th>Kernel</th>
+  </tr>
+  <tr>
+   <td>Android Common
+   </td>
+   <td><strong>kernel/common</strong> android-3.10.y (<a
+href="https://android.googlesource.com/kernel/common/+/android-3.10.y">git</a>)
+   </td>
+  </tr>
+  <tr>
+   <td>Nexus 5X (bullhead)
+   </td>
+   <td><strong>kernel/msm</strong> android-msm-bullhead-3.10-n-preview-2 (<a
+href="https://android.googlesource.com/kernel/msm/+/android-msm-bullhead-3.10-n-preview-2">git</a>)
+   </td>
+  </tr>
+  <tr>
+   <td>Nexus 6P (angler)
+   </td>
+   <td><strong>kernel/msm</strong> android-msm-angler-3.10-n-preview-2 (<a
+href="https://android.googlesource.com/kernel/msm/+/android-msm-angler-3.10-n-preview-2">git</a>)
+   </td>
+  </tr>
+</table>
+<p>
+Note that each of these kernels uses a backport to 3.10. The ext4
+and jbd2 drivers from linux 3.18 were transplanted into existing kernels based
+on 3.10. Due to interdependencies between parts of the kernel, this backport
+breaks support for a number of features that are not used by Nexus devices.
+These include:
+</p>
+
+<ul>
+<li>The ext3 driver, although ext4 can still mount and use ext3 filesystems
+<li>Global File Sytem (GFS) Support
+<li>ACL support in ext4</li>
+</ul>
+
+<p>
+In addition to functional support for ext4 encryption, device manufacturers may
+also consider implementing cryptographic acceleration to speed up file-based
+encryption and improve the user experience.
+</p>
+<h3 id="enabling-file-based-encryption">Enabling file-based encryption</h3>
+<p>
+FBE is enabled by adding the flag <code>fileencryption</code> with no parameters
+to the <code>fstab</code> line in the final column for the <code>userdata</code>
+partition. You can see an example at:
+<a href="https://android.googlesource.com/device/lge/bullhead/+/nougat-release/fstab_fbe.bullhead">
+https://android.googlesource.com/device/lge/bullhead/+/nougat-release/fstab_fbe.bullhead</a>
+</p>
+<p>
+Whilst testing the FBE implementation on a device, it is possible to specify the
+following flag:
+<code>forcefdeorfbe="&lt;path/to/metadata/partition&gt;"</code>
+</p>
+<p>
+This sets the device up with FDE but allows conversion to FBE for developers. By
+default, this behaves like <code>forceencrypt</code>, putting the device into
+FDE mode. However, it will expose a debug option allowing a device to be put
+into FBE mode as is the case in the developer preview. It is also possible to
+enable FBE from fastboot using this command:
+</p>
+<p>
+<pre class="devsite-terminal devsite-click-to-copy">
+fastboot --wipe-and-use-fbe
+</pre>
+</p>
+<p>
+This is intended solely for development purposes as a platform for demonstrating
+the feature before actual FBE devices are released. This flag may be deprecated
+in the future.
+</p>
+<h3 id="integrating-with-keymaster">Integrating with Keymaster</h3>
+<p>
+The generation of keys and management of the kernel keyring is handled by
+<code>vold</code>. The AOSP implementation of FBE requires that the device
+support Keymaster HAL version 1.0 or later. There is no support for earlier
+versions of the Keymaster HAL.
+</p>
+<p>
+On first boot, user 0’s keys are generated and installed early in the boot
+process. By the time the <code>on-post-fs</code> phase of <code>init</code>
+completes, the Keymaster must be ready to handle requests. On Nexus devices,
+this is handled by having a script block:
+</p>
+
+<ul>
+<li>Ensure Keymaster is started before <code>/data</code> is mounted
+<li>Specify the file encryption cipher suite: AOSP implementation of file-based
+encryption uses AES-256 in XTS mode
+<p class="note">
+<strong>Note</strong>: All encryption is based on AES-256 in
+XTS mode. Due to the way XTS is defined, it needs two 256-bit keys; so in
+effect, both CE and DE keys are 512-bit keys.
+</p>
+</li>
+</ul>
+
+<h3 id="encryption-policy">Encryption policy</h3>
+<p>
+Ext4 encryption applies the encryption policy at the directory level. When a
+device’s <code>userdata</code> partition is first created, the basic structures
+and policies are applied by the <code>init</code> scripts. These scripts will
+trigger the creation of the first user’s (user 0’s) CE and DE keys as well as
+define which directories are to be encrypted with these keys. When additional
+users and profiles are created, the necessary additional keys are generated and
+stored in the keystore; their credential and devices storage locations are
+created and the encryption policy links these keys to those directories.
+</p>
+<p>
+In the current AOSP implementation, the encryption policy is hardcoded into this
+location:
+</p>
+<pre class="devsite-click-to-copy">/system/extras/ext4_utils/ext4_crypt_init_extensions.cpp</pre>
+<p>
+It is possible to add exceptions in this file to prevent certain directories
+from being encrypted at all, by adding to the <code>directories_to_exclude</code>
+list. If modifications of this sort are made then the device
+manufacturer should include <a href="/security/selinux/device-policy.html">
+SELinux policies</a> that only grant access to the
+applications that need to use the unencrypted directory. This should exclude all
+untrusted applications.
+</p>
+<p>
+The only known acceptable use case for this is in support of legacy OTA
+capabilities.
+</p>
+<h3 id="supporting-direct-boot-in-system-applications">
+Supporting Direct Boot in system applications</h3>
+
+<h4 id="making-applications-direct-boot-aware">
+Making applications Direct Boot aware</h4>
+<p>
+To facilitate rapid migration of system apps, there are two new attributes that
+can be set at the application level. The
+<code>defaultToDeviceProtectedStorage</code> attribute is available only to
+system apps. The <code>directBootAware</code> attribute is available to all.
+</p>
+
+<pre class="devsite-click-to-copy">
+&lt;application
+    android:directBootAware="true"
+    android:defaultToDeviceProtectedStorage="true"&gt;
+</pre>
+
+<p>
+The <code>directBootAware</code> attribute at the application level is shorthand for marking
+all components in the app as being encryption aware.
+</p>
+<p>
+The <code>defaultToDeviceProtectedStorage</code> attribute redirects the default
+app storage location to point at DE storage instead of pointing at CE storage.
+System apps using this flag must carefully audit all data stored in the default
+location, and change the paths of sensitive data to use CE storage. Device
+manufactures using this option should carefully inspect the data that they are
+storing to ensure that it contains no personal information.
+</p>
+<p>
+When running in this mode, the following System APIs are
+available to explicitly manage a Context backed by CE storage when needed, which
+are equivalent to their Device Protected counterparts.
+</p>
+
+<ul>
+<li><code>Context.createCredentialProtectedStorageContext()</code>
+<li><code>Context.isCredentialProtectedStorage()</code></li>
+</ul>
+<h4 id="supporting-multiple-users">Supporting multiple users</h4>
+<p>
+Each user in a multi-user environment gets a separate encryption key. Every user
+gets two keys: a DE and a CE key. User 0 must log into the device first as it is
+a special user. This is pertinent for <a
+href="/devices/tech/admin/index.html">Device
+Administration</a> uses.
+</p>
+<p>
+Crypto-aware applications interact across users in this manner:
+<code>INTERACT_ACROSS_USERS</code> and <code>INTERACT_ACROSS_USERS_FULL</code>
+allow an application to act across all the users on the device. However, those
+apps will be able to access only CE-encrypted directories for users that are
+already unlocked.
+</p>
+<p>
+An application may be able to interact freely across the DE areas, but one user
+unlocked does not mean that all the users on the device are unlocked. The
+application should check this status before trying to access these areas.
+</p>
+<p>
+Each work profile user ID also gets two keys: DE and CE. When the work challenge
+is met, the profile user is unlocked and the Keymaster (in TEE) can provide the
+profile’s TEE key.
+</p>
+<h3 id="handling-updates">Handling updates</h3>
+<p>
+The recovery partition is unable to access the DE protected storage on the
+userdata partition. Devices implementing FBE are strongly recommended to support
+OTA using the upcoming A/B system updates. As the OTA can be applied during
+normal operation there is no need for recovery to access data on the encrypted drive.
+</p>
+<p>
+If a legacy OTA solution is used, which requires recovery to access the OTA file
+on the userdata partition then:
+</p>
+
+<ul>
+<li>Create a top level directory (for example “misc_ne”) in the userdata
+partition.
+<li>Add this top level directory to the encryption policy exception (see <a
+href="#encryption-policy">Encryption policy</a> above).
+<li>Create a directory with this to hold OTA packages.
+<li>Add an SELinux rule and file contexts to control access to this folder and
+it contents. Only the process or applications receiving OTA updates should be be
+able to read and write to this folder.
+<li>No other application or process should have access to this folder.</li>
+</ul>
+
+<p>
+Within this folder create a directory to contain the OTA packages.
+</p>
+<h2 id="validation">Validation</h2>
+<p>
+To ensure the implemented version of the feature works as intended, employ the
+many <a href="https://android.googlesource.com/platform/cts/+/nougat-cts-release/hostsidetests/appsecurity/src/android/appsecurity/cts/DirectBootHostTest.java">
+CTS encryption tests</a>.
+</p>
+<p>
+Once the kernel builds for your board, also build for x86 and run under QEMU in
+order to test with <a
+hre="https://git.kernel.org/cgit/fs/ext2/xfstests-bld.git/plain/quick-start?h=META">
+xfstest</a> by using:
+</p>
+<pre class="devsite-terminal devsite-click-to-copy">
+kvm-xfstests -c encrypt -g auto
+</pre>
+<p>
+In addition, device manufacturers may perform these manual tests. On a device
+with FBE enabled:
+</p>
+
+<ul>
+  <li>Check that <code>ro.crypto.state</code> exists
+    <ul>
+      <li>Ensure <code>ro.crypto.state</code> is encrypted</li>
+    </ul>
+  </li>
+  <li>Check that <code>ro.crypto.type</code> exists
+    <ul>
+      <li>Ensure <code>ro.crypto.type</code> is set to <code>file</code></li>
+    </ul>
+  </li>
+</ul>
+
+<p>
+Additionally, testers can boot a <code>userdebug</code> instance with a lockscreen set on the
+primary user. Then <code>adb</code> shell into the device and use
+<code>su</code> to become root. Make sure <code>/data/data</code> contains
+encrypted filenames; if it does not, something is wrong.
+</p>
+<h2 id="aosp-implementation-details">AOSP implementation details</h2>
+<p>
+This section provides details on the AOSP implementation and describes how
+file-based encryption works. It should not be necessary for device manufacturers
+to make any changes here to use FBE and Direct Boot on their devices.
+</p>
+<h3 id="ext4-encryption">ext4 encryption</h3>
+<p>
+The AOSP implementation uses ext4 encryption in kernel and is configured to:
+</p><ul>
+<li>Encrypt file contents with AES-256 in XTS mode
+<li>Encrypt file names with AES-256 in CBC-CTS mode</li></ul>
+<h3 id="key-derivation">Key derivation</h3>
+<p>
+Disk encryption keys, which are 512-bit AES-XTS keys, are stored encrypted
+by another key (a 256-bit AES-GCM key) held in the TEE. To use this TEE key,
+three requirements must be met:
+</p><ul>
+<li>The auth token
+<li>The stretched credential
+<li>The “secdiscardable hash”</li></ul>
+<p>
+The <em>auth token</em> is a cryptographically authenticated token generated by
+<a
+href="/security/authentication/gatekeeper.html">Gatekeeper</a>
+when a user successfully logs in. The TEE will refuse to use the key unless the
+correct auth token is supplied. If the user has no credential, then no auth
+token is used nor needed.
+</p>
+<p>
+The <em>stretched credential</em> is the user credential after salting and
+stretching with the <code>scrypt</code> algorithm. The credential is actually
+hashed once in the lock settings service before being passed to
+<code>vold</code> for passing to <code>scrypt</code>. This is cryptographically
+bound to the key in the TEE with all the guarantees that apply to
+<code>KM_TAG_APPLICATION_ID</code>. If the user has no credential, then no
+stretched credential is used nor needed.
+</p>
+<p>
+The <code>secdiscardable hash</code> is a 512-bit hash of a random 16 KB file
+stored alongside other information used to reconstruct the key, such as the
+seed. This file is securely deleted when the key is deleted, or it is encrypted
+in a new way; this added protection ensures an attacker must recover every bit
+of this securely deleted file to recover the key. This is cryptographically
+bound to the key in the TEE with all the guarantees that apply to
+<code>KM_TAG_APPLICATION_ID</code>. See the <a
+href="/security/keystore/implementer-ref.html">Keystore
+Implementer's Reference</a>.
+
+  </body>
+</html>

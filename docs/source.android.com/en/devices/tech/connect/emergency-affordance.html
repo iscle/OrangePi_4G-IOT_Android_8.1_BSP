@@ -1,0 +1,285 @@
+<html devsite>
+  <head>
+    <title>Implementing Emergency Affordance</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>All mobile devices sold in India from the 1st January 2017 will need to
+provide a panic button to meet Indian Department of Telecommunications (DoT)
+requirements.</p>
+
+<p>An Emergency Affordance feature has been developed to provide a reference
+implementation of the panic button for Android devices to address these
+regulatory requirements. This will be enabled by default in future Android
+releases but must be patched into existing builds. Currently, this feature is
+exclusively targeted at devices that are sold in the Indian market but can be
+included on all devices sold throughout the world as the feature has no effect
+outside India.</p>
+
+<h2 id="examples-source">Examples and source</h2> <p>The Emergency Affordance
+feature is implemented in the Android Open Source Project (AOSP) <a
+href="https://android.googlesource.com/platform/frameworks/base/">frameworks/base</a>
+project. It is available in the master branch and will be enabled by default in
+future Android releases.</p>
+
+<p>This feature is currently available in the following branches and commits.
+This information is provided to enable device manufacturers to easily patch the
+necessary changes into their existing builds. Device manufacturers wanting to
+implement the AOSP reference emergency affordance feature can cherry-pick the
+commits from the applicable branches into their own builds.</p>
+
+<p class="table-caption" id="cherry-picks-reference-implementation">
+  <strong>Table 1.</strong> Cherry-picks for AOSP reference emergency affordance feature</p>
+<table>
+<tbody>
+<tr>
+<th scope="col">Branch</th>
+<th scope="col">Commits</th>
+</tr>
+<tr>
+<td>master</td>
+<td><a href="https://android-review.googlesource.com/#/c/284723/">e0c3c66</a>
+Added Emergency affordance feature<br>
+<a href="https://android-review.googlesource.com/#/c/287188/">42a4338</a>
+Added translations for emergency action string<br>
+<a href="https://android-review.googlesource.com/#/c/286858/">4df8d64</a>
+Fixed an issue where the emergency affordance would show on tablets
+</td>
+</tr>
+<tr>
+<td>nougat-dev</td>
+<td><a href="https://android-review.googlesource.com/#/c/284761/">e6680d9</a>
+Added Emergency affordance feature<br>
+<a href="https://android-review.googlesource.com/#/c/287293/">95e1865</a>
+Added translations for emergency action string<br>
+<a href="https://android-review.googlesource.com/#/c/286953/">a70bb89</a>
+Fixed an issue where the emergency affordance would show on tablets
+</td>
+</tr>
+<tr>
+<td>marshmallow-dev</td>
+<td><a href="https://android-review.googlesource.com/#/c/284624/">cd22634</a>
+Added Emergency affordance feature<br>
+<a href="https://android-review.googlesource.com/#/c/286937/">13f51c6</a>
+Added translations for emergency action string<br>
+<a href="https://android-review.googlesource.com/#/c/287241/">6531666</a>
+Fixed an issue where the emergency affordance would show on tablets
+</td>
+</tr>
+<tr>
+<td class="style1">lollipop-mr1-dev</td>
+<td><a href="https://android-review.googlesource.com/#/c/284743/">5fbc86b</a>
+Added Emergency affordance feature<br>
+<a href="https://android-review.googlesource.com/#/c/287382/">1b60879</a>
+Added translations for emergency action string<br>
+<a href="https://android-review.googlesource.com/#/c/286856/">d74366f</a>
+Fixed an issue where the emergency affordance would show on tablets
+</td>
+
+</tr>
+</tbody>
+</table>
+
+<h2 id="implementation">Implementation</h2> <p>The Emergency Affordance feature
+makes no changes to the APIs exposed through the Android SDK. When enabled and
+activated, it provides two triggers that can initiate an emergency call to
+112, which is the single emergency number to be used in India and mandated by
+the DoT regulations.<br> An emergency call is initiated by either:</p> <ul>
+<li>Long pressing the <strong>EMERGENCY</strong> button on the lockscreen
+(Figure 1)</li> <li>Tapping the <strong>Emergency</strong> option from the
+<em>Global Action Menu</em> (Figure 2), accessed by long pressing the power
+key.</li> </ul>
+
+<table>
+  <tr>
+    <td width="50%"><img src="/devices/tech/connect/images/emergency-button.png" alt="emergency
+button" width="246" id="emergency-button" />
+<p class="img-caption">
+  <strong>Figure 1.</strong> Long press the <strong>EMERGENCY</strong> button,
+highlighted with a red box, on the lock screen.</p></td>
+    <td width="50%"><img src="/devices/tech/connect/images/emergency-option.png" alt="emergency
+option" width="247" id="emergency-option" />
+<p class="img-caption">
+  <strong>Figure 2.</strong> Tap the <strong>Emergency</strong> action item on
+the <em>Global Action Menu</em>.</p></td>
+  </tr>
+</table>
+
+<p>This feature introduces the following internal components:</p> <ul>
+<li>EmergencyAffordanceManager
+<pre class="devsite-click-to-copy">
+frameworks/base/core/java/com/android/internal/policy/EmergencyAffordanceManager.java
+</pre>
+</li>
+<li>EmergencyAffordanceService
+<pre class="devsite-click-to-copy">
+frameworks/base/services/core/java/com/android/server/emergency/EmergencyAffordanceService.java
+</pre>
+</li>
+</ul>
+
+<h3 id="EmergencyAffordanceManager">EmergencyAffordanceManager</h3> <p>The
+EmergencyAffordanceManager provides an internal API to use the Emergency
+Affordance feature. It provides methods for initiating the emergency call and
+querying at runtime if the feature should be enabled.</p> <ul> <li><code>void
+performEmergencyCall()</code> - Initiates an emergency call</li>
+<li><code>boolean needsEmergencyAffordance()</code> - Determines if the feature
+should be active</li> </ul> <p>The feature may be permanently disabled at build
+time by changing the <code>EmergencyAffordanceManager.ENABLED</code> constant
+to <code>false</code>. This will cause <code>needsEmergencyAffordance()</code>
+to always return false and prevent the <code>EmergencyAffordanceService</code>
+from starting.</p>
+
+<h3 id="EmergencyAffordanceService">EmergencyAffordanceService</h3> <p>The
+<code>EmergencyAffordanceService</code> is a system service that monitors the
+Mobile Country Code (MCC) of all the detected cellular networks and the MCC of
+the installed SIM cards. If any of the installed SIM cards or detected cellular
+networks have a MCC matching one of India's MCCs (404,405) then the feature
+will be enabled. This means the feature can be enabled in India even if no SIM
+card is present. It is assumed the mobile network will permit registration for
+emergency calls even without a SIM card installed. The feature will remain
+enabled until a non-India SIM is installed and none of the detected networks
+have a matching MCC.</p>
+
+<p>The following resources and settings affect the behavior of the Emergency
+Affordance feature. If the config type is "Resource" it is an internal resource
+defined in <code>frameworks/base/core/res/res/values/config.xml</code>. If
+config type is "Setting" it is a setting stored in the systems settings
+provider.</p>
+
+<p class="table-caption" id="settings-affecting behavior">
+  <strong>Table 2.</strong> Settings affecting behavior of emergency affordance
+feature</p>
+<table>
+<tbody>
+<tr>
+<th scope="col">Config Type</th>
+<th scope="col">Name</th>
+<th scope="col">Description</th>
+</tr>
+<tr>
+<td>Resource</td>
+<td>config_emergency_call_number</td>
+<td>The phone number that is automatically dialed when the emergency call is
+initiated.<br>
+Type: String<br>
+Default: 112</td>
+</tr>
+<tr>
+<td>Resource</td>
+<td>config_emergency_mcc_codes</td>
+<td>An array of Integers listing the MCCs the feature should be active in.<br>
+Type: Array of Integers<br>
+Default: {404,405}</td>
+</tr>
+<tr>
+<td>Setting</td>
+<td>emergency_affordance_number</td>
+<td>Global setting override with the number to call with the emergency
+affordance. This will only have an effect on debuggable build images (ie. build
+type is userdebug or eng). This is intended only for testing.<br>
+Type: String<br>
+Default: unset</td>
+</tr>
+<tr>
+<td>Setting </td>
+<td>force_emergency_affordance</td>
+<td>Global setting, whether the emergency affordance should be shown regardless
+of device state. This is intended only for testing.<br>
+Type: Boolean (1 or 0)<br>
+Default: unset --&gt; 0</td>
+</tr>
+</tbody>
+</table>
+
+<h3 id="112">Enable emergency calls to '112'</h3> <p>The emergency affordance
+feature connects the call using the emergency dialer so that the call can be
+connected when the lock screen is active. The emergency dialer only connects
+calls to the list of numbers provided by the Radio Interface Layer (RIL),
+through the system property 'ril.ecclist', when no SIM is installed and
+'<code>ril.ecclist&lt;<i>SimSlotNumber</i>&gt;</code>' when a SIM is inserted
+and <code><i>&lt;SimSlotNumber&gt;</i></code> is the slot ID of the default
+subscriber.<br> Device manufacturers using the emergency affordance feature
+must ensure that devices in India always enable 112 as an emergency number in
+the RIL.</p>
+
+<h2 id="validation">Validation</h2> <p>While testing, on a debuggable build,
+the number that is called can be changed with the following command:</p>
+<pre class="devsite-terminal devsite-click-to-copy">
+adb shell settings put global emergency_affordance_number <var>NUMBER_TO_CALL</var>
+</pre>
+
+<p>Although this setting can be set on a normal user build, it will be ignored.
+To actually connect the call the number must be in the list of emergency
+numbers provided by the RIL. This can be temporarily set using the following
+command executed from a root shell on a userdebug device:</p>
+<pre class="devsite-terminal devsite-click-to-copy">
+setprop ril.ecclist "$(getprop ril.ecclist),<var>NUMBER_TO_CALL</var>"
+</pre>
+
+<p>The following command can also be used to force the Emergency Affordance
+feature to be enabled even in the absence of an Indian mobile network being
+detected or an Indian SIM card being inserted.</p>
+<pre class="devsite-terminal devsite-click-to-copy">
+adb shell settings put global force_emergency_affordance 1
+</pre>
+
+<p>During testing it is recommend that at least the following cases are
+tested.</p>
+
+<ul> <li>Once activated, long pressing the <strong>EMERGENCY</strong> button on
+the lockscreen (Figure 1) initiates a call the specified emergency number.</li>
+<li>Once activated, the <strong>Emergency</strong> item on the Global Action
+Menu is present and that tapping it initiates a call to the specified emergency
+number.</li> <li>The feature <b>is not</b> <b>activated</b> in the absence of a
+detected Indian Mobile Network with a non-India SIM card installed.</li>
+<li>The feature <b>is activated</b> on the device whilst an Indian SIM card is
+installed, regardless of the detected mobile networks.</li> <li>The feature
+<b>is</b> <b>activated</b> on the device whilst an in the presence of a Indian
+Mobile Network regardless of the SIM cards installed.</li> </ul>
+
+<p>If a device includes supports multiple SIM cards then testing should ensure
+that the SIM MCC detection works correctly in each SIM slot. The feature is not
+governed by Android compatibility, so there are no CTS tests for it.</p>
+
+<h2 id="faq">Frequently Asked Questions</h2>
+
+<h5 id="q-112">Q. The emergency number '112' has not been commissioned yet in
+India, should it still be used?</h5>
+
+<p>'112' is the number that will be used in India as the Public Safety
+Answering Point (PSAP) as defined by the Integrated Emergency Communications
+and Response Systems (IECRS). Until the PSAP is commissioned all calls to '112'
+will be routed to the existing '100' emergency number.</p>
+
+<h5 id="q-other-triggers">Q. What about other triggers like "triple" pressing
+the power button?</h5> <p>Device manufacturer may choose to implement
+additional triggers. Triple tapping the hardware power button is also an
+approved trigger action by the India DoT. However, this trigger is not
+supported in the AOSP reference implementation as a number of other widely used
+applications use the power button gestures, including repeated tapping of the
+power button. These applications might interfere with the emergency dialer, or
+the user may accidentally trigger the panic button while trying to trigger
+actions in these applications.</p>
+
+  </body>
+</html>

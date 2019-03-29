@@ -1,0 +1,1018 @@
+<html devsite>
+  <head>
+    <title>Reading Bug Reports</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>Bugs are a reality in any type of development&#8212;and bug reports are
+critical to identifying and solving problems. All versions of Android support
+capturing bug reports with <a href="http://developer.android.com/tools/help/adb.html">Android
+Debug Bridge (adb)</a>; Android versions 4.2 and higher support a
+<a href="http://developer.android.com/tools/device.html#developer-device-options">Developer
+Option</a> for taking bug reports and sharing via email, Drive, etc.</p>
+
+<p>Android bug reports contain <code>dumpsys</code>, <code>dumpstate</code>, and
+<code>logcat</code> data in text (.txt) format, enabling you to easily search
+for specific content. The following sections detail bug report components,
+describe common problems, and give helpful tips and <code>grep</code> commands
+for finding logs associated with those bugs. Most sections also include examples
+for <code>grep</code> command and output and/or <code>dumpsys</code> output.</p>
+
+<h2 id="logcat">Logcat</h2>
+<p>The <code>logcat</code> log is a string-based dump of all <code>logcat</code>
+information. The <strong>system</strong> part is reserved for the framework and
+has a longer history than <strong>main</strong> which contains everything else.
+Each line starts with <code>timestamp PID TID log-level</code>.</p>
+
+  <section class="expandable">
+    <h4 class="showalways">Show example</h4>
+    <p><pre>------ SYSTEM LOG (logcat -v threadtime -d *:v) ------
+--------- beginning of system
+<i>Blah</i>
+<i>Blah</i>
+<i>Blah</i>
+
+--------- beginning of main
+<i>Blah </i>
+<i>Blah</i>
+<i>Blah</i></pre></p>
+  </section>
+
+<h3 id="event-log">Viewing the event log</h3>
+<p>This log contains string representations of binary-formatted log messages. It
+is less noisy than the <code>logcat</code> log but also a little harder to read.
+When viewing event logs, you can search this section for specific process ID
+(PID) to see what a process has been doing. The basic format is:
+<code>timestamp PID TID log-level log-tag tag-values</code>.</p>
+
+<p>Log levels include the following:</p>
+<ul>
+<li>V: verbose</li>
+<li>D: debug</li>
+<li>I: information</li>
+<li>W: warning</li>
+<li>E: error</li>
+</ul>
+
+  <section class="expandable">
+    <h4 class="showalways">Show example</h4>
+    <p><pre>------ EVENT LOG (logcat -b events -v threadtime -d *:v) ------
+09-28 13:47:34.179   785  5113 I am_proc_bound: [0,23054,com.google.android.gms.unstable]
+09-28 13:47:34.777   785  1975 I am_proc_start: [0,23134,10032,com.android.chrome,broadcast,com.android.chrome/org.chromium.chrome.browser.precache.PrecacheServiceLauncher]
+09-28 13:47:34.806   785  2764 I am_proc_bound: [0,23134,com.android.chrome]
+...</pre></p>
+  </section>
+<p>&nbsp;</p>
+<p>For other useful event log tags, refer to
+<a href="https://android.googlesource.com/platform/frameworks/base/+/master/services/core/java/com/android/server/EventLogTags.logtags">/services/core/java/com/android/server/EventLogTags.logtags</a>.</p>
+
+<h2 id="anrs-deadlocks">ANRs and deadlocks</h2>
+<p>Bugreports can help you identify what's causing
+<a href="http://developer.android.com/training/articles/perf-anr.html">Application
+Not Responding (ANR)</a> errors and deadlock events.</p>
+
+<h3 id="determine-anr-app">Identifying unresponsive apps</h3>
+<p>When an application does not respond within a certain time, usually due to a
+blocked or busy main thread, the system kills the process and dumps the stack to
+<code>/data/anr</code>. To discover the culprit behind an ANR, grep for
+<code>am_anr</code> in the binary event log.</p>
+
+  <section class="expandable">
+    <h4 class="showalways">Show example</h4>
+    <p><pre>grep "am_anr" bugreport-2015-10-01-18-13-48.txt
+10-01 18:12:49.599  4600  4614 I am_anr  : [0,29761,com.google.android.youtube,953695941,executing service com.google.android.youtube/com.google.android.apps.youtube.app.offline.transfer.OfflineTransferService]
+10-01 18:14:10.211  4600  4614 I am_anr  : [0,30363,com.google.android.apps.plus,953728580,executing service com.google.android.apps.plus/com.google.android.apps.photos.service.PhotosService]</pre></p>
+  </section>
+
+<p></p>
+<p>You can also grep for <code>ANR in</code> in the <code>logcat</code> log,
+which contains more information about what was using CPU at the time of the ANR.
+</p>
+
+  <section class="expandable">
+    <h4 class="showalways">Show example</h4>
+    <p><pre>grep "ANR in" bugreport-2015-10-01-18-13-48.txt
+10-01 18:13:11.984  4600  4614 E ActivityManager: ANR in com.google.android.youtube
+10-01 18:14:31.720  4600  4614 E ActivityManager: ANR in com.google.android.apps.plus
+10-01 18:14:31.720  4600  4614 E ActivityManager: PID: 30363
+10-01 18:14:31.720  4600  4614 E ActivityManager: Reason: executing service com.google.android.apps.plus/com.google.android.apps.photos.service.PhotosService
+10-01 18:14:31.720  4600  4614 E ActivityManager: Load: 35.27 / 23.9 / 16.18
+10-01 18:14:31.720  4600  4614 E ActivityManager: CPU usage from 16ms to 21868ms later:
+10-01 18:14:31.720  4600  4614 E ActivityManager:   74% 3361/mm-qcamera-daemon: 62% user + 12% kernel / faults: 15276 minor 10 major
+10-01 18:14:31.720  4600  4614 E ActivityManager:   41% 4600/system_server: 18% user + 23% kernel / faults: 18597 minor 309 major
+10-01 18:14:31.720  4600  4614 E ActivityManager:   32% 27420/com.google.android.GoogleCamera: 24% user + 7.8% kernel / faults: 48374 minor 338 major
+10-01 18:14:31.720  4600  4614 E ActivityManager:   16% 130/kswapd0: 0% user + 16% kernel
+10-01 18:14:31.720  4600  4614 E ActivityManager:   15% 283/mmcqd/0: 0% user + 15% kernel
+...
+10-01 18:14:31.720  4600  4614 E ActivityManager:   0.1% 27248/irq/503-synapti: 0%
+10-01 18:14:31.721  4600  4614 I ActivityManager: Killing 30363:com.google.android.apps.plus/u0a206 (adj 0): bg anr</pre></p>
+  </section>
+
+<h3 id="find-stack-traces">Finding stack traces</h3>
+<p>You can often find stack traces that correspond to an ANR. Make sure the
+timestamp and PID on the VM traces match the ANR you are investigating, then
+check the main thread of the process. Keep in mind:</p>
+<ul>
+<li>The main thread tells you only what the thread was doing at the time of the
+ANR, which may or may not correspond to the true cause of the ANR. (The stack in
+the bug report may be innocent; something else may have been stuck for a long
+time&#8212;but not quite long enough to ANR&#8212;before becoming unstuck.)
+</li>
+<li>More than one set of stack traces (<code>VM TRACES JUST NOW</code> and
+<code>VM TRACES AT LAST ANR</code>) might exist. Make sure you are viewing the
+correct section.</li>
+</ul>
+
+  <section class="expandable">
+    <h4 class="showalways">Show example</h4>
+    <p><pre>------ VM TRACES AT LAST ANR (/data/anr/traces.txt: 2015-10-01 18:14:41) ------
+
+----- pid 30363 at 2015-10-01 18:14:11 -----
+Cmd line: com.google.android.apps.plus
+Build fingerprint: 'google/angler/angler:6.0/MDA89D/2294819:userdebug/dev-keys'
+ABI: 'arm'
+Build type: optimized
+Zygote loaded classes=3978 post zygote classes=27
+Intern table: 45068 strong; 21 weak
+JNI: CheckJNI is off; globals=283 (plus 360 weak)
+Libraries: /system/lib/libandroid.so /system/lib/libcompiler_rt.so /system/lib/libjavacrypto.so /system/lib/libjnigraphics.so /system/lib/libmedia_jni.so /system/lib/libwebviewchromium_loader.so libjavacore.so (7)
+Heap: 29% free, 21MB/30MB; 32251 objects
+Dumping cumulative Gc timings
+Total number of allocations 32251
+Total bytes allocated 21MB
+Total bytes freed 0B
+Free memory 9MB
+Free memory until GC 9MB
+Free memory until OOME 490MB
+Total memory 30MB
+Max memory 512MB
+Zygote space size 1260KB
+Total mutator paused time: 0
+Total time waiting for GC to complete: 0
+Total GC count: 0
+Total GC time: 0
+Total blocking GC count: 0
+Total blocking GC time: 0
+
+suspend all histogram:  Sum: 119.728ms 99% C.I. 0.010ms-107.765ms Avg: 5.442ms Max: 119.562ms
+DALVIK THREADS (12):
+"Signal Catcher" daemon prio=5 tid=2 Runnable
+  | group="system" sCount=0 dsCount=0 obj=0x12c400a0 self=0xef460000
+  | sysTid=30368 nice=0 cgrp=default sched=0/0 handle=0xf4a69930
+  | state=R schedstat=( 9021773 5500523 26 ) utm=0 stm=0 core=1 HZ=100
+  | stack=0xf496d000-0xf496f000 stackSize=1014KB
+  | held mutexes= "mutator lock"(shared held)
+  native: #00 pc 0035a217  /system/lib/libart.so (art::DumpNativeStack(std::__1::basic_ostream&lt;char, std::__1::char_traits&lt;char&gt; &gt;&, int, char const*, art::ArtMethod*, void*)+126)
+  native: #01 pc 0033b03b  /system/lib/libart.so (art::Thread::Dump(std::__1::basic_ostream&lt;char, std::__1::char_traits&lt;char&gt; &gt;&) const+138)
+  native: #02 pc 00344701  /system/lib/libart.so (art::DumpCheckpoint::Run(art::Thread*)+424)
+  native: #03 pc 00345265  /system/lib/libart.so (art::ThreadList::RunCheckpoint(art::Closure*)+200)
+  native: #04 pc 00345769  /system/lib/libart.so (art::ThreadList::Dump(std::__1::basic_ostream&lt;char, std::__1::char_traits&lt;char&gt; &gt;&)+124)
+  native: #05 pc 00345e51  /system/lib/libart.so (art::ThreadList::DumpForSigQuit(std::__1::basic_ostream&lt;char, std::__1::char_traits&lt;char&gt; &gt;&)+312)
+  native: #06 pc 0031f829  /system/lib/libart.so (art::Runtime::DumpForSigQuit(std::__1::basic_ostream&lt;char, std::__1::char_traits&lt;char&gt; &gt;&)+68)
+  native: #07 pc 00326831  /system/lib/libart.so (art::SignalCatcher::HandleSigQuit()+896)
+  native: #08 pc 003270a1  /system/lib/libart.so (art::SignalCatcher::Run(void*)+324)
+  native: #09 pc 0003f813  /system/lib/libc.so (__pthread_start(void*)+30)
+  native: #10 pc 00019f75  /system/lib/libc.so (__start_thread+6)
+  (no managed stack frames)
+
+"main" prio=5 tid=1 Suspended
+  | group="main" sCount=1 dsCount=0 obj=0x747552a0 self=0xf5376500
+  | sysTid=30363 nice=0 cgrp=default sched=0/0 handle=0xf74feb34
+  | state=S schedstat=( 331107086 164153349 851 ) utm=6 stm=27 core=3 HZ=100
+  | stack=0xff00f000-0xff011000 stackSize=8MB
+  | held mutexes=
+  kernel: __switch_to+0x7c/0x88
+  kernel: futex_wait_queue_me+0xd4/0x130
+  kernel: futex_wait+0xf0/0x1f4
+  kernel: do_futex+0xcc/0x8f4
+  kernel: compat_SyS_futex+0xd0/0x14c
+  kernel: cpu_switch_to+0x48/0x4c
+  native: #00 pc 000175e8  /system/lib/libc.so (syscall+28)
+  native: #01 pc 000f5ced  /system/lib/libart.so (art::ConditionVariable::Wait(art::Thread*)+80)
+  native: #02 pc 00335353  /system/lib/libart.so (art::Thread::FullSuspendCheck()+838)
+  native: #03 pc 0011d3a7  /system/lib/libart.so (art::ClassLinker::LoadClassMembers(art::Thread*, art::DexFile const&, unsigned char const*, art::Handle&lt;art::mirror::Class&gt;, art::OatFile::OatClass const*)+746)
+  native: #04 pc 0011d81d  /system/lib/libart.so (art::ClassLinker::LoadClass(art::Thread*, art::DexFile const&, art::DexFile::ClassDef const&, art::Handle&lt;art::mirror::Class&gt;)+88)
+  native: #05 pc 00132059  /system/lib/libart.so (art::ClassLinker::DefineClass(art::Thread*, char const*, unsigned int, art::Handle&lt;art::mirror::ClassLoader&gt;, art::DexFile const&, art::DexFile::ClassDef const&)+320)
+  native: #06 pc 001326c1  /system/lib/libart.so (art::ClassLinker::FindClassInPathClassLoader(art::ScopedObjectAccessAlreadyRunnable&, art::Thread*, char const*, unsigned int, art::Handle&lt;art::mirror::ClassLoader&gt;, art::mirror::Class**)+688)
+  native: #07 pc 002cb1a1  /system/lib/libart.so (art::VMClassLoader_findLoadedClass(_JNIEnv*, _jclass*, _jobject*, _jstring*)+264)
+  native: #08 pc 002847fd  /data/dalvik-cache/arm/system@framework@boot.oat (Java_java_lang_VMClassLoader_findLoadedClass__Ljava_lang_ClassLoader_2Ljava_lang_String_2+112)
+  at java.lang.VMClassLoader.findLoadedClass!(Native method)
+  at java.lang.ClassLoader.findLoadedClass(ClassLoader.java:362)
+  at java.lang.ClassLoader.loadClass(ClassLoader.java:499)
+  at java.lang.ClassLoader.loadClass(ClassLoader.java:469)
+  at android.app.ActivityThread.installProvider(ActivityThread.java:5141)
+  at android.app.ActivityThread.installContentProviders(ActivityThread.java:4748)
+  at android.app.ActivityThread.handleBindApplication(ActivityThread.java:4688)
+  at android.app.ActivityThread.-wrap1(ActivityThread.java:-1)
+  at android.app.ActivityThread$H.handleMessage(ActivityThread.java:1405)
+  at android.os.Handler.dispatchMessage(Handler.java:102)
+  at android.os.Looper.loop(Looper.java:148)
+  at android.app.ActivityThread.main(ActivityThread.java:5417)
+  at java.lang.reflect.Method.invoke!(Native method)
+  at com.android.internal.os.ZygoteInit$MethodAndArgsCaller.run(ZygoteInit.java:726)
+  at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:616)
+
+  ...
+<i>  Stacks for other threads in this process follow</i>
+  ...</pre></p>
+  </section>
+
+<h3 id="deadlocks">Finding deadlocks</h3>
+<p>Deadlocks often first appear as ANRs because threads are getting stuck. If
+the deadlock hits the system server, the watchdog will eventually kill it,
+leading to an entry in the log similar to:
+<code>WATCHDOG KILLING SYSTEM PROCESS</code>. From the user perspective, the
+device reboots, although technically this is a runtime restart rather than a
+true reboot.</p>
+
+<ul>
+<li>In a <strong>runtime</strong> restart, the system server dies and is
+restarted; the user sees the device return to the boot animation.</li>
+<li>In a <strong>reboot</strong>, the kernel has crashed; the user sees the
+device return to the Google boot logo.</li>
+</ul>
+
+<p>To find deadlocks, check the VM traces sections for a pattern of thread A
+waiting on something held by thread B, which in turn is waiting on something
+held by thread A.</p>
+
+  <section class="expandable">
+    <h4 class="showalways">Show example</h4>
+    <p><pre>"Binder_B" prio=5 tid=73 Blocked
+  | group="main" sCount=1 dsCount=0 obj=0x13faa0a0 self=0x95e24800
+  | sysTid=2016 nice=0 cgrp=default sched=0/0 handle=0x8b68d930
+  | state=S schedstat=( 9351576559 4141431119 16920 ) utm=819 stm=116 core=1 HZ=100
+  | stack=0x8b591000-0x8b593000 stackSize=1014KB
+  | held mutexes=
+  at com.android.server.pm.UserManagerService.exists(UserManagerService.java:387)
+  - waiting to lock &lt;0x025f9b02&gt; (a android.util.ArrayMap) held by thread 20
+  at com.android.server.pm.PackageManagerService.getApplicationInfo(PackageManagerService.java:2848)
+  at com.android.server.AppOpsService.getOpsRawLocked(AppOpsService.java:881)
+  at com.android.server.AppOpsService.getOpsLocked(AppOpsService.java:856)
+  at com.android.server.AppOpsService.noteOperationUnchecked(AppOpsService.java:719)
+  - locked &lt;0x0231885a&gt; (a com.android.server.AppOpsService)
+  at com.android.server.AppOpsService.noteOperation(AppOpsService.java:713)
+  at com.android.server.AppOpsService$2.getMountMode(AppOpsService.java:260)
+  at com.android.server.MountService$MountServiceInternalImpl.getExternalStorageMountMode(MountService.java:3416)
+  at com.android.server.am.ActivityManagerService.startProcessLocked(ActivityManagerService.java:3228)
+  at com.android.server.am.ActivityManagerService.startProcessLocked(ActivityManagerService.java:3170)
+  at com.android.server.am.ActivityManagerService.startProcessLocked(ActivityManagerService.java:3059)
+  at com.android.server.am.BroadcastQueue.processNextBroadcast(BroadcastQueue.java:1070)
+  - locked &lt;0x044d166f&gt; (a com.android.server.am.ActivityManagerService)
+  at com.android.server.am.ActivityManagerService.finishReceiver(ActivityManagerService.java:16950)
+  at android.app.ActivityManagerNative.onTransact(ActivityManagerNative.java:494)
+  at com.android.server.am.ActivityManagerService.onTransact(ActivityManagerService.java:2432)
+  at android.os.Binder.execTransact(Binder.java:453)
+...
+  "PackageManager" prio=5 tid=20 Blocked
+  | group="main" sCount=1 dsCount=0 obj=0x1304f4a0 self=0xa7f43900
+  | sysTid=1300 nice=10 cgrp=bg_non_interactive sched=0/0 handle=0x9fcf9930
+  | state=S schedstat=( 26190141996 13612154802 44357 ) utm=2410 stm=209 core=2 HZ=100
+  | stack=0x9fbf7000-0x9fbf9000 stackSize=1038KB
+  | held mutexes=
+  at com.android.server.AppOpsService.noteOperationUnchecked(AppOpsService.java:718)
+  - waiting to lock &lt;0x0231885a&gt; (a com.android.server.AppOpsService) held by thread 73
+  at com.android.server.AppOpsService.noteOperation(AppOpsService.java:713)
+  at com.android.server.AppOpsService$2.getMountMode(AppOpsService.java:260)
+  at com.android.server.AppOpsService$2.hasExternalStorage(AppOpsService.java:273)
+  at com.android.server.MountService$MountServiceInternalImpl.hasExternalStorage(MountService.java:3431)
+  at com.android.server.MountService.getVolumeList(MountService.java:2609)
+  at android.os.storage.StorageManager.getVolumeList(StorageManager.java:880)
+  at android.os.Environment$UserEnvironment.getExternalDirs(Environment.java:83)
+  at android.os.Environment.isExternalStorageEmulated(Environment.java:708)
+  at com.android.server.pm.PackageManagerService.isExternalMediaAvailable(PackageManagerService.java:9327)
+  at com.android.server.pm.PackageManagerService.startCleaningPackages(PackageManagerService.java:9367)
+  - locked &lt;0x025f9b02&gt; (a android.util.ArrayMap)
+  at com.android.server.pm.PackageManagerService$PackageHandler.doHandleMessage(PackageManagerService.java:1320)
+  at com.android.server.pm.PackageManagerService$PackageHandler.handleMessage(PackageManagerService.java:1122)
+  at android.os.Handler.dispatchMessage(Handler.java:102)
+  at android.os.Looper.loop(Looper.java:148)
+  at android.os.HandlerThread.run(HandlerThread.java:61)
+  at com.android.server.ServiceThread.run(ServiceThread.java:46)</pre></p>
+  </section>
+
+
+<h2 id="activities">Activities</h2>
+<p>An <a href="http://developer.android.com/guide/components/activities.html">Activity</a>
+is an application component that provides a screen users interact with to do
+something such as dial a number, take a photo, send an email, etc. From a bug
+report perspective, an
+<a href="http://developer.android.com/reference/android/app/Activity.html">activity</a>
+is a single, focused thing a user can do, which makes locating the activity that
+was in focus during a crash very important. Activities (via ActivityManager)
+run processes, so locating all process stops and starts for a given activity can
+also aid troubleshooting.</p>
+
+<h3 id="history-focused-activities">Viewing focused activities</h3>
+<p>To view a history of focused activities, search for
+<code>am_focused_activity</code>.</p>
+
+  <section class="expandable">
+    <h4 class="showalways">Show example</h4>
+    <p><pre>grep "am_focused_activity" bugreport-2015-10-01-18-13-48.txt
+10-01 18:10:41.409  4600 14112 I am_focused_activity: [0,com.google.android.GoogleCamera/com.android.camera.CameraActivity]
+10-01 18:11:17.313  4600  5687 I am_focused_activity: [0,com.google.android.googlequicksearchbox/com.google.android.launcher.GEL]
+10-01 18:11:52.747  4600 14113 I am_focused_activity: [0,com.google.android.GoogleCamera/com.android.camera.CameraActivity]
+10-01 18:14:07.762  4600  5687 I am_focused_activity: [0,com.google.android.googlequicksearchbox/com.google.android.launcher.GEL]</pre></p>
+  </section>
+
+<h3 id="history-process-starts">Viewing process starts</h3>
+<p>To view a history of process starts, search for <code>Start proc</code>.</p>
+
+  <section class="expandable">
+    <h4 class="showalways">Show example</h4>
+    <p><pre>grep "Start proc" bugreport-2015-10-01-18-13-48.txt
+10-01 18:09:15.309  4600  4612 I ActivityManager: Start proc 24533:com.metago.astro/u0a240 for broadcast com.metago.astro/com.inmobi.commons.analytics.androidsdk.IMAdTrackerReceiver
+10-01 18:09:15.687  4600 14112 I ActivityManager: Start proc 24548:com.google.android.apps.fitness/u0a173 for service com.google.android.apps.fitness/.api.services.ActivityUpsamplingService
+10-01 18:09:15.777  4600  6604 I ActivityManager: Start proc 24563:cloudtv.hdwidgets/u0a145 for broadcast cloudtv.hdwidgets/cloudtv.switches.SwitchSystemUpdateReceiver
+10-01 18:09:20.574  4600  6604 I ActivityManager: Start proc 24617:com.wageworks.ezreceipts/u0a111 for broadcast com.wageworks.ezreceipts/.ui.managers.IntentReceiver
+...</pre></p>
+  </section>
+
+<h3 id="device-thrashing">Is the device thrashing?</h3>
+<p>To determine if the device is
+<a href="https://en.wikipedia.org/wiki/Thrashing_(computer_science)">thrashing</a>,
+check for an abnormal increase in activity around <code>am_proc_died</code> and
+<code>am_proc_start</code> in a short amount of time.</p>
+
+  <section class="expandable">
+    <h4 class="showalways">Show example</h4>
+    <p><pre>grep -e "am_proc_died" -e "am_proc_start" bugreport-2015-10-01-18-13-48.txt
+10-01 18:07:06.494  4600  9696 I am_proc_died: [0,20074,com.android.musicfx]
+10-01 18:07:06.555  4600  6606 I am_proc_died: [0,31166,com.concur.breeze]
+10-01 18:07:06.566  4600 14112 I am_proc_died: [0,18812,com.google.android.apps.fitness]
+10-01 18:07:07.018  4600  7513 I am_proc_start: [0,20361,10113,com.sony.playmemories.mobile,broadcast,com.sony.playmemories.mobile/.service.StartupReceiver]
+10-01 18:07:07.357  4600  4614 I am_proc_start: [0,20381,10056,com.google.android.talk,service,com.google.android.talk/com.google.android.libraries.hangouts.video.CallService]
+10-01 18:07:07.784  4600  4612 I am_proc_start: [0,20402,10190,com.andcreate.app.trafficmonitor:loopback_measure_serivce,service,com.andcreate.app.trafficmonitor/.loopback.LoopbackMeasureService]
+10-01 18:07:10.753  4600  5997 I am_proc_start: [0,20450,10097,com.amazon.mShop.android.shopping,broadcast,com.amazon.mShop.android.shopping/com.amazon.identity.auth.device.storage.LambortishClock$ChangeTimestampsBroadcastReceiver]
+10-01 18:07:15.267  4600  6605 I am_proc_start: [0,20539,10173,com.google.android.apps.fitness,service,com.google.android.apps.fitness/.api.services.ActivityUpsamplingService]
+10-01 18:07:15.985  4600  4612 I am_proc_start: [0,20568,10022,com.android.musicfx,broadcast,com.android.musicfx/.ControlPanelReceiver]
+10-01 18:07:16.315  4600  7512 I am_proc_died: [0,20096,com.google.android.GoogleCamera]</pre></p>
+  </section>
+
+<h2 id="memory">Memory</h2>
+<p>Because Android devices often have constrained physical memory, managing
+random-access memory (RAM) is critical. Bug reports contain several indicators
+of low memory as well as a dumpstate that provides a memory snapshot.</p>
+
+<h3 id="low-memory">Identifying low memory</h3>
+<p>Low memory can cause the system to thrash as it kills some processes to free
+memory but continues to start other processes. To view corroborating evidence of
+low memory, check for concentrations of <code>am_proc_died</code> and
+<code>am_proc_start</code> entries in the binary event log.</p>
+
+<p>Low memory can also slow task switching and thwart return attempts (because
+the task the user was trying to return to was killed). If the launcher was
+killed, it restarts when the user touches the home button and logs show the
+launcher reload its content.</p>
+
+<h4 id="historical-low-memory">Viewing historical indicators</h4>
+<p>The <code>am_low_memory</code> entry in the binary event log indicates the
+last cached process has died. After this, the system starts killing services.
+
+  <section class="expandable">
+    <h4 class="showalways">Show example</h4>
+    <p><pre>grep "am_low_memory" bugreport-2015-10-01-18-13-48.txt
+10-01 18:11:02.219  4600  7513 I am_low_memory: 41
+10-01 18:12:18.526  4600 14112 I am_low_memory: 39
+10-01 18:12:18.874  4600  7514 I am_low_memory: 38
+10-01 18:12:22.570  4600 14112 I am_low_memory: 40
+10-01 18:12:34.811  4600 20319 I am_low_memory: 43
+10-01 18:12:37.945  4600  6521 I am_low_memory: 43
+10-01 18:12:47.804  4600 14110 I am_low_memory: 43</pre></p>
+  </section>
+
+<h4 id="thrashing-indicators">Viewing thrashing indicators</h4>
+<p>Other indicators of system thrashing (paging, direct reclaim, etc.) include
+<code>kswapd</code>, <code>kworker</code>, and <code>mmcqd</code> consuming
+cycles. (Keep in mind the bugreport being gathered can influence thrashing
+indicators.)</p>
+
+  <section class="expandable">
+    <h4 class="showalways">Show example</h4>
+    <p><pre>------ CPU INFO (top -n 1 -d 1 -m 30 -t) ------
+
+User 15%, System 54%, IOW 28%, IRQ 0%
+User 82 + Nice 2 + Sys 287 + Idle 1 + IOW 152 + IRQ 0 + SIRQ 5 = 529
+
+  PID   TID PR CPU% S     VSS     RSS PCY UID      Thread          Proc
+15229 15229  0  19% R      0K      0K  fg root     kworker/0:2
+29512 29517  1   7% D 1173524K 101188K  bg u0_a27   Signal Catcher  com.google.android.talk
+24565 24570  3   6% D 2090920K 145168K  fg u0_a22   Signal Catcher  com.google.android.googlequicksearchbox:search
+19525 19525  2   6% R   3476K   1644K  fg shell    top             top
+24957 24962  2   5% R 1706928K 125716K  bg u0_a47   Signal Catcher  com.google.android.GoogleCamera
+19519 19519  3   4% S      0K      0K  fg root     kworker/3:1
+  120   120  0   3% S      0K      0K  fg root     mmcqd/1
+18233 18233  1   3% S      0K      0K  fg root     kworker/1:1
+25589 25594  1   2% D 1270476K  75776K  fg u0_a8    Signal Catcher  com.google.android.gms
+19399 19399  2   1% S      0K      0K  fg root     kworker/2:2
+ 1963  1978  1   0% S 1819100K 125136K  fg system   android.fg      system_server
+ 1963  1981  3   0% S 1819100K 125136K  fg system   android.display system_server</pre></p>
+  </section>
+<p></p>
+
+<p>ANR logs can provide a similar memory snapshot.</p>
+
+  <section class="expandable">
+    <h4 class="showalways">Show example</h4>
+    <p><pre>10-03 17:19:59.959  1963  1976 E ActivityManager: ANR in com.google.android.apps.magazines
+10-03 17:19:59.959  1963  1976 E ActivityManager: PID: 18819
+10-03 17:19:59.959  1963  1976 E ActivityManager: Reason: Broadcast of Intent { act=android.net.conn.CONNECTIVITY_CHANGE flg=0x4000010 cmp=com.google.android.apps.magazines/com.google.apps.dots.android.newsstand.appwidget.NewsWidgetProvider (has extras) }
+10-03 17:19:59.959  1963  1976 E ActivityManager: Load: 19.19 / 14.76 / 12.03
+10-03 17:19:59.959  1963  1976 E ActivityManager: CPU usage from 0ms to 11463ms later:
+10-03 17:19:59.959  1963  1976 E ActivityManager:   54% 15229/kworker/0:2: 0% user + 54% kernel
+10-03 17:19:59.959  1963  1976 E ActivityManager:   38% 1963/system_server: 14% user + 23% kernel / faults: 17152 minor 1073 major
+10-03 17:19:59.959  1963  1976 E ActivityManager:   11% 120/mmcqd/1: 0% user + 11% kernel
+10-03 17:19:59.959  1963  1976 E ActivityManager:   10% 2737/com.android.systemui: 4.7% user + 5.6% kernel / faults: 7211 minor 149 major
+10-03 17:19:59.959  1963  1976 E ActivityManager:   0.2% 1451/debuggerd: 0% user + 0.2% kernel / faults: 15211 minor 147 major
+10-03 17:19:59.959  1963  1976 E ActivityManager:   8.7% 6162/com.twofortyfouram.locale: 4% user + 4.7% kernel / faults: 4924 minor 260 major
+10-03 17:19:59.959  1963  1976 E ActivityManager:   6.1% 24565/com.google.android.googlequicksearchbox:search: 2.4% user + 3.7% kernel / faults: 2902 minor 129 major
+10-03 17:19:59.959  1963  1976 E ActivityManager:   6% 55/kswapd0: 0% user + 6% kernel
+10-03 17:19:59.959  1963  1976 E ActivityManager:   4.9% 18819/com.google.android.apps.magazines: 1.5% user + 3.3% kernel / faults: 10129 minor 986 major
+10-03 17:19:59.959  1963  1976 E ActivityManager:   2.8% 18233/kworker/1:1: 0% user + 2.8% kernel
+10-03 17:19:59.959  1963  1976 E ActivityManager:   4.2% 3145/com.android.phone: 2% user + 2.2% kernel / faults: 3005 minor 43 major
+10-03 17:19:59.959  1963  1976 E ActivityManager:   4.2% 8084/com.android.chrome: 2% user + 2.1% kernel / faults: 4798 minor 380 major
+10-03 17:19:59.959  1963  1976 E ActivityManager:   3.4% 182/surfaceflinger: 1.1% user + 2.3% kernel / faults: 842 minor 13 major
+10-03 17:19:59.959  1963  1976 E ActivityManager:   3% 18236/kworker/1:2: 0% user + 3% kernel
+10-03 17:19:59.959  1963  1976 E ActivityManager:   2.9% 19231/com.android.systemui:screenshot: 0.8% user + 2.1% kernel / faults: 6119 minor 348 major
+10-03 17:19:59.959  1963  1976 E ActivityManager:   2.3% 15350/kworker/0:4: 0% user + 2.3% kernel
+10-03 17:19:59.959  1963  1976 E ActivityManager:   2.2% 1454/mediaserver: 0% user + 2.2% kernel / faults: 479 minor 6 major
+10-03 17:19:59.959  1963  1976 E ActivityManager:   2% 16496/com.android.chrome:sandboxed_process10: 0.1% user + 1.8% kernel / faults: 3610 minor 234 major
+10-03 17:19:59.959  1963  1976 E ActivityManager:   1% 3119/com.android.nfc: 0.4% user + 0.5% kernel / faults: 1789 minor 17 major
+10-03 17:19:59.959  1963  1976 E ActivityManager:   1.7% 19337/com.jarettmillard.localeconnectiontype:background: 0.1% user + 1.5% kernel / faults: 7854 minor 439 major
+10-03 17:19:59.959  1963  1976 E ActivityManager:   0.7% 3066/com.google.android.inputmethod.latin: 0.3% user + 0.3% kernel / faults: 1336 minor 7 major
+10-03 17:19:59.959  1963  1976 E ActivityManager:   1% 25589/com.google.android.gms: 0.3% user + 0.6% kernel / faults: 2867 minor 237 major
+10-03 17:19:59.959  1963  1976 E ActivityManager:   0.9% 1460/sensors.qcom: 0.5% user + 0.4% kernel / faults: 262 minor 5 major
+10-03 17:19:59.959  1963  1976 E ActivityManager:   0.8% 3650/mpdecision: 0% user + 0.8% kernel / faults: 160 minor 1 major
+10-03 17:19:59.959  1963  1976 E ActivityManager:   0.1% 3132/com.redbend.vdmc: 0% user + 0% kernel / faults: 1746 minor 5 major</pre></p>
+  </section>
+
+<h3 id="memory-snapshot">Getting a memory snapshot</h3>
+<p>The memory snapshot is a dumpstate that lists running Java and native
+processes (for details, refer to
+<a href="https://developer.android.com/tools/debugging/debugging-memory.html#ViewingAllocations">Viewing
+Overall Memory Allocations</a>). Keep in mind the snapshot gives only the state
+at a specific moment in time; the system might have been in better (or worse)
+shape before the snapshot.</p>
+<ul>
+<li>To understand how long a process runs, see
+<a href="#process-runtime">Process runtime</a>.</li>
+<li>To understand why something is currently running, see
+<a href="#why-is-process-running">Why is a process running?</a></li>
+</ul>
+
+  <section class="expandable">
+    <h4 class="showalways">Show example</h4>
+    <p><pre>Total PSS by OOM adjustment:
+    86752 kB: Native
+               22645 kB: surfaceflinger (pid 197)
+               18597 kB: mediaserver (pid 204)
+               ...
+   136959 kB: System
+              136959 kB: system (pid 785)
+   220218 kB: Persistent
+              138859 kB: com.android.systemui (pid 947 / activities)
+               39178 kB: com.android.nfc (pid 1636)
+               28313 kB: com.android.phone (pid 1659)
+               13868 kB: com.redbend.vdmc (pid 1646)
+     9534 kB: Persistent Service
+                9534 kB: com.android.bluetooth (pid 23807)
+   178604 kB: Foreground
+              168620 kB: com.google.android.googlequicksearchbox (pid 1675 / activities)
+                9984 kB: com.google.android.apps.maps (pid 13952)
+   188286 kB: Visible
+               85326 kB: com.google.android.wearable.app (pid 1535)
+               38978 kB: com.google.process.gapps (pid 1510)
+               31936 kB: com.google.android.gms.persistent (pid 2072)
+               27950 kB: com.google.android.gms.wearable (pid 1601)
+                4096 kB: com.google.android.googlequicksearchbox:interactor (pid 1550)
+    52948 kB: Perceptible
+               52948 kB: com.google.android.inputmethod.latin (pid 1566)
+   150851 kB: A Services
+               81121 kB: com.google.android.gms (pid 1814)
+               37586 kB: com.google.android.talk (pid 9584)
+               10949 kB: com.google.android.music:main (pid 4019)
+               10727 kB: com.motorola.targetnotif (pid 31071)
+               10468 kB: com.google.android.GoogleCamera (pid 9984)
+    33298 kB: Previous
+               33298 kB: com.android.settings (pid 9673 / activities)
+   165188 kB: B Services
+               49490 kB: com.facebook.katana (pid 15035)
+               22483 kB: com.whatsapp (pid 28694)
+               21308 kB: com.iPass.OpenMobile (pid 5325)
+               19788 kB: com.google.android.apps.googlevoice (pid 23934)
+               17399 kB: com.google.android.googlequicksearchbox:search (pid 30359)
+                9073 kB: com.google.android.apps.youtube.unplugged (pid 21194)
+                7660 kB: com.iPass.OpenMobile:remote (pid 23754)
+                7291 kB: com.pujie.wristwear.pujieblack (pid 24240)
+                7157 kB: com.instagram.android:mqtt (pid 9530)
+                3539 kB: com.qualcomm.qcrilmsgtunnel (pid 16186)
+   204324 kB: Cached
+               43424 kB: com.amazon.mShop.android (pid 13558)
+               22563 kB: com.google.android.apps.magazines (pid 13844)
+               ...
+                4298 kB: com.google.android.apps.enterprise.dmagent (pid 13826)</pre></p>
+  </section>
+
+<h2 id="broadcasts">Broadcasts</h2>
+<p>Applications generate broadcasts to send events within the current
+application or to another application. Broadcast receivers subscribe to specific
+messages (via filters), enabling them to both listen and respond to a broadcast.
+Bug reports contain information about sent broadcasts and unsent broadcasts, as
+well as a dumpsys of all receivers listening to a specific broadcast.</p>
+
+<h3 id="historical-broadcasts">Viewing historical broadcasts</h3>
+<p>Historical broadcasts are those that have already been sent, listed in
+reverse chronological order.</p>
+
+<p>The <strong>summary</strong> section is an overview of the last 300
+foreground broadcasts and the last 300 background broadcasts.</p>
+
+  <section class="expandable">
+    <h4 class="showalways">Show example</h4>
+    <p><pre> Historical broadcasts summary [foreground]:
+ #0: act=android.intent.action.SCREEN_ON flg=0x50000010
+    +1ms dispatch +90ms finish
+    enq=2015-10-29 17:10:51 disp=2015-10-29 17:10:51 fin=2015-10-29 17:10:51
+  #1: act=android.intent.action.SCREEN_OFF flg=0x50000010
+    0 dispatch +60ms finish
+    enq=2015-10-29 17:10:05 disp=2015-10-29 17:10:05 fin=2015-10-29 17:10:05
+ ...
+ Historical broadcasts summary [background]:
+ ...</pre></p>
+  </section>
+<p></p>
+
+<p>The <strong>detail</strong> section contains complete information for the
+last 50 foreground broadcasts and the last 50 background broadcasts, as well as
+the receivers for each broadcast. Receivers that have a:</p>
+<ul>
+<li><code>BroadcastRecord</code> entry are registered at runtime and are sent
+only to already running processes.</li>
+<li><code>ResolveInfo</code> entry are registered through manifest entries. The
+ActivityManager starts the process for each <code>ResolveInfo</code> if it is
+not already running.</li>
+</ul>
+
+  <section class="expandable">
+    <h4 class="showalways">Show example</h4>
+    <p><pre>Historical broadcasts [foreground]:
+ ...
+ Historical broadcasts [background]:
+ Historical Broadcast background #0:
+ ...
+ Historical Broadcast background #5:
+    BroadcastRecord{18dbb16 u0 android.intent.action.USER_PRESENT} to user 0
+    Intent { act=android.intent.action.USER_PRESENT flg=0x24000010 }
+    caller=com.android.systemui 2925:com.android.systemui/u0a27 pid=2925 uid=10027
+    enqueueClockTime=2015-10-29 17:10:55 dispatchClockTime=2015-10-29 17:10:55
+    dispatchTime=-2s321ms (0 since enq) finishTime=-2s320ms (+1ms since disp)
+    Receiver #0: BroadcastFilter{8181cc1 u-1 ReceiverList{5d929a8 902 system/1000/u-1 local:eca4dcb}}
+    Receiver #1: BroadcastFilter{6371c97 u-1 ReceiverList{2938b16 902 system/1000/u-1 local:840b831}}
+    ...
+    Receiver #19: BroadcastFilter{93f16b u0 ReceiverList{5c61eba 17016 com.google.android.gm/10079/u0 remote:24083e5}}
+ ...
+ Historical Broadcast background #37:
+    BroadcastRecord{7f6dd6 u0 android.hardware.action.NEW_PICTURE} to user 0
+    Intent { act=android.hardware.action.NEW_PICTURE dat=content://media/external/images/media/6345 flg=0x10 }
+    caller=com.google.android.GoogleCamera 32734:com.google.android.GoogleCamera/u0a53 pid=32734 uid=10053
+    enqueueClockTime=2015-10-29 17:09:48 dispatchClockTime=2015-10-29 17:09:49
+    dispatchTime=-45s720ms (+399ms since enq) finishTime=-45s701ms (+19ms since disp)
+    resultTo=null resultCode=0 resultData=null
+    nextReceiver=4 receiver=null
+    Receiver #0: ResolveInfo{33d2857 com.google.android.gms/com.google.android.libraries.social.mediamonitor.MediaMonitor m=0x608000}
+      priority=0 preferredOrder=0 match=0x608000 specificIndex=-1 isDefault=false
+      ActivityInfo:
+        name=com.google.android.libraries.social.mediamonitor.MediaMonitor
+        packageName=com.google.android.gms
+        enabled=true exported=true processName=com.google.android.gms
+        ...
+    Receiver #1: ResolveInfo{d9edf44 com.google.android.apps.maps/com.google.android.apps.gmm.ugc.clientnotification.StartPhotoTakenNotifierServiceReceiver m=0x608000}
+      priority=0 preferredOrder=0 match=0x608000 specificIndex=-1 isDefault=false
+      ActivityInfo:
+        name=com.google.android.apps.gmm.ugc.clientnotification.StartPhotoTakenNotifierServiceReceiver
+        packageName=com.google.android.apps.maps
+        enabled=true exported=true processName=com.google.android.apps.maps
+        ...
+    Receiver #2: ResolveInfo{743f82d com.google.android.apps.photos/com.google.android.libraries.social.mediamonitor.MediaMonitor m=0x608000}
+      priority=0 preferredOrder=0 match=0x608000 specificIndex=-1 isDefault=false
+      ActivityInfo:
+        name=com.google.android.libraries.social.mediamonitor.MediaMonitor
+        packageName=com.google.android.apps.photos
+        enabled=true exported=true processName=com.google.android.apps.photos
+        ...
+    Receiver #3: ResolveInfo{d5c9162 com.google.android.apps.plus/com.google.android.libraries.social.mediamonitor.MediaMonitor m=0x608000}
+      priority=0 preferredOrder=0 match=0x608000 specificIndex=-1 isDefault=false
+      ActivityInfo:
+        name=com.google.android.libraries.social.mediamonitor.MediaMonitor
+        packageName=com.google.android.apps.plus
+        enabled=true exported=true processName=com.google.android.apps.plus
+        ...</pre></p>
+  </section>
+
+<h3 id="active-broadcasts">Viewing active broadcasts</h3>
+<p>Active broadcasts are those that have yet to be sent. A large number in the
+queue means the system can't dispatch the broadcasts fast enough to keep up.</p>
+
+  <section class="expandable">
+    <h4 class="showalways">Show example</h4>
+    <p><pre> Active ordered broadcasts [background]:
+ Active Ordered Broadcast background #133: <i>// size of queue</i>
+ ...</pre></p>
+  </section>
+
+<h3 id="broadcast-listeners">Viewing broadcast listeners</h3>
+<p>To view a list of receivers listening for a broadcast, check the Receiver
+Resolver Table in the <code>dumpsys activity broadcasts</code>. The following
+example displays all receivers listening for <code>USER_PRESENT</code>.</p>
+
+  <section class="expandable">
+    <h4 class="showalways">Show example</h4>
+    <p><pre>-------------------------------------------------------------------------------
+ACTIVITY MANAGER BROADCAST STATE (dumpsys activity broadcasts)
+..
+  Receiver Resolver Table:
+    Full MIME Types:
+    ..
+    Wild MIME Types:
+    ..
+    Schemes:
+    ..
+    Non-Data Actions:
+    ..
+        android.intent.action.USER_PRESENT:
+          BroadcastFilter{8181cc1 u-1 ReceiverList{5d929a8 902 system/1000/u-1 local:eca4dcb}}
+          BroadcastFilter{6371c97 u-1 ReceiverList{2938b16 902 system/1000/u-1 local:840b831}}
+          BroadcastFilter{320c00 u0 ReceiverList{d3a6283 902 system/1000/u0 local:799c532}}
+          BroadcastFilter{e486048 u0 ReceiverList{36fbaeb 902 system/1000/u0 local:5f51e3a}}
+          BroadcastFilter{22b02 u-1 ReceiverList{b3f744d 902 system/1000/u-1 local:de837e4}}
+          BroadcastFilter{3e989ab u0 ReceiverList{f8deffa 2981 com.google.process.gapps/10012/u0 remote:26bd225}}
+          BroadcastFilter{fb56150 u0 ReceiverList{22b7b13 2925 com.android.systemui/10027/u0 remote:c54a602}}
+          BroadcastFilter{63bbb6 u-1 ReceiverList{ba6c751 3484 com.android.nfc/1027/u-1 remote:5c4a478}}
+          BroadcastFilter{95ad20d u0 ReceiverList{d8374a4 3586 com.google.android.googlequicksearchbox/10029/u0 remote:feb3737}}
+          BroadcastFilter{fdef551 u0 ReceiverList{28ca78 3745 com.google.android.gms.persistent/10012/u0 remote:f23afdb}}
+          BroadcastFilter{9830707 u0 ReceiverList{aabd946 3745 com.google.android.gms.persistent/10012/u0 remote:a4da121}}
+          BroadcastFilter{83c43d2 u0 ReceiverList{d422e5d 3745 com.google.android.gms.persistent/10012/u0 remote:f585034}}
+          BroadcastFilter{8890378 u0 ReceiverList{26d2cdb 3745 com.google.android.gms.persistent/10012/u0 remote:dfa61ea}}
+          BroadcastFilter{7bbb7 u0 ReceiverList{214b2b6 3745 com.google.android.gms.persistent/10012/u0 remote:8353a51}}
+          BroadcastFilter{38d3566 u0 ReceiverList{de859c1 3745 com.google.android.gms.persistent/10012/u0 remote:e003aa8}}
+          BroadcastFilter{3435d9f u0 ReceiverList{6e38b3e 3745 com.google.android.gms.persistent/10012/u0 remote:8dd7ff9}}
+          BroadcastFilter{d0a34bb u0 ReceiverList{5091d4a 3745 com.google.android.gms.persistent/10012/u0 remote:d6d22b5}}
+          BroadcastFilter{d43c416 u0 ReceiverList{51a3531 3745 com.google.android.gms.persistent/10012/u0 remote:d0b9dd8}}
+          BroadcastFilter{aabf36d u0 ReceiverList{a88bf84 3745 com.google.android.gms.persistent/10012/u0 remote:a9d6197}}
+          BroadcastFilter{93f16b u0 ReceiverList{5c61eba 17016 com.google.android.gm/10079/u0 remote:24083e5}}
+          BroadcastFilter{68f794e u0 ReceiverList{4cb1c49 947 com.google.android.googlequicksearchbox:search/10029/u0 remote:251d250}}
+      ..
+    MIME Typed Actions:</pre></p>
+  </section>
+
+<h2 id="monitor contention">Monitor contention</h2>
+<p>Monitor contention logging can sometimes indicate actual monitor contention,
+but most often indicates the system is so loaded that everything has slowed down.
+You might see long monitor events logged by ART in system or event log.</p>
+
+<p>In the system log:</p>
+<p><pre>10-01 18:12:44.343 29761 29914 W art     : Long monitor contention event with owner method=void android.database.sqlite.SQLiteClosable.acquireReference() from SQLiteClosable.java:52 waiters=0 for 3.914s</pre></p>
+
+<p>In the event log:</p>
+<p><pre>10-01 18:12:44.364 29761 29914 I dvm_lock_sample: [com.google.android.youtube,0,pool-3-thread-9,3914,ScheduledTaskMaster.java,138,SQLiteClosable.java,52,100]</pre></p>
+
+<h2 id="background-compilation">Background compilation</h2>
+<p>Compilation can be expensive and load the device.</p>
+
+  <section class="expandable">
+    <h4 class="showalways">Show example</h4>
+    <p><pre>09-14 06:27:05.670  2508  2587 E ActivityManager: CPU usage from 0ms to 5857ms later:
+09-14 06:27:05.670  2508  2587 E ActivityManager:   84% 5708/dex2oat: 81% user + 2.3% kernel / faults: 3731 minor 1 major
+09-14 06:27:05.670  2508  2587 E ActivityManager:   73% 2508/system_server: 21% user + 51% kernel / faults: 10019 minor 28 major
+09-14 06:27:05.670  2508  2587 E ActivityManager:   1% 3935/com.android.phone: 0.3% user + 0.6% kernel / faults: 2684 minor 2 major</pre></p>
+  </section>
+<p></p>
+
+<p>Compilation might occur in the background when Google Play store updates are
+downloading. In this case, messages from the Google Play store app
+(<code>finsky</code>) and <code>installd</code> appear prior to
+<code>dex2oat</code> messages.</p>
+
+  <section class="expandable">
+    <h4 class="showalways">Show example</h4>
+    <p><pre>10-07 08:42:33.725 11051 11051 D Finsky  : [1] InstallerTask.advanceState: Prepare to patch com.garmin.android.apps.virb (com.garmin.android.apps.virb) from content://downloads/my_downloads/3602 format 2
+10-07 08:42:33.752   495   495 I installd: free_cache(48637657) avail 15111192576
+…
+10-07 08:42:39.998  2497  2567 I PackageManager.DexOptimizer: Running dexopt (dex2oat) on: /data/app/vmdl436577137.tmp/base.apk pkg=com.garmin.android.apps.virb isa=arm vmSafeMode=false debuggable=false oatDir = /data/app/vmdl436577137.tmp/oat bootComplete=true
+…</pre></p>
+  </section>
+<p></p>
+
+<p>Compilation might also occur in the background when an application is loading
+a dex file that has not yet been compiled. In this case, you won't see
+<code>finsky</code> or <code>installd</code> logging.</p>
+
+  <section class="expandable">
+    <h4 class="showalways">Show example</h4>
+    <p><pre>09-14 07:29:20.433 15736 15736 I dex2oat : /system/bin/dex2oat -j4 --dex-file=/data/user/0/com.facebook.katana/app_secondary_program_dex/program-72cef82b591768306676e10161c886b58b34315a308602be.dex.jar --oat-file=/data/user/0/com.facebook.katana/app_secondary_program_dex_opt/program-72cef82b591768306676e10161c886b58b34315a308602be.dex.dex
+...
+09-14 07:29:25.102 15736 15736 I dex2oat : dex2oat took 4.669s (threads: 4) arena alloc=7MB java alloc=3MB native alloc=29MB free=4MB</pre></p>
+  </section>
+
+<h2 id="narrative">Narrative</h2>
+<p>Establishing the narrative of a problem (how it started, what happened, how
+the system reacted) requires a solid timeline of events. You can use the
+information in the bug report to sync timelines across multiple logs and
+determine the exact timestamp of the bug report.</p>
+
+<h3 id="timelines">Syncing timelines</h3>
+<p>A bugreport reflects multiple parallel timelines: system log, event log,
+kernel log, and multiple specialized timelines for broadcasts, battery stats,
+etc. Unfortunately, timelines are often reported using different time bases.</p>
+
+<p>The system and event log timestamps are in the same timezone as the user (as
+are most other timestamps). For example, when user taps the home button, the
+system log reports:</p>
+<p><pre>10-03 17:19:52.939  1963  2071 I ActivityManager: START u0 {act=android.intent.action.MAIN cat=[android.intent.category.HOME] flg=0x10200000 cmp=com.google.android.googlequicksearchbox/com.google.android.launcher.GEL (has extras)} from uid 1000 on display 0</pre></p>
+
+<p>For the same action, the event log reports:</p>
+<p><pre>10-03 17:19:54.279  1963  2071 I am_focused_activity: [0,com.google.android.googlequicksearchbox/com.google.android.launcher.GEL]</pre></p>
+
+<p>Kernel (<code>dmesg</code>) logs use a different time base, tagging log items
+with seconds since bootloader completes. To register this timescale to other
+timescales, search for <em>suspend exit</em> and <em>suspend entry</em> messages:</p>
+<p><pre>&lt;6&gt;[201640.779997] PM: suspend exit 2015-10-03 19:11:06.646094058 UTC
+…
+&lt;6&gt;[201644.854315] PM: suspend entry 2015-10-03 19:11:10.720416452 UTC</pre></p>
+
+<p>Because kernel logs might not include time while in suspend, you should
+piecewise register the log between the suspend entry and exit messages.
+Additionally, kernel logs use UTC timezone and must be adjusted to the user
+timezone.</p>
+
+<h3 id="time-of-bugreport">Identifying bugreport time</h3>
+<p>To determine when a bugreport was taken, first check the system log (Logcat)
+for the <code>dumpstate: begin</code>:</p>
+<p><pre>10-03 17:19:54.322 19398 19398 I dumpstate: begin</pre></p>
+
+<p>Next, check the kernel log (<code>dmesg</code>) timestamps for the <code>Starting service
+'bugreport'</code> message:</p>
+<p><pre>&lt;5&gt;[207064.285315] init: Starting service 'bugreport'...</pre></p>
+
+<p>Work backwards to correlate the two events, keeping in mind the caveats
+mentioned in <a href="#timelines">Syncing timelines</a>. While there's a lot
+happening after the bugreport is initiated, most activity isn't very useful as
+the act of taking the bugreport loads the system substantially.</p>
+
+<h2 id="power">Power</h2>
+
+<p>The event log contains screen power status, where 0 is screen off, 1 is
+screen on, and 2 is for keyguard done.</p>
+
+  <section class="expandable">
+    <h4 class="showalways">Show example</h4>
+    <p><pre>grep screen_toggled bugreport-2015-10-18-16-52-22.txt
+10-18 15:05:04.383   992   992 I screen_toggled: 1
+10-18 15:05:07.010   992   992 I screen_toggled: 0
+10-18 15:23:15.063   992   992 I screen_toggled: 1
+10-18 15:23:25.684   992   992 I screen_toggled: 0
+10-18 15:36:31.623   992   992 I screen_toggled: 1
+10-18 15:36:37.660  3283  3283 I screen_toggled: 2</pre></p>
+  </section>
+
+<p></p>
+<p>Bug reports also contain statistics about wake locks, a mechanism used by
+application developers to indicate their application needs to have the device
+stay on. (For details on wake locks, refer to
+<a href="https://developer.android.com/reference/android/os/PowerManager.WakeLock.html">PowerManager.WakeLock</a>
+and <a href="https://developer.android.com/training/scheduling/wakelock.html#cpu">Keep
+the CPU on</a>.)
+
+<p>The aggregated wake lock duration statistics track <strong>only</strong> the
+time a wake lock is actually responsible for keeping the device awake and
+<strong>do not</strong> include time with the screen on. In addition, if
+multiple wake locks are held simultaneously, the wake lock duration time is
+distributed across those wake locks.</p>
+
+<p>For more help visualizing power status, use
+<a href="https://github.com/google/battery-historian">Battery Historian</a>, a
+Google open source tool to analyze battery consumers using Android bugreport
+files.</p>
+
+<h2 id="packages">Packages</h2>
+<p>The DUMP OF SERVICE package contains application versions (and other useful
+info).</p>
+
+  <section class="expandable">
+    <h4 class="showalways">Show example</h4>
+    <p><pre>...
+Packages:
+...
+ Package [com.google.android.gms] (3cf534b):
+   userId=10013
+   sharedUser=SharedUserSetting{98f3d28 com.google.uid.shared/10013}
+   pkg=Package{b8f6a41 com.google.android.gms}
+   codePath=/system/priv-app/PrebuiltGmsCore
+   resourcePath=/system/priv-app/PrebuiltGmsCore
+   legacyNativeLibraryDir=/system/priv-app/PrebuiltGmsCore/lib
+   primaryCpuAbi=arm64-v8a
+   secondaryCpuAbi=armeabi-v7a
+   versionCode=8186448 targetSdk=23
+   versionName=8.1.86 (2287566-448)
+   splits=[base]
+   applicationInfo=ApplicationInfo{5158507 com.google.android.gms}
+   flags=[ SYSTEM HAS_CODE ALLOW_CLEAR_USER_DATA ]
+   privateFlags=[ PRIVILEGED ]
+   dataDir=/data/user/0/com.google.android.gms
+   supportsScreens=[small, medium, large, xlarge, resizeable, anyDensity]
+   libraries:
+     com.google.android.gms
+   usesOptionalLibraries:
+     com.android.location.provider
+     com.google.android.ble
+     com.android.media.remotedisplay
+   usesLibraryFiles:
+     /system/framework/com.android.media.remotedisplay.jar
+     /system/framework/com.android.location.provider.jar
+   timeStamp=2015-10-14 15:17:56
+   firstInstallTime=2015-09-22 14:08:35
+   lastUpdateTime=2015-10-14 15:17:56
+   signatures=PackageSignatures{db63be6 [1af63d8]}
+   installPermissionsFixed=true installStatus=1
+   pkgFlags=[ SYSTEM HAS_CODE ALLOW_CLEAR_USER_DATA ]
+   declared permissions:
+     com.google.android.gms.permission.INTERNAL_BROADCAST: prot=signature, INSTALLED
+     ...
+     com.google.android.gms.permission.CAR_VENDOR_EXTENSION: prot=dangerous, INSTALLED
+   User 0:  installed=true hidden=false stopped=false notLaunched=false enabled=0
+     disabledComponents:
+       com.google.android.gms.icing.service.PowerConnectedReceiver
+       ...
+       com.google.android.gms.icing.proxy.AppsMonitor
+     enabledComponents:
+       com.google.android.gms.mdm.receivers.GmsRegisteredReceiver
+       ...
+       com.google.android.gms.subscribedfeeds.SyncService</pre></p>
+  </section>
+
+<h2 id="processes">Processes</h2>
+<p>Bug reports contain a huge amount of data for processes, including start and
+stop time, runtime length, associated services, <code>oom_adj</code> score, etc.
+For details on how Android manages processes, refer to
+<a href="http://developer.android.com/guide/components/processes-and-threads.html">Processes
+and Threads</a>.</p>
+
+<h3 id="process-runtime">Determining process runtime</h3>
+<p>The <code>procstats</code> section contains complete statistics on how long
+processes and associated services have been running. For a quick, human-readable
+summary, search for <code>AGGREGATED OVER</code> to view data from either the
+last three or 24 hours, then search for <code>Summary:</code> to view the list
+of processes, how long those processes have run at various priorities, and their
+RAM usage formatted as min-average-max PSS/min-average-max USS.</p>
+
+  <section class="expandable">
+    <h4 class="showalways">Show example</h4>
+    <p><pre>-------------------------------------------------------------------------------
+DUMP OF SERVICE processinfo:
+-------------------------------------------------------------------------------
+DUMP OF SERVICE procstats:
+COMMITTED STATS FROM 2015-10-19-23-54-56 (checked in):
+...
+COMMITTED STATS FROM 2015-10-20-03-00-00 (checked in):
+...
+CURRENT STATS:
+...
+AGGREGATED OVER LAST 24 HOURS:
+System memory usage:
+...
+Per-Package Stats:
+...
+Summary:
+...
+  * com.google.android.gms.persistent / u0a13 / v8186448:
+           TOTAL: 100% (21MB-27MB-40MB/20MB-24MB-38MB over 597)
+             Top: 51% (22MB-26MB-38MB/21MB-24MB-36MB over 383)
+          Imp Fg: 49% (21MB-27MB-40MB/20MB-25MB-38MB over 214)
+…
+          Start time: 2015-10-19 09:14:37
+  Total elapsed time: +1d0h22m7s390ms (partial) libart.so
+
+AGGREGATED OVER LAST 3 HOURS:
+System memory usage:
+...
+Per-Package Stats:
+...
+Summary:
+  * com.google.android.gms.persistent / u0a13 / v8186448:
+           TOTAL: 100% (23MB-27MB-32MB/21MB-25MB-29MB over 111)
+             Top: 61% (23MB-26MB-31MB/21MB-24MB-28MB over 67)
+          Imp Fg: 39% (23MB-28MB-32MB/21MB-26MB-29MB over 44)
+...
+          Start time: 2015-10-20 06:49:24
+  Total elapsed time: +2h46m59s736ms (partial) libart.so</pre></p>
+  </section>
+
+<h3 id="why-is-process-running">Why is a process running?</h3>
+<p>The <code>dumpsys activity processes</code> section lists all currently
+running processes ordered by <code>oom_adj</code> score (Android indicates
+process importance by assigning the process an <code>oom_adj</code> value, which
+can be dynamically updated by ActivityManager). The output is similar to that of
+a <a href="#memory-snapshot">memory snapshot</a> but includes additional
+information about what is causing the process to run. In the example below,
+the bolded entries indicate the <code>gms.persistent</code> process is running
+at <code>vis</code> (visible) priority because the system process is bound to
+its <code>NetworkLocationService</code>.</p>
+
+  <section class="expandable">
+    <h4 class="showalways">Show example</h4>
+    <p><pre>-------------------------------------------------------------------------------
+ACTIVITY MANAGER RUNNING PROCESSES (dumpsys activity processes)
+...
+Process LRU list (sorted by oom_adj, 34 total, non-act at 14, non-svc at 14):
+    PERS #33: sys   F/ /P  trm: 0 902:system/1000 (fixed)
+    PERS #32: pers  F/ /P  trm: 0 2925:com.android.systemui/u0a27 (fixed)
+    PERS #31: pers  F/ /P  trm: 0 3477:com.quicinc.cne.CNEService/1000 (fixed)
+    PERS #30: pers  F/ /P  trm: 0 3484:com.android.nfc/1027 (fixed)
+    PERS #29: pers  F/ /P  trm: 0 3502:com.qualcomm.qti.rcsbootstraputil/1001 (fixed)
+    PERS #28: pers  F/ /P  trm: 0 3534:com.qualcomm.qti.rcsimsbootstraputil/1001 (fixed)
+    PERS #27: pers  F/ /P  trm: 0 3553:com.android.phone/1001 (fixed)
+    Proc #25: psvc  F/ /IF trm: 0 4951:com.android.bluetooth/1002 (service)
+        com.android.bluetooth/.hfp.HeadsetService&lt;=Proc{902:system/1000}
+    Proc # 0: fore  F/A/T  trm: 0 3586:com.google.android.googlequicksearchbox/u0a29 (top-activity)
+  Proc #26: vis   F/ /SB trm: 0 3374:com.google.android.googlequicksearchbox:interactor/u0a29 (service)
+        com.google.android.googlequicksearchbox/com.google.android.voiceinteraction.GsaVoiceInteractionService&lt;=Proc{902:system/1000}
+<b>    Proc # 5: vis   F/ /T  trm: 0 3745:com.google.android.gms.persistent/u0a12 (service)</b>
+<b>        com.google.android.gms/com.google.android.location.network.NetworkLocationService&lt;=Proc{902:system/1000}</b>
+    Proc # 3: vis   F/ /SB trm: 0 3279:com.google.android.gms/u0a12 (service)
+        com.google.android.gms/.icing.service.IndexService&lt;=Proc{947:com.google.android.googlequicksearchbox:search/u0a29}
+    Proc # 2: vis   F/ /T  trm: 0 947:com.google.android.googlequicksearchbox:search/u0a29 (service)
+        com.google.android.googlequicksearchbox/com.google.android.sidekick.main.remoteservice.GoogleNowRemoteService&lt;=Proc{3586:com.google.android.googlequicksearchbox/u0a29}
+    Proc # 1: vis   F/ /T  trm: 0 2981:com.google.process.gapps/u0a12 (service)
+        com.google.android.gms/.tapandpay.hce.service.TpHceService&lt;=Proc{3484:com.android.nfc/1027}
+    Proc #11: prcp  B/ /IB trm: 0 3392:com.google.android.inputmethod.latin/u0a64 (service)
+        com.google.android.inputmethod.latin/com.android.inputmethod.latin.LatinIME&lt;=Proc{902:system/1000}
+    Proc #24: svc   B/ /S  trm: 0 27071:com.google.android.music:main/u0a67 (started-services)
+    Proc #22: svc   B/ /S  trm: 0 853:com.qualcomm.qcrilmsgtunnel/1001 (started-services)
+    Proc # 4: prev  B/ /LA trm: 0 32734:com.google.android.GoogleCamera/u0a53 (previous)
+    Proc #23: svcb  B/ /S  trm: 0 671:com.qualcomm.telephony/1000 (started-services)
+    Proc #20: cch   B/ /CE trm: 0 27659:com.android.providers.calendar/u0a2 (provider)
+        com.android.providers.calendar/.CalendarProvider2&lt;=Proc{27697:com.google.android.calendar/u0a40}
+    Proc #13: cch   B/ /CE trm: 0 653:com.google.android.gms.wearable/u0a12 (cch-empty)
+    Proc #10: cch   B/ /S  trm: 0 4067:com.google.android.talk/u0a62 (cch-started-ui-services)
+    Proc # 7: cch   B/ /S  trm: 0 18868:com.google.corp.huddle.android/u0a95 (cch-started-ui-services)
+    Proc # 6: cch   B/ /CA trm: 0 27697:com.google.android.calendar/u0a40 (cch-act)
+    Proc # 8: cch+1 B/ /CA trm: 0 25675:com.google.android.apps.genie.geniewidget/u0a81 (cch-act)
+    Proc #16: cch+2 B/ /CE trm: 0 1272:com.google.android.keep/u0a106 (cch-empty)
+    Proc #15: cch+2 B/ /CE trm: 0 885:android.process.media/u0a9 (cch-empty)
+    Proc #14: cch+2 B/ /CE trm: 0 15146:android.process.acore/u0a3 (cch-empty)
+    Proc # 9: cch+3 B/ /CA trm: 0 17016:com.google.android.gm/u0a79 (cch-act)
+    Proc #19: cch+4 B/ /CE trm: 0 973:com.google.android.apps.maps/u0a66 (cch-empty)
+    Proc #18: cch+4 B/ /CE trm: 0 1091:com.google.android.apps.photos/u0a71 (cch-empty)
+    Proc #17: cch+4 B/ /CE trm: 0 1141:com.google.android.apps.plus/u0a74 (cch-empty)
+    Proc #12: cch+5 B/ /CA trm: 0 22299:com.google.android.apps.dogfood/u0a105 (cch-act)
+    Proc #21: cch+6 B/ /CE trm: 0 995:com.google.android.partnersetup/u0a18 (cch-empty)></pre></p>
+  </section>
+
+<h2 id=scans>Scans</h2>
+<p>Use the following steps to identify applications performing excessive
+Bluetooth Low Energy (BLE) scans:</p>
+<ul>
+<li>Find log messages for <code>BluetoothLeScanner</code>:
+<pre>
+$ grep 'BluetoothLeScanner' ~/downloads/bugreport.txt
+07-28 15:55:19.090 24840 24851 D BluetoothLeScanner: onClientRegistered() - status=0 clientIf=5
+</pre></li>
+<li>Locate the PID in the log messages. In this example, "24840" and
+"24851" are PID (process ID) and TID (thread ID).</li>
+<li>Locate the application associated with the PID:
+<pre>
+PID #24840: ProcessRecord{4fe996a 24840:com.badapp/u0a105}
+</pre>
+<p>In this example, the package name is <code>com.badapp</code>.</li>
+<li>Look up the package name on Google Play to identify the responsible
+application:
+<strong>https://play.google.com/store/apps/details?id=com.badapp</strong>.</li>
+</ul>
+<p class=note><strong>Note</strong>: For devices running Android 7.0, the
+system collects data for BLE scans and associates these activities
+with the initiating application. For details, see
+<a href="/devices/tech/power/values.html#le-bt-scans">Low Energy (LE)
+and Bluetooth scans</a>.</p>
+
+  </body>
+</html>

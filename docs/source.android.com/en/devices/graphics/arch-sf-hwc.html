@@ -1,0 +1,205 @@
+<html devsite>
+  <head>
+    <title>SurfaceFlinger and Hardware Composer</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>Having buffers of graphical data is wonderful, but life is even better when
+you get to see them on your device's screen. That's where SurfaceFlinger and the
+Hardware Composer HAL come in.</p>
+
+
+<h2 id=surfaceflinger>SurfaceFlinger</h2>
+
+<p>SurfaceFlinger's role is to accept buffers of data from multiple sources,
+composite them, and send them to the display. Once upon a time this was done
+with software blitting to a hardware framebuffer (e.g.
+<code>/dev/graphics/fb0</code>), but those days are long gone.</p>
+
+<p>When an app comes to the foreground, the WindowManager service asks
+SurfaceFlinger for a drawing surface. SurfaceFlinger creates a layer (the
+primary component of which is a BufferQueue) for which SurfaceFlinger acts as
+the consumer. A Binder object for the producer side is passed through the
+WindowManager to the app, which can then start sending frames directly to
+SurfaceFlinger.</p>
+
+<p class="note"><strong>Note:</strong> While this section uses SurfaceFlinger
+terminology, WindowManager uses the term <em>window</em> instead of
+<em>layer</em>&hellip;and uses layer to mean something else. (It can be argued
+that SurfaceFlinger should really be called LayerFlinger.)</p>
+
+<p>Most applications have three layers on screen at any time: the status bar at
+the top of the screen, the navigation bar at the bottom or side, and the
+application UI. Some apps have more, some less (e.g. the default home app has a
+separate layer for the wallpaper, while a full-screen game might hide the status
+bar. Each layer can be updated independently. The status and navigation bars
+are rendered by a system process, while the app layers are rendered by the app,
+with no coordination between the two.</p>
+
+<p>Device displays refresh at a certain rate, typically 60 frames per second on
+phones and tablets. If the display contents are updated mid-refresh, tearing
+will be visible; so it's important to update the contents only between cycles.
+The system receives a signal from the display when it's safe to update the
+contents. For historical reasons we'll call this the VSYNC signal.</p>
+
+<p>The refresh rate may vary over time, e.g. some mobile devices will range from 58
+to 62fps depending on current conditions. For an HDMI-attached television, this
+could theoretically dip to 24 or 48Hz to match a video. Because we can update
+the screen only once per refresh cycle, submitting buffers for display at 200fps
+would be a waste of effort as most of the frames would never be seen. Instead of
+taking action whenever an app submits a buffer, SurfaceFlinger wakes up when the
+display is ready for something new.</p>
+
+<p>When the VSYNC signal arrives, SurfaceFlinger walks through its list of
+layers looking for new buffers. If it finds a new one, it acquires it; if not,
+it continues to use the previously-acquired buffer. SurfaceFlinger always wants
+to have something to display, so it will hang on to one buffer. If no buffers
+have ever been submitted on a layer, the layer is ignored.</p>
+
+<p>After SurfaceFlinger has collected all buffers for visible layers, it asks
+the Hardware Composer how composition should be performed.</p>
+
+<h2 id=hwc>Hardware Composer</h2>
+
+<p>The Hardware Composer HAL (HWC) was introduced in Android 3.0 and has evolved
+steadily over the years. Its primary purpose is to determine the most efficient
+way to composite buffers with the available hardware. As a HAL, its
+implementation is device-specific and usually done by the display hardware OEM.</p>
+
+<p>The value of this approach is easy to recognize when you consider <em>overlay
+planes</em>, the purpose of which is to composite multiple buffers together in
+the display hardware rather than the GPU. For example, consider a typical
+Android phone in portrait orientation, with the status bar on top, navigation
+bar at the bottom, and app content everywhere else. The contents for each layer
+are in separate buffers. You could handle composition using either of the
+following methods:</p>
+
+<ul>
+<li>Rendering the app content into a scratch buffer, then rendering the status
+bar over it, the navigation bar on top of that, and finally passing the scratch
+buffer to the display hardware.</li>
+<li>Passing all three buffers to the display hardware and tell it to read data
+from different buffers for different parts of the screen.</li>
+</ul>
+
+<p>The latter approach can be significantly more efficient.</p>
+
+<p>Display processor capabilities vary significantly. The number of overlays,
+whether layers can be rotated or blended, and restrictions on positioning and
+overlap can be difficult to express through an API. The HWC attempts to
+accommodate such diversity through a series of decisions:</p>
+
+<ol>
+<li>SurfaceFlinger provides HWC with a full list of layers and asks, "How do
+you want to handle this?"</li>
+<li>HWC responds by marking each layer as overlay or GLES composition.</li>
+<li>SurfaceFlinger takes care of any GLES composition, passing the output buffer
+to HWC, and lets HWC handle the rest.</li>
+</ol>
+
+<p>Since hardware vendors can custom tailor decision-making code, it's possible
+to get the best performance out of every device.</p>
+
+<p>Overlay planes may be less efficient than GL composition when nothing on the
+screen is changing. This is particularly true when overlay contents have
+transparent pixels and overlapping layers are blended together. In such cases,
+the HWC can choose to request GLES composition for some or all layers and retain
+the composited buffer. If SurfaceFlinger comes back asking to composite the same
+set of buffers, the HWC can continue to show the previously-composited scratch
+buffer. This can improve the battery life of an idle device.</p>
+
+<p>Devices running Android 4.4 and later typically support four overlay planes.
+Attempting to composite more layers than overlays causes the system to use GLES
+composition for some of them, meaning the number of layers used by an app can
+have a measurable impact on power consumption and performance.</p>
+
+<h2 id=virtual-displays>Virtual displays</h2>
+
+<p>SurfaceFlinger supports a primary display (i.e. what's built into your phone
+or tablet), an external display (such as a television connected through HDMI),
+and one or more virtual displays that make composited output available within
+the system. Virtual displays can be used to record the screen or send it over a
+network.</p>
+
+<p>Virtual displays may share the same set of layers as the main display
+(the layer stack) or have its own set. There is no VSYNC for a virtual display,
+so the VSYNC for the primary display is used to trigger composition for all
+displays.</p>
+
+<p>In older versions of Android, virtual displays were always composited with
+GLES and the Hardware Composer managed composition for the primary display only.
+In Android 4.4, the Hardware Composer gained the ability to participate in
+virtual display composition.</p>
+
+<p>As you might expect, frames generated for a virtual display are written to a
+BufferQueue.</p>
+
+<h2 id=screenrecord>Case Study: screenrecord</h2>
+
+<p>The <a href="https://android.googlesource.com/platform/frameworks/av/+/marshmallow-release/cmds/screenrecord/">screenrecord
+command</a> allows you to record everything that appears on the screen as an
+.mp4 file on disk. To implement, we have to receive composited frames from
+SurfaceFlinger, write them to the video encoder, and then write the encoded
+video data to a file. The video codecs are managed by a separate process
+(mediaserver) so we have to move large graphics buffers around the system. To
+make it more challenging, we're trying to record 60fps video at full resolution.
+The key to making this work efficiently is BufferQueue.</p>
+
+<p>The MediaCodec class allows an app to provide data as raw bytes in buffers,
+or through a <a href="/devices/graphics/arch-sh.html">Surface</a>. When
+screenrecord requests access to a video encoder, mediaserver creates a
+BufferQueue, connects itself to the consumer side, then passes the producer
+side back to screenrecord as a Surface.</p>
+
+<p>The screenrecord command then asks SurfaceFlinger to create a virtual display
+that mirrors the main display (i.e. it has all of the same layers), and directs
+it to send output to the Surface that came from mediaserver. In this case,
+SurfaceFlinger is the producer of buffers rather than the consumer.</p>
+
+<p>After the configuration is complete, screenrecord waits for encoded data to
+appear. As apps draw, their buffers travel to SurfaceFlinger, which composites
+them into a single buffer that gets sent directly to the video encoder in
+mediaserver. The full frames are never even seen by the screenrecord process.
+Internally, mediaserver has its own way of moving buffers around that also
+passes data by handle, minimizing overhead.</p>
+
+<h2 id=simulate-secondary>Case Study: Simulate secondary displays</h2>
+
+<p>The WindowManager can ask SurfaceFlinger to create a visible layer for which
+SurfaceFlinger acts as the BufferQueue consumer. It's also possible to ask
+SurfaceFlinger to create a virtual display, for which SurfaceFlinger acts as
+the BufferQueue producer. What happens if you connect them, configuring a
+virtual display that renders to a visible layer?</p>
+
+<p>You create a closed loop, where the composited screen appears in a window.
+That window is now part of the composited output, so on the next refresh
+the composited image inside the window will show the window contents as well
+(and then it's
+<a href="https://en.wikipedia.org/wiki/Turtles_all_the_way_down">turtles all the
+way down)</a>. To see this in action, enable
+<a href="http://developer.android.com/tools/index.html">Developer options</a> in
+settings, select <strong>Simulate secondary displays</strong>, and enable a
+window. For bonus points, use screenrecord to capture the act of enabling the
+display then play it back frame-by-frame.</p>
+
+  </body>
+</html>

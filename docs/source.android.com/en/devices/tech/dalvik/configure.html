@@ -1,0 +1,472 @@
+<html devsite>
+  <head>
+    <title>Configuring ART</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>This page discusses how to configure ART and its compilation options. Topics addressed here
+include configuration of pre-compilation of the system image, dex2oat compilation options,
+and how to trade off system partition space, data partition space, and performance.</p>
+
+<p>See <a href="http://source.android.com/devices/tech/dalvik/index.html">ART
+and Dalvik</a>, the <a
+href="http://source.android.com/devices/tech/dalvik/dex-format.html">Dalvik
+Executable format</a>, and the remaining pages on source.android.com to work
+with ART. See <a
+href="http://developer.android.com/guide/practices/verifying-apps-art.html">Verifying
+App Behavior on the Android Runtime (ART)</a> to ensure your apps work
+properly.</p>
+
+<h2 id=how_art_works>How ART works</h2>
+
+<p>ART uses ahead-of-time (AOT) compilation, and starting in Android 7.0
+(Nougat or N), it uses a hybrid combination of AOT, just-in-time (JIT)
+compilation, and profile-guided compilation.  The combination of all these
+compilation modes is configurable and will be discussed in this section. As an
+example, Pixel devices are configured with the following compilation flow:</p>
+<ol>
+<li>An application is initially installed without any AOT compilation. The
+  first few times the application runs, it will be interpreted, and methods
+  frequently executed will be JIT compiled.</li>
+<li>When the device is idle and charging, a compilation daemon runs to
+  AOT-compile frequently used code based on a profile generated during the
+  first runs.</li>
+<li>The next restart of an application will use the profile-guided code and
+  avoid doing JIT compilation at runtime for methods already compiled. Methods
+  that get JIT-compiled during the new runs will be added to the profile, which
+  will then be picked up by the compilation daemon.</li>
+</ol>
+
+<p>ART comprises a compiler (the <code>dex2oat</code> tool) and a runtime
+(<code>libart.so</code>) that is loaded for starting the Zygote. The
+<code>dex2oat</code> tool takes an APK file and generates one or more
+compilation artifact files that the runtime loads. The number of files, their
+extensions, and names are subject to change across releases, but as of the
+Android O release, the files being generated are:</p>
+<ul>
+<li><code>.vdex</code>: contains the uncompressed DEX code of the
+  APK, with some additional metadata to speed up verification.</li>
+<li><code>.odex</code>: contains AOT compiled code for methods in the
+  APK.</li>
+<li><code>.art (optional)</code>: contains ART internal
+  representations of some strings and classes listed in the APK, used to speed
+  application startup. </li>
+</ul>
+
+<h2 id=compilation_options>Compilation options</h2>
+
+<p>Compilation options for ART are of two categories:
+<ol>
+<li>System ROM configuration: what code gets AOT-compiled when building a
+  system image.</li>
+<li>Runtime configuration: how ART compiles and runs applications on a
+  device.</li>
+</ol>
+</p>
+
+<p>One core ART option to configure these two categories is <em>compiler
+filters</em>. Compiler filters drive how ART compiles DEX code and is an
+option passed to the <code>dex2oat</code> tool. Starting in Android O, there
+are four officially supported filters:</p>
+<ul>
+<li><em>verify</em>: only run DEX code verification.</li>
+<li><em>quicken</em>: run DEX code verification and optimize some DEX
+  instructions to get better interpreter performance.</li>
+<li><em>speed</em>: run DEX code verification and AOT-compile all methods.</li>
+<li><em>speed-profile</em>: run DEX code verification and AOT-compile methods
+  listed in a profile file.</li>
+</ul>
+
+<h3 id=system_rom>System ROM configuration</h3>
+
+<p>There are a number of ART build options available for configuring a system
+ROM. How to configure these options depends on the available storage space for
+<code>/system</code> and the number of pre-installed applications. The
+JARs/APKs that are compiled into a system ROM can be divided in four
+categories:</p>
+<ul>
+<li>Boot classpath code: compiled with the <em>speed</em> compiler filter by
+    default.</li>
+<li>System server code: compiled with the <em>speed</em> compiler filter by
+  default.</li>
+<li>Product-specific core applications: compiled with the <em>speed</em>
+  compiler filter by default.</li>
+<li>All other applications: compiled with the <em>quicken</em> compiler filter
+  by default.</li>
+</ul>
+
+<h4 id=build_options>Makefile options</h4>
+<ul>
+
+<li><code>WITH_DEXPREOPT</code></li>
+<p>
+Whether <code>dex2oat</code> is invoked on DEX code installed on the system image. Enabled by default.
+</p>
+
+<li><code>DONT_DEXPREOPT_PREBUILTS</code> (since Android 5.0)</li>
+<p>
+Enabling <code>DONT_DEXPREOPT_PREBUILTS</code> prevents the prebuilts from being
+pre-optimized. These are apps that have <code>include $(BUILD_PREBUILT)</code>
+specified in their <code>Android.mk</code>, such as Gmail. Skipping
+pre-optimization of prebuilt apps that are likely to be updated via Google Play
+saves <code>/system</code> space but does add to first boot time.
+</p>
+
+<li><code>WITH_DEXPREOPT_BOOT_IMG_ONLY</code></li>
+
+<p>Enabling <code>WITH_DEXPREOPT_BOOT_IMG_ONLY</code> pre-optimizes only the
+boot classpath.
+
+<li><code>LOCAL_DEX_PREOPT</code></li>
+
+<p>Pre-optimization can also be enabled or disabled on an individual app basis by
+specifying the <code>LOCAL_DEX_PREOPT</code> option in the module definition.
+This can be useful for disabling pre-optimization of apps that may immediately
+receive Google Play updates since the updates would render the pre-optimized
+code in the system image obsolete. This is also useful to save space on major
+version upgrade OTAs since users may already have newer versions of apps in the
+data partition.</p>
+
+<p><code>LOCAL_DEX_PREOPT</code> supports the values ‘true’ or ‘false’ to
+enable or disable pre-optimization, respectively. In addition, ‘nostripping’ can
+be specified if pre-optimization should not strip the <code>classes.dex</code>
+file from the APK or JAR file. Normally this file is stripped since it’s no
+longer needed after pre-optimization, but this last option is necessary to
+allow third-party APK signatures to remain valid.</p>
+
+<li><code>PRODUCT_DEX_PREOPT_BOOT_FLAGS</code></li>
+<p>
+Passes options to <code>dex2oat</code> to control how the boot image is
+compiled. It can be used to specify customized image classes lists, compiled
+classes lists, and compiler filters.
+</p>
+
+<li><code>PRODUCT_DEX_PREOPT_DEFAULT_FLAGS</code></li>
+<p>
+Passes options to <code>dex2oat</code> to control how everything besides the
+boot image is compiled.
+</p>
+
+<li><code>PRODUCT_DEX_PREOPT_MODULE_CONFIGS</code></li>
+<p>
+Provides the ability to pass <code>dex2oat</code> options for a particular
+module and product configuration. It is set in a product’s
+<code>device.mk</code> file by <code>$(call add-product-dex-preopt-module-config,&lt;modules&gt;,&lt;option&gt;)</code>
+where <code>&lt;modules&gt;</code> is a list of LOCAL_MODULE and LOCAL_PACKAGE names
+for JAR and APK files, respectively.
+</p>
+
+<li><code>PRODUCT_DEXPREOPT_SPEED_APPS (New in Android O)</code></li>
+<p>
+List of applications that have been identified as core to the products and
+which are desirable to compile with the <em>speed</em> compiler filter. For
+example, persistent apps such as SystemUI get a chance to use
+profile-guided compilation only at the next reboot, so it may be better for the
+product to have these apps always AOT-compiled.
+</p>
+
+<li><code>PRODUCT_SYSTEM_SERVER_APPS (New in Android O)</code></li>
+<p>
+List of applications that are loaded by the system server. These applications
+will be compiled by default with the <em>speed</em> compiler filter.
+</p>
+
+<li><code>PRODUCT_ART_TARGET_INCLUDE_DEBUG_BUILD(Post Android O)</code></li>
+<p>
+Whether to include a debug version of ART on the device. By default, this is
+enabled for userdebug and eng builds. The behavior can be overridden by explicitly
+setting the option to <em>true</em> or <em>false</em>.
+</p>
+<p>
+By default, the device will use the non-debug version (<em>libart.so</em>).
+To switch, set the system property <code>persist.sys.dalvik.vm.lib.2</code> to
+<em>libartd.so</em>.
+</p>
+
+<li><code>WITH_DEXPREOPT_PIC (Removed in Android O)</code></li>
+
+<p>In Android 5.1.0 through Android 6.0.1, <code>WITH_DEXPREOPT_PIC</code> can
+be specified to enable position-independent code (PIC). With this, compiled
+code from the image doesn’t have to be relocated from /system into
+/data/dalvik-cache, saving space in the data partition. However, there is a
+slight runtime impact because it disables an optimization that takes advantage
+of position-dependent code.  Typically, devices wanting to save space in /data
+should enable PIC compilation.</p>
+
+<p>In Android 7.0, PIC compilation was enabled by default.</p>
+
+</ul>
+
+
+
+<h4 id=boot_classpath>Boot classpath configuration</h4>
+
+<ul>
+<li>Preloaded Classes List</li>
+
+<p>The preloaded classes list is a list of classes the zygote will initialize on
+startup. This saves each app from having to run these class initializers
+separately, allowing them to start up faster and share pages in memory. The
+preloaded classes list file is located at frameworks/base/preloaded-classes by
+default, and it contains a list that is tuned for typical phone use. This may
+be different for other devices, such as wearables, and should be tuned
+accordingly. Be careful when tuning this since adding too many classes wastes
+memory loading unused classes; meanwhile, adding too few forces each app to
+have to have its own copy, again wasting memory.</p>
+
+<p>Example usage (in product’s device.mk):</p>
+
+<pre class="devsite-click-to-copy">
+PRODUCT_COPY_FILES += &lt;filename&gt;:system/etc/preloaded-classes
+</pre>
+
+<p class="note"><strong>Note:</strong> This line must be placed before
+inheriting any product configuration makefiles that get the default one from:
+<code>build/target/product/base.mk</code></p>
+
+<li>Image Classes List</li>
+
+<p>The image classes list is a list of classes that dex2oat initializes ahead of
+time and stores in the boot.art file. This allows the zygote to load these
+results out of the boot.art file on startup instead of running the initializers
+for these classes itself during preloading. A key feature of this is that the
+pages loaded from the image and shared between processes can be clean, allowing
+them to be swapped out easily in low-memory situations. In L, by default the
+image classes list uses the same list as the preloaded classes list. Beginning
+post-L in AOSP, a custom image classes list can be specified using:</p>
+
+<pre class="devsite-click-to-copy">
+PRODUCT_DEX_PREOPT_BOOT_FLAGS
+</pre>
+
+<p>Example use (in product’s <code>device.mk</code>):</p>
+
+<pre class="devsite-click-to-copy">
+PRODUCT_DEX_PREOPT_BOOT_FLAGS += --image-classes=&lt;filename&gt;
+</pre>
+
+<li>Compiled Classes List</li>
+
+<p>In post-L AOSP, a subset of classes from the boot classpath can be specified to
+be compiled during pre-optimization using the compiled classes list. This can
+be a useful option for devices that are very tight on space and can’t fit the
+entire pre-optimized boot image. However, note classes not specified by this
+list will not be compiled - not even on the device - and must be interpreted,
+potentially affecting runtime performance. By default, dex2oat will look for a
+compiled classes list in $OUT/system/etc/compiled-classes, so a custom one can
+be copied to that location by the device.mk. A particular file location can
+also be specified using:
+
+<pre class="devsite-click-to-copy">
+PRODUCT_DEX_PREOPT_BOOT_FLAGS
+</pre>
+
+<p>Example usage (in product’s <code>device.mk</code>):</p>
+
+<pre class="devsite-click-to-copy">
+PRODUCT_COPY_FILES += &lt;filename&gt;:system/etc/compiled-classes
+</pre>
+
+<p class="note"><strong>Note:</strong> This line must be placed before
+inheriting any product configuration makefiles that get the default one from:
+<code>build/target/product/base.mk</code></p>
+</ul>
+
+<h3 id=runtime_configuration>Runtime configuration</h3>
+
+<h4 id=undefined>Jit options</h4>
+
+<p>The following options affect Android releases only where the ART JIT compiler
+is available.</p>
+
+<ul>
+<li>dalvik.vm.usejit: whether or not the JIT is enabled.</li>
+<li>dalvik.vm.jitinitialsize (default 64K): the initial capacity
+of the code cache. The code cache will regularly GC and increase if needed.
+<li>dalvik.vm.jitmaxsize (default 64M): the maximum capacity of the code cache.
+<li>dalvik.vm.jitthreshold: (default 10000) - This
+is the threshold that the "hotness" counter of a method needs to pass in order
+for the method to be JIT compiled. The "hotness" counter is a metric internal
+to the runtime. It includes the number of calls, backward branches, and other
+factors.
+<li>dalvik.vm.usejitprofiles: whether or not
+JIT profiles are enabled; this may be used even if dalvik.vm.usejit is false.
+Note that if this is false, the compiler filter <em>speed-profile</em> does
+not AOT-compile any method and is equivalent to <em>quicken</em>.
+<li>dalvik.vm.jitprithreadweight (default to
+dalvik.vm.jitthreshold / 20) - The weight of the JIT "samples"
+(see jitthreshold) for the application UI thread. Use to speed up compilation
+of methods that directly affect users experience when interacting with the
+app.
+<li>dalvik.vm.jittransitionweight: (default to dalvik.vm.jitthreshold / 10)
+the weight of the method
+invocation that transitions between compile code and interpreter. This helps
+make sure the methods involved are compiled to minimize transitions (which are
+expensive).
+</li>
+</ul>
+
+<h4 id=undefined>Package manager options</h4>
+
+<p>
+Since Android 7.0, there's a generic way to specify the level of
+compilation/verification that happened at various stages.
+The compilation levels can be configured via system properties
+with the defaults being:
+</p>
+
+<ul>
+<li>pm.dexopt.install=quicken</li>
+<p>This is the compilation filter used when installing applications through Google
+Play. For faster installs, try the <em>quicken</em> compiler filter.
+</p>
+<li>pm.dexopt.bg-dexopt=speed-profile</li>
+<p>
+This is the compilation filter used when the device is idle, charging and
+fully charged.  Try the <em>speed-profile</em> compiler filter
+to take advantage of profile-guided compilation and save on storage.
+</p>
+<li>pm.dexopt.boot=verify</li>
+<p>
+The compilation filter used after an over-the-air update. We
+<strong>strongly</strong> recommend the <em>verify</em> compiler filter for this
+option to avoid very long boot times.
+</p>
+<li>pm.dexopt.first-boot=quicken<li>
+<p>
+The compilation filter for the first time the device ever boots. The filter
+used here will only affect the boot time after factory. We recommend the filter
+<em>quicken</em> for it to avoid long times before a user gets to
+use the phone for the very first time. Note that if all applications in
+<code>/system</code> are already compiled with the <em>quicken</em> compiler
+filter or are compiled with the <em>speed</em> or <em>speed-profile</em>
+compiler filter, the <code>pm.dexopt.first-boot</code> has no effect.
+</p>
+
+</ul>
+
+<h4 id=undefined>Dex2oat options</h4>
+
+
+<p>Note that these options affect <code>dex2oat</code>
+during on-device compilation as well as during pre-optimization, whereas most
+of the options discussed above affect only pre-optimization.</p>
+
+<p>To control <code>dex2oat</code> while it’s compiling the boot image:</p>
+
+<ul>
+  <li>dalvik.vm.image-dex2oat-Xms: initial heap size
+  <li>dalvik.vm.image-dex2oat-Xmx: maximum heap size
+  <li>dalvik.vm.image-dex2oat-filter: compiler filter option
+  <li>dalvik.vm.image-dex2oat-threads: number of threads to use
+</ul>
+
+<p>To control <code>dex2oat</code> while it’s compiling everything besides the boot image:</p>
+
+<ul>
+  <li>dalvik.vm.dex2oat-Xms: initial heap size
+  <li>dalvik.vm.dex2oat-Xmx: maximum heap size
+  <li>dalvik.vm.dex2oat-filter: compiler filter option
+</ul>
+
+<p>On releases through Android 6.0, one additional option is provided for compiling everything
+besides the boot image:</p>
+<ul>
+  <li>dalvik.vm.dex2oat-threads: number of threads to use
+</ul>
+
+<p>Starting with Android 6.1, this becomes two additional options for compiling everything besides
+the boot image:</p>
+<ul>
+  <li>dalvik.vm.boot-dex2oat-threads: number of threads to use during boot time
+  <li>dalvik.vm.dex2oat-threads: number of threads to use after boot time
+</ul>
+
+<p>Starting with Android 7.1, two options are provided for controlling how memory is used when
+compiling everything besides the boot image:</p>
+<ul>
+  <li>dalvik.vm.dex2oat-very-large: minimum total dex file size in bytes to disable AOT compilation
+  <li>dalvik.vm.dex2oat-swap: use dex2oat swap file (for low-memory devices)
+</ul>
+
+<p>The options that control initial and maximum heap size for
+<code>dex2oat</code> should not be reduced since they could limit what
+applications can be compiled.</p>
+
+<h2 id=other_odex>A/B specific configuration</h2>
+
+<h3 id=undefined>ROM configuration</h3>
+
+<p>Starting in Android 7.0, devices may use two system partitions to enable
+<a href="/devices/tech/ota/ab_updates.html">A/B system updates</a>.
+To save on the system partition size, the preopted files can be installed in
+the unused second system partition. They are then copied to the data partition
+on first boot.</p>
+
+<p>Example usage (in <code>device-common.mk</code>):</p>
+
+<pre class="devsite-click-to-copy">
+PRODUCT_PACKAGES += \
+     cppreopts.sh
+PRODUCT_PROPERTY_OVERRIDES += \
+     ro.cp_system_other_odex=1
+</pre>
+
+<p>And in device's <code>BoardConfig.mk</code>:</p>
+
+<pre class="devsite-click-to-copy">
+BOARD_USES_SYSTEM_OTHER_ODEX := true
+</pre>
+
+<p>
+Note that boot classpath code, system server code, and product-specific core
+applications always compile to the system partition. By default, all other
+applications get compiled to the unused second system partition. This can be
+controlled with the <code>SYSTEM_OTHER_ODEX_FILTER</code>, which has a value by
+default of:</p>
+
+<pre class="devsite-click-to-copy">
+SYSTEM_OTHER_ODEX_FILTER ?= app/% priv-app/%
+</pre>
+
+<h3 id=undefined>Background dexopt OTA</h3>
+
+<p>With A/B enabled devices, applications can be compiled in the background for
+updating to the new system image. See <a
+href="/devices/tech/ota/ab_updates.html#compilation">App compilation in
+background</a> to optionally include the compilation script and
+binaries in the system image. The compilation filter used for this compilation
+is controlled with:</p>
+<pre class="devsite-click-to-copy">
+pm.dexopt.ab-ota=speed-profile
+</pre>
+
+<p>
+We recommend using <em>speed-profile</em> to take advantage of profile guided
+compilation and save on storage.
+</p>
+
+
+
+
+  </body>
+</html>

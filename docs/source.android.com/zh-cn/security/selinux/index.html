@@ -1,0 +1,67 @@
+<html devsite><head>
+    <title>Android 中的安全增强型 Linux</title>
+    <meta name="project_path" value="/_project.yaml"/>
+    <meta name="book_path" value="/_book.yaml"/>
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+<h2 id="introduction">简介</h2>
+
+<p>Android 安全模型部分基于应用沙盒的概念。每个应用都在自己的沙盒内运行。在 Android 4.3 之前的版本中，这些沙盒是通过为每个应用创建独一无二的 Linux UID（在应用安装时创建）来定义的。从 Android 4.3 版起，安全增强型 Linux (SELinux) 开始用于进一步定义 Android 应用沙盒的边界。</p>
+
+<p>作为 Android <a href="/security/index.html">安全模型</a>的一部分，Android 使用 SELinux 对所有进程强制执行强制访问控制 (MAC)，其中包括以 Root/超级用户权限运行的进程（也称为 Linux 功能）。SELinux 能够限制特权进程并能够自动创建安全政策，从而可提升 Android 的安全性。</p>
+
+<p>很多公司和组织都为此做出了卓越的贡献；<a href="https://android.googlesource.com/">android.googlesource.com</a> 上公开了所有 Android 代码和贡献者，以供所有人查看。借助 SELinux，Android 可以更好地保护和限制系统服务、控制对应用数据和系统日志的访问、降低恶意软件的影响，并保护用户免遭移动设备上的代码可能存在的缺陷的影响。</p>
+
+<p>Android 中包含 SELinux（处于强制模式）和默认适用于整个 <a href="https://android.googlesource.com/">Android 开放源代码项目</a>的相应安全政策。在强制模式下，非法操作会被阻止，并且所有尝试进行的违规行为都会被内核记录到 <code>dmesg</code> 和 <code>logcat</code> 中。Android 设备制造商应收集与错误相关的信息，以便在实施其软件和 SELinux 政策之前先对其进行优化。</p>
+
+<h2 id="background">背景</h2>
+
+<p>SELinux 采用默认拒绝的方式运行。任何未经明确允许的行为都会被拒绝。SELinux 可以采用以下任一种全局模式运行：宽容模式和强制模式。在宽容模式下，权限拒绝事件会被记录下来，但不会被强制执行；在强制模式下，拒绝事件会被记录下来，并且会被强制执行。此外，SELinux 还支持特定域宽容模式。在这种模式下，可将特定域（进程）设为宽容域，同时使系统的其余部分处于全局强制模式。域简单来说就是安全政策中用于标识一个进程或一组进程的标签，安全政策会以相同的方式对待使用相同域作为标签的所有进程。借助特定域宽容模式，可逐渐将 SELinux 应用于系统中越来越多的部分。此外，借助特定域宽容模式，还可以为新服务制定政策，同时确保系统的其余部分处于强制模式。</p>
+
+<p>在 Android 5.0 (L) 版本中，Android 开始全面强制执行 SELinux。这基于 4.3 版中的宽容模式和 4.4 中的部分强制模式。简而言之，Android 正在从对有限的一组关键域（<code>installd</code>、<code>netd</code>、<code>vold</code> 和 <code>zygote</code>）强制执行 SELinux 转为对所有域（超过 60 个域）强制执行 SELinux。这意味着，制造商必须要更好地了解并扩展其 SELinux 实现，以便提供兼容的设备。请注意：</p>
+
+<ul>
+<li>在 5.0 版中，所有域均处于强制模式</li>
+<li><code>init</code> 以外的任何进程都不应在 <code>init</code> 域中运行</li>
+<li>如果出现任何常规拒绝事件（对于 block_device、socket_device、default_service 等），都表示设备需要一个特殊域</li>
+</ul>
+
+<h2 id="supporting_documentation">支持文档</h2>
+
+<p>如需关于如何构建实用政策的详细信息，请参阅以下文档：</p>
+
+<p><a href="http://seandroid.bitbucket.org/PapersandPresentations.html">http://seandroid.bitbucket.org/PapersandPresentations.html</a></p>
+
+<p><a href="https://www.codeproject.com/Articles/806904/Android-Security-Customization-with-SEAndroid">https://www.codeproject.com/Articles/806904/Android-Security-Customization-with-SEAndroid</a></p>
+
+<p><a href="https://events.linuxfoundation.org/sites/events/files/slides/abs2014_seforandroid_smalley.pdf">https://events.linuxfoundation.org/sites/events/files/slides/abs2014_seforandroid_smalley.pdf</a></p>
+
+<p><a href="https://www.internetsociety.org/sites/default/files/02_4.pdf">https://www.internetsociety.org/sites/default/files/02_4.pdf</a></p>
+
+<p><a href="http://freecomputerbooks.com/books/The_SELinux_Notebook-4th_Edition.pdf">http://freecomputerbooks.com/books/The_SELinux_Notebook-4th_Edition.pdf</a></p>
+
+<p><a href="http://selinuxproject.org/page/ObjectClassesPerms">http://selinuxproject.org/page/ObjectClassesPerms</a></p>
+
+<p><a href="https://www.nsa.gov/resources/everyone/digital-media-center/publications/research-papers/assets/files/implementing-selinux-as-linux-security-module-report.pdf">https://www.nsa.gov/resources/everyone/digital-media-center/publications/research-papers/assets/files/implementing-selinux-as-linux-security-module-report.pdf</a></p>
+
+<p><a href="https://www.nsa.gov/resources/everyone/digital-media-center/publications/research-papers/assets/files/configuring-selinux-policy-report.pdf">https://www.nsa.gov/resources/everyone/digital-media-center/publications/research-papers/assets/files/configuring-selinux-policy-report.pdf</a></p>
+
+<p><a href="https://www.gnu.org/software/m4/manual/index.html">https://www.gnu.org/software/m4/manual/index.html</a></p>
+
+</body></html>

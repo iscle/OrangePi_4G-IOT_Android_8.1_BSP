@@ -1,0 +1,218 @@
+<html devsite><head>
+    <title>实现安全保护措施</title>
+    <meta name="project_path" value="/_project.yaml"/>
+    <meta name="book_path" value="/_book.yaml"/>
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+<p>Android 安全团队经常会收到用户发来的请求，希望我们提供关于如何防止 Android 设备上出现潜在安全问题的信息。我们偶尔也会对设备进行抽查，并让设备制造商和受影响的合作伙伴知晓潜在问题。</p>
+
+<p>在本页中，我们提供了根据自己的经验总结的安全方面的最佳做法（扩展了我们为开发者提供的<a href="http://developer.android.com/guide/practices/security.html">安全设计</a>文档），以及关于如何在设备上编译或安装系统级软件的详细信息。</p>
+
+<p>为了方便相关人员采用这些最佳做法，Android 安全团队会尽可能将相关测试整合到 <a href="/compatibility/cts">Android 兼容性测试套件</a> (CTS) 和 <a href="http://tools.android.com/tips/lint">Android Lint</a> 中。我们竭诚欢迎设备实现人员贡献可以帮助其他 Android 用户的相关测试（要查看与安全相关的测试，请访问 <code>root/cts/tests/tests/security/src/android/security/cts</code>）。</p>
+
+<h2 id="dev-process">开发流程</h2>
+<p>请在开发流程和环境中遵循以下最佳做法。</p>
+
+<h3 id="sec-review">审核源代码</h3>
+<p>进行源代码审核可以发现大量安全问题，包括本文档中指出的问题。Android 强烈建议采用手动和自动两种方式审核源代码。最佳做法：</p>
+
+<ul>
+<li>对所有使用 Android SDK 的应用代码运行 <a href="http://tools.android.com/tips/lint">Android Lint</a>，并更正发现的所有问题。</li>
+<li>应使用可以发现内存管理问题（例如，缓冲区溢出和差一错误）的自动工具分析本机代码。</li>
+<li>Android 编译系统支持很多 LLVM 清理程序，例如可用于进行自动源代码审核的 AddressSanitizer 和 UndefinedBehaviorSanitizer。</li>
+</ul>
+
+<h3 id="auto-test">使用自动测试功能</h3>
+<p>自动测试功能可以发现大量安全问题，包括下文中讨论的一些问题。最佳做法：</p>
+
+<ul>
+<li>定期更新 CTS 并运行安全性测试；运行最新版本的 CTS 来验证兼容性。</li>
+<li>在整个开发流程中定期运行 CTS，以便提早发现问题并缩短解决问题所需的时间。在自动编译流程（每天会编译多次）的连续集成期间，Android 会使用 CTS。
+</li>
+<li>设备制造商应使接口的安全性测试实现自动化，包括使用格式有误的输入内容进行测试（模糊测试）。</li>
+</ul>
+
+<h3 id="sign-sysimg">为系统映像签名</h3>
+<p>系统映像的签名对于判断设备的完整性至关重要。最佳做法：</p>
+
+<ul>
+<li>不得使用众所周知的密钥为设备签名。</li>
+<li>应按照与处理敏感密钥方面的业界标准做法一致的方式管理用于为设备签名的密钥，包括使用能够提供有限、可审核访问权限的硬件安全模块 (HSM)。</li>
+</ul>
+
+<h3 id="sign-apk">为应用 (APK) 签名</h3>
+<p>应用签名在保障设备安全方面发挥着重要作用，可用于进行权限检查以及软件更新。在选择为应用签名使用的密钥时，务必要考虑应用是仅在一台设备上使用，还是供多台设备共用。最佳做法：</p>
+
+<ul>
+<li>不得使用众所周知的密钥为应用签名。</li>
+<li>应按照与处理敏感密钥方面的业界标准做法一致的方式管理用于为应用签名的密钥，包括使用能够提供有限、可审核访问权限的 HSM。</li>
+<li>不应使用平台密钥为应用签名。</li>
+<li>不应使用不同的密钥为软件包名称相同的应用签名。在针对不同的设备开发应用时，经常会出现这种情况，尤其是在使用平台密钥时。如果应用独立于设备，则在多台设备之间使用相同的密钥。如果应用是特定设备专用的，则按设备和密钥创建独一无二的软件包名称。</li>
+</ul>
+
+<h3 id="apps-pub">发布应用</h3>
+<p>在 Google Play 中，设备制造商能够直接更新应用，而无需进行完整的系统更新。这不仅有助于加快应对安全问题和推出新功能的速度，还有助于确保您的应用具有独一无二的软件包名称。最佳做法：</p>
+
+<ul>
+<li>将您的应用上传到 Google Play，以便能够进行自动更新，而无需进行完整的无线下载 (OTA) 更新。已上传但并未发布的应用无法供用户直接下载，但仍可进行更新。之前安装过相应应用的用户可以重新安装它和/或在其他设备上安装它。</li>
+<li>创建与您的公司明确相关的应用包名称，例如在名称中使用公司商标。</li>
+<li>设备制造商发布的应用应上传到 Google Play 商店，以免第三方用户冒用软件包名称。如果某个设备制造商在设备上安装了某个应用，但没有在 Play 商店中发布该应用，其他开发者便可以上传同样的应用，使用同样的软件包名称，并更改该应用的元数据。当用户获得该应用后，这些不相关的元数据可能会带来困扰。</li>
+</ul>
+
+<h3 id="incident-response">应对安全事件</h3>
+<p>外部各方必须能够就设备特有的安全问题与设备制造商联系。我们建议创建一个公开的电子邮件地址来管理安全事件。最佳做法：</p>
+
+<ul>
+<li>创建 security@your-company.com 或类似地址，并将其公开。<em></em></li>
+<li>如果您发现了影响 Android 操作系统或多个设备制造商提供的 Android 设备的安全问题，则应填写<a href="https://code.google.com/p/android/issues/entry?template=Security%20bug%20report">安全错误报告</a>与 Android 安全团队联系。</li>
+</ul>
+
+<h2 id="prod-implement">产品实现</h2>
+<p>在实现产品时，请遵循以下最佳做法。</p>
+
+<h3 id="root-processes">隔离 Root 进程</h3>
+<p>Root 进程是最常受到提权攻击的目标，因此减少 Root 进程数量有助于降低提权风险。CTS 中包含一个能够列出 Root 进程的信息测试。最佳做法：</p>
+
+<ul>
+<li>应尽可能减少设备上作为 Root 代码运行的必要代码的数量。尽可能使用常规 Android 进程而非 Root 进程。ICS Galaxy Nexus 只有 6 个 Root 进程：vold、inetd、zygote、tf_daemon、ueventd 和 init。如果某个进程必须要在设备上作为 Root 进程运行，请将该进程记录在 AOSP 功能请求中，以便对其进行公开审核。</li>
+<li>应尽可能将 Root 代码与不可信数据隔离开来，并尽可能通过 IPC 访问 Root 代码。例如，将 Root 功能缩减成可通过 Binder 访问的小型服务，并将这个具有签名权限的服务提供给网络流量处理权限很小或没有此类权限的应用。</li>
+<li>Root 进程不得通过网络套接字进行监听。</li>
+<li>Root 进程不得为应用提供通用运行时（例如 Java VM）。</li>
+</ul>
+
+<h3 id="sys-apps">隔离系统应用</h3>
+<p>一般而言，预先安装的应用不应使用共用系统 UID 运行。不过，如果某个应用必须使用共用系统 UID 或其他特权服务（例如，电话服务），那么该应用不应导出由用户安装的第三方应用可访问的任何服务、广播接收器或内容提供程序。最佳做法：</p>
+
+<ul>
+<li>应尽可能减少设备上作为系统代码运行的必要代码的数量。尽可能通过 Android 进程自身的 UID 使用此类进程，而非重复使用系统 UID。</li>
+<li>应尽可能将系统代码与不可信数据隔离开来，并且系统代码应尽可能仅向其他可信进程提供 IPC。</li>
+<li>系统进程不得通过网络套接字进行监听。</li>
+</ul>
+
+<h3 id="process-isolate">隔离进程</h3>
+<p>Android 应用沙盒要求应用与系统中的其他进程（包括 Root 进程和调试程序）隔离开来。除非应用或用户特意启用了调试功能，否则任何应用都不应违反这一要求。最佳做法：</p>
+
+<ul>
+<li>Root 进程不得访问各个应用数据文件夹内的数据，使用已记录的 Android 调试方法时除外。</li>
+<li>Root 进程不得访问应用内存，使用已记录的 Android 调试方法时除外。</li>
+<li>设备上不得有任何会访问其他应用/进程的数据或内存的应用。</li>
+</ul>
+
+<h3 id="suid-files">保护 SUID 文件</h3>
+<p>新的 SetUID 程序应该不能被不可信程序访问。SetUID 程序过去经常是可被用来获取 Root 权限的漏洞位置，因此务必要最大限度地降低 SetUID 程序对不可信应用的可用性。最佳做法：</p>
+
+<ul>
+<li>SUID 进程不得提供可被用来规避 Android 安全模型的 shell 或后门程序。</li>
+<li>必须确保任何用户都无法对 SUID 程序执行写入操作。</li>
+<li>SUID 程序不应为全局可读或全局可执行程序。创建一个组，限定只有该组的成员能够访问相应的 SUID 二进制文件，并将应该能够执行相应 SUID 程序的所有应用放入该组中。
+</li>
+<li>SUID 程序经常会被用户用作获取设备 Root 权限的来源。为了降低这种风险，应确保 shell 用户无法执行 SUID 程序。</li>
+</ul>
+
+<p>CTS 验证程序包括一个可列出 SUID 文件的信息测试；根据 CTS 测试，有些 SetUID 文件是不允许使用的。</p>
+
+<h3 id="listening-sockets">保护监听套接字</h3>
+<p>当设备通过任何端口或任何接口进行监听时，CTS 测试都会失败。如果测试失败，Android 会验证是否遵循了以下最佳做法：</p>
+
+<ul>
+<li>设备上不应存在监听端口。</li>
+<li>必须能够在不使用 OTA 的情况下停用监听端口。停用这些端口的方法可以是更改服务器或用户设备配置。</li>
+<li>Root 进程不得通过任何端口进行监听。</li>
+<li>归系统 UID 所有的进程不得通过任何端口进行监听。</li>
+<li>对于使用套接字的本地 IPC，应用必须使用只有某个组可以访问的 UNIX 域套接字。为 IPC 创建文件描述符，并允许特定 UNIX 组对其执行 +RW 操作。所有客户端应用都必须在该 UNIX 组内。</li>
+<li>有些拥有多个处理器的设备（例如，无线装置/调制解调器从应用处理器中分离出来）会借助网络套接字在处理器之间进行通信。在这种情况下，处理器间通信所用的网络套接字必须使用单独的网络接口，以防止设备上未经授权的应用访问（例如，使用 iptables 防止设备上的其他应用访问）。</li>
+<li>负责处理监听端口的守护进程必须能够防范格式有误的数据。Google 可能会使用未经授权的客户端针对端口进行模糊测试，也可能会在可能的情况下使用已获授权的客户端针对端口进行模糊测试。所有崩溃事件都将记录为具有适当严重程度的错误。</li>
+</ul>
+
+<h3 id="logging">记录数据</h3>
+<p>记录数据的做法会增加数据遭泄露的风险并降低系统性能。之前曾发生过多起因 Android 设备上默认安装的应用记录敏感用户数据而导致的公共安全事件。最佳做法：</p>
+
+<ul>
+<li>应用或系统服务不应记录第三方应用提供的可能包含敏感信息的数据。</li>
+<li>应用不得在正常操作过程中记录任何个人身份信息 (PII)。</li>
+</ul>
+
+<p>CTS 中包含一些能够检查系统日志中是否存在可能敏感的信息的测试。</p>
+
+<h3 id="directories">限制对目录的访问</h3>
+<p>全局可写目录可能会引入安全漏洞，并且可能会使应用能够重命名可信文件、替换文件或进行基于符号链接的攻击（攻击者可能会利用指向某个文件的符号链接诱使可信程序执行不应执行的操作）。可写目录还可能会导致卸载应用后无法适当清除与相应应用关联的所有文件。</p>
+
+<p>作为最佳做法，系统用户或 Root 用户创建的目录不应为全局可写目录。CTS 测试能够测试已知目录，从而有助于强制执行这种最佳做法。</p>
+
+<h3 id="config-files">保护配置文件</h3>
+<p>许多驱动程序和服务都依赖于存储在 <code>/system/etc</code>、<code>/data</code> 等目录中的配置文件和数据文件。如果这些文件由某个特权进程处理且为全局可写文件，应用可能能够通过在全局可写文件中创建恶意内容来利用该特权进程中的漏洞。最佳做法：</p>
+
+<ul>
+<li>特权进程使用的配置文件不应为全局可读文件。</li>
+<li>特权进程使用的配置文件不得为全局可写文件。</li>
+</ul>
+
+<h3 id="native-code">存储本机代码库</h3>
+<p>特权设备制造商进程使用的所有代码都必须位于 <code>/vendor</code> 或 <code>/system</code> 中；这些文件系统会在设备启动时以只读模式装载。作为最佳做法，系统使用的库或手机上安装的其他权限非常高的应用使用的库也应位于这些文件系统中。这有助于防止出现可让攻击者用来控制特权进程执行的代码的安全漏洞。</p>
+
+<h3 id="device-drivers">限制对设备驱动程序的访问</h3>
+<p>应该只有可信代码能够直接访问驱动程序。首选架构要尽可能提供一个单一用途守护进程来代理向驱动程序发出的调用，并仅限该守护进程访问驱动程序。作为最佳做法，驱动程序设备节点不应为全局可读或全局可写节点。CTS 测试能够检查是否存在全局可读或全局可写驱动程序的已知实例，从而有助于强制执行这种最佳做法。
+</p>
+
+<h3 id="adb">停用 ADB</h3>
+<p>Android 调试桥 (ADB) 是一款非常实用的开发和调试工具，但它只适合在受控的安全环境中使用，不应针对一般使用情况启用该工具。最佳做法：</p>
+
+<ul>
+<li>ADB 必须默认处于停用状态。</li>
+<li>ADB 必须要求用户先将其开启，然后再接受连接。</li>
+</ul>
+
+<h3 id="unlockable-bootloaders">解锁引导加载程序</h3>
+<p>许多 Android 设备都支持解锁引导加载程序。解锁引导加载程序后，设备所有者将能够修改系统分区和/或安装自定义操作系统。常见用例包括在设备上安装第三方 ROM 以及进行系统级开发。例如，Google Nexus 设备所有者可以运行 <code>fastboot oem unlock</code> 来启动解锁过程，该进程会向用户显示以下消息：</p>
+
+<div style="background-color: #B2EBF2; padding: 10px;margin-right:25px">
+
+<p><strong>Unlock bootloader?</strong></p>
+
+<p>If you unlock the bootloader, you will be able to install custom operating system software on this phone.</p>
+
+<p>A custom OS is not subject to the same testing as the original OS, and can cause your phone and installed applications to stop working properly.</p>
+
+<p>To prevent unauthorized access to your personal data, unlocking the bootloader will also delete all personal data from your phone (a "factory data reset").</p>
+
+<p>Press the Volume Up/Down buttons to select Yes or No. Then press the Power button to continue.</p>
+
+<p><strong>Yes</strong>: Unlock bootloader (may void warranty)</p>
+
+<p><strong>No</strong>: Do not unlock bootloader and restart phone.</p>
+</div>
+
+<br />
+<p>作为最佳做法，在解锁之前，可解锁的 Android 设备必须先安全地清除所有用户数据。如果未能适当删除所有数据便进行解锁，能够接触到这些设备的攻击者便可以在未经授权的情况下获取机密的 Android 用户数据。为了防止用户数据泄露，支持解锁的设备必须正确实现解锁（我们已见到过设备制造商以不当方式实现解锁的无数实例）。正确实现的解锁过程具有以下特性：</p>
+
+<ul>
+<li>在用户确认解锁命令后，设备必须立即开始清除数据。在安全删完数据之前，不得设置 <code>unlocked</code> 标记。</li>
+<li>如果无法安全删完数据，设备必须保持锁定状态。</li>
+<li>如果底层块设备支持 <code>ioctl(BLKSECDISCARD)</code> 或等同命令，则应使用此类命令。对于 eMMC 设备，这意味着使用 Secure Erase 或 Secure Trim 命令。对于 eMMC 4.5 及更高版本，这意味着先使用常规的 Erase 或 Trim 命令，然后再执行 Sanitize 操作。</li>
+<li>如果底层块设备不支持 <code>BLKSECDISCARD</code>，则必须改用 <code>ioctl(BLKDISCARD)</code>。在 eMMC 设备上，这是一个常规的 Trim 操作。</li>
+<li>如果 <code>BLKDISCARD</code> 不受支持，可以将块设备中的数据重写为全零。</li>
+<li>最终用户必须能够要求在刷写分区之前先清除用户数据。例如，在 Nexus 设备上，这可以通过 <code>fastboot oem lock</code> 命令来实现。</li>
+<li>无论设备处于解锁和/或重新锁定状态，都可以通过 eFuses 或类似机制进行记录。</li>
+</ul>
+
+<p>这些要求旨在确保在完成解锁操作时所有数据都已被销毁。未能实现这些保护措施会被视为存在中级安全漏洞。</p>
+
+<p>将设备解锁后，可以使用 <code>fastboot oem lock</code> 命令重新将其锁定。使用新的自定义操作系统时，锁定引导加载程序能够为用户数据提供的保护与原始设备制造商操作系统提供的保护相同（例如，如果设备被再次解锁，用户数据将会被清除）。</p>
+
+</body></html>

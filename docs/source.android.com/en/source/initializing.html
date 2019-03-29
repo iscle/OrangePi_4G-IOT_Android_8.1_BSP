@@ -1,0 +1,469 @@
+<html devsite>
+  <head>
+    <title>Establishing a Build Environment</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+<p>This section describes how to set up your local work environment to build
+the Android source files. You will need to use Linux or Mac OS. Building under
+Windows is not currently supported.</p>
+<p>For an overview of the entire code-review and code-update process, see <a
+href="life-of-a-patch.html">Life of a Patch</a>.</p>
+<p class="note"><strong>Note:</strong> All commands in this site are preceded
+by a dollar sign ($) to differentiate them from output or entries within files.
+You may use the <em>Click to copy</em> feature at the top right of each command
+box to copy all lines without the dollar signs or triple-click each line to
+copy it individually without the dollar sign.</p>
+<h2 id="choosing-a-branch">Choosing a Branch</h2>
+<p>Some of the requirements for your build environment are determined by which
+version of the source code you plan to compile. See
+<a href="build-numbers.html">Build Numbers</a> for a full listing of branches you may
+choose from. You may also choose to download and build the latest source code
+(called <code>master</code>), in which case you will simply omit the branch specification
+when you initialize the repository.</p>
+<p>Once you have selected a branch, follow the appropriate instructions below to
+set up your build environment.</p>
+<h2 id="setting-up-a-linux-build-environment">Setting up a Linux build environment</h2>
+<p>These instructions apply to all branches, including <code>master</code>.</p>
+<p>The Android build is routinely tested in house on recent versions of
+Ubuntu LTS (14.04), but most distributions should have the required
+build tools available. Reports of successes or failures on other
+distributions are welcome.</p>
+<p>For Gingerbread (2.3.x) and newer versions, including the <code>master</code>
+branch, a 64-bit environment is required. Older versions can be
+compiled on 32-bit systems.</p>
+<p class="note"><strong>Note:</strong> See the <a
+href="requirements.html">Requirements</a> for the complete list of hardware and
+software requirements. Then follow the detailed instructions for Ubuntu and Mac
+OS below.</p>
+
+<h3 id="installing-the-jdk">Installing the JDK</h3>
+<p>The <code>master</code> branch of Android in the <a
+href="https://android.googlesource.com/">Android Open Source Project (AOSP)</a>
+requires Java 8. On Ubuntu, use <a
+href="http://openjdk.java.net/install/">OpenJDK</a>.</p>
+<p>See  <a href="requirements.html#jdk">JDK Requirements</a> for older
+versions.</p>
+
+<h4 id="for-ubuntu-15-04">For Ubuntu &gt;= 15.04</h4>
+<p>Run the following:</p>
+<pre class="devsite-click-to-copy">
+<code class="devsite-terminal">sudo apt-get update</code>
+<code class="devsite-terminal">sudo apt-get install openjdk-8-jdk</code>
+</pre>
+
+<h4 id="for-ubuntu-14-04">For Ubuntu LTS 14.04</h4>
+<p>There are no available supported OpenJDK 8 packages for Ubuntu 14.04. The
+<strong>Ubuntu 15.04 OpenJDK 8</strong> packages have been used successfully
+with Ubuntu 14.04. <em>Newer package versions (e.g. those for 15.10, 16.04) were
+found not to work on 14.04 using the instructions below.</em></p>
+<ol>
+<li>
+<p>Download the <code>.deb</code> packages for 64-bit architecture from
+<a href="http://archive.ubuntu.com/ubuntu/pool/universe/o/openjdk-8/">archive.ubuntu.com</a>:</p>
+<ul>
+<li><a
+href="http://archive.ubuntu.com/ubuntu/pool/universe/o/openjdk-8/openjdk-8-jre-headless_8u45-b14-1_amd64.deb">openjdk-8-jre-headless_8u45-b14-1_amd64.deb</a>
+with SHA256 <code>0f5aba8db39088283b51e00054813063173a4d8809f70033976f83e214ab56c0</code></li>
+<li><a
+href="http://archive.ubuntu.com/ubuntu/pool/universe/o/openjdk-8/openjdk-8-jre_8u45-b14-1_amd64.deb">openjdk-8-jre_8u45-b14-1_amd64.deb</a>
+with SHA256 <code>9ef76c4562d39432b69baf6c18f199707c5c56a5b4566847df908b7d74e15849</code></li>
+<li><a
+href="http://archive.ubuntu.com/ubuntu/pool/universe/o/openjdk-8/openjdk-8-jdk_8u45-b14-1_amd64.deb">openjdk-8-jdk_8u45-b14-1_amd64.deb</a>
+with SHA256 <code>6e47215cf6205aa829e6a0a64985075bd29d1f428a4006a80c9db371c2fc3c4c</code></li>
+</ul>
+</li>
+<li>
+<p>Optionally, confirm the checksums of the downloaded files against the SHA256
+string listed with each package above.</p>
+<p>For example, with the <code>sha256sum</code> tool:</p>
+<pre class="devsite-terminal devsite-click-to-copy">
+sha256sum {downloaded.deb file}
+</pre>
+</li>
+<li>
+<p>Install the packages:</p>
+<pre class="devsite-terminal devsite-click-to-copy">
+sudo apt-get update
+</pre>
+<p>Run <code>dpkg</code> for each of the .deb files you downloaded. It may produce errors due to
+missing dependencies:</p>
+<pre class="devsite-terminal devsite-click-to-copy">
+sudo dpkg -i {downloaded.deb file}
+</pre>
+<p>To fix missing dependencies:</p>
+<pre class="devsite-terminal devsite-click-to-copy">
+sudo apt-get -f install
+</pre>
+</li>
+</ol>
+
+<h4 id="default-java-version">Update the default Java version - optional</h4>
+
+<p>Optionally, for the Ubuntu versions above update the default Java version by
+running:</p>
+<pre class="devsite-click-to-copy">
+<code class="devsite-terminal">sudo update-alternatives --config java</code>
+<code class="devsite-terminal">sudo update-alternatives --config javac</code>
+</pre>
+
+<p>If, during a build, you encounter version errors for Java, set its
+path as described in the <a href="building.html#wrong-java-version">Wrong
+Java Version</a> section.</p>
+
+<h3 id="installing-required-packages-ubuntu-1404">Installing required packages (Ubuntu 14.04)</h3>
+
+<p>You will need a 64-bit version of Ubuntu. Ubuntu 14.04 is recommended.</p>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+sudo apt-get install git-core gnupg flex bison gperf build-essential zip curl zlib1g-dev gcc-multilib g++-multilib libc6-dev-i386 lib32ncurses5-dev x11proto-core-dev libx11-dev lib32z-dev ccache libgl1-mesa-dev libxml2-utils xsltproc unzip
+</pre>
+
+<p class="note"><strong>Note:</strong> To use SELinux tools for policy
+analysis, also install the <code>python-networkx</code> package.</p>
+
+<p class="note"><strong>Note:</strong> If you are using LDAP and want
+to run ART host tests, also install the <code>libnss-sss:i386</code>
+package.</p>
+
+<h3 id="installing-required-packages-ubuntu-1204">Installing required packages
+(Ubuntu 12.04)</h3>
+
+<p>You may use Ubuntu 12.04 to build older versions of Android. Version 12.04
+is not supported on master or recent releases.</p>
+
+<pre class="devsite-click-to-copy">
+<code class="devsite-terminal">sudo apt-get install git gnupg flex bison gperf build-essential zip curl libc6-dev libncurses5-dev:i386 x11proto-core-dev libx11-dev:i386 libreadline6-dev:i386 libgl1-mesa-glx:i386 libgl1-mesa-dev g++-multilib mingw32 tofrodos python-markdown libxml2-utils xsltproc zlib1g-dev:i386</code>
+<code class="devsite-terminal">sudo ln -s /usr/lib/i386-linux-gnu/mesa/libGL.so.1 /usr/lib/i386-linux-gnu/libGL.so</code>
+</pre>
+
+<h3 id="installing-required-packages-ubuntu-1004-1110">Installing required
+packages (Ubuntu 10.04 -- 11.10)</h3>
+<p>Building on Ubuntu 10.04-11.10 is no longer supported, but may be useful for
+building older releases of AOSP.</p>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+sudo apt-get install git gnupg flex bison gperf build-essential zip curl zlib1g-dev libc6-dev lib32ncurses5-dev ia32-libs x11proto-core-dev libx11-dev lib32readline5-dev lib32z-dev libgl1-mesa-dev g++-multilib mingw32 tofrodos python-markdown libxml2-utils xsltproc
+</pre>
+
+<p>On Ubuntu 10.10:</p>
+
+<preclass="devsite-terminal devsite-click-to-copy">
+sudo ln -s /usr/lib32/mesa/libGL.so.1 /usr/lib32/mesa/libGL.so
+</pre>
+
+<p>On Ubuntu 11.10:</p>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+sudo apt-get install libx11-dev:i386
+</pre>
+
+<h3 id="configuring-usb-access">Configuring USB Access</h3>
+
+<p>Under GNU/Linux systems (and specifically under Ubuntu systems),
+regular users can't directly access USB devices by default. The
+system needs to be configured to allow such access.</p>
+<p>The recommended approach is to create a file at
+<code>/etc/udev/rules.d/51-android.rules</code> (as the root user).</p>
+
+<p>To do this, run the following command to download the <a
+href="51-android.txt">51-android.txt</a> file attached to this site, modify
+it to include your username, and place it in the correct location:</p>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+wget -S -O - http://source.android.com/source/51-android.txt | sed "s/&lt;username&gt;/$USER/" | sudo tee >/dev/null /etc/udev/rules.d/51-android.rules; sudo udevadm control --reload-rules
+</pre>
+
+<p>Those new rules take effect the next time a device is plugged in.
+It might therefore be necessary to unplug the device and plug it
+back into the computer.</p>
+
+<h3 id="using-a-separate-output-directory">Using a separate output directory</h3>
+
+<p>By default, the output of each build is stored in the <code>out/</code>
+subdirectory of the matching source tree.</p>
+
+<p>On some machines with multiple storage devices, builds are
+faster when storing the source files and the output on
+separate volumes. For additional performance, the output
+can be stored on a filesystem optimized for speed instead
+of crash robustness, since all files can be re-generated
+in case of filesystem corruption.</p>
+
+<p>To set this up, export the <code>OUT_DIR_COMMON_BASE</code> variable
+to point to the location where your output directories
+will be stored.</p>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+export OUT_DIR_COMMON_BASE=&lt;path-to-your-out-directory&gt;
+</pre>
+
+<p>The output directory for each separate source tree will be
+named after the directory holding the source tree.</p>
+
+<p>For instance, if you have source trees as <code>/source/master1</code>
+and <code>/source/master2</code> and <code>OUT_DIR_COMMON_BASE</code> is set to
+<code>/output</code>, the output directories will be <code>/output/master1</code>
+and <code>/output/master2</code>.</p>
+
+<p>It's important in that case to not have multiple source
+trees stored in directories that have the same name,
+as those would end up sharing an output directory, with
+unpredictable results.</p>
+
+<p>This is only supported on Jelly Bean (4.1) and newer,
+including the <code>master</code> branch.</p>
+
+<h2 id="setting-up-a-mac-os-x-build-environment">Setting up a Mac OS build
+environment</h2>
+
+<p>In a default installation, Mac OS runs on a case-preserving but
+case-insensitive filesystem. This type of filesystem is not supported by git
+and will cause some git commands (such as <code>git status</code>) to behave
+abnormally. Because of this, we recommend that you always work with the AOSP
+source files on a case-sensitive filesystem. This can be done fairly easily
+using a disk image, discussed below.</p>
+
+<p>Once the proper filesystem is available, building the <code>master</code>
+branch in a modern Mac OS environment is very straightforward. Earlier
+branches require some additional tools and SDKs.</p>
+
+<h3 id="creating-a-case-sensitive-disk-image">Creating a case-sensitive disk image</h3>
+
+<p>You can create a case-sensitive filesystem within your existing Mac OS environment
+using a disk image. To create the image, launch Disk
+Utility and select "New Image".  A size of 25GB is the minimum to
+complete the build; larger numbers are more future-proof. Using sparse images
+saves space while allowing to grow later as the need arises. Be sure to select
+"case sensitive, journaled" as the volume format.</p>
+
+<p>You can also create it from a shell with the following command:</p>
+<pre class="devsite-click-to-copy">
+<span class="no-select"># </span>hdiutil create -type SPARSE -fs 'Case-sensitive Journaled HFS+' -size 40g ~/android.dmg
+</pre>
+
+<p>This will create a <code>.dmg</code> (or possibly a
+<code>.dmg.sparseimage</code>) file which, once mounted, acts as a drive with
+the required formatting for Android development.</p>
+
+<p>If you need a larger volume later, you can also resize the sparse image with
+the following command:</p>
+
+<pre class="devsite-click-to-copy">
+<span class="no-select"># </span>hdiutil resize -size &lt;new-size-you-want&gt;g ~/android.dmg.sparseimage
+</pre>
+
+<p>For a disk image named <code>android.dmg</code> stored in your home
+directory, you can add helper functions to your <code>~/.bash_profile</code>:</p>
+
+<ul>
+<li>
+To mount the image when you execute <code>mountAndroid</code>:</p>
+
+<pre class="devsite-click-to-copy">
+# mount the android file image
+function mountAndroid { hdiutil attach ~/android.dmg -mountpoint /Volumes/android; }
+</pre>
+
+<p class="note"><strong>Note:</strong> If your system created a
+<code>.dmg.sparseimage</code> file, replace <code>~/android.dmg</code> with
+<code>~/android.dmg.sparseimage</code>.</p>
+</li>
+
+<li>
+<p>To unmount it when you execute <code>umountAndroid</code>:</p>
+<pre class="devsite-click-to-copy">
+# unmount the android file image
+function umountAndroid() { hdiutil detach /Volumes/android; }
+</pre>
+</li>
+</ul>
+
+<p>Once you've mounted the <code>android</code> volume, you'll do all your work
+there. You can eject it (unmount it) just like you would with an external
+drive.</p>
+
+<h3 id="installing-the-mac-jdk">Installing the JDK</h3>
+
+<p>See <a href="requirements.html">Requirements</a> for the version of Java to
+use when developing various versions of Android.</p>
+
+<h4 id="installing-required-packages">Installing required packages</h4>
+
+<ol>
+<li>
+<p>Install Xcode command line tools with:
+<pre class="devsite-terminal devsite-click-to-copy">
+xcode-select --install
+</pre>
+
+<p>For older versions of Mac OS (10.8 or earlier), you need to install Xcode from
+<a href="http://developer.apple.com/">the Apple developer site</a>.
+If you are not already registered as an Apple developer, you will have to
+create an Apple ID in order to download.</p>
+</li>
+
+<li>
+<p>Install MacPorts from <a
+href="http://www.macports.org/install.php">macports.org</a>.</p>
+
+<p class="note"><strong>Note:</strong> Make sure that
+<code>/opt/local/bin</code> appears in your path <strong>before</strong>
+<code>/usr/bin</code>. If not, please add the following to your
+<code>~/.bash_profile</code> file:</p>
+
+<pre class="devsite-click-to-copy">
+export PATH=/opt/local/bin:$PATH
+</pre>
+
+<p class="note"><strong>Note:</strong> If you do not have a
+<code>.bash_profile</code> file in your home directory, create one.</p>
+</li>
+
+<li>
+<p>Get make, git, and GPG packages from MacPorts:</p>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+POSIXLY_CORRECT=1 sudo port install gmake libsdl git gnupg
+</pre>
+
+<p>If using Mac OS X v10.4, also install bison:</p>
+<pre class="devsite-terminal devsite-click-to-copy">
+POSIXLY_CORRECT=1 sudo port install bison
+</pre>
+</li>
+</ol>
+
+<h4 id="reverting-from-make-382">Reverting from make 3.82</h4>
+
+<p>In Android 4.0.x (Ice Cream Sandwich) and earlier, a bug exists in gmake 3.82
+that prevents android from building. You can install version 3.81 using
+MacPorts with these steps:</p>
+
+<ol>
+<li>
+<p>Edit <code>/opt/local/etc/macports/sources.conf</code> and add a line that says:</p>
+<pre class="devsite-click-to-copy">
+file:///Users/Shared/dports
+</pre>
+
+<p>above the rsync line.  Then create this directory:</p>
+<pre class="devsite-terminal devsite-click-to-copy">
+mkdir /Users/Shared/dports
+</pre>
+</li>
+
+<li>
+<p>In the new <code>dports</code> directory, run:</p>
+<pre class="devsite-terminal devsite-click-to-copy">
+svn co --revision 50980 http://svn.macports.org/repository/macports/trunk/dports/devel/gmake/ devel/gmake/
+</pre>
+</li>
+
+<li>
+<p>Create a port index for your new local repository:</p>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+portindex /Users/Shared/dports
+</pre>
+</li>
+
+<li>
+<p>Install the old version of gmake with:</p>
+<pre class="devsite-terminal devsite-click-to-copy">
+sudo port install gmake @3.81
+</pre>
+</li>
+</ol>
+
+<h4 id="setting-a-file-descriptor-limit">Setting a file descriptor limit</h4>
+
+<p>On Mac OS, the default limit on the number of simultaneous file descriptors
+open is too low and a highly parallel build process may exceed this limit.</p>
+
+<p>To increase the cap, add the following lines to your <code>~/.bash_profile</code>: </p>
+<pre class="devsite-click-to-copy">
+# set the number of open files to be 1024
+ulimit -S -n 1024
+</pre>
+
+<h2 id="optimizing-a-build-environment">Optimizing a build environment (optional)</h2>
+
+<h3 id="setting-up-ccache">Setting up ccache</h3>
+
+<p>You can optionally tell the build to use the ccache compilation tool, which
+is a compiler cache for C and C++ that can help make builds faster. It
+is especially useful for build servers and other high-volume production
+environments. Ccache acts as a compiler cache that can be used to speed up rebuilds.
+This works very well if you use <code>make clean</code> often, or if you frequently
+switch between different build products.</p>
+
+<p class="note"><strong>Note:</strong> If you're instead conducting incremental
+builds (such as an individual developer rather than a build server), ccache may
+slow your builds down by making you pay for cache misses.</p>
+
+<p>To use ccache, issue these commands in the root of the source tree:</p>
+
+<pre class="devsite-click-to-copy">
+<code class="devsite-terminal">export USE_CCACHE=1</code>
+<code class="devsite-terminal">export CCACHE_DIR=/&lt;path_of_your_choice&gt;/.ccache</code>
+<code class="devsite-terminal">prebuilts/misc/linux-x86/ccache/ccache -M 50G</code>
+</pre>
+
+<p>The suggested cache size is 50-100G.</p>
+
+<p>Put the following in your <code>.bashrc</code> (or equivalent):</p>
+
+<pre class="devsite-click-to-copy">
+export USE_CCACHE=1
+</pre>
+
+<p>By default the cache will be stored in <code>~/.ccache</code>.
+If your home directory is on NFS or some other non-local filesystem,
+you will want to specify the directory in your <code>.bashrc</code> file too.</p>
+
+<p>On Mac OS, you should replace <code>linux-x86</code> with <code>darwin-x86</code>:</p>
+
+<pre class="devsite-click-to-copy">
+prebuilts/misc/darwin-x86/ccache/ccache -M 50G
+</pre>
+
+<p>When building Ice Cream Sandwich (4.0.x) or older, ccache is in
+a different location:</p>
+
+<pre class="devsite-click-to-copy">
+prebuilt/linux-x86/ccache/ccache -M 50G
+</pre>
+
+<p>This setting is stored in the CCACHE_DIR and is persistent.</p>
+
+<p>On Linux, you can watch ccache being used by doing the following:</p>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+watch -n1 -d prebuilts/misc/linux-x86/ccache/ccache -s
+</pre>
+
+<h2 id="next-download-the-source">Next: Download the source</h2>
+
+<p>Your build environment is good to go! Proceed to <a
+href="downloading.html">downloading the source</a>.</p>
+
+  </body>
+</html>

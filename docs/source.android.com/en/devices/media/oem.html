@@ -1,0 +1,165 @@
+<html devsite>
+  <head>
+    <title>OEM Dependencies for Media Resource Manager</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>This document is intended to help original equipment manufacturers (OEMs)
+properly implement support for Android media resource manager and related APIs.</p>
+
+<h2 id=1_max_concurrent_codec_instances>1. Max concurrent codec instances</h2>
+
+<p>The <code>CodecCapabilities.getMaxSupportedInstances</code> interface
+returns the maximum number of supported concurrent codec instances.</p>
+
+<p>The CTS test
+<code>testGetMaxSupportedInstances(android.media.cts.MediaCodecCapabilitiesTest)</code>
+is used to enforce the proper maximum is set in
+<code>/etc/media_codecs.xml</code>.</p>
+
+<p>Here is an example:</p>
+
+<pre class="devsite-click-to-copy">
+...
+&lt;MediaCodecs&gt;
+    ...
+    &lt;Encoders&gt;
+        &lt;MediaCodec name="OMX.<em>&lt;vendor&gt;</em>.video.encoder.avc" type="video/avc" &gt;
+           ...
+            &lt;Limit name="concurrent-instances" max="13" /&gt;
+        &lt;/MediaCodec&gt;
+        ...
+    &lt;/Encoders&gt;
+    ...
+&lt;/MediaCodecs&gt;
+</pre>
+
+<p>OEMs can use this test to generate the concurrent limits that pass the test.
+To do this:</p>
+
+  <ol>
+    <li>Run the test first using cts-tradefed.
+    <li>Evaluate the resulting failure message. Here is an example:
+
+<pre class="devsite-click-to-copy">
+There was 1 failure:
+1) testGetMaxSupportedInstances(android.media.cts.MediaCodecCapabilitiesTest)
+junit.framework.AssertionFailedError: In order to pass the test, please publish
+following codecs' concurrent instances limit in /etc/media_codecs.xml:
+&lt;MediaCodec name="OMX.<em>&lt;vendor&gt;</em>.video.encoder.mpeg4" type="video/mp4v-es" &gt;
+    &lt;Limit name="concurrent-instances" max="13" /&gt;
+&lt;/MediaCodec&gt;
+&lt;MediaCodec name="OMX.<em>&lt;vendor&gt;</em>.video.encoder.h263" type="video/3gpp" &gt;
+    &lt;Limit name="concurrent-instances" max="13" /&gt;
+&lt;/MediaCodec&gt;
+&lt;MediaCodec name="OMX.<em>&lt;vendor&gt;</em>.video.encoder.avc" type="video/avc" &gt;
+    &lt;Limit name="concurrent-instances" max="13" /&gt;
+&lt;/MediaCodec>
+&lt;MediaCodec name="OMX.<em>&lt;vendor&gt;</em>.video.encoder.vp8" type="video/x-vnd.on2.vp8" &gt;
+    &lt;Limit name="concurrent-instances" max="13" /&gt;
+&lt;/MediaCodec&gt;
+&lt;MediaCodec name="OMX.<em>&lt;vendor&gt;</em>.video.decoder.avc" type="video/avc" &gt;
+    &lt;Limit name="concurrent-instances" max="13" /&gt;
+&lt;/MediaCodec&gt;
+&lt;MediaCodec name="OMX.<em>&lt;vendor&gt;</em>.video.decoder.avc.secure" type="video/avc" &gt;
+    &lt;Limit name="concurrent-instances" max="4" /&gt;
+&lt;/MediaCodec&gt;
+&lt;MediaCodec name="OMX.<em>&lt;vendor&gt;</em>.video.decoder.mpeg4" type="video/mp4v-es" &gt;
+    &lt;Limit name="concurrent-instances" max="12" /&gt;
+&lt;/MediaCodec&gt;
+&lt;MediaCodec name="OMX.<em>&lt;vendor&gt;</em>.video.decoder.h263" type="video/3gpp" &gt;
+    &lt;Limit name="concurrent-instances" max="12" /&gt;
+&lt;/MediaCodec&gt;
+&lt;MediaCodec name="OMX.<em>&lt;vendor&gt;</em>.video.decoder.vp8" type="video/x-vnd.on2.vp8" &gt;
+    &lt;Limit name="concurrent-instances" max="12" /&gt;
+&lt;/MediaCodec&gt;
+</pre>
+
+    <li>Add the <code>concurrent-instances</code> lines suggested in the test
+failure message to the <code>/etc/media_codecs.xml</code> file.
+
+    <li>Re-run the test to verify its success.
+  </ol>
+
+<h2 id=2_achievable_frame_rates_for_video_codecs>2. Achievable frame rates for video codecs</h2>
+<p>The <code>VideoCapabilities.getAchievableFrameRatesFor</code> interface
+returns the range of achievable video frame rates for a video size. This
+information must be provided by the OEM for each device via an XML file placed at
+<code>/etc/media_codecs_performance.xml</code>. These settings are tested by
+the <code>com.android.cts.videoperf.VideoEncoderDecoderTest</code> and
+<code>android.media.cts.VideoDecoderPerfTest</code> CTS tests.</p>
+
+<p>OEMs can use the CTS tests to generate the XML files that pass the tests. To do this:</p>
+  <ol>
+    <li>Run the tests first using cts-tradefed. Given the
+variability of Android performance, it is recommended the tests are run
+multiple times to get more accurate minimum and maximum values.
+    <li>Use the provided <a
+href="https://android.googlesource.com/platform/cts/+/marshmallow-cts-dev/tools/cts-media/get_achievable_rates.py">get_achievable_rates.py</a>
+script to generate the XML file.
+    <li>Place the XML file at: <code>/etc/media_codecs_performance.xml</code><br>
+This is usually done by placing the XML file in the device project
+(device/<em>&lt;vendor&gt;</em>/<em>&lt;product&gt;</em>) and adding a
+<code>PRODUCT_COPY_FILES</code> line to <code>device.mk</code> like so:
+<pre class="devsite-click-to-copy">
+PRODUCT_COPY_FILES += \
+...
+   device/moto/shamu/media_codecs.xml:system/etc/media_codecs.xml \
++    device/moto/shamu/media_codecs_performance.xml:system/etc/media_codecs_performance.xml
+</pre>
+    <li>Re-run the performance tests to verify their success.
+  </ol>
+
+<h2 id=3_co-exist_of_secure_codec_and_non-secure_codec>3. Co-exist of secure codec and non-secure codec</h2>
+
+<ul>
+  <li>supports-secure-with-non-secure-codec &mdash;
+If the instance of secure codec and the instance of non-secure codec can’t
+co-exist at the same time, that should be indicated as global setting in the
+<code>media_codecs.xml</code> file.
+<pre class="devsite-click-to-copy">
+&lt;MediaCodecs&gt;
+    &lt;Settings&gt;
+        &lt;Setting name="supports-secure-with-non-secure-codec" value="false" /&gt;
+    &lt;/Settings&gt;
+    &lt;Encoders&gt;
+…
+</pre>
+  <li>supports-multiple-secure-codecs &mdash;
+If co-exist of multiple secure codec instances is not supported, that should be
+indicated as a global setting in the <code>media_codecs.xml</code> file.
+<pre class="devsite-click-to-copy">
+&lt;MediaCodecs&gt;
+    &lt;Settings&gt;
+        &lt;Setting name="supports-multiple-secure-codecs" value="false" /&gt;
+    &lt;/Settings&gt;
+    &lt;Encoders&gt;
+…
+</pre>
+  <li>Note that the both settings are true by default, meaning if they are supported,
+there’s no need to add the setting line to the <code>media_codecs.xml</code>.
+  <li>The <code>ResourceManagerTest</code> CTS tests may fail if these two settings were not set
+properly.
+</ul>
+
+  </body>
+</html>

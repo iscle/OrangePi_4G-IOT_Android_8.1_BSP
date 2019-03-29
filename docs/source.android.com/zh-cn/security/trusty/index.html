@@ -1,0 +1,95 @@
+<html devsite><head>
+    <title>Trusty TEE</title>
+    <meta name="project_path" value="/_project.yaml"/>
+    <meta name="book_path" value="/_book.yaml"/>
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+<p>Trusty 是一组在移动设备上支持可信执行环境 (TEE) 的软件组件。</p>
+
+<p>Trusty 包含以下组件：</p>
+
+<ul>
+  <li>一个在用于提供 TEE 的处理器上运行的操作系统（Trusty 操作系统）</li><li>适用于 Android 内核 (Linux) 的驱动程序，旨在促进与在 Trusty 操作系统下运行的应用之间的通信</li><li>一组适用于 Android 系统软件的库，旨在使用内核驱动程序促进与在 Trusty 操作系统中执行的可信应用之间的通信</li></ul>
+
+<p><strong>重要提示</strong>：Trusty 和 Trusty API 随时可能发生变化。</p>
+
+<p>如需关于 Trusty API 的信息，请参阅 <a href="trusty-ref.html">API 参考</a>。</p>
+
+<h2 id="uses_examples">使用和示例</h2>
+
+<p>所有 TEE 操作系统（不仅仅是 Trusty）均可用于 TEE 实现。</p>
+
+<p>TEE 处理器通常是系统内的单独微处理器，或是主处理器的虚拟化实例。TEE 处理器与系统的其余部分之间使用由硬件支持的内存和 I/O 保护机制隔离开来。</p>
+
+<p>TEE 处理器如今已成为移动设备的基本组成部分。这些设备上的主处理器会被视为“不可信”，它们无法访问制造商用于存储机密数据（例如，设备专用加密密钥）的特定 RAM、硬件寄存器和 Fuse 区域。在主处理器上运行的软件会将所有需要使用机密数据的操作委派给 TEE 处理器。</p>
+
+<p>在 Android 生态系统中，最广为人知的不可信主处理器示例是用于受保护内容的 <a href="/devices/drm.html">DRM 框架</a>。在 TEE 处理器上运行的软件可以访问解密受保护内容所需的设备专用密钥。主处理器只能看到已加密的内容，这样一来，就可以针对基于软件的攻击提供高级别的安全保障和保护。</p>
+
+<p>TEE 还有许多其他用法，例如移动支付、安全银行、全盘加密、多因素身份验证、设备重置保护、抗重放攻击的持久存储、无线显示（“投射”）受保护的内容、安全的 PIN 码和指纹处理，甚至还有恶意软件检测。</p>
+
+<p>Trusty 提供用于开发以下两类应用的 API：</p>
+
+<ul>
+  <li>在 TEE 处理器上运行的可信应用或服务</li><li>在主处理器上运行并使用可信应用提供的服务的普通/不可信应用</li></ul>
+
+<p>在主处理器上运行的软件可以使用 Trusty API 连接到可信应用并与它们交换任意消息，就像通过 IP 提供的网络服务一样。应用负责使用应用级协议确定这些消息的数据格式和语义。消息传递的可靠性由底层 Trusty 基础架构（采用在主处理器上运行的驱动程序的形式）来保证，并且通信完全是异步进行的。</p>
+
+<h2 id="trusted_applications_and_services">可信应用和服务</h2>
+
+<p>可信应用会以单独进程的形式在 Trusty 操作系统内核下运行。每个进程都会利用 TEE 处理器的 MMU 功能在各自的虚拟内存沙盒中运行。内核会使用由安全计时器驱动且按优先级进行调度的轮询调度程序安排这些进程。在最新版本的 Trusty 中，所有 Trusty 应用均具有相同的优先级。</p>
+
+<p>可以使用 C/C++（对 C++ 的支持有限）编写适用于 Trusty 操作系统的应用，此类应用可以访问小型的 C 库。<code>main()</code> 函数目前不接受任何参数。系统调用存根是作为该库的一部分在本机汇编代码中提供的，因此可按名称访问系统调用。</p>
+
+<h3 id="language_threading">语言和线程支持</h3>
+
+<p>所有 Trusty 应用均为单线程应用；目前不支持在 Trusty 用户空间中使用多线程。</p>
+
+<h3 id="application_structure">应用结构</h3>
+
+<p>Trusty 应用会在加载期间初始化一次，并且在 TEE 处理器重置之前，会一直保留在内存中。Trusty 目前不支持动态加载和取消加载应用。</p>
+
+<p>可信应用是作为<strong>事件驱动型服务器</strong>编写的，会等待其他应用或主处理器上运行的应用发出的命令。此外，可信应用也可以作为其他可信服务器应用的客户端。以下 API 部分中介绍的事件将由 Trusty 内核传送到可信应用。</p>
+
+<h2 id="third-party_trusty_applications">第三方 Trusty 应用</h2>
+
+<p>目前，所有 Trusty 应用都是由一个开发方开发的，并封装了 Trusty 内核映像。整个映像会由引导加载程序在启动过程中进行签名并验证。该版本的 Trusty 中不支持第三方应用开发。</p>
+
+<p>尽管 Trusty 操作系统支持开发新应用，但在开发新应用时务必要万分谨慎；每个新应用都会使系统可信计算基 (TCB) 的范围增大。可信应用可以访问设备机密数据，并且可以利用这些数据进行计算或数据转换。</p>
+
+<p>能够开发在 TEE 中运行的新应用为进行创新提供了多种可能性。不过，根据 TEE 的定义，如果这些应用没有附带某种形式的证明其<strong>可信</strong>的凭据，则无法分发。这种凭据通常采用数字签名的形式，即由应用运行时所在产品的用户信任的实体提供的数字签名。</p>
+
+<h2 id="downloading_building">下载和编译 Trusty</h2>
+
+<p>您可以通过以下网址找到 Android 开放源代码项目 (AOSP) 中的 Trusty 实现：<br />
+<a href="https://android-review.googlesource.com/#/admin/projects/?filter=trusty">https://android-review.googlesource.com/#/admin/projects/?filter=trusty</a></p>
+
+<p>要查看 AOSP 上的 Trusty 内核分支，请访问：<br />
+<a href="https://android.googlesource.com/kernel/common/+/android-trusty-3.10">https://android.googlesource.com/kernel/common/+/android-trusty-3.10</a><br />
+<a href="https://android.googlesource.com/kernel/common/+/android-trusty-3.18">https://android.googlesource.com/kernel/common/+/android-trusty-3.18</a></p>
+
+<p>要实现 Trusty，请运行以下命令（假设 Android 工具链已位于路径中）：</p>
+<pre>
+$ repo init -u https://android.googlesource.com/trusty/manifest
+$ repo sync
+$ make -j24 generic-arm64
+</pre>
+
+<p>您可以从 <code>device/*/*/project/*</code> 中选择其他受支持的编译目标</p>
+
+</body></html>

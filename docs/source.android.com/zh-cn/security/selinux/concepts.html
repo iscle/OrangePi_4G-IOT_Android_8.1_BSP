@@ -1,0 +1,106 @@
+<html devsite><head>
+    <title>SELinux 概念</title>
+    <meta name="project_path" value="/_project.yaml"/>
+    <meta name="book_path" value="/_book.yaml"/>
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+<p>请查看此页中的内容，熟悉 SELinux 中使用的概念。</p>
+
+<h2 id="mandatory_access_control">强制访问控制</h2>
+
+<p>安全增强型 Linux (SELinux) 是适用于 Linux 操作系统的强制访问控制 (MAC) 系统。作为 MAC 系统，它与 Linux 中用户非常熟悉的自主访问控制 (DAC) 系统不同。在 DAC 系统中，存在所有权的概念，即特定资源的所有者可以控制与相应资源关联的访问权限。这种系统通常比较粗放，并且容易出现无意中提权的问题。MAC 系统则会在决定是否允许每次访问尝试时都咨询核心机构。</p>
+
+<p>SELinux 已作为 Linux 安全模块 (LSM) 框架的一部分实现，该框架可识别各种内核对象以及对这些对象执行的敏感操作。其中每项操作要执行时，系统都会调用 LSM 钩子函数，以便根据不透明安全对象中存储的关于相应操作的信息来确定是否应允许执行相应操作。SELinux 针对这些钩子以及这些安全对象的管理提供了相应的实现，该实现可结合自己的政策来决定是否允许相应访问。</p>
+
+<p>通过结合使用其他 Android 安全措施，Android 的访问控制政策能够大大降低遭到入侵的计算机和帐号可能蒙受的损失。Android 的自主访问控制和强制访问控制等工具可为您提供一种结构，确保您的软件仅以最低权限级别运行。这样可降低攻击造成的影响，并降低错误进程重写数据甚至是传输数据的可能性。</p>
+
+<p>从 Android 4.3 起，SELinux 开始为传统的自主访问控制 (DAC) 环境提供强制访问控制 (MAC) 保护功能。例如，软件通常情况下必须以 Root 用户帐号的身份运行，才能向原始块设备写入数据。在基于 DAC 的传统 Linux 环境中，如果 Root 用户遭到入侵，攻击者便可以利用该用户身份向每个原始块设备写入数据。不过，可以使用 SELinux 为这些设备添加标签，以便被分配了 Root 权限的进程只能向相关政策中指定的设备写入数据。这样一来，该进程便无法重写特定原始块设备之外的数据和系统设置。</p>
+
+<p>如需更多威胁示例以及使用 SELinux 解决威胁的方法，请参阅<a href="implement.html#use_cases">用例</a>。</p>
+
+<h2 id="enforcement_levels">强制执行级别</h2>
+
+<p>请熟悉以下术语，了解如何按不同的强制执行级别实现 SELinux。</p>
+
+<ul>
+  <li><em></em>宽容模式 - 仅记录但不强制执行 SELinux 安全政策。
+  </li><li><em></em>强制模式 - 强制执行并记录安全政策。如果失败，则显示为 EPERM 错误。
+</li></ul>
+
+<p>在选择强制执行级别时只能二择其一，您的选择将决定您的政策是采取操作，还是仅允许您收集潜在的失败事件。宽容模式在实现过程中尤其有用。</p>
+
+<ul>
+  <li><em></em>不受限 - 一种非常宽松的政策，会在开发过程中禁止执行某些任务并提供暂时的权宜之计。不应对 Android 开放源代码项目 (AOSP) 之外的任何内容使用这种政策。
+  </li><li><em></em>受限 - 针对相应服务编写的自定义政策。这种政策应精确定义允许的事项。
+</li></ul>
+
+<p>不受限政策可用于协助在 Android 中快速实现 SELinux。这种政策适用于大多数 Root 级应用。但应尽可能逐渐将这种政策转换为受限政策，以精确限制每个应用只能使用所需的资源。</p>
+
+<p>您的政策最好是处于强制模式的受限政策。处于强制模式的不受限政策可以掩盖采用受限政策时在宽容模式下会记录的可能违规行为。因此，我们强烈建议设备实现人员实现真正的受限政策。</p>
+
+<h2 id="labels_rules_and_domains">标签、规则和域</h2>
+
+<p><em></em>SELinux 依靠标签来匹配操作和政策。标签用于决定允许的事项。套接字、文件和进程在 SELinux 中都有标签。SELinux 决定基本上是根据为这些对象分配的标签以及定义这些对象可以如何交互的政策做出的。在 SELinux 中，标签采用以下形式：user:role:type:mls_level，其中 type 是访问决定的主要组成部分，可通过构成标签的其他组成部分进行修改。对象会映射到类，对每个类的不同访问类型由权限表示。</p>
+
+<p>政策规则采用以下形式：allow domains types:classes permissions;，其中：<em></em><em></em><em></em><em></em></p>
+
+<ul>
+  <li>Domain<em></em> - 一个进程或一组进程的标签。也称为域类型，因为它只是指进程的类型。
+  </li><li><em></em>Type - 一个对象（例如，文件、套接字）或一组对象的标签。
+  </li><li><em></em>Class - 要访问的对象（例如，文件、套接字）的类型。
+  </li><li><em></em>Permission - 要执行的操作（例如，读取、写入）。
+</li></ul>
+
+<p>使用政策规则时将遵循的结构示例：</p>
+<code>allow appdomain app_data_file:file rw_file_perms;</code>
+
+<p>这表示所有应用域都可以读取和写入带有 app_data_file 标签的文件。请注意，该规则依赖于在 global_macros 文件中定义的宏，您还可以在 te_macros 文件中找到一些其他非常实用的宏。这两个文件均位于 AOSP 源代码树的 <a href="https://android.googlesource.com/platform/system/sepolicy/">system/sepolicy</a> 目录中，其中提供了一些适用于常见的类、权限和规则分组的宏。应尽可能使用这些宏，以便降低因相关权限被拒而导致失败的可能性。</p>
+
+<p><em></em>除了在规则中逐个列出域或类型之外，还可以通过属性引用一组域或类型。简单来说，属性是一组域或类型的名称。每个域或类型都可以与任意数量的属性相关联。当编写的规则指定了某个属性名称时，该名称会自动扩展为列出与该属性关联的所有域或类型。<em></em><em></em>例如，domain 属性与所有进程域相关联，file_type 属性与所有文件类型相关联。</p>
+
+<p>使用上述语法可以创建构成 SELinux 政策基本内容的 avc 规则。规则采用以下形式：</p><pre>
+&lt;rule variant&gt; &lt;source_types&gt; &lt;target_types&gt; : &lt;classes&gt; &lt;permissions&gt;
+</pre>
+
+<p><em></em><em></em><em></em><em></em>该规则指明了，当带有任何 source_types 标签的主体尝试对某个对象执行与任何 permissions 对应的操作时，如果该对象包含带有任何 target_types 标签的任何 classes 类，会发生什么情况。这些规则的一个最常见示例是 allow 规则，例如：</p>
+
+<pre>
+allow domain null_device:chr_file { open };
+</pre>
+
+<p><em></em><em></em><em></em><em></em>该规则允许具有与“domain”属性关联的任何域的进程对 target_type 标签为“null_device”的“chr_file”类（字符设备文件）的对象执行“open”权限所描述的操作。在实际中，该规则可能会扩展为包含其他权限：</p>
+
+<pre>
+allow domain null_device:chr_file { getattr open read ioctl lock append write};
+</pre>
+
+<p>当了解到“domain”是分配给所有进程域的属性，并且 null_device 是字符设备 /dev/null 的标签时，该规则基本上会允许对 <code>/dev/null</code> 进行读写操作。</p>
+
+<p><em></em>一个 domain 通常对应一个进程，而且具有与其关联的标签。</p>
+
+<p>例如，典型的 Android 应用会在自己的进程中运行，并且具有授予其特定受限权限的 untrusted_app 标签。</p>
+
+<p>系统中内置的平台应用会以单独的标签运行，并会被授予一组不同的权限。作为核心 Android 系统的一部分，系统 UID 应用以表示另一组权限的 system_app 标签运行。</p>
+
+<p>在任何情况下，都不应直接允许域访问以下通用标签；而应为一个或多个对象创建一个更具体的类型：</p>
+
+<ul>
+  <li>socket_device</li><li>device</li><li>block_device</li><li>default_service</li><li>system_data_file</li><li>tmpfs</li></ul>
+
+</body></html>

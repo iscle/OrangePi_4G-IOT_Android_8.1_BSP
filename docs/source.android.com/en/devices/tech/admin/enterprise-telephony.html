@@ -1,0 +1,125 @@
+<html devsite>
+  <head>
+    <title>Implementing Enterprise Telephony</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>
+This document outlines the changes made to the telephony-related parts of the
+Android framework in the 7.0 release to support enterprise use cases. This
+document is targeted at manufacturers and focuses entirely on framework-related
+telephony changes. In addition, this document outlines the changes that OEMs
+will need to make to their preloaded applications that handle telephony-related
+functions.
+</p>
+
+<p>
+Android 7.0 introduces several new features to support enterprise telephony use
+cases, in particular:
+</p>
+
+<ul>
+<li>Cross profile contact search - Allows applications in the personal profile
+to search for contacts that are supplied by the managed profile contacts
+provider, which can be backed by any datastore, for example local to the device
+or perhaps within an enterprise directory
+<li>Cross profile contact badging - Allows work contacts to be clearly
+distinguished from personal contacts
+<li>Making Connection Service managed profile aware - Allows applications within
+the Managed Profile to offer telephony features, such as to provide a separate
+work dialer and work ConnectionService</li>
+</ul>
+
+<h2 id="examples-and-source">Examples and source</h2>
+
+<p>
+The Android Open Source Project (AOSP) implementations of Dialer, Contacts, and
+Messaging apps have integrated the cross profile contact search  and badging
+capability.
+</p>
+
+<p>
+Examples:
+</p><ul>
+<li><strong>Adding badge to work contacts</strong>: see
+<code>packages/apps/ContactsCommon</code> <em>f3eb5a207bfe0ff3b4ed2350ae5865ed8bc59798</em>
+<li><strong>Cross profile search</strong>: see <code>packages/apps/ContactsCommon</code> <em>cd0b29ddbf3648e48f048196c62245d545bc6122</em></li>
+</ul>
+
+<h2 id="implementation">Implementation</h2>
+
+<p>
+Device implementers must implement cross-profile, search, lookup and badging
+for contacts in their Dialer Contacts and SMS/MMS Messaging apps.</p>
+
+<h3 id="cross-profile-contact-search">Cross-profile contact search</h3>
+
+<p>
+Cross profile contact search should be implemented using the Enterprise Contacts
+API (<code>ContactsContract.Contacts.ENTERPRISE_CONTENT_FILTER_URI</code> etc.)
+see <a
+href="http://developer.android.com/preview/features/afw.html#contacts">http://developer.android.com/preview/features/afw.html#contacts</a>
+</p>
+
+<h3 id="work-profile-contact-badging">Work profile contact badging</h3>
+
+<p>
+Work profile contact badging can be implemented by checking
+<code>ContactsContract.Directory.isEntepriseDirectoryId() </code>if available or
+<a
+href="http://developer.android.com/reference/android/provider/ContactsContract.Contacts.html#isEnterpriseContactId(long)">http://developer.android.com/reference/android/provider/ContactsContract.Contacts.html#isEnterpriseContactId(long)</a>
+<code> </code>
+</p>
+
+<h3 id="managed-profile-aware-connectionservice">Managed Profile Aware
+ConnectionService</h3>
+
+<p>
+Manufacturers should not need to modify the framework code to support this
+functionality, but should be aware of it’s impact on the Telecomm service and
+other telephony features.
+</p>
+
+<h2 id="validation">Validation</h2>
+
+<p>
+The cross profile contact search and badging feature can be validated by:
+</p>
+
+<ol>
+<li>Setting up a managed profile on a test device using <a
+href="https://github.com/googlesamples/android-testdpc">TestDPC</a>.
+<li>Enabling cross profile contact search.
+<li>Adding a local work contact within the managed profile.
+<li>Searching for that contact within the system Dialer Contacts and SMS/MMS
+Messaging Apps within the personal profile, checking that this contact is found
+and it is correctly badged.</li>
+</ol>
+
+<p>
+CTS tests have been added to ensure the underlying cross profile contact search
+API has been implemented in
+<code>com/android/cts/managedprofile/ContactsTest.java</code>.
+</p>
+
+  </body>
+</html>

@@ -1,0 +1,59 @@
+<html devsite><head>
+    <title>验证启动</title>
+    <meta name="project_path" value="/_project.yaml"/>
+    <meta name="book_path" value="/_book.yaml"/>
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+<p>Android 4.4 及更高版本支持通过可选的 device-mapper-verity (dm-verity) 内核功能进行的验证启动，以便对块设备进行透明的完整性检查。dm-verity 有助于阻止可以持续保有 Root 权限并入侵设备的持续性 Rootkit。验证启动功能有助于 Android 用户在启动设备时确定设备状态与上次使用时是否相同。</p>
+
+<p>更为狡猾且具有 Root 权限的恶意软件可以躲开检测程序的检测，并以其他方式掩蔽自己。可以获取 Root 权限的软件就能够做到这一点，因为它通常比检测程序的权限更高，从而能够“欺骗”检测程序。</p>
+
+<p>通过 dm-verity 功能，您可以查看块设备（文件系统的底部存储层），并确定它是否与预期配置一致。该功能是利用加密哈希树做到这一点的。对于每个块（通常为 4k），都有一个 SHA256 哈希。</p>
+
+<p>由于哈希值存储在页面树中，因此顶级“根”哈希必须可信，才能验证树的其余部分。能够修改任何块相当于能够破坏加密哈希。下图描绘了此结构。</p>
+
+<img src="../images/dm-verity-hash-table.png" alt="dm-verity-hash-table" id="figure1"/>
+<p class="img-caption">
+  <strong>图 1.</strong> dm-verity 哈希表</p>
+
+<p>启动分区中包含一个公钥，该公钥必须已由原始设备制造商 (OEM) 在外部进行验证。该密钥用于验证相应哈希的签名，并用于确认设备的系统分区是否受到保护且未被更改。</p>
+
+<h2 id="prerequisites">前提条件</h2>
+
+<h3 id="verified-boot">建立验证启动流程</h3>
+<p>为了大幅降低遭到入侵的风险，请使用烧录到设备上的密钥来验证内核。如需详细信息，请参阅<a href="verified-boot.html">验证启动</a>。</p>
+
+<h3 id="block-otas">切换到面向块的 OTA</h3>
+<p>要为设备启用 dm-verity，您必须使用基于块的无线下载 (OTA) 更新来确保所有设备均使用相同的系统分区。如需详细信息，请参阅<a href="/devices/tech/ota/block.html">基于块的 OTA</a>。</p>
+
+<h3 id="config-dm-verity">配置 dm-verity</h3>
+
+<p>在切换到面向块的 OTA 后，纳入最新的 Android 内核或使用现成的上游内核，然后通过添加相关配置选项 <code>CONFIG_DM_VERITY</code> 来启用 dm-verity 支持。</p>
+
+<p>如果使用 Android 内核，dm-verity 会在该内核编译后启用。如需详细信息，请参阅<a href="dm-verity.html">实现 dm-verity</a>。</p>
+
+<h2 id="supporting-docs">支持文档</h2>
+<p><a href="verified-boot.html">验证启动</a><br />
+<a href="/devices/tech/ota/block.html">基于块的 OTA</a><br />
+<a href="dm-verity.html">实现 dm-verity</a><br />
+<a href="https://gitlab.com/cryptsetup/cryptsetup/wikis/DMVerity">cryptsetup - dm-verity：device-mapper 块完整性检查目标</a><br />
+<a href="http://www.chromium.org/chromium-os/chromiumos-design-docs/verified-boot">Chromium 项目 - 验证启动</a><br />
+<a href="http://git.kernel.org/?p=linux/kernel/git/torvalds/linux-2.6.git;a=blob;f=Documentation/device-mapper/verity.txt">Linux 内核文档：verity.txt</a></p>
+
+</body></html>

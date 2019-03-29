@@ -1,0 +1,863 @@
+<html devsite><head>
+    <title>阅读错误报告</title>
+    <meta name="project_path" value="/_project.yaml"/>
+    <meta name="book_path" value="/_book.yaml"/>
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+<p>无论是任何类型的开发工作，出错都在所难免，而错误报告对于找出和解决问题至关重要。Android 的所有版本都支持通过 <a href="http://developer.android.com/tools/help/adb.html">Android 调试桥 (adb)</a> 获取错误报告；Android 4.2 及更高版本支持一个旨在获取错误报告以及通过电子邮件、云端硬盘等分享报告的<a href="http://developer.android.com/tools/device.html#developer-device-options">开发者选项</a>。</p>
+
+<p>Android 错误报告中包含文本 (.txt) 格式的 <code>dumpsys</code>、<code>dumpstate</code> 和 <code>logcat</code> 数据，以便您轻松搜索特定内容。以下各部分详细说明了错误报告的组成部分、介绍了常见问题，并提供了关于查找与这些错误相关的日志的实用提示和 <code>grep</code> 命令。大多数部分中还包括 <code>grep</code> 命令及输出和/或 <code>dumpsys</code> 输出方面的示例。</p>
+
+<h2 id="logcat">Logcat</h2>
+<p><code>logcat</code> 日志是所有 <code>logcat</code> 信息的转储，并采用字符串形式。<strong>system</strong>（系统）部分专门用于记录框架方面的信息，与包含所有其他内容的 <strong>main</strong>（主要内容）部分相比，该部分包含更长时间内的记录。每行都以 <code>timestamp PID TID log-level</code> 开头。</p>
+
+  <section class="expandable">
+    <h4 class="showalways">显示示例</h4>
+    <p></p><pre>------ SYSTEM LOG (logcat -v threadtime -d *:v) ------
+--------- beginning of system
+<i>Blah</i>
+<i>Blah</i>
+<i>Blah</i>
+
+--------- beginning of main
+<i>Blah </i>
+<i>Blah</i>
+<i>Blah</i></pre><p></p>
+  </section>
+
+<h3 id="event-log">查看事件日志</h3>
+<p>该日志中包含将二进制格式转换成了字符串形式的日志消息。它比 <code>logcat</code> 日志要清晰明了，但也有些难以阅读。在查看事件日志时，您可以在这一部分中搜索特定进程 ID (PID)，以查看相应进程一直在做什么。基本格式为：<code>timestamp PID TID log-level log-tag tag-values</code>。</p>
+
+<p>日志级别包括以下几种：</p>
+<ul>
+<li>V：详细</li>
+<li>D：调试</li>
+<li>I：信息</li>
+<li>W：警告</li>
+<li>E：错误</li>
+</ul>
+
+  <section class="expandable">
+    <h4 class="showalways">显示示例</h4>
+    <p></p><pre>------ EVENT LOG (logcat -b events -v threadtime -d *:v) ------
+09-28 13:47:34.179   785  5113 I am_proc_bound: [0,23054,com.google.android.gms.unstable]
+09-28 13:47:34.777   785  1975 I am_proc_start: [0,23134,10032,com.android.chrome,broadcast,com.android.chrome/org.chromium.chrome.browser.precache.PrecacheServiceLauncher]
+09-28 13:47:34.806   785  2764 I am_proc_bound: [0,23134,com.android.chrome]
+...</pre><p></p>
+  </section>
+<p> </p>
+<p>有关其他实用的事件日志标记，请参阅 <a href="https://android.googlesource.com/platform/frameworks/base/+/master/services/core/java/com/android/server/EventLogTags.logtags">/services/core/java/com/android/server/EventLogTags.logtags</a>。</p>
+
+<h2 id="anrs-deadlocks">ANR 和死锁</h2>
+<p>错误报告有助于您找出导致<a href="http://developer.android.com/training/articles/perf-anr.html">应用无响应 (ANR)</a> 错误和死锁事件的原因。</p>
+
+<h3 id="determine-anr-app">找出无响应的应用</h3>
+<p>当某个应用在一定时间内没有响应（通常是由于主线程被阻塞或繁忙）时，系统会终止该进程并将堆栈转储到 <code>/data/anr</code>。要找出 ANR 背后的罪魁祸首，请为二进制事件日志中的 <code>am_anr</code> 执行 grep 命令。</p>
+
+  <section class="expandable">
+    <h4 class="showalways">显示示例</h4>
+    <p></p><pre>grep "am_anr" bugreport-2015-10-01-18-13-48.txt
+10-01 18:12:49.599  4600  4614 I am_anr  : [0,29761,com.google.android.youtube,953695941,executing service com.google.android.youtube/com.google.android.apps.youtube.app.offline.transfer.OfflineTransferService]
+10-01 18:14:10.211  4600  4614 I am_anr  : [0,30363,com.google.android.apps.plus,953728580,executing service com.google.android.apps.plus/com.google.android.apps.photos.service.PhotosService]</pre><p></p>
+  </section>
+
+<p></p>
+<p>您也可以为 <code>logcat</code> 日志（其中包含关于发生 ANR 时是什么在占用 CPU 的更多信息）中的 <code>ANR in</code> 执行 grep 命令。</p>
+
+  <section class="expandable">
+    <h4 class="showalways">显示示例</h4>
+    <p></p><pre>grep "ANR in" bugreport-2015-10-01-18-13-48.txt
+10-01 18:13:11.984  4600  4614 E ActivityManager: ANR in com.google.android.youtube
+10-01 18:14:31.720  4600  4614 E ActivityManager: ANR in com.google.android.apps.plus
+10-01 18:14:31.720  4600  4614 E ActivityManager: PID: 30363
+10-01 18:14:31.720  4600  4614 E ActivityManager: Reason: executing service com.google.android.apps.plus/com.google.android.apps.photos.service.PhotosService
+10-01 18:14:31.720  4600  4614 E ActivityManager: Load: 35.27 / 23.9 / 16.18
+10-01 18:14:31.720  4600  4614 E ActivityManager: CPU usage from 16ms to 21868ms later:
+10-01 18:14:31.720  4600  4614 E ActivityManager:   74% 3361/mm-qcamera-daemon: 62% user + 12% kernel / faults: 15276 minor 10 major
+10-01 18:14:31.720  4600  4614 E ActivityManager:   41% 4600/system_server: 18% user + 23% kernel / faults: 18597 minor 309 major
+10-01 18:14:31.720  4600  4614 E ActivityManager:   32% 27420/com.google.android.GoogleCamera: 24% user + 7.8% kernel / faults: 48374 minor 338 major
+10-01 18:14:31.720  4600  4614 E ActivityManager:   16% 130/kswapd0: 0% user + 16% kernel
+10-01 18:14:31.720  4600  4614 E ActivityManager:   15% 283/mmcqd/0: 0% user + 15% kernel
+...
+10-01 18:14:31.720  4600  4614 E ActivityManager:   0.1% 27248/irq/503-synapti: 0%
+10-01 18:14:31.721  4600  4614 I ActivityManager: Killing 30363:com.google.android.apps.plus/u0a206 (adj 0): bg anr</pre><p></p>
+  </section>
+
+<h3 id="find-stack-traces">查找堆栈跟踪</h3>
+<p>通常您可以找到与 ANR 对应的堆栈跟踪。请确保 VM 跟踪上的时间戳和 PID 与您正在调查的 ANR 相符，然后再检查进程的主线程。请注意：</p>
+<ul>
+<li>主线程只能让您了解发生 ANR 时它在做什么，这可能是导致 ANR 的真正原因，也可能不是。（错误报告中的堆栈可能是无辜的；可能有其他线程在恢复正常之前粘滞了很长时间，但不足以导致 ANR。）
+</li>
+<li>可能存在多组堆栈跟踪（<code>VM TRACES JUST NOW</code> 和 <code>VM TRACES AT LAST ANR</code>）。请确保您查看的是正确的部分。</li>
+</ul>
+
+  <section class="expandable">
+    <h4 class="showalways">显示示例</h4>
+    <p></p><pre>------ VM TRACES AT LAST ANR (/data/anr/traces.txt: 2015-10-01 18:14:41) ------
+
+----- pid 30363 at 2015-10-01 18:14:11 -----
+Cmd line: com.google.android.apps.plus
+Build fingerprint: 'google/angler/angler:6.0/MDA89D/2294819:userdebug/dev-keys'
+ABI: 'arm'
+Build type: optimized
+Zygote loaded classes=3978 post zygote classes=27
+Intern table: 45068 strong; 21 weak
+JNI: CheckJNI is off; globals=283 (plus 360 weak)
+Libraries: /system/lib/libandroid.so /system/lib/libcompiler_rt.so /system/lib/libjavacrypto.so /system/lib/libjnigraphics.so /system/lib/libmedia_jni.so /system/lib/libwebviewchromium_loader.so libjavacore.so (7)
+Heap: 29% free, 21MB/30MB; 32251 objects
+Dumping cumulative Gc timings
+Total number of allocations 32251
+Total bytes allocated 21MB
+Total bytes freed 0B
+Free memory 9MB
+Free memory until GC 9MB
+Free memory until OOME 490MB
+Total memory 30MB
+Max memory 512MB
+Zygote space size 1260KB
+Total mutator paused time: 0
+Total time waiting for GC to complete: 0
+Total GC count: 0
+Total GC time: 0
+Total blocking GC count: 0
+Total blocking GC time: 0
+
+suspend all histogram:  Sum: 119.728ms 99% C.I. 0.010ms-107.765ms Avg: 5.442ms Max: 119.562ms
+DALVIK THREADS (12):
+"Signal Catcher" daemon prio=5 tid=2 Runnable
+  | group="system" sCount=0 dsCount=0 obj=0x12c400a0 self=0xef460000
+  | sysTid=30368 nice=0 cgrp=default sched=0/0 handle=0xf4a69930
+  | state=R schedstat=( 9021773 5500523 26 ) utm=0 stm=0 core=1 HZ=100
+  | stack=0xf496d000-0xf496f000 stackSize=1014KB
+  | held mutexes= "mutator lock"(shared held)
+  native: #00 pc 0035a217  /system/lib/libart.so (art::DumpNativeStack(std::__1::basic_ostream&lt;char, std::__1::char_traits&lt;char&gt; &gt;&amp;, int, char const*, art::ArtMethod*, void*)+126)
+  native: #01 pc 0033b03b  /system/lib/libart.so (art::Thread::Dump(std::__1::basic_ostream&lt;char, std::__1::char_traits&lt;char&gt; &gt;&amp;) const+138)
+  native: #02 pc 00344701  /system/lib/libart.so (art::DumpCheckpoint::Run(art::Thread*)+424)
+  native: #03 pc 00345265  /system/lib/libart.so (art::ThreadList::RunCheckpoint(art::Closure*)+200)
+  native: #04 pc 00345769  /system/lib/libart.so (art::ThreadList::Dump(std::__1::basic_ostream&lt;char, std::__1::char_traits&lt;char&gt; &gt;&amp;)+124)
+  native: #05 pc 00345e51  /system/lib/libart.so (art::ThreadList::DumpForSigQuit(std::__1::basic_ostream&lt;char, std::__1::char_traits&lt;char&gt; &gt;&amp;)+312)
+  native: #06 pc 0031f829  /system/lib/libart.so (art::Runtime::DumpForSigQuit(std::__1::basic_ostream&lt;char, std::__1::char_traits&lt;char&gt; &gt;&amp;)+68)
+  native: #07 pc 00326831  /system/lib/libart.so (art::SignalCatcher::HandleSigQuit()+896)
+  native: #08 pc 003270a1  /system/lib/libart.so (art::SignalCatcher::Run(void*)+324)
+  native: #09 pc 0003f813  /system/lib/libc.so (__pthread_start(void*)+30)
+  native: #10 pc 00019f75  /system/lib/libc.so (__start_thread+6)
+  (no managed stack frames)
+
+"main" prio=5 tid=1 Suspended
+  | group="main" sCount=1 dsCount=0 obj=0x747552a0 self=0xf5376500
+  | sysTid=30363 nice=0 cgrp=default sched=0/0 handle=0xf74feb34
+  | state=S schedstat=( 331107086 164153349 851 ) utm=6 stm=27 core=3 HZ=100
+  | stack=0xff00f000-0xff011000 stackSize=8MB
+  | held mutexes=
+  kernel: __switch_to+0x7c/0x88
+  kernel: futex_wait_queue_me+0xd4/0x130
+  kernel: futex_wait+0xf0/0x1f4
+  kernel: do_futex+0xcc/0x8f4
+  kernel: compat_SyS_futex+0xd0/0x14c
+  kernel: cpu_switch_to+0x48/0x4c
+  native: #00 pc 000175e8  /system/lib/libc.so (syscall+28)
+  native: #01 pc 000f5ced  /system/lib/libart.so (art::ConditionVariable::Wait(art::Thread*)+80)
+  native: #02 pc 00335353  /system/lib/libart.so (art::Thread::FullSuspendCheck()+838)
+  native: #03 pc 0011d3a7  /system/lib/libart.so (art::ClassLinker::LoadClassMembers(art::Thread*, art::DexFile const&amp;, unsigned char const*, art::Handle&lt;art::mirror::Class&gt;, art::OatFile::OatClass const*)+746)
+  native: #04 pc 0011d81d  /system/lib/libart.so (art::ClassLinker::LoadClass(art::Thread*, art::DexFile const&amp;, art::DexFile::ClassDef const&amp;, art::Handle&lt;art::mirror::Class&gt;)+88)
+  native: #05 pc 00132059  /system/lib/libart.so (art::ClassLinker::DefineClass(art::Thread*, char const*, unsigned int, art::Handle&lt;art::mirror::ClassLoader&gt;, art::DexFile const&amp;, art::DexFile::ClassDef const&amp;)+320)
+  native: #06 pc 001326c1  /system/lib/libart.so (art::ClassLinker::FindClassInPathClassLoader(art::ScopedObjectAccessAlreadyRunnable&amp;, art::Thread*, char const*, unsigned int, art::Handle&lt;art::mirror::ClassLoader&gt;, art::mirror::Class**)+688)
+  native: #07 pc 002cb1a1  /system/lib/libart.so (art::VMClassLoader_findLoadedClass(_JNIEnv*, _jclass*, _jobject*, _jstring*)+264)
+  native: #08 pc 002847fd  /data/dalvik-cache/arm/system@framework@boot.oat (Java_java_lang_VMClassLoader_findLoadedClass__Ljava_lang_ClassLoader_2Ljava_lang_String_2+112)
+  at java.lang.VMClassLoader.findLoadedClass!(Native method)
+  at java.lang.ClassLoader.findLoadedClass(ClassLoader.java:362)
+  at java.lang.ClassLoader.loadClass(ClassLoader.java:499)
+  at java.lang.ClassLoader.loadClass(ClassLoader.java:469)
+  at android.app.ActivityThread.installProvider(ActivityThread.java:5141)
+  at android.app.ActivityThread.installContentProviders(ActivityThread.java:4748)
+  at android.app.ActivityThread.handleBindApplication(ActivityThread.java:4688)
+  at android.app.ActivityThread.-wrap1(ActivityThread.java:-1)
+  at android.app.ActivityThread$H.handleMessage(ActivityThread.java:1405)
+  at android.os.Handler.dispatchMessage(Handler.java:102)
+  at android.os.Looper.loop(Looper.java:148)
+  at android.app.ActivityThread.main(ActivityThread.java:5417)
+  at java.lang.reflect.Method.invoke!(Native method)
+  at com.android.internal.os.ZygoteInit$MethodAndArgsCaller.run(ZygoteInit.java:726)
+  at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:616)
+
+  ...
+<i>  Stacks for other threads in this process follow</i>
+  ...</pre><p></p>
+  </section>
+
+<h3 id="deadlocks">查找死锁</h3>
+<p>由于线程出现粘滞，死锁往往首先表现为 ANR。如果系统服务器发生死锁，监控程序最终会将其终止，从而导致日志中出现类似以下的条目：<code>WATCHDOG KILLING SYSTEM PROCESS</code>。对于用户来说，他们看到的是设备重新启动，但从技术上来讲这是运行时重启，而不是真正的设备重新启动。</p>
+
+<ul>
+<li>在<strong>运行时</strong>重启时，系统服务器已死机并会重启，并且用户会看到设备返回到显示启动动画。</li>
+<li>在设备<strong>重新启动</strong>时，内核已崩溃，并且用户会看到设备返回到显示 Google 启动徽标。</li>
+</ul>
+
+<p>要查找死锁，请检查 VM 跟踪部分中是否存在以下模式：线程 A 在等待线程 B 占用的某些资源，而线程 B 也在等待线程 A 占用的某些资源。</p>
+
+  <section class="expandable">
+    <h4 class="showalways">显示示例</h4>
+    <p></p><pre>"Binder_B" prio=5 tid=73 Blocked
+  | group="main" sCount=1 dsCount=0 obj=0x13faa0a0 self=0x95e24800
+  | sysTid=2016 nice=0 cgrp=default sched=0/0 handle=0x8b68d930
+  | state=S schedstat=( 9351576559 4141431119 16920 ) utm=819 stm=116 core=1 HZ=100
+  | stack=0x8b591000-0x8b593000 stackSize=1014KB
+  | held mutexes=
+  at com.android.server.pm.UserManagerService.exists(UserManagerService.java:387)
+  - waiting to lock &lt;0x025f9b02&gt; (a android.util.ArrayMap) held by thread 20
+  at com.android.server.pm.PackageManagerService.getApplicationInfo(PackageManagerService.java:2848)
+  at com.android.server.AppOpsService.getOpsRawLocked(AppOpsService.java:881)
+  at com.android.server.AppOpsService.getOpsLocked(AppOpsService.java:856)
+  at com.android.server.AppOpsService.noteOperationUnchecked(AppOpsService.java:719)
+  - locked &lt;0x0231885a&gt; (a com.android.server.AppOpsService)
+  at com.android.server.AppOpsService.noteOperation(AppOpsService.java:713)
+  at com.android.server.AppOpsService$2.getMountMode(AppOpsService.java:260)
+  at com.android.server.MountService$MountServiceInternalImpl.getExternalStorageMountMode(MountService.java:3416)
+  at com.android.server.am.ActivityManagerService.startProcessLocked(ActivityManagerService.java:3228)
+  at com.android.server.am.ActivityManagerService.startProcessLocked(ActivityManagerService.java:3170)
+  at com.android.server.am.ActivityManagerService.startProcessLocked(ActivityManagerService.java:3059)
+  at com.android.server.am.BroadcastQueue.processNextBroadcast(BroadcastQueue.java:1070)
+  - locked &lt;0x044d166f&gt; (a com.android.server.am.ActivityManagerService)
+  at com.android.server.am.ActivityManagerService.finishReceiver(ActivityManagerService.java:16950)
+  at android.app.ActivityManagerNative.onTransact(ActivityManagerNative.java:494)
+  at com.android.server.am.ActivityManagerService.onTransact(ActivityManagerService.java:2432)
+  at android.os.Binder.execTransact(Binder.java:453)
+...
+  "PackageManager" prio=5 tid=20 Blocked
+  | group="main" sCount=1 dsCount=0 obj=0x1304f4a0 self=0xa7f43900
+  | sysTid=1300 nice=10 cgrp=bg_non_interactive sched=0/0 handle=0x9fcf9930
+  | state=S schedstat=( 26190141996 13612154802 44357 ) utm=2410 stm=209 core=2 HZ=100
+  | stack=0x9fbf7000-0x9fbf9000 stackSize=1038KB
+  | held mutexes=
+  at com.android.server.AppOpsService.noteOperationUnchecked(AppOpsService.java:718)
+  - waiting to lock &lt;0x0231885a&gt; (a com.android.server.AppOpsService) held by thread 73
+  at com.android.server.AppOpsService.noteOperation(AppOpsService.java:713)
+  at com.android.server.AppOpsService$2.getMountMode(AppOpsService.java:260)
+  at com.android.server.AppOpsService$2.hasExternalStorage(AppOpsService.java:273)
+  at com.android.server.MountService$MountServiceInternalImpl.hasExternalStorage(MountService.java:3431)
+  at com.android.server.MountService.getVolumeList(MountService.java:2609)
+  at android.os.storage.StorageManager.getVolumeList(StorageManager.java:880)
+  at android.os.Environment$UserEnvironment.getExternalDirs(Environment.java:83)
+  at android.os.Environment.isExternalStorageEmulated(Environment.java:708)
+  at com.android.server.pm.PackageManagerService.isExternalMediaAvailable(PackageManagerService.java:9327)
+  at com.android.server.pm.PackageManagerService.startCleaningPackages(PackageManagerService.java:9367)
+  - locked &lt;0x025f9b02&gt; (a android.util.ArrayMap)
+  at com.android.server.pm.PackageManagerService$PackageHandler.doHandleMessage(PackageManagerService.java:1320)
+  at com.android.server.pm.PackageManagerService$PackageHandler.handleMessage(PackageManagerService.java:1122)
+  at android.os.Handler.dispatchMessage(Handler.java:102)
+  at android.os.Looper.loop(Looper.java:148)
+  at android.os.HandlerThread.run(HandlerThread.java:61)
+  at com.android.server.ServiceThread.run(ServiceThread.java:46)</pre><p></p>
+  </section>
+
+<h2 id="activities">Activity</h2>
+<p><a href="http://developer.android.com/guide/components/activities.html">Activity</a> 是一种应用组件，可提供一个屏幕，用户能够通过与该屏幕互动来执行某些操作，例如拨打电话号码、拍照、发送电子邮件，等等。从错误报告的角度来看，一个 <a href="http://developer.android.com/reference/android/app/Activity.html">Activity</a> 是用户可以执行一项明确具体的操作，这使得查找在崩溃期间处于聚焦状态的 Activity 变得非常重要。Activity 通过 ActivityManager 运行进程，因此找出指定 Activity 的所有进程停止和启动事件也有助于进行问题排查。</p>
+
+<h3 id="history-focused-activities">查看处于聚焦状态的 Activity</h3>
+<p>要查看记录的处于聚焦状态的 Activity，请搜索 <code>am_focused_activity</code>。</p>
+
+  <section class="expandable">
+    <h4 class="showalways">显示示例</h4>
+    <p></p><pre>grep "am_focused_activity" bugreport-2015-10-01-18-13-48.txt
+10-01 18:10:41.409  4600 14112 I am_focused_activity: [0,com.google.android.GoogleCamera/com.android.camera.CameraActivity]
+10-01 18:11:17.313  4600  5687 I am_focused_activity: [0,com.google.android.googlequicksearchbox/com.google.android.launcher.GEL]
+10-01 18:11:52.747  4600 14113 I am_focused_activity: [0,com.google.android.GoogleCamera/com.android.camera.CameraActivity]
+10-01 18:14:07.762  4600  5687 I am_focused_activity: [0,com.google.android.googlequicksearchbox/com.google.android.launcher.GEL]</pre><p></p>
+  </section>
+
+<h3 id="history-process-starts">查看进程启动事件</h3>
+<p>要查看记录的进程启动事件，请搜索 <code>Start proc</code>。</p>
+
+  <section class="expandable">
+    <h4 class="showalways">显示示例</h4>
+    <p></p><pre>grep "Start proc" bugreport-2015-10-01-18-13-48.txt
+10-01 18:09:15.309  4600  4612 I ActivityManager: Start proc 24533:com.metago.astro/u0a240 for broadcast com.metago.astro/com.inmobi.commons.analytics.androidsdk.IMAdTrackerReceiver
+10-01 18:09:15.687  4600 14112 I ActivityManager: Start proc 24548:com.google.android.apps.fitness/u0a173 for service com.google.android.apps.fitness/.api.services.ActivityUpsamplingService
+10-01 18:09:15.777  4600  6604 I ActivityManager: Start proc 24563:cloudtv.hdwidgets/u0a145 for broadcast cloudtv.hdwidgets/cloudtv.switches.SwitchSystemUpdateReceiver
+10-01 18:09:20.574  4600  6604 I ActivityManager: Start proc 24617:com.wageworks.ezreceipts/u0a111 for broadcast com.wageworks.ezreceipts/.ui.managers.IntentReceiver
+...</pre><p></p>
+  </section>
+
+<h3 id="device-thrashing">设备是否发生系统颠簸？</h3>
+<p>要确定设备是否发生<a href="https://en.wikipedia.org/wiki/Thrashing_(computer_science)">系统颠簸</a>，请检查 <code>am_proc_died</code> 和 <code>am_proc_start</code> 前后在短时间内是否出现活动异常增加。</p>
+
+  <section class="expandable">
+    <h4 class="showalways">显示示例</h4>
+    <p></p><pre>grep -e "am_proc_died" -e "am_proc_start" bugreport-2015-10-01-18-13-48.txt
+10-01 18:07:06.494  4600  9696 I am_proc_died: [0,20074,com.android.musicfx]
+10-01 18:07:06.555  4600  6606 I am_proc_died: [0,31166,com.concur.breeze]
+10-01 18:07:06.566  4600 14112 I am_proc_died: [0,18812,com.google.android.apps.fitness]
+10-01 18:07:07.018  4600  7513 I am_proc_start: [0,20361,10113,com.sony.playmemories.mobile,broadcast,com.sony.playmemories.mobile/.service.StartupReceiver]
+10-01 18:07:07.357  4600  4614 I am_proc_start: [0,20381,10056,com.google.android.talk,service,com.google.android.talk/com.google.android.libraries.hangouts.video.CallService]
+10-01 18:07:07.784  4600  4612 I am_proc_start: [0,20402,10190,com.andcreate.app.trafficmonitor:loopback_measure_serivce,service,com.andcreate.app.trafficmonitor/.loopback.LoopbackMeasureService]
+10-01 18:07:10.753  4600  5997 I am_proc_start: [0,20450,10097,com.amazon.mShop.android.shopping,broadcast,com.amazon.mShop.android.shopping/com.amazon.identity.auth.device.storage.LambortishClock$ChangeTimestampsBroadcastReceiver]
+10-01 18:07:15.267  4600  6605 I am_proc_start: [0,20539,10173,com.google.android.apps.fitness,service,com.google.android.apps.fitness/.api.services.ActivityUpsamplingService]
+10-01 18:07:15.985  4600  4612 I am_proc_start: [0,20568,10022,com.android.musicfx,broadcast,com.android.musicfx/.ControlPanelReceiver]
+10-01 18:07:16.315  4600  7512 I am_proc_died: [0,20096,com.google.android.GoogleCamera]</pre><p></p>
+  </section>
+
+<h2 id="memory">内存</h2>
+<p>由于 Android 设备的物理内存通常都存在限制，因此管理随机存取存储器 (RAM) 至关重要。错误报告中包含一些用于指示内存不足的指标以及一个提供内存快照的 dumpstate。</p>
+
+<h3 id="low-memory">发现内存不足的情况</h3>
+<p>内存不足可能会导致系统发生颠簸，这是因为虽然内存不足时系统会终止某些进程来释放内存，但又会继续启动其他进程。要查看内存不足的确凿证据，请检查二进制事件日志中 <code>am_proc_died</code> 和 <code>am_proc_start</code> 条目的密集程度。</p>
+
+<p>内存不足还可能会减慢任务切换速度，并且可能会阻止进行返回尝试（因为用户尝试返回到的任务已被终止）。如果启动器被终止，它会在用户触摸主屏幕按钮时重启，并且日志中会显示启动器重新加载其内容。</p>
+
+<h4 id="historical-low-memory">查看历史指标</h4>
+<p>二进制事件日志中的 <code>am_low_memory</code> 条目表示最后一个缓存的进程已终止。在此之后，系统开始终止各项服务。
+
+  </p><section class="expandable">
+    <h4 class="showalways">显示示例</h4>
+    <p></p><pre>grep "am_low_memory" bugreport-2015-10-01-18-13-48.txt
+10-01 18:11:02.219  4600  7513 I am_low_memory: 41
+10-01 18:12:18.526  4600 14112 I am_low_memory: 39
+10-01 18:12:18.874  4600  7514 I am_low_memory: 38
+10-01 18:12:22.570  4600 14112 I am_low_memory: 40
+10-01 18:12:34.811  4600 20319 I am_low_memory: 43
+10-01 18:12:37.945  4600  6521 I am_low_memory: 43
+10-01 18:12:47.804  4600 14110 I am_low_memory: 43</pre><p></p>
+  </section>
+
+<h4 id="thrashing-indicators">查看系统颠簸指标</h4>
+<p>关于系统颠簸（分页、直接回收等）的其他指标包括 <code>kswapd</code>、<code>kworker</code> 和 <code>mmcqd</code> 消耗的 CPU 周期。（请注意，收集错误报告可能会影响系统颠簸指标。）</p>
+
+  <section class="expandable">
+    <h4 class="showalways">显示示例</h4>
+    <p></p><pre>------ CPU INFO (top -n 1 -d 1 -m 30 -t) ------
+
+User 15%, System 54%, IOW 28%, IRQ 0%
+User 82 + Nice 2 + Sys 287 + Idle 1 + IOW 152 + IRQ 0 + SIRQ 5 = 529
+
+  PID   TID PR CPU% S     VSS     RSS PCY UID      Thread          Proc
+15229 15229  0  19% R      0K      0K  fg root     kworker/0:2
+29512 29517  1   7% D 1173524K 101188K  bg u0_a27   Signal Catcher  com.google.android.talk
+24565 24570  3   6% D 2090920K 145168K  fg u0_a22   Signal Catcher  com.google.android.googlequicksearchbox:search
+19525 19525  2   6% R   3476K   1644K  fg shell    top             top
+24957 24962  2   5% R 1706928K 125716K  bg u0_a47   Signal Catcher  com.google.android.GoogleCamera
+19519 19519  3   4% S      0K      0K  fg root     kworker/3:1
+  120   120  0   3% S      0K      0K  fg root     mmcqd/1
+18233 18233  1   3% S      0K      0K  fg root     kworker/1:1
+25589 25594  1   2% D 1270476K  75776K  fg u0_a8    Signal Catcher  com.google.android.gms
+19399 19399  2   1% S      0K      0K  fg root     kworker/2:2
+ 1963  1978  1   0% S 1819100K 125136K  fg system   android.fg      system_server
+ 1963  1981  3   0% S 1819100K 125136K  fg system   android.display system_server</pre><p></p>
+  </section>
+<p></p>
+
+<p>ANR 日志可以提供类似的内存快照。</p>
+
+  <section class="expandable">
+    <h4 class="showalways">显示示例</h4>
+    <p></p><pre>10-03 17:19:59.959  1963  1976 E ActivityManager: ANR in com.google.android.apps.magazines
+10-03 17:19:59.959  1963  1976 E ActivityManager: PID: 18819
+10-03 17:19:59.959  1963  1976 E ActivityManager: Reason: Broadcast of Intent { act=android.net.conn.CONNECTIVITY_CHANGE flg=0x4000010 cmp=com.google.android.apps.magazines/com.google.apps.dots.android.newsstand.appwidget.NewsWidgetProvider (has extras) }
+10-03 17:19:59.959  1963  1976 E ActivityManager: Load: 19.19 / 14.76 / 12.03
+10-03 17:19:59.959  1963  1976 E ActivityManager: CPU usage from 0ms to 11463ms later:
+10-03 17:19:59.959  1963  1976 E ActivityManager:   54% 15229/kworker/0:2: 0% user + 54% kernel
+10-03 17:19:59.959  1963  1976 E ActivityManager:   38% 1963/system_server: 14% user + 23% kernel / faults: 17152 minor 1073 major
+10-03 17:19:59.959  1963  1976 E ActivityManager:   11% 120/mmcqd/1: 0% user + 11% kernel
+10-03 17:19:59.959  1963  1976 E ActivityManager:   10% 2737/com.android.systemui: 4.7% user + 5.6% kernel / faults: 7211 minor 149 major
+10-03 17:19:59.959  1963  1976 E ActivityManager:   0.2% 1451/debuggerd: 0% user + 0.2% kernel / faults: 15211 minor 147 major
+10-03 17:19:59.959  1963  1976 E ActivityManager:   8.7% 6162/com.twofortyfouram.locale: 4% user + 4.7% kernel / faults: 4924 minor 260 major
+10-03 17:19:59.959  1963  1976 E ActivityManager:   6.1% 24565/com.google.android.googlequicksearchbox:search: 2.4% user + 3.7% kernel / faults: 2902 minor 129 major
+10-03 17:19:59.959  1963  1976 E ActivityManager:   6% 55/kswapd0: 0% user + 6% kernel
+10-03 17:19:59.959  1963  1976 E ActivityManager:   4.9% 18819/com.google.android.apps.magazines: 1.5% user + 3.3% kernel / faults: 10129 minor 986 major
+10-03 17:19:59.959  1963  1976 E ActivityManager:   2.8% 18233/kworker/1:1: 0% user + 2.8% kernel
+10-03 17:19:59.959  1963  1976 E ActivityManager:   4.2% 3145/com.android.phone: 2% user + 2.2% kernel / faults: 3005 minor 43 major
+10-03 17:19:59.959  1963  1976 E ActivityManager:   4.2% 8084/com.android.chrome: 2% user + 2.1% kernel / faults: 4798 minor 380 major
+10-03 17:19:59.959  1963  1976 E ActivityManager:   3.4% 182/surfaceflinger: 1.1% user + 2.3% kernel / faults: 842 minor 13 major
+10-03 17:19:59.959  1963  1976 E ActivityManager:   3% 18236/kworker/1:2: 0% user + 3% kernel
+10-03 17:19:59.959  1963  1976 E ActivityManager:   2.9% 19231/com.android.systemui:screenshot: 0.8% user + 2.1% kernel / faults: 6119 minor 348 major
+10-03 17:19:59.959  1963  1976 E ActivityManager:   2.3% 15350/kworker/0:4: 0% user + 2.3% kernel
+10-03 17:19:59.959  1963  1976 E ActivityManager:   2.2% 1454/mediaserver: 0% user + 2.2% kernel / faults: 479 minor 6 major
+10-03 17:19:59.959  1963  1976 E ActivityManager:   2% 16496/com.android.chrome:sandboxed_process10: 0.1% user + 1.8% kernel / faults: 3610 minor 234 major
+10-03 17:19:59.959  1963  1976 E ActivityManager:   1% 3119/com.android.nfc: 0.4% user + 0.5% kernel / faults: 1789 minor 17 major
+10-03 17:19:59.959  1963  1976 E ActivityManager:   1.7% 19337/com.jarettmillard.localeconnectiontype:background: 0.1% user + 1.5% kernel / faults: 7854 minor 439 major
+10-03 17:19:59.959  1963  1976 E ActivityManager:   0.7% 3066/com.google.android.inputmethod.latin: 0.3% user + 0.3% kernel / faults: 1336 minor 7 major
+10-03 17:19:59.959  1963  1976 E ActivityManager:   1% 25589/com.google.android.gms: 0.3% user + 0.6% kernel / faults: 2867 minor 237 major
+10-03 17:19:59.959  1963  1976 E ActivityManager:   0.9% 1460/sensors.qcom: 0.5% user + 0.4% kernel / faults: 262 minor 5 major
+10-03 17:19:59.959  1963  1976 E ActivityManager:   0.8% 3650/mpdecision: 0% user + 0.8% kernel / faults: 160 minor 1 major
+10-03 17:19:59.959  1963  1976 E ActivityManager:   0.1% 3132/com.redbend.vdmc: 0% user + 0% kernel / faults: 1746 minor 5 major</pre><p></p>
+  </section>
+
+<h3 id="memory-snapshot">获取内存快照</h3>
+<p>内存快照是一种 dumpstate，其中会列出正在运行的 Java 进程和本机进程（有关详情，请参阅<a href="https://developer.android.com/tools/debugging/debugging-memory.html#ViewingAllocations">查看整体内存分配</a>）。请注意，快照仅提供特定时刻的状态；在此快照之前，系统的状况可能更好，也可能更糟。</p>
+<ul>
+<li>要了解某个进程的运行时长，请参阅<a href="#process-runtime">进程运行时</a>。</li>
+<li>要了解为什么某个进程当前正在运行，请参阅<a href="#why-is-process-running">某个进程为什么正在运行？</a></li>
+</ul>
+
+  <section class="expandable">
+    <h4 class="showalways">显示示例</h4>
+    <p></p><pre>Total PSS by OOM adjustment:
+    86752 kB: Native
+               22645 kB: surfaceflinger (pid 197)
+               18597 kB: mediaserver (pid 204)
+               ...
+   136959 kB: System
+              136959 kB: system (pid 785)
+   220218 kB: Persistent
+              138859 kB: com.android.systemui (pid 947 / activities)
+               39178 kB: com.android.nfc (pid 1636)
+               28313 kB: com.android.phone (pid 1659)
+               13868 kB: com.redbend.vdmc (pid 1646)
+     9534 kB: Persistent Service
+                9534 kB: com.android.bluetooth (pid 23807)
+   178604 kB: Foreground
+              168620 kB: com.google.android.googlequicksearchbox (pid 1675 / activities)
+                9984 kB: com.google.android.apps.maps (pid 13952)
+   188286 kB: Visible
+               85326 kB: com.google.android.wearable.app (pid 1535)
+               38978 kB: com.google.process.gapps (pid 1510)
+               31936 kB: com.google.android.gms.persistent (pid 2072)
+               27950 kB: com.google.android.gms.wearable (pid 1601)
+                4096 kB: com.google.android.googlequicksearchbox:interactor (pid 1550)
+    52948 kB: Perceptible
+               52948 kB: com.google.android.inputmethod.latin (pid 1566)
+   150851 kB: A Services
+               81121 kB: com.google.android.gms (pid 1814)
+               37586 kB: com.google.android.talk (pid 9584)
+               10949 kB: com.google.android.music:main (pid 4019)
+               10727 kB: com.motorola.targetnotif (pid 31071)
+               10468 kB: com.google.android.GoogleCamera (pid 9984)
+    33298 kB: Previous
+               33298 kB: com.android.settings (pid 9673 / activities)
+   165188 kB: B Services
+               49490 kB: com.facebook.katana (pid 15035)
+               22483 kB: com.whatsapp (pid 28694)
+               21308 kB: com.iPass.OpenMobile (pid 5325)
+               19788 kB: com.google.android.apps.googlevoice (pid 23934)
+               17399 kB: com.google.android.googlequicksearchbox:search (pid 30359)
+                9073 kB: com.google.android.apps.youtube.unplugged (pid 21194)
+                7660 kB: com.iPass.OpenMobile:remote (pid 23754)
+                7291 kB: com.pujie.wristwear.pujieblack (pid 24240)
+                7157 kB: com.instagram.android:mqtt (pid 9530)
+                3539 kB: com.qualcomm.qcrilmsgtunnel (pid 16186)
+   204324 kB: Cached
+               43424 kB: com.amazon.mShop.android (pid 13558)
+               22563 kB: com.google.android.apps.magazines (pid 13844)
+               ...
+                4298 kB: com.google.android.apps.enterprise.dmagent (pid 13826)</pre><p></p>
+  </section>
+
+<h2 id="broadcasts">广播</h2>
+<p>应用会生成广播，以便在当前应用内发送事件或向其他应用发送事件。广播接收方可以通过过滤器订阅特定消息，以便收听和响应广播。错误报告中包含已发送广播和未发送广播的相关信息，以及关于收听特定广播的所有接收方的 dumpsys。</p>
+
+<h3 id="historical-broadcasts">查看历史广播</h3>
+<p>历史广播是指已发送的广播，按时间逆序排列。</p>
+
+<p><strong>summary</strong>（摘要）部分用于提供最近 300 个前台广播和最近 300 个后台广播的概况。</p>
+
+  <section class="expandable">
+    <h4 class="showalways">显示示例</h4>
+    <p></p><pre> Historical broadcasts summary [foreground]:
+ #0: act=android.intent.action.SCREEN_ON flg=0x50000010
+    +1ms dispatch +90ms finish
+    enq=2015-10-29 17:10:51 disp=2015-10-29 17:10:51 fin=2015-10-29 17:10:51
+  #1: act=android.intent.action.SCREEN_OFF flg=0x50000010
+    0 dispatch +60ms finish
+    enq=2015-10-29 17:10:05 disp=2015-10-29 17:10:05 fin=2015-10-29 17:10:05
+ ...
+ Historical broadcasts summary [background]:
+ ...</pre><p></p>
+  </section>
+<p></p>
+
+<p><strong>detail</strong>（详情）部分包含最近 50 个前台广播和最近 50 个后台广播的完整信息，以及每个广播的接收方。</p>
+<ul>
+<li>具有 <code>BroadcastRecord</code> 条目的接收方是在运行时注册的，并且只会被发送到已在运行的进程。</li>
+<li>具有 <code>ResolveInfo</code> 条目的接收方是通过清单条目注册的。ActivityManager 会为每个 <code>ResolveInfo</code> 启动相应进程（如果相应进程尚未在运行）。</li>
+</ul>
+
+  <section class="expandable">
+    <h4 class="showalways">显示示例</h4>
+    <p></p><pre>Historical broadcasts [foreground]:
+ ...
+ Historical broadcasts [background]:
+ Historical Broadcast background #0:
+ ...
+ Historical Broadcast background #5:
+    BroadcastRecord{18dbb16 u0 android.intent.action.USER_PRESENT} to user 0
+    Intent { act=android.intent.action.USER_PRESENT flg=0x24000010 }
+    caller=com.android.systemui 2925:com.android.systemui/u0a27 pid=2925 uid=10027
+    enqueueClockTime=2015-10-29 17:10:55 dispatchClockTime=2015-10-29 17:10:55
+    dispatchTime=-2s321ms (0 since enq) finishTime=-2s320ms (+1ms since disp)
+    Receiver #0: BroadcastFilter{8181cc1 u-1 ReceiverList{5d929a8 902 system/1000/u-1 local:eca4dcb}}
+    Receiver #1: BroadcastFilter{6371c97 u-1 ReceiverList{2938b16 902 system/1000/u-1 local:840b831}}
+    ...
+    Receiver #19: BroadcastFilter{93f16b u0 ReceiverList{5c61eba 17016 com.google.android.gm/10079/u0 remote:24083e5}}
+ ...
+ Historical Broadcast background #37:
+    BroadcastRecord{7f6dd6 u0 android.hardware.action.NEW_PICTURE} to user 0
+    Intent { act=android.hardware.action.NEW_PICTURE dat=content://media/external/images/media/6345 flg=0x10 }
+    caller=com.google.android.GoogleCamera 32734:com.google.android.GoogleCamera/u0a53 pid=32734 uid=10053
+    enqueueClockTime=2015-10-29 17:09:48 dispatchClockTime=2015-10-29 17:09:49
+    dispatchTime=-45s720ms (+399ms since enq) finishTime=-45s701ms (+19ms since disp)
+    resultTo=null resultCode=0 resultData=null
+    nextReceiver=4 receiver=null
+    Receiver #0: ResolveInfo{33d2857 com.google.android.gms/com.google.android.libraries.social.mediamonitor.MediaMonitor m=0x608000}
+      priority=0 preferredOrder=0 match=0x608000 specificIndex=-1 isDefault=false
+      ActivityInfo:
+        name=com.google.android.libraries.social.mediamonitor.MediaMonitor
+        packageName=com.google.android.gms
+        enabled=true exported=true processName=com.google.android.gms
+        ...
+    Receiver #1: ResolveInfo{d9edf44 com.google.android.apps.maps/com.google.android.apps.gmm.ugc.clientnotification.StartPhotoTakenNotifierServiceReceiver m=0x608000}
+      priority=0 preferredOrder=0 match=0x608000 specificIndex=-1 isDefault=false
+      ActivityInfo:
+        name=com.google.android.apps.gmm.ugc.clientnotification.StartPhotoTakenNotifierServiceReceiver
+        packageName=com.google.android.apps.maps
+        enabled=true exported=true processName=com.google.android.apps.maps
+        ...
+    Receiver #2: ResolveInfo{743f82d com.google.android.apps.photos/com.google.android.libraries.social.mediamonitor.MediaMonitor m=0x608000}
+      priority=0 preferredOrder=0 match=0x608000 specificIndex=-1 isDefault=false
+      ActivityInfo:
+        name=com.google.android.libraries.social.mediamonitor.MediaMonitor
+        packageName=com.google.android.apps.photos
+        enabled=true exported=true processName=com.google.android.apps.photos
+        ...
+    Receiver #3: ResolveInfo{d5c9162 com.google.android.apps.plus/com.google.android.libraries.social.mediamonitor.MediaMonitor m=0x608000}
+      priority=0 preferredOrder=0 match=0x608000 specificIndex=-1 isDefault=false
+      ActivityInfo:
+        name=com.google.android.libraries.social.mediamonitor.MediaMonitor
+        packageName=com.google.android.apps.plus
+        enabled=true exported=true processName=com.google.android.apps.plus
+        ...</pre><p></p>
+  </section>
+
+<h3 id="active-broadcasts">查看待发送的广播</h3>
+<p>待发送的广播是指尚未发送的广播。如果队列中存在大量广播，则意味着系统无法足够快地发送广播来跟上进度。</p>
+
+  <section class="expandable">
+    <h4 class="showalways">显示示例</h4>
+    <p></p><pre> Active ordered broadcasts [background]:
+ Active Ordered Broadcast background #133: <i>// size of queue</i>
+ ...</pre><p></p>
+  </section>
+
+<h3 id="broadcast-listeners">查看广播收听方</h3>
+<p>要查看收听某个广播的接收方列表，请查看 <code>dumpsys activity broadcasts</code> 中的 Receiver Resolver Table。以下示例显示了收听 <code>USER_PRESENT</code> 的所有接收方。</p>
+
+  <section class="expandable">
+    <h4 class="showalways">显示示例</h4>
+    <p></p><pre>-------------------------------------------------------------------------------
+ACTIVITY MANAGER BROADCAST STATE (dumpsys activity broadcasts)
+..
+  Receiver Resolver Table:
+    Full MIME Types:
+    ..
+    Wild MIME Types:
+    ..
+    Schemes:
+    ..
+    Non-Data Actions:
+    ..
+        android.intent.action.USER_PRESENT:
+          BroadcastFilter{8181cc1 u-1 ReceiverList{5d929a8 902 system/1000/u-1 local:eca4dcb}}
+          BroadcastFilter{6371c97 u-1 ReceiverList{2938b16 902 system/1000/u-1 local:840b831}}
+          BroadcastFilter{320c00 u0 ReceiverList{d3a6283 902 system/1000/u0 local:799c532}}
+          BroadcastFilter{e486048 u0 ReceiverList{36fbaeb 902 system/1000/u0 local:5f51e3a}}
+          BroadcastFilter{22b02 u-1 ReceiverList{b3f744d 902 system/1000/u-1 local:de837e4}}
+          BroadcastFilter{3e989ab u0 ReceiverList{f8deffa 2981 com.google.process.gapps/10012/u0 remote:26bd225}}
+          BroadcastFilter{fb56150 u0 ReceiverList{22b7b13 2925 com.android.systemui/10027/u0 remote:c54a602}}
+          BroadcastFilter{63bbb6 u-1 ReceiverList{ba6c751 3484 com.android.nfc/1027/u-1 remote:5c4a478}}
+          BroadcastFilter{95ad20d u0 ReceiverList{d8374a4 3586 com.google.android.googlequicksearchbox/10029/u0 remote:feb3737}}
+          BroadcastFilter{fdef551 u0 ReceiverList{28ca78 3745 com.google.android.gms.persistent/10012/u0 remote:f23afdb}}
+          BroadcastFilter{9830707 u0 ReceiverList{aabd946 3745 com.google.android.gms.persistent/10012/u0 remote:a4da121}}
+          BroadcastFilter{83c43d2 u0 ReceiverList{d422e5d 3745 com.google.android.gms.persistent/10012/u0 remote:f585034}}
+          BroadcastFilter{8890378 u0 ReceiverList{26d2cdb 3745 com.google.android.gms.persistent/10012/u0 remote:dfa61ea}}
+          BroadcastFilter{7bbb7 u0 ReceiverList{214b2b6 3745 com.google.android.gms.persistent/10012/u0 remote:8353a51}}
+          BroadcastFilter{38d3566 u0 ReceiverList{de859c1 3745 com.google.android.gms.persistent/10012/u0 remote:e003aa8}}
+          BroadcastFilter{3435d9f u0 ReceiverList{6e38b3e 3745 com.google.android.gms.persistent/10012/u0 remote:8dd7ff9}}
+          BroadcastFilter{d0a34bb u0 ReceiverList{5091d4a 3745 com.google.android.gms.persistent/10012/u0 remote:d6d22b5}}
+          BroadcastFilter{d43c416 u0 ReceiverList{51a3531 3745 com.google.android.gms.persistent/10012/u0 remote:d0b9dd8}}
+          BroadcastFilter{aabf36d u0 ReceiverList{a88bf84 3745 com.google.android.gms.persistent/10012/u0 remote:a9d6197}}
+          BroadcastFilter{93f16b u0 ReceiverList{5c61eba 17016 com.google.android.gm/10079/u0 remote:24083e5}}
+          BroadcastFilter{68f794e u0 ReceiverList{4cb1c49 947 com.google.android.googlequicksearchbox:search/10029/u0 remote:251d250}}
+      ..
+    MIME Typed Actions:</pre><p></p>
+  </section>
+
+<h2 id="monitor contention">显示器争用</h2>
+<p>显示器争用日志记录有时可以表明实际的显示器争用情况，但通常情况下会表明系统负载过重，从而导致所有进程都变慢了。您可能会在系统日志或事件日志中看到 ART 记录的长时间占用显示器的事件。</p>
+
+<p>在系统日志中：</p>
+<p></p><pre>10-01 18:12:44.343 29761 29914 W art     : Long monitor contention event with owner method=void android.database.sqlite.SQLiteClosable.acquireReference() from SQLiteClosable.java:52 waiters=0 for 3.914s</pre><p></p>
+
+<p>在事件日志中：</p>
+<p></p><pre>10-01 18:12:44.364 29761 29914 I dvm_lock_sample: [com.google.android.youtube,0,pool-3-thread-9,3914,ScheduledTaskMaster.java,138,SQLiteClosable.java,52,100]</pre><p></p>
+
+<h2 id="background-compilation">后台编译</h2>
+<p>编译可能会占用大量资源，而且会加重设备负载。</p>
+
+  <section class="expandable">
+    <h4 class="showalways">显示示例</h4>
+    <p></p><pre>09-14 06:27:05.670  2508  2587 E ActivityManager: CPU usage from 0ms to 5857ms later:
+09-14 06:27:05.670  2508  2587 E ActivityManager:   84% 5708/dex2oat: 81% user + 2.3% kernel / faults: 3731 minor 1 major
+09-14 06:27:05.670  2508  2587 E ActivityManager:   73% 2508/system_server: 21% user + 51% kernel / faults: 10019 minor 28 major
+09-14 06:27:05.670  2508  2587 E ActivityManager:   1% 3935/com.android.phone: 0.3% user + 0.6% kernel / faults: 2684 minor 2 major</pre><p></p>
+  </section>
+<p></p>
+
+<p>下载 Google Play 商店更新时，编译可能会在后台进行。在这种情况下，来自 Google Play 商店应用 (<code>finsky</code>) 和 <code>installd</code> 的消息会显示在 <code>dex2oat</code> 消息之前。</p>
+
+  <section class="expandable">
+    <h4 class="showalways">显示示例</h4>
+    <p></p><pre>10-07 08:42:33.725 11051 11051 D Finsky  : [1] InstallerTask.advanceState: Prepare to patch com.garmin.android.apps.virb (com.garmin.android.apps.virb) from content://downloads/my_downloads/3602 format 2
+10-07 08:42:33.752   495   495 I installd: free_cache(48637657) avail 15111192576
+…
+10-07 08:42:39.998  2497  2567 I PackageManager.DexOptimizer: Running dexopt (dex2oat) on: /data/app/vmdl436577137.tmp/base.apk pkg=com.garmin.android.apps.virb isa=arm vmSafeMode=false debuggable=false oatDir = /data/app/vmdl436577137.tmp/oat bootComplete=true
+…</pre><p></p>
+  </section>
+<p></p>
+
+<p>当某个应用正在加载尚未编译的 dex 文件时，编译也可能会在后台进行。在这种情况下，您将看不到 <code>finsky</code> 或 <code>installd</code> 日志记录。</p>
+
+  <section class="expandable">
+    <h4 class="showalways">显示示例</h4>
+    <p></p><pre>09-14 07:29:20.433 15736 15736 I dex2oat : /system/bin/dex2oat -j4 --dex-file=/data/user/0/com.facebook.katana/app_secondary_program_dex/program-72cef82b591768306676e10161c886b58b34315a308602be.dex.jar --oat-file=/data/user/0/com.facebook.katana/app_secondary_program_dex_opt/program-72cef82b591768306676e10161c886b58b34315a308602be.dex.dex
+...
+09-14 07:29:25.102 15736 15736 I dex2oat : dex2oat took 4.669s (threads: 4) arena alloc=7MB java alloc=3MB native alloc=29MB free=4MB</pre><p></p>
+  </section>
+
+<h2 id="narrative">叙述</h2>
+<p>创建问题叙述（如何开始、发生了什么、系统是如何应对的）需要一个固定的事件时间轴。您可以利用错误报告中的信息来同步多个日志中的时间轴并确定错误报告的确切时间戳。</p>
+
+<h3 id="timelines">同步时间轴</h3>
+<p>错误报告会反映多个并行时间轴（系统日志、事件日志、内核日志）以及针对广播、电池统计信息等的多个专用时间轴。遗憾的是，系统通常会使用不同的时间基准来报告时间轴。</p>
+
+<p>系统日志时间戳和事件日志时间戳采用用户所用的时区（与大多数其他时间戳一样）。例如，当用户点按主屏幕按钮时，系统日志会报告以下内容：</p>
+<p></p><pre>10-03 17:19:52.939  1963  2071 I ActivityManager: START u0 {act=android.intent.action.MAIN cat=[android.intent.category.HOME] flg=0x10200000 cmp=com.google.android.googlequicksearchbox/com.google.android.launcher.GEL (has extras)} from uid 1000 on display 0</pre><p></p>
+
+<p>对于上述操作，事件日志会报告以下内容：</p>
+<p></p><pre>10-03 17:19:54.279  1963  2071 I am_focused_activity: [0,com.google.android.googlequicksearchbox/com.google.android.launcher.GEL]</pre><p></p>
+
+<p>内核 (<code>dmesg</code>) 日志采用不同的时间基准，按距离引导加载程序完成的时间来标记日志内容（以秒为单位）。要按照其他时间表的时间基准记录此时间表，请搜索“suspend exit”（暂停退出）和“suspend entry”（暂停进入）消息。<em></em><em></em></p>
+<p></p><pre>&lt;6&gt;[201640.779997] PM: suspend exit 2015-10-03 19:11:06.646094058 UTC
+…
+&lt;6&gt;[201644.854315] PM: suspend entry 2015-10-03 19:11:10.720416452 UTC</pre><p></p>
+
+<p>由于内核日志在暂停状态下可能不会包含时间，因此您应该分段记录暂停进入和暂停退出消息之间的日志。此外，内核日志使用 UTC 时区，您必须将其调整为用户时区。</p>
+
+<h3 id="time-of-bugreport">确定错误报告的生成时间</h3>
+<p>要确定错误报告的生成时间，请先查看系统日志 (Logcat) 中的 <code>dumpstate: begin</code>：</p>
+<p></p><pre>10-03 17:19:54.322 19398 19398 I dumpstate: begin</pre><p></p>
+
+<p>接下来，查看内核日志 (<code>dmesg</code>) 时间戳中的 <code>Starting service
+'bugreport'</code> 消息：</p>
+<p></p><pre>&lt;5&gt;[207064.285315] init: Starting service 'bugreport'...</pre><p></p>
+
+<p>进行逆向推算以关联这两个事件，同时牢记<a href="#timelines">同步时间轴</a>中提到的注意事项。尽管在初始化错误报告之后发生了很多活动，但大多数活动并不是非常有用，因为生成错误报告这一活动会大大加重系统负载。</p>
+
+<h2 id="power">电源</h2>
+
+<p>事件日志中包含屏幕电源状态，其中 0 表示屏幕关闭，1 表示屏幕打开，2 表示已锁屏。</p>
+
+  <section class="expandable">
+    <h4 class="showalways">显示示例</h4>
+    <p></p><pre>grep screen_toggled bugreport-2015-10-18-16-52-22.txt
+10-18 15:05:04.383   992   992 I screen_toggled: 1
+10-18 15:05:07.010   992   992 I screen_toggled: 0
+10-18 15:23:15.063   992   992 I screen_toggled: 1
+10-18 15:23:25.684   992   992 I screen_toggled: 0
+10-18 15:36:31.623   992   992 I screen_toggled: 1
+10-18 15:36:37.660  3283  3283 I screen_toggled: 2</pre><p></p>
+  </section>
+
+<p></p>
+<p>错误报告中还包含关于唤醒锁的统计信息，唤醒锁是应用开发者采用的一种机制，用于表明其应用需要设备保持开启状态。（要详细了解唤醒锁，请参阅 <a href="https://developer.android.com/reference/android/os/PowerManager.WakeLock.html">PowerManager.WakeLock</a> 和<a href="https://developer.android.com/training/scheduling/wakelock.html#cpu">使 CPU 保持运行状态</a>。）
+
+</p><p>唤醒锁总时长统计信息<strong>仅</strong>跟踪唤醒锁实际负责使设备保持唤醒状态的时间，<strong>不</strong>包括屏幕处于开启状态的时间。此外，如果同时持有多个唤醒锁，系统会在它们之间分配唤醒锁时长。</p>
+
+<p>如需直观呈现电源状态方面的更多帮助，请使用 <a href="https://github.com/google/battery-historian">Battery Historian</a>（一种 Google 开放源代码工具，能够利用 Android 错误报告文件分析电池消耗进程）。</p>
+
+<h2 id="packages">程序包</h2>
+<p>“DUMP OF SERVICE”程序包中包含应用版本（以及其他实用信息）。</p>
+
+  <section class="expandable">
+    <h4 class="showalways">显示示例</h4>
+    <p></p><pre>...
+Packages:
+...
+ Package [com.google.android.gms] (3cf534b):
+   userId=10013
+   sharedUser=SharedUserSetting{98f3d28 com.google.uid.shared/10013}
+   pkg=Package{b8f6a41 com.google.android.gms}
+   codePath=/system/priv-app/PrebuiltGmsCore
+   resourcePath=/system/priv-app/PrebuiltGmsCore
+   legacyNativeLibraryDir=/system/priv-app/PrebuiltGmsCore/lib
+   primaryCpuAbi=arm64-v8a
+   secondaryCpuAbi=armeabi-v7a
+   versionCode=8186448 targetSdk=23
+   versionName=8.1.86 (2287566-448)
+   splits=[base]
+   applicationInfo=ApplicationInfo{5158507 com.google.android.gms}
+   flags=[ SYSTEM HAS_CODE ALLOW_CLEAR_USER_DATA ]
+   privateFlags=[ PRIVILEGED ]
+   dataDir=/data/user/0/com.google.android.gms
+   supportsScreens=[small, medium, large, xlarge, resizeable, anyDensity]
+   libraries:
+     com.google.android.gms
+   usesOptionalLibraries:
+     com.android.location.provider
+     com.google.android.ble
+     com.android.media.remotedisplay
+   usesLibraryFiles:
+     /system/framework/com.android.media.remotedisplay.jar
+     /system/framework/com.android.location.provider.jar
+   timeStamp=2015-10-14 15:17:56
+   firstInstallTime=2015-09-22 14:08:35
+   lastUpdateTime=2015-10-14 15:17:56
+   signatures=PackageSignatures{db63be6 [1af63d8]}
+   installPermissionsFixed=true installStatus=1
+   pkgFlags=[ SYSTEM HAS_CODE ALLOW_CLEAR_USER_DATA ]
+   declared permissions:
+     com.google.android.gms.permission.INTERNAL_BROADCAST: prot=signature, INSTALLED
+     ...
+     com.google.android.gms.permission.CAR_VENDOR_EXTENSION: prot=dangerous, INSTALLED
+   User 0:  installed=true hidden=false stopped=false notLaunched=false enabled=0
+     disabledComponents:
+       com.google.android.gms.icing.service.PowerConnectedReceiver
+       ...
+       com.google.android.gms.icing.proxy.AppsMonitor
+     enabledComponents:
+       com.google.android.gms.mdm.receivers.GmsRegisteredReceiver
+       ...
+       com.google.android.gms.subscribedfeeds.SyncService</pre><p></p>
+  </section>
+
+<h2 id="processes">进程</h2>
+<p>错误报告中包含大量的进程数据，例如启动和停止时间、运行时时长、相关服务、<code>oom_adj</code> 得分等。要详细了解 Android 如何管理进程，请参阅<a href="http://developer.android.com/guide/components/processes-and-threads.html">进程和线程</a>。</p>
+
+<h3 id="process-runtime">确定进程运行时</h3>
+<p><code>procstats</code> 部分包含有关进程及相关服务已运行时长的完整统计信息。要快速获得便于用户阅读的摘要，请搜索 <code>AGGREGATED OVER</code> 以查看最近 3 个小时或 24 个小时的数据，然后搜索 <code>Summary:</code> 以查看进程列表、这些进程已以各种优先级运行的时长，以及它们使用 RAM 的情况（格式为“最小-平均-最大 PSS”/“最小-平均-最大 USS”）。</p>
+
+  <section class="expandable">
+    <h4 class="showalways">显示示例</h4>
+    <p></p><pre>-------------------------------------------------------------------------------
+DUMP OF SERVICE processinfo:
+-------------------------------------------------------------------------------
+DUMP OF SERVICE procstats:
+COMMITTED STATS FROM 2015-10-19-23-54-56 (checked in):
+...
+COMMITTED STATS FROM 2015-10-20-03-00-00 (checked in):
+...
+CURRENT STATS:
+...
+AGGREGATED OVER LAST 24 HOURS:
+System memory usage:
+...
+Per-Package Stats:
+...
+Summary:
+...
+  * com.google.android.gms.persistent / u0a13 / v8186448:
+           TOTAL: 100% (21MB-27MB-40MB/20MB-24MB-38MB over 597)
+             Top: 51% (22MB-26MB-38MB/21MB-24MB-36MB over 383)
+          Imp Fg: 49% (21MB-27MB-40MB/20MB-25MB-38MB over 214)
+…
+          Start time: 2015-10-19 09:14:37
+  Total elapsed time: +1d0h22m7s390ms (partial) libart.so
+
+AGGREGATED OVER LAST 3 HOURS:
+System memory usage:
+...
+Per-Package Stats:
+...
+Summary:
+  * com.google.android.gms.persistent / u0a13 / v8186448:
+           TOTAL: 100% (23MB-27MB-32MB/21MB-25MB-29MB over 111)
+             Top: 61% (23MB-26MB-31MB/21MB-24MB-28MB over 67)
+          Imp Fg: 39% (23MB-28MB-32MB/21MB-26MB-29MB over 44)
+...
+          Start time: 2015-10-20 06:49:24
+  Total elapsed time: +2h46m59s736ms (partial) libart.so</pre><p></p>
+  </section>
+
+<h3 id="why-is-process-running">某个进程为什么正在运行？</h3>
+<p><code>dumpsys activity processes</code> 部分会列出当前正在运行的所有进程，并按 <code>oom_adj</code> 得分排序（Android 通过为进程分配 <code>oom_adj</code> 值来表明进程的重要性，该值可由 ActivityManager 动态更新）。这种输出类似于<a href="#memory-snapshot">内存快照</a>的输出，但包含有关是什么导致进程运行的更多信息。在以下示例中，以粗体显示的条目表明 <code>gms.persistent</code> 进程正在以 <code>vis</code>（可见）优先级运行，因为该系统进程已经与其 <code>NetworkLocationService</code> 绑定。</p>
+
+  <section class="expandable">
+    <h4 class="showalways">显示示例</h4>
+    <p></p><pre>-------------------------------------------------------------------------------
+ACTIVITY MANAGER RUNNING PROCESSES (dumpsys activity processes)
+...
+Process LRU list (sorted by oom_adj, 34 total, non-act at 14, non-svc at 14):
+    PERS #33: sys   F/ /P  trm: 0 902:system/1000 (fixed)
+    PERS #32: pers  F/ /P  trm: 0 2925:com.android.systemui/u0a27 (fixed)
+    PERS #31: pers  F/ /P  trm: 0 3477:com.quicinc.cne.CNEService/1000 (fixed)
+    PERS #30: pers  F/ /P  trm: 0 3484:com.android.nfc/1027 (fixed)
+    PERS #29: pers  F/ /P  trm: 0 3502:com.qualcomm.qti.rcsbootstraputil/1001 (fixed)
+    PERS #28: pers  F/ /P  trm: 0 3534:com.qualcomm.qti.rcsimsbootstraputil/1001 (fixed)
+    PERS #27: pers  F/ /P  trm: 0 3553:com.android.phone/1001 (fixed)
+    Proc #25: psvc  F/ /IF trm: 0 4951:com.android.bluetooth/1002 (service)
+        com.android.bluetooth/.hfp.HeadsetService&lt;=Proc{902:system/1000}
+    Proc # 0: fore  F/A/T  trm: 0 3586:com.google.android.googlequicksearchbox/u0a29 (top-activity)
+  Proc #26: vis   F/ /SB trm: 0 3374:com.google.android.googlequicksearchbox:interactor/u0a29 (service)
+        com.google.android.googlequicksearchbox/com.google.android.voiceinteraction.GsaVoiceInteractionService&lt;=Proc{902:system/1000}
+<b>    Proc # 5: vis   F/ /T  trm: 0 3745:com.google.android.gms.persistent/u0a12 (service)</b>
+<b>        com.google.android.gms/com.google.android.location.network.NetworkLocationService&lt;=Proc{902:system/1000}</b>
+    Proc # 3: vis   F/ /SB trm: 0 3279:com.google.android.gms/u0a12 (service)
+        com.google.android.gms/.icing.service.IndexService&lt;=Proc{947:com.google.android.googlequicksearchbox:search/u0a29}
+    Proc # 2: vis   F/ /T  trm: 0 947:com.google.android.googlequicksearchbox:search/u0a29 (service)
+        com.google.android.googlequicksearchbox/com.google.android.sidekick.main.remoteservice.GoogleNowRemoteService&lt;=Proc{3586:com.google.android.googlequicksearchbox/u0a29}
+    Proc # 1: vis   F/ /T  trm: 0 2981:com.google.process.gapps/u0a12 (service)
+        com.google.android.gms/.tapandpay.hce.service.TpHceService&lt;=Proc{3484:com.android.nfc/1027}
+    Proc #11: prcp  B/ /IB trm: 0 3392:com.google.android.inputmethod.latin/u0a64 (service)
+        com.google.android.inputmethod.latin/com.android.inputmethod.latin.LatinIME&lt;=Proc{902:system/1000}
+    Proc #24: svc   B/ /S  trm: 0 27071:com.google.android.music:main/u0a67 (started-services)
+    Proc #22: svc   B/ /S  trm: 0 853:com.qualcomm.qcrilmsgtunnel/1001 (started-services)
+    Proc # 4: prev  B/ /LA trm: 0 32734:com.google.android.GoogleCamera/u0a53 (previous)
+    Proc #23: svcb  B/ /S  trm: 0 671:com.qualcomm.telephony/1000 (started-services)
+    Proc #20: cch   B/ /CE trm: 0 27659:com.android.providers.calendar/u0a2 (provider)
+        com.android.providers.calendar/.CalendarProvider2&lt;=Proc{27697:com.google.android.calendar/u0a40}
+    Proc #13: cch   B/ /CE trm: 0 653:com.google.android.gms.wearable/u0a12 (cch-empty)
+    Proc #10: cch   B/ /S  trm: 0 4067:com.google.android.talk/u0a62 (cch-started-ui-services)
+    Proc # 7: cch   B/ /S  trm: 0 18868:com.google.corp.huddle.android/u0a95 (cch-started-ui-services)
+    Proc # 6: cch   B/ /CA trm: 0 27697:com.google.android.calendar/u0a40 (cch-act)
+    Proc # 8: cch+1 B/ /CA trm: 0 25675:com.google.android.apps.genie.geniewidget/u0a81 (cch-act)
+    Proc #16: cch+2 B/ /CE trm: 0 1272:com.google.android.keep/u0a106 (cch-empty)
+    Proc #15: cch+2 B/ /CE trm: 0 885:android.process.media/u0a9 (cch-empty)
+    Proc #14: cch+2 B/ /CE trm: 0 15146:android.process.acore/u0a3 (cch-empty)
+    Proc # 9: cch+3 B/ /CA trm: 0 17016:com.google.android.gm/u0a79 (cch-act)
+    Proc #19: cch+4 B/ /CE trm: 0 973:com.google.android.apps.maps/u0a66 (cch-empty)
+    Proc #18: cch+4 B/ /CE trm: 0 1091:com.google.android.apps.photos/u0a71 (cch-empty)
+    Proc #17: cch+4 B/ /CE trm: 0 1141:com.google.android.apps.plus/u0a74 (cch-empty)
+    Proc #12: cch+5 B/ /CA trm: 0 22299:com.google.android.apps.dogfood/u0a105 (cch-act)
+    Proc #21: cch+6 B/ /CE trm: 0 995:com.google.android.partnersetup/u0a18 (cch-empty)&gt;</pre><p></p>
+  </section>
+
+<h2 id="scans">扫描</h2>
+<p>您可以按照以下步骤来确定过度执行蓝牙低功耗 (BLE) 扫描的应用：</p>
+<ul>
+<li>查找 <code>BluetoothLeScanner</code> 的日志消息：<pre>
+$ grep 'BluetoothLeScanner' ~/downloads/bugreport.txt
+07-28 15:55:19.090 24840 24851 D BluetoothLeScanner: onClientRegistered() - status=0 clientIf=5
+</pre></li>
+<li>在日志消息中找到 PID。在此示例中，“24840”和“24851”分别为 PID（进程 ID）和 TID（线程 ID）。</li>
+<li>找到与该 PID 关联的应用：<pre>
+PID #24840: ProcessRecord{4fe996a 24840:com.badapp/u0a105}
+</pre>
+<p>在此示例中，程序包名称为 <code>com.badapp</code>。</p></li>
+<li>在 Google Play 上查找该程序包名称，以找出相应的应用：<strong>https://play.google.com/store/apps/details?id=com.badapp</strong>。</li>
+</ul>
+<p class="note"><strong>注意</strong>：对于运行 Android 7.0 的设备，系统会收集 BLE 扫描数据，并会将这些活动与初始应用相关联。有关详情，请参阅<a href="/devices/tech/power/values.html#le-bt-scans">低功耗 (LE) 和蓝牙扫描</a>。</p>
+
+</body></html>

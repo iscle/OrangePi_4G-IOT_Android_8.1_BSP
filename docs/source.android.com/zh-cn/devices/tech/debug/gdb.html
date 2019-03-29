@@ -1,0 +1,109 @@
+<html devsite><head>
+    <title>使用 GDB</title>
+    <meta name="project_path" value="/_project.yaml"/>
+    <meta name="book_path" value="/_book.yaml"/>
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+<p>GNU 项目调试程序 (GDB) 是常用的 Unix 调试程序。本页详细介绍了如何使用 <code>gdb</code> 调试 Android 应用和进程。</p>
+
+<h2 id="running">调试运行中的应用或进程</h2>
+
+<p>要连接到已在运行的应用或本机守护进程，请配合使用 <code>gdbclient</code> 和 PID。例如，要调试 PID 为 1234 的进程，请运行：</p>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+gdbclient 1234
+</pre>
+
+<p>此脚本会设置端口转发，在设备上启动相应的 <code>gdbserver</code>，在主机上启动相应的 <code>gdb</code>，配置 <code>gdb</code> 以找出符号，然后将 <code>gdb</code> 连接到远程 <code>gdbserver</code>。</p>
+
+<h2 id="starts">调试本机进程启动</h2>
+
+<p>要在进程启动时对其进行调试，请使用 <code>gdbserver</code> 或 <code>gdbserver64</code>（适用于 64 位进程）。例如：</p>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+adb shell gdbserver :5039 /system/bin/<var>MY_TEST_APP</var>
+</pre>
+
+<p>输出示例：</p>
+<pre class="devsite-click-to-copy">
+Process <var>MY_TEST_APP</var> created; pid = 3460
+Listening on port 5039
+</pre>
+
+<p>接下来，从 <code>gdbserver</code> 输出中找出应用 PID，并将其用于其他终端窗口。</p>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+gdbclient <var>APP_PID</var>
+</pre>
+
+<p>最后，在 <code>gdb</code> 提示处输入 <strong>continue</strong>。</p>
+
+<p class="note"><strong>注意</strong>：如果您指定了错误的 <code>gdbserver</code>，将会收到没任何帮助的错误消息（例如“<code>Reply contains invalid hex digit 59</code>”）。</p>
+
+<h2 id="app-startup">调试应用启动</h2>
+
+<p>有时，您需要在应用启动时对其进行调试；例如在应用发生崩溃时，您需要逐步检查代码，以查看崩溃之前<em></em>发生的情况。
+<a href="#running">附加</a>调试程序有时能解决问题，有时不能解决问题，因为应用可能会在您可以附加调试程序之前崩溃。<code>logwrapper</code> 方法（用于 <code>strace</code> 和 <code>valgrind</code>）不一定能解决所有的问题，因为应用可能没有权限打开端口，而 <code>gdbserver</code> 会继承这项限制。</p>
+
+<p>要调试应用启动，请使用“设置”中的开发者选项，指示应用等待附加 Java 调试程序：</p>
+
+<ol>
+<li>请依次转到“设置”&gt;“开发者选项”&gt;“选择调试应用”<em></em>，并从列表中选择您的应用，然后按<strong>等待调试程序</strong>。</li>
+
+<li>启动应用，您可以从启动器启动，也可以在命令行中运行以下命令来启动：<pre class="devsite-terminal devsite-click-to-copy">
+am start -a android.intent.action.MAIN -n <var>APP_NAME</var>/.<var>APP_ACTIVITY</var>
+</pre></li>
+
+<li>等待应用加载，然后等待系统显示一个对话框提示您应用正在等待附加调试程序。</li>
+
+<li>正常附加 <code>gdbserver</code>/<code>gdbclient</code>，设置断点，然后继续运行该进程。</li></ol>
+
+<p>要让应用实际运行，请附加 Java 调试网络协议 (JDWP) 调试程序，例如 Java 调试程序 (jdb)：</p>
+<pre class="devsite-click-to-copy">
+<code class="devsite-terminal">adb forward tcp:12345 jdwp:<var>XXX</var>  # (Where XXX is the pid of the debugged process.)</code>
+<code class="devsite-terminal">jdb -attach localhost:12345</code>
+</pre>
+
+<h2 id="crash">调试崩溃的应用或进程</h2>
+
+<p>如果您希望 <code>debuggerd</code> 暂停崩溃的进程，以便您可以附加 <code>gdb</code>，请设置相应的属性：</p>
+
+<pre class="devsite-click-to-copy">
+# Android 7.0 Nougat and later.
+<code class="devsite-terminal">adb shell setprop debug.debuggerd.wait_for_gdb true</code>
+</pre>
+
+<pre class="devsite-click-to-copy">
+# Android 6.0 Marshmallow and earlier.
+<code class="devsite-terminal">adb shell setprop debug.db.uid 999999</code>
+</pre>
+
+<p>在寻常的崩溃输出结束后，<code>debuggerd</code> 会提供有关如何使用命令连接 <code>gdb</code> 的说明：</p><pre class="devsite-terminal devsite-click-to-copy">
+gdbclient <var>PID</var>
+</pre>
+
+<h2 id="symbols">无符号调试</h2>
+
+<p>对于 32 位 ARM，如果您没有符号，<code>gdb</code> 就会搞不清楚要反汇编的指令集（ARM 或 Thumb）。要在缺失符号信息时指定已选为默认项的指令集，请设置以下属性：</p>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+set arm fallback-mode arm  # or thumb
+</pre>
+
+</body></html>

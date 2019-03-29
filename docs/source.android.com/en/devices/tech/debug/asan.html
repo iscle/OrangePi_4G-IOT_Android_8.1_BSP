@@ -1,0 +1,259 @@
+<html devsite>
+  <head>
+    <title>AddressSanitizer</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>AddressSanitizer (ASan) is a fast compiler-based tool for detecting memory bugs
+in native code. It is comparable to Valgrind (Memcheck tool), but, unlike it,
+ASan:</p>
+
+<ul>
+  <li> + detects overflows on stack and global objects
+  <li> - does not detect uninitialized reads and memory leaks
+  <li> + is much faster (two-three times slowdown compared to Valgrind’s 20-100x)
+  <li> + has less memory overhead
+</ul>
+
+<p>This document describes how to build and run parts of the Android platform with
+AddressSanitizer. If you are looking to build a standalone (i.e. SDK/NDK)
+application with AddressSanitizer, see the <a
+href="https://github.com/google/sanitizers/wiki/AddressSanitizerOnAndroid">AddressSanitizerOnAndroid</a>
+public project site instead.</p>
+
+<p>AddressSanitizer consists of a compiler (<code>external/clang</code>) and a runtime library
+(<code>external/compiler-rt/lib/asan</code>).</p>
+
+<p class="note"><strong>Note</strong>: Use the current master
+branch to gain access to the <a href="#sanitize_target">SANITIZE_TARGET</a>
+feature and the ability to build the entire Android platform with
+AddressSanitizer at once. Otherwise, you are limited to using
+<code>LOCAL_SANITIZE</code>.</p>
+
+<h2 id=building_with_clang>Building with Clang</h2>
+
+<p>As a first step to building an ASan-instrumented binary, make sure that your
+code builds with Clang. This is done by default on the master branch, so there should be nothing
+you need to do. If you believe that the module you'd like to test is being built with GCC,
+you can switch to Clang by adding <code>LOCAL_CLANG:=true</code>
+to the build rules. Clang may find bugs in your code that GCC missed.</p>
+
+<h2 id=building_executables_with_addresssanitizer>Building executables with AddressSanitizer</h2>
+
+<p>Add <code>LOCAL_SANITIZE:=address</code> to the build rule of the
+executable.</p>
+
+<pre class="devsite-click-to-copy">
+LOCAL_SANITIZE:=address
+</pre>
+
+<p>When a bug is detected, ASan prints a verbose report both to the standard
+output and to <code>logcat</code> and then crashes the process.</p>
+
+<h2 id=building_shared_libraries_with_addresssanitizer>Building shared libraries with AddressSanitizer</h2>
+
+<p>Due to the way ASan works, a library built with ASan cannot be used by an
+executable that's built without ASan.</p>
+
+<p class="note"><strong>Note</strong>: In runtime situations where an ASan library is
+loaded into an incorrect process, you will see unresolved symbol messages
+starting with <code>_asan</code> or <code>_sanitizer</code>.</p>
+
+<p>To sanitize a shared library that is used in multiple executables, not all of
+which are built with ASan, you'll need two copies of the library. The
+recommended way to do this is to add the following to <code>Android.mk</code>
+for the module in question:</p>
+
+<pre class="devsite-click-to-copy">
+LOCAL_SANITIZE:=address
+LOCAL_MODULE_RELATIVE_PATH := asan
+</pre>
+
+<p>This puts the library in <code>/system/lib/asan</code> instead of
+<code>/system/lib</code>. Then, run your executable with:
+<code>LD_LIBRARY_PATH=/system/lib/asan</code></p>
+
+<p>For system daemons, add the following to the appropriate section of
+<code>/init.rc</code> or <code>/init.$device$.rc</code>.</p>
+
+<pre class="devsite-click-to-copy">
+setenv LD_LIBRARY_PATH /system/lib/asan
+</pre>
+
+<p class="warning"><strong>Warning</strong>: The <code>LOCAL_MODULE_RELATIVE_PATH</code>
+setting <strong>moves</strong> your library to <code>/system/lib/asan</code>,
+meaning that clobbering and rebuilding from scratch will result in the
+library missing from <code>/system/lib</code>, and probably an unbootable
+image. That's an unfortunate limitation of the
+current build system. Don't clobber; do <code>make -j $N</code> and <code>adb
+sync</code>.</p>
+
+<p>Verify the process is using libraries from <code>/system/lib/asan</code>
+when present by reading <code>/proc/$PID/maps</code>. If it's not, you may need
+to disable SELinux, like so:</p>
+
+<pre class="devsite-click-to-copy">
+<code class="devsite-terminal">adb root</code>
+<code class="devsite-terminal">adb shell setenforce 0</code>
+# restart the process with adb shell kill $PID
+# if it is a system service, or may be adb shell stop; adb shell start.
+</pre>
+
+<h2 id=better_stack_traces>Better stack traces</h2>
+
+<p>AddressSanitizer uses a fast, frame-pointer-based unwinder to record a stack
+trace for every memory allocation and deallocation event in the program. Most
+of Android is built without frame pointers. As a result, you will often get
+only one or two meaningful frames. To fix this, either rebuild the library with
+ASan (recommended!), or with:</p>
+
+<pre class="devsite-click-to-copy">
+LOCAL_CFLAGS:=-fno-omit-frame-pointer
+LOCAL_ARM_MODE:=arm
+</pre>
+
+<p>Or set <code>ASAN_OPTIONS=fast_unwind_on_malloc=0</code> in the process
+environment. The latter can be very CPU-intensive, depending on
+the load.</p>
+
+<h2 id=symbolization>Symbolization</h2>
+
+<p>Initially, ASan reports contain references to offsets in binaries and shared
+libraries. There are two ways to obtain source file and line information:</p>
+
+<ul>
+  <li>Ensure llvm-symbolizer binary is present in <code>/system/bin</code>.
+Llvm-symbolizer is built from sources in:
+<code>third_party/llvm/tools/llvm-symbolizer</code> <li>Filter the report
+through the <code>external/compiler-rt/lib/asan/scripts/symbolize.py</code>
+script.
+</ul>
+
+<p>The second approach can provide more data (i.e. file:line locations) because of
+the availability of symbolized libraries on the host.</p>
+
+<h2 id=addresssanitizer_in_the_apps>AddressSanitizer in the apps</h2>
+
+<p>AddressSanitizer cannot see into Java code, but it can detect bugs in the JNI
+libraries. For that, you'll need to build the executable with ASan, which in
+this case is <code>/system/bin/app_process(<em>32|64</em>)</code>. This will
+enable ASan in all apps on the device at the same time, which is a
+bit stressful, but nothing that a 2GB RAM device cannot handle.</p>
+
+<p>Add the usual <code>LOCAL_SANITIZE:=address</code> to
+the app_process build rule in <code>frameworks/base/cmds/app_process</code>. Ignore
+the <code>app_process__asan</code> target in the same file for now (if it is
+still there at the time you read
+this). Edit the Zygote record in
+<code>system/core/rootdir/init.zygote(<em>32|64</em>).rc</code> to add the
+following lines:</p>
+
+<pre class="devsite-click-to-copy">
+setenv LD_LIBRARY_PATH /system/lib/asan:/system/lib
+setenv ASAN_OPTIONS
+allow_user_segv_handler=true
+</pre>
+
+<p>Build, adb sync, fastboot flash boot, reboot.</p>
+
+<h2 id=using_the_wrap_property>Using the wrap property</h2>
+
+<p>The approach in the previous section puts AddressSanitizer into every
+application in the system (actually, into every descendant of the Zygote
+process). It is possible to run only one (or several) applications with ASan,
+trading some memory overhead for slower application startup.</p>
+
+<p>This can be done by starting your app with the “wrap.” property, the same one
+that’s used to run apps under Valgrind. The following example runs the Gmail app
+under ASan:</p>
+
+<pre class="devsite-click-to-copy">
+<code class="devsite-terminal">adb root</code>
+<code class="devsite-terminal">adb shell setenforce 0  # disable SELinux</code>
+<code class="devsite-terminal">adb shell setprop wrap.com.google.android.gm "asanwrapper"</code>
+</pre>
+
+<p>In this context, asanwrapper rewrites <code>/system/bin/app_process</code>
+to <code>/system/bin/asan/app_process</code>, which is built with
+AddressSanitizer. It also adds <code>/system/lib/asan</code> at the start of
+the dynamic library search path. This way ASan-instrumented
+libraries from <code>/system/lib/asan</code> are preferred to normal libraries
+in <code>/system/lib</code> when running with asanwrapper.</p>
+
+<p>Again, if a bug is found, the app will crash, and the report will be printed to
+the log.</p>
+
+<h2 id=sanitize_target>SANITIZE_TARGET</h2>
+
+<p>The master branch has support for building the entire Android platform with
+AddressSanitizer at once.</p>
+
+<p>Run the following commands in the same build tree.</p>
+
+<pre class="devsite-click-to-copy">
+<code class="devsite-terminal">make -j42</code>
+<code class="devsite-terminal">SANITIZE_TARGET=address make -j42</code>
+</pre>
+
+<p>In this mode, <code>userdata.img</code> contains extra libraries and must be
+flashed to the device as well. Use the following command line:</p>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+fastboot flash userdata && fastboot flashall
+</pre>
+
+<p>At the moment of this writing, modern Nexus and Pixel devices boot to the UI in this mode.</p>
+
+<p>This works by building two sets of shared libraries: normal in
+<code>/system/lib</code> (the first make invocation), ASan-instrumented in
+<code>/data/asan/lib</code> (the second make invocation). Executables from the
+second build overwrite the ones from the first build. ASan-instrumented
+executables get a different library search path that includes
+<code>/data/asan/lib</code> before <code>/system/lib</code> through the use of
+"/system/bin/linker_asan" in PT_INTERP.</p>
+
+<p>The build system clobbers intermediate object directories when the
+<code>$SANITIZE_TARGET</code> value has changed. This forces a rebuild of all
+targets while preserving installed binaries under <code>/system/lib</code>.</p>
+
+<p>Some targets cannot be built with ASan:</p>
+
+<ul>
+  <li>Statically linked executables.
+  <li><code>LOCAL_CLANG:=false</code> targets
+  <li><code>LOCAL_SANITIZE:=false</code> will not be ASan'd for <code>SANITIZE_TARGET=address</code>
+</ul>
+
+<p>Executables like these are skipped in the SANITIZE_TARGET build, and the
+version from the first make invocation is left in <code>/system/bin</code>.</p>
+
+<p>Libraries like this are simply built without ASan. They can contain some ASan
+code anyway from the static libraries they depend upon.</p>
+
+<h2 id=supporting_documentation>Supporting documentation</h2>
+
+<p><a href="https://github.com/google/sanitizers/wiki/AddressSanitizerOnAndroid">AddressSanitizerOnAndroid</a> public project site</p>
+<p><a href="https://www.chromium.org/developers/testing/addresssanitizer">AddressSanitizer and Chromium</a></p>
+<p><a href="https://github.com/google/sanitizers">Other Google Sanitizers</a></p>
+
+  </body>
+</html>

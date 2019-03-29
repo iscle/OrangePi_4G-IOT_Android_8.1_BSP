@@ -1,0 +1,181 @@
+<html devsite>
+  <head>
+    <title>Audio Latency for App Developers</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>For the lowest audio latency possible, we recommend you use Android native audio
+based on OpenSL ES 1.0.1.</p>
+
+<h2 id="implementation">Implementation checklist</h2>
+
+<p>To use Android native audio:</p>
+
+<ol>
+
+<li>
+Download and install the
+<a href="https://developer.android.com/tools/sdk/ndk/index.html">Android NDK</a>.
+In the rest of this document, we'll assume <code>NDKroot</code> is the
+directory where you installed NDK.
+</li>
+
+<li>
+Read the <a href="#supporting">supporting documentation.</a>
+</li>
+
+<li>
+Check for API level 9 or higher.
+</li>
+
+<li>
+Check for feature
+<a href="http://developer.android.com/guide/topics/manifest/uses-feature-element.html#hw-features">android.hardware.audio.low_latency.</a>
+</li>
+
+<li>
+Use the recommended native buffer size and sample rate returned by
+<a href="http://developer.android.com/reference/android/media/AudioManager.html#getProperty(java.lang.String)">android.media.AudioManager.getProperty(java.lang.String)</a>
+<p> <strong>Note</strong>: the same buffer size and sample rate should also be used for input.</p>
+</li>
+
+<li>
+Usually an OpenSL ES buffer count of 1 is sufficient.
+</li>
+
+<li>
+Keep your callback handlers short, without bursty CPU usage or unbounded blocking.  Avoid
+<a href="avoiding_pi.html">priority inversion.</a>
+</li>
+
+<li>
+Consider using
+<a href="avoiding_pi.html#nonBlockingAlgorithms">non-blocking algorithms</a>
+to communicate between input and output callback handlers,
+and between the callback handlers and the rest of your application.
+</li>
+
+</ol>
+
+<h2 id="supporting">Supporting documentation</h2>
+
+<h3 id="opensl_es_1_0_1">OpenSL ES 1.0.1</h3>
+
+<p>
+Use a PDF viewer to review the
+<a href="https://www.khronos.org/registry/sles/specs/OpenSL_ES_Specification_1.0.1.pdf">OpenSL 1.0.1 Specification.</a>
+This is a rather long reference, and not all of it will be relevant to you; but you
+will need to consult it for details on the API.
+</p>
+
+<p class="note">
+<strong>Note</strong>: this document describes the full OpenSL ES 1.0.1, but Android
+native audio is actually based on a subset of OpenSL ES 1.0.1 with some Android-specific extensions.
+</p>
+
+<p>
+Documents describing later versions of OpenSL ES, such as 1.1,
+are not relevant to Android.
+</p>
+
+<h3 id="opensl_es_for_android">OpenSL ES for Android</h3>
+
+<p>
+The document "OpenSL ES for Android" is provided in the NDK installation,
+and is not currently available online.  Open this link in a browser:
+</p>
+
+<pre class="devsite-click-to-copy">
+NDKroot/docs/Additional_library_docs/opensles/index.html
+</pre>
+
+<p>
+You'll want to skim the whole
+document, but pay special attention to the "Performance" subsection of the
+"Programming notes" section.
+</p>
+
+<p>
+Section "Supported features from OpenSL ES 1.0.1"
+describes the subset supported by Android.
+</p>
+
+<p>
+Section "Android extensions" describes Android-specific extensions
+that aren't included in base OpenSL ES 1.0.1.
+</p>
+
+<h3 id="relationship">Relationship with OpenSL ES 1.0.1</h3>
+
+<p>
+This Venn diagram shows the relationship between
+Android native audio and OpenSL ES 1.0.1.
+</p>
+
+<img src="images/venn.png" alt="Venn diagram" id="figure1" />
+<p class="img-caption">
+  <strong>Figure 1.</strong> Venn diagram
+</p>
+
+<h2 id="resources">Other resources</h2>
+
+<h3 id="source_android_com">source.android.com</h3>
+
+<p>
+The site <a href="/">source.android.com</a>
+is primarily designed for OEMs building Android
+devices, and the SoC vendors who supply components to these OEMs.
+</p>
+
+<p>
+However, there is a wealth of useful information about latency at this site, so
+you may want to review it.  See the articles at
+<a href="latency.html">Audio Latency.</a>
+</p>
+
+<h3 id="android_ndk">android-ndk</h3>
+
+<p>
+If you have questions about how to use Android native audio, you can ask at the discussion group
+<a href="https://groups.google.com/forum/#!forum/android-ndk">android-ndk.</a>
+</p>
+
+<h3 id="videos">Videos</h3>
+
+<dl>
+
+<dt><a href="https://youtu.be/d3kfEeMZ65c">High performance audio on Android</a>
+(Google I/O 2013)</dt>
+<dd>The whole video is about latency.</dd>
+
+<dt><a href="https://youtu.be/92fgcUNCHic">Building great multi-media experiences on Android</a>
+(Google I/O 2014)</dt>
+<dd>The first 14 minutes are about audio in general and input latency in particular.</dd>
+
+<dt><a href="https://youtu.be/PnDK17zP9BI">Audio latency: buffer sizes</a>
+(100 Days of Google Dev)</dt>
+<dd>Describes the relationship between audio latency, buffer sizes, and task scheduling.</dd>
+
+</dl>
+
+  </body>
+</html>

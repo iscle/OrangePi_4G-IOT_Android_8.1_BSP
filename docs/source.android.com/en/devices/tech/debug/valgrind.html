@@ -1,0 +1,75 @@
+<html devsite>
+  <head>
+    <title>Using Valgrind</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+<p>The <a href="http://valgrind.org/">Valgrind</a> tool suite includes Memcheck
+(for detecting memory-related errors in C and C++), Cachegrind (a cache
+profiler), Massif (a heap profiler), and several other tools.</p>
+
+<p class="note"><strong>Note:</strong> While you can use Valgrind for Android
+debugging, most Android platform developers use
+<a href="/devices/tech/debug/asan.html">AddressSanitizer</a> instead.</p>
+
+<h2 id=build-valgrind>Building Valgrind</h2>
+<p>To build Valgrind:</p>
+<pre class="devsite-terminal devsite-click-to-copy">
+mmma -j6 external/valgrind
+</pre>
+
+<h2 id=app-valgrind>Using on an application</h2>
+<p>To use Valgrind on an application:</p>
+
+<pre class="devsite-click-to-copy">
+<code class="devsite-terminal">adb shell setprop wrap.<em>app_name</em> "logwrapper valgrind"</code>
+<code class="devsite-terminal">adb shell am start -a android.intent.action.MAIN -n <em>app_name</em>/.MainActivity</code>
+</pre>
+
+<code><em>app_name</em></code> must be a fully-qualified name such as
+<strong>com.google.example_app</strong>.
+
+<h2 id=server-valgrind>Using on the system server</h2>
+<p>To run the system server with Valgrind:</p>
+
+<pre class="devsite-click-to-copy">
+<code class="devsite-terminal">adb shell setprop wrap.system_server "logwrapper valgrind"</code>
+<code class="devsite-terminal">adb shell stop && adb shell start</code>
+</pre>
+
+
+<h2 id=symbols-valgrind>Getting debug symbols</h2>
+<p>For debug symbols, push unstripped libraries to <code>/data/local/symbols</code>:</p>
+<pre class="devsite-click-to-copy">
+<code class="devsite-terminal">adb shell mkdir /data/local/symbols</code>
+<code class="devsite-terminal">adb push $OUT/symbols /data/local/symbols</code>
+</pre>
+
+<h2 id=boot-valgrind>Using during boot up</h2>
+<p>To use Valgrind during boot up, edit
+<code>out/target/product/XXXX/root/init.rc</code> by changing</p>
+<pre class="devsite-click-to-copy">service example /system/bin/foo --arg1 --arg2</pre>
+<p>to:</p>
+<pre class="devsite-click-to-copy">>service example /system/bin/logwrapper /system/bin/valgrind /system/bin/foo --arg1 --arg2</pre>
+<p>To see the effects, create a <code>boot.img</code> and reflash the
+device.</p>
+
+  </body>
+</html>

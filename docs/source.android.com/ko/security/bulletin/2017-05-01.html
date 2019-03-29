@@ -1,0 +1,2952 @@
+<html devsite><head>
+    <title>Android 보안 게시판 — 2017년 5월</title>
+    <meta name="project_path" value="/_project.yaml"/>
+    <meta name="book_path" value="/_book.yaml"/>
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+<p><em>2017년 5월 1일 게시됨 | 2017년 5월 2일 업데이트됨</em></p>
+
+<p>Android 보안 게시판에서는 Android 기기에 영향을 미치는 보안 취약성
+세부정보를 다룹니다. 게시판과 함께 무선(OTA) 업데이트를 통해
+Nexus 기기의 보안 업데이트가 출시되었습니다. Google 기기 펌웨어 이미지도
+<a href="https://developers.google.com/android/nexus/images">Google 개발자 사이트</a>에 게시되었습니다. 아래 목록의 문제는 2017년 5월 5일
+보안 패치 수준 이상에서 모두 해결되었습니다. <a href="https://support.google.com/pixelphone/answer/4457705#pixel_phones&nexus_devices">Pixel 및 Nexus 업데이트 일정</a>을
+참조하여 기기의 보안 패치 수준을 확인하는 방법을 알아보세요.</p>
+
+<p>파트너에게는 게시판에 설명된 문제에 관한 알림을
+2017년 4월 3일 이전에 전달했습니다. 이러한 문제를 해결하기 위한 소스 코드 패치는
+Android 오픈소스 프로젝트(AOSP) 저장소에 배포되었으며 이 게시판에도 링크되어 있습니다.
+이 게시판에는 AOSP 외부의 패치 링크도 포함되어 있습니다.</p>
+
+<p>이 중 가장 심각한 문제는 미디어 파일을 처리할 때
+이메일과 웹 탐색, MMS 등 여러 방법을 통해 대상 기기에서
+원격으로 코드를 실행할 수 있게 하는 심각한 보안 취약성입니다. <a href="/security/overview/updates-resources.html#severity">심각도 평가</a>는
+개발 목적으로 플랫폼 및 서비스 완화를 사용할 수 없거나
+우회에 성공한 경우 취약성 악용으로 인해 대상 기기가 받는 영향을
+기준으로 내려집니다.</p>
+
+<p>실제 고객이 새로 보고된 이러한 문제로 인해 악용당했다는 신고는
+접수되지 않았습니다. <a href="https://developer.android.com/training/safetynet/index.html">SafetyNet</a>과 같이 Android 플랫폼의 보안을 개선하는
+<a href="/security/enhancements/index.html">Android 보안 플랫폼 보호</a> 및 서비스 보호 기능에 관해
+자세히 알아보려면 <a href="#mitigations">Android 및 Google 서비스 완화</a>
+섹션을 참조하세요.</p>
+
+<p>모든 고객은 기기에서 이 업데이트를 수락하는 것이 좋습니다.</p>
+<h2 id="announcements">공지사항</h2>
+<ul>
+<li>이 게시판에는 Android 파트너가 모든 Android 기기에서 유사하게 발생하는
+취약성 문제의 일부를 더욱 빠르고 유연하게 해결하기 위한
+두 가지 보안 패치 수준 문자열이 포함되어 있습니다. 자세한 내용은 <a href="#common-questions-and-answers">일반적인
+질문 및 답변</a>을 참조하세요.
+ <ul>
+ <li><strong>2017-05-01</strong>: 부분 보안 패치 수준 문자열입니다. 이 보안 패치 수준 문자열은
+  2017-05-01 및 이전의 보안 패치 수준 문자열과 관련된 문제가
+  모두 해결되었음을 나타냅니다.</li>
+ <li><strong>2017-05-05</strong>: 전체 보안 패치 수준 문자열입니다. 이 보안 패치 수준 문자열은
+  2017-05-01과 2017-05-05 및 이전의 보안 패치 수준
+  문자열과 관련된 문제가 모두 해결되었음을 나타냅니다.</li>
+</ul>
+</li>
+<li>지원되는 Google 기기는 2017년 5월 5일 보안 패치 수준을 단일 OTA
+업데이트를 통해 받게 됩니다.</li>
+</ul>
+
+<h2 id="mitigations">Android 및 Google 서비스 완화</h2>
+
+<p>다음은 SafetyNet과 같은 <a href="/security/enhancements/index.html">Android 보안 플랫폼</a> 및
+서비스 보호 기능에서 제공하는 완화에 관한 요약입니다.
+이러한 기능을 통해 Android에서 보안 취약성이 악용될
+가능성을 줄일 수 있습니다.</p>
+
+<ul>
+<li>Android 플랫폼 최신 버전의 향상된 기능으로 Android의 여러 문제를
+악용하기가 더욱 어려워졌습니다. 가능하다면 모든 사용자는 최신 버전의 Android로
+업데이트하는 것이 좋습니다.</li>
+<li>Android 보안팀에서는 <a href="/security/reports/Google_Android_Security_PHA_classifications.pdf">잠재적으로 위험한 애플리케이션</a>에 관해
+사용자에게 경고를 보내는 <a href="/security/reports/Google_Android_Security_2016_Report_Final.pdf">앱 인증 및 SafetyNet</a>을 사용하여
+악용사례를 적극적으로 모니터링합니다. 앱 인증은 <a href="http://www.android.com/gms">Google 모바일 서비스</a>가 적용된
+기기에 기본적으로 사용 설정되어 있으며 Google Play 외부에서
+애플리케이션을 설치하는 사용자에게 특히 중요합니다. Google
+Play 내에서 기기 루팅 도구는 금지되어 있지만
+사용자가 감지된 루팅 애플리케이션을 설치하려 하면 출처에 상관없이
+앱 인증이 경고를 표시합니다. 또한 앱 인증은
+권한 승격 취약성을 악용하는 것으로 알려진 악성 애플리케이션을
+식별하고 차단합니다. 이러한 애플리케이션이 이미 설치된 경우 앱 인증에서 사용자에게
+이를 알리고 감지된 애플리케이션을 삭제하려고 시도합니다.</li>
+<li>가능한 경우 Google 행아웃과 메신저 애플리케이션은 미디어 서버와 같은 프로세스에
+미디어를 자동으로 전달하지 않습니다.</li>
+</ul>
+
+<h2 id="acknowledgements">감사의 말씀</h2>
+
+<p>참여해 주신 다음 연구원에게 감사드립니다.</p>
+<ul>
+<li>Venustech의 ADlab: CVE-2017-0630</li>
+<li>Tencent KeenLab(<a href="https://twitter.com/keen_lab">@keen_lab</a>)의
+Di Shen(<a href="https://twitter.com/returnsme">@returnsme</a>):
+CVE-2016-10287</li>
+<li>Trend Micro의 Ecular Xu(徐健): CVE-2017-0599, CVE-2017-0635</li>
+<li><a href="http://www.ms509.com">MS509Team</a>의 En He(<a href="https://twitter.com/heeeeen4x">@heeeeen4x</a>),
+Bo Liu: CVE-2017-0601</li>
+<li><a href="https://twrp.me/">Team Win Recovery Project</a>의 Ethan Yonker:
+CVE-2017-0493</li>
+<li>Qihoo 360 Technology Co. Ltd.
+IceSword Lab의 Gengjia Chen(<a href="https://twitter.com/chengjia4574">@chengjia4574</a>),
+<a href="http://weibo.com/jfpan">pjf</a>: CVE-2016-10285, CVE-2016-10288, CVE-2016-10290,
+CVE-2017-0624, CVE-2017-0616, CVE-2017-0617, CVE-2016-10294, CVE-2016-10295,
+CVE-2016-10296</li>
+<li>Tencent PC Manager의 godzheng(郑文选 <a href="https://twitter.com/virtualseekers">@VirtualSeekers</a>):
+CVE-2017-0602</li>
+<li><a href="http://tuncay2.web.engr.illinois.edu">University of Illinois at
+Urbana-Champaign</a>의 <a href="https://www.linkedin.com/in/g%C3%BCliz-seray-tuncay-952a1b9/">Güliz
+Seray Tuncay</a>: CVE-2017-0593</li>
+<li>Qihoo 360 Technology Co. Ltd. Alpha Team의 Hao Chen, Guang Gong:
+CVE-2016-10283</li>
+<li>Xiaomi Inc의 Juhu Nie, Yang Cheng, Nan Li, Qiwu Huang: CVE-2016-10276</li>
+<li><a href="https://github.com/michalbednarski">Michał Bednarski</a>:
+CVE-2017-0598</li>
+<li>Tesla's Product Security Team의 Nathan Crandall(<a href="https://twitter.com/natecray">@natecray</a>):
+CVE-2017-0331, CVE-2017-0606</li>
+<li><a href="mailto:jiych.guru@gmail.com">Niky1235</a>(<a href="https://twitter.com/jiych_guru">@jiych_guru</a>): CVE-2017-0603</li>
+<li>Alibaba Mobile Security Group의 Peng Xiao, Chengming Yang, Ning You,
+Chao Yang, Yang song: CVE-2016-10281, CVE-2016-10280</li>
+<li><a href="https://alephsecurity.com/">Aleph Research</a>의 Roee Hay(<a href="https://twitter.com/roeehay">@roeehay</a>): CVE-2016-10277</li>
+<li><a href="mailto:sbauer@plzdonthack.me">Scott Bauer</a>(<a href="https://twitter.com/ScottyBauer1">@ScottyBauer1</a>): CVE-2016-10274</li>
+<li><a href="http://c0reteam.org">C0RE Team</a>의 <a href="mailto:segfault5514@gmail.com">Tong Lin</a>, <a href="mailto:computernik@gmail.com">Yuan-Tsung Lo</a>, Xuxian Jiang: CVE-2016-10291</li>
+<li>Vasily Vasiliev: CVE-2017-0589</li>
+<li><a href="http://www.trendmicro.com">Trend Micro</a> <a href="http://blog.trendmicro.com/trendlabs-security-intelligence/category/mobile">Mobile Threat Response Team</a>의
+V.E.O(<a href="https://twitter.com/vysea">@VYSEa</a>):
+CVE-2017-0590, CVE-2017-0587, CVE-2017-0600</li>
+<li>Tencent Security Platform Department의 Xiling Gong: CVE-2017-0597</li>
+<li>360 Marvel Team의 Xingyuan Lin: CVE-2017-0627</li>
+<li>Alibaba Inc의 Yong Wang(王勇)(<a href="https://twitter.com/ThomasKing2014">@ThomasKing2014</a>):
+CVE-2017-0588</li>
+<li>Qihoo 360 Technology Co. Ltd. IceSword Lab의
+Yonggang Guo(<a href="https://twitter.com/guoygang">@guoygang</a>): CVE-2016-10289, CVE-2017-0465</li>
+<li>Qihoo 360 Technology Co. Ltd. Vulpecker Team의 Yu Pan: CVE-2016-10282,
+CVE-2017-0615</li>
+<li>Qihoo 360 Technology Co. Ltd. Vulpecker Team의 Yu Pan, Peide Zhang:
+CVE-2017-0618, CVE-2017-0625</li>
+</ul>
+
+<h2 id="2017-05-01-details">2017-05-01 보안 패치 수준—취약성
+세부정보</h2>
+
+<p>다음 섹션에서는 2017-05-01 패치 수준에 적용되는
+각 보안 취약성에 관해 자세히 알아볼 수 있습니다. 여기에는 문제 설명,
+심각도 근거 및 CVE, 관련 참조, 심각도, 업데이트된 Google 기기, 업데이트된
+AOSP 버전(해당하는 경우), 신고된 날짜가 포함된 표가 제시됩니다. 가능한 경우
+AOSP 변경사항 목록과 같이 문제를 해결한 공개 변경사항을 버그 ID에
+연결합니다. 하나의 버그와 관련된 변경사항이 여러 개인 경우 추가
+참조가 버그 ID 다음에 오는 번호에 연결되어 있습니다.</p>
+
+<h3 id="rce-in-mediaserver">미디어 서버의
+원격 코드 실행 취약성</h3>
+
+<p>미디어 서버의 원격 코드 실행 취약성으로 인해 특별히 제작된 파일을 사용하는
+공격자가 미디어 파일 및 데이터 처리 중에 메모리 손상을 일으킬 수
+있습니다. 이 문제는 미디어 서버 프로세스 내에서 원격 코드를 실행할 가능성이 있으므로
+심각도 심각으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="18%" />
+  <col width="17%" />
+  <col width="10%" />
+  <col width="19%" />
+  <col width="18%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>업데이트된 AOSP 버전</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0587</td>
+    <td><a href="https://android.googlesource.com/platform/external/libmpeg2/+/a86eb798d077b9b25c8f8c77e3c02c2f287c1ce7">A-35219737</a></td>
+    <td>심각</td>
+    <td>모두</td>
+    <td>6.0, 6.0.1, 7.0, 7.1.1, 7.1.2</td>
+    <td>2017년 1월 4일</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0588</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/av/+/6f1d990ce0f116a205f467d9eb2082795e33872b">A-34618607</a></td>
+    <td>심각</td>
+    <td>모두</td>
+    <td>4.4.4, 5.0.2, 5.1.1, 6.0, 6.0.1, 7.0, 7.1.1, 7.1.2</td>
+    <td>2017년 1월 21일</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0589</td>
+    <td><a href="https://android.googlesource.com/platform/external/libhevc/+/bcfc7124f6ef9f1ec128fb2e90de774a5b33d199">A-34897036</a></td>
+    <td>심각</td>
+    <td>모두</td>
+    <td>5.0.2, 5.1.1, 6.0, 6.0.1, 7.0, 7.1.1, 7.1.2</td>
+    <td>2017년 2월 1일</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0590</td>
+    <td><a href="https://android.googlesource.com/platform/external/libhevc/+/45c97f878bee15cd97262fe7f57ecea71990fed7">A-35039946</a></td>
+    <td>심각</td>
+    <td>모두</td>
+    <td>5.0.2, 5.1.1, 6.0, 6.0.1, 7.0, 7.1.1, 7.1.2</td>
+    <td>2017년 2월 6일</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0591</td>
+    <td><a href="https://android.googlesource.com/platform/external/libavc/+/5c3fd5d93a268abb20ff22f26009535b40db3c7d">A-34097672</a></td>
+    <td>심각</td>
+    <td>모두</td>
+    <td>6.0, 6.0.1, 7.0, 7.1.1, 7.1.2</td>
+    <td>Google 사내용</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0592</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/av/+/acc192347665943ca674acf117e4f74a88436922">A-34970788</a></td>
+    <td>심각</td>
+    <td>모두</td>
+    <td>4.4.4, 5.0.2, 5.1.1, 6.0, 6.0.1, 7.0, 7.1.1, 7.1.2</td>
+    <td>Google 사내용</td>
+  </tr>
+</tbody></table>
+
+<h3 id="eop-in-framework-apis">프레임워크 API의 권한 승격
+취약성</h3>
+
+<p>프레임워크 API의 권한 승격 취약성으로 인해 로컬 악성 애플리케이션이
+맞춤 권한에 액세스할 수 있습니다. 이 문제는 애플리케이션 데이터를
+다른 애플리케이션으로부터 분리하는 운영체제 보호를 일반적으로
+우회하는 것이므로 심각도 높음으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="18%" />
+  <col width="17%" />
+  <col width="10%" />
+  <col width="19%" />
+  <col width="18%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>업데이트된 AOSP 버전</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0593</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/base/+/78efbc95412b8efa9a44d573f5767ae927927d48">A-34114230</a></td>
+    <td>높음</td>
+    <td>모두</td>
+    <td>6.0, 6.0.1, 7.0, 7.1.1, 7.1.2</td>
+    <td>2017년 1월 5일</td>
+  </tr>
+</tbody></table>
+
+<h3 id="eop-in-mediaserver">미디어 서버의 권한 승격
+취약성</h3>
+
+<p>미디어 서버의 권한 승격 취약성으로 인해 로컬 악성 애플리케이션이
+권한이 설정된 프로세스의 컨텍스트 내에서 임의의 코드를 실행할 수
+있습니다. 이 문제는 보통 타사 애플리케이션이 액세스할 수 없는 승격된
+권한으로의 로컬 액세스 권한을 확보하는 데 사용될 수 있으므로 심각도 높음으로
+평가됩니다.</p>
+
+<table>
+  <colgroup><col width="18%" />
+  <col width="17%" />
+  <col width="10%" />
+  <col width="19%" />
+  <col width="18%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>업데이트된 AOSP 버전</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0594</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/av/+/594bf934384920618d2b6ce0bcda1f60144cb3eb">A-34617444</a></td>
+    <td>높음</td>
+    <td>모두</td>
+    <td>4.4.4, 5.0.2, 5.1.1, 6.0, 6.0.1, 7.0, 7.1.1, 7.1.2</td>
+    <td>2017년 1월 22일</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0595</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/av/+/5443b57cc54f2e46b35246637be26a69e9f493e1">A-34705519</a></td>
+    <td>높음</td>
+    <td>모두</td>
+    <td>4.4.4, 5.0.2, 5.1.1, 6.0, 6.0.1, 7.0, 7.1.1</td>
+    <td>2017년 1월 24일</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0596</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/av/+/5443b57cc54f2e46b35246637be26a69e9f493e1">A-34749392</a></td>
+    <td>높음</td>
+    <td>모두</td>
+    <td>4.4.4, 5.0.2, 5.1.1, 6.0, 6.0.1, 7.0, 7.1.1</td>
+    <td>2017년 1월 24일</td>
+  </tr>
+</tbody></table>
+
+<h3 id="eop-in-audioserver">오디오 서버의 권한 승격
+취약성</h3>
+
+<p>오디오 서버의 권한 승격 취약성으로 인해 로컬 악성 애플리케이션이
+권한이 설정된 프로세스의 컨텍스트 내에서 임의의 코드를 실행할 수
+있습니다. 이 문제는 보통 타사 애플리케이션이 액세스할 수 없는 승격된
+권한으로의 로컬 액세스 권한을 확보하는 데 사용될 수 있으므로 심각도 높음으로
+평가됩니다.</p>
+
+<table>
+  <colgroup><col width="18%" />
+  <col width="17%" />
+  <col width="10%" />
+  <col width="19%" />
+  <col width="18%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>업데이트된 AOSP 버전</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0597</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/av/+/a9188f89179a7edd301abaf37d644adf5d647a04">A-34749571</a></td>
+    <td>높음</td>
+    <td>모두</td>
+    <td>4.4.4, 5.0.2, 5.1.1, 6.0, 6.0.1, 7.0, 7.1.1, 7.1.2</td>
+    <td>2017년 1월 25일</td>
+  </tr>
+</tbody></table>
+
+<h3 id="id-in-framework-apis">프레임워크 API의 정보 공개
+취약성</h3>
+
+<p>프레임워크 API의 정보 공개 취약성으로 인해 로컬 악성 애플리케이션이
+애플리케이션 데이터를 다른 애플리케이션으로부터 분리하는 운영체제 보호를
+우회할 수 있습니다. 이 문제는 애플리케이션이 액세스할 수 없는 데이터의
+액세스 권한을 확보하는 데 사용될 수 있으므로 심각도
+높음으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="18%" />
+  <col width="17%" />
+  <col width="10%" />
+  <col width="19%" />
+  <col width="18%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>업데이트된 AOSP 버전</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0598</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/base/+/4e110ab20bb91e945a17c6e166e14e2da9608f08">A-34128677</a>
+    [<a href="https://android.googlesource.com/platform/frameworks/base/+/d42e1204d5dddb78ec9d20d125951b59a8344f40">2</a>]</td>
+    <td>높음</td>
+    <td>모두</td>
+    <td>4.4.4, 5.0.2, 5.1.1, 6.0, 6.0.1, 7.0, 7.1.1, 7.1.2</td>
+    <td>2017년 1월 6일</td>
+  </tr>
+</tbody></table>
+
+<h3 id="dos-in-mediaserver">미디어 서버의 서비스 거부(DoS) 취약성</h3>
+
+<p>미디어 서버의 원격 서비스 거부 취약성으로 인해 특별히 제작된 파일을 사용하는
+공격자가 기기를 지연시키거나 재부팅되게 만들 수 있습니다. 이 문제는
+원격 서비스 거부를 일으킬 수 있으므로 심각도 높음으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="18%" />
+  <col width="17%" />
+  <col width="10%" />
+  <col width="19%" />
+  <col width="18%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>업데이트된 AOSP 버전</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0599</td>
+    <td><a href="https://android.googlesource.com/platform/external/libhevc/+/a1424724a00d62ac5efa0e27953eed66850d662f">A-34672748</a></td>
+    <td>높음</td>
+    <td>모두</td>
+    <td>6.0, 6.0.1, 7.0, 7.1.1, 7.1.2</td>
+    <td>2017년 1월 23일</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0600</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/av/+/961e5ac5788b52304e64b9a509781beaf5201fb0">A-35269635</a></td>
+    <td>높음</td>
+    <td>모두</td>
+    <td>4.4.4, 5.0.2, 5.1.1, 6.0, 6.0.1, 7.0, 7.1.1, 7.1.2</td>
+    <td>2017년 2월 10일</td>
+  </tr>
+</tbody></table>
+
+<h3 id="eop-in-bluetooth">블루투스의 권한 승격
+취약성</h3>
+
+<p>블루투스의 권한 승격 취약성으로 인해 로컬 악성 애플리케이션이 사용자 권한 없이
+블루투스를 통해 유해한 파일이 공유되도록 허용할 수 있습니다. 이 문제는
+사용자 상호작용 요구사항을 로컬에서 우회할 수 있게 하므로
+심각도 보통으로 평가됩니다. </p>
+
+<table>
+  <colgroup><col width="18%" />
+  <col width="17%" />
+  <col width="10%" />
+  <col width="19%" />
+  <col width="18%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>업데이트된 AOSP 버전</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0601</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/base/+/667d2cbe3eb1450f273a4f6595ccef35e1f0fe4b">A-35258579</a></td>
+    <td>보통</td>
+    <td>모두</td>
+    <td>7.0, 7.1.1, 7.1.2</td>
+    <td>2017년 2월 9일</td>
+  </tr>
+</tbody></table>
+
+<h3 id="id-in-file-based-encryption">파일 기반 암호화의 정보 공개
+취약성</h3>
+
+<p>파일 기반 암호화의 정보 공개 취약성으로 인해 로컬 악성 공격자가
+애플리케이션 데이터를 잠금 화면의 운영체제 보호를
+우회할 수 있습니다. 이 문제는 잠금 화면을 우회할 가능성이 있으므로
+심각도 보통으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="18%" />
+  <col width="17%" />
+  <col width="10%" />
+  <col width="19%" />
+  <col width="18%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>업데이트된 AOSP 버전</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0493</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/base/+/e4cefbf4fce458489b5f1bebc79dfaf566bcc5d5">A-32793550</a>
+    [<a href="https://android.googlesource.com/platform/frameworks/base/+/f806d65e615b942c268a5f68d44bde9d55634972">2</a>]</td>
+    <td>보통</td>
+    <td>모두</td>
+    <td>7.0, 7.1.1</td>
+    <td>2016년 11월 9일</td>
+  </tr>
+</tbody></table>
+
+<h3 id="id-in-bluetooth">블루투스의 정보 공개 취약성</h3>
+
+<p>블루투스의 정보 공개 취약성으로 인해 로컬 악성 애플리케이션이
+애플리케이션 데이터를 다른 애플리케이션으로부터 분리하는 운영체제 보호를
+우회할 수 있습니다. 이 문제는
+취약성 관련 세부정보로 인해 심각도 보통으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="18%" />
+  <col width="17%" />
+  <col width="10%" />
+  <col width="19%" />
+  <col width="18%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>업데이트된 AOSP 버전</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0602</td>
+    <td><a href="https://android.googlesource.com/platform/system/bt/+/a4875a49404c544134df37022ae587a4a3321647">A-34946955</a></td>
+    <td>보통</td>
+    <td>모두</td>
+    <td>4.4.4, 5.0.2, 5.1.1, 6.0, 6.0.1, 7.0, 7.1.1, 7.1.2</td>
+    <td>2016년 12월 5일</td>
+  </tr>
+</tbody></table>
+
+<h3 id="id-in-openssl-&-boringssl">OpenSSL 및 BoringSSL의 정보 공개 취약성</h3>
+
+<p>OpenSSL 및 BoringSSL의 정보 공개 취약성으로 인해
+원격 공격자가 민감한 정보에 액세스할 수
+있습니다. 이 문제는 취약성 관련
+세부정보로 인해 심각도 보통으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="18%" />
+  <col width="17%" />
+  <col width="10%" />
+  <col width="19%" />
+  <col width="18%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>업데이트된 AOSP 버전</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-7056</td>
+    <td><a href="https://android.googlesource.com/platform/external/boringssl/+/13179a8e75fee98740b5ce728752aa7294b3e32d">A-33752052</a></td>
+    <td>보통</td>
+    <td>모두</td>
+    <td>4.4.4, 5.0.2, 5.1.1, 6.0, 6.0.1, 7.0, 7.1.1, 7.1.2</td>
+    <td>2016년 12월 19일</td>
+  </tr>
+</tbody></table>
+
+<h3 id="dos-in-mediaserver-2">미디어 서버의 서비스 거부(DoS)
+취약성</h3>
+
+<p>미디어 서버의 서비스 거부(DoS) 취약성으로 인해 공격자가 특별히 제작된
+파일을 사용하여 기기 지연이나 재부팅을 유발할 수 있습니다. 이 문제는
+일반적이지 않은 기기 설정이 필요하므로 심각도 보통으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="18%" />
+  <col width="17%" />
+  <col width="10%" />
+  <col width="19%" />
+  <col width="18%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>업데이트된 AOSP 버전</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0603</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/av/+/36b04932bb93cc3269279282686b439a17a89920">A-35763994</a></td>
+    <td>보통</td>
+    <td>모두</td>
+    <td>4.4.4, 5.0.2, 5.1.1, 6.0, 6.0.1, 7.0, 7.1.1, 7.1.2</td>
+    <td>2017년 2월 23일</td>
+  </tr>
+</tbody></table>
+
+<h3 id="dos-in-mediaserver-3">미디어 서버의 서비스 거부(DoS)
+취약성</h3>
+
+<p>미디어 서버의 원격 서비스 거부 취약성으로 인해 특별히 제작된 파일을 사용하는
+공격자가 기기를 지연시키거나 재부팅되게 만들 수 있습니다. 이 문제는
+취약성 관련 세부정보로 인해 심각도 낮음으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="18%" />
+  <col width="17%" />
+  <col width="10%" />
+  <col width="19%" />
+  <col width="18%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>업데이트된 AOSP 버전</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0635</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/av/+/523f6b49c1a2289161f40cf9fe80b92e592e9441">A-35467107</a></td>
+    <td>낮음</td>
+    <td>모두</td>
+    <td>7.0, 7.1.1, 7.1.2</td>
+    <td>2017년 2월 16일</td>
+  </tr>
+</tbody></table>
+
+<h2 id="2017-05-05-details">2017-05-05 보안 패치 수준—취약성
+세부정보</h2>
+
+<p>다음 섹션에서는 2017-05-05 패치 수준에 적용되는
+각 보안 취약성에 관해 자세히 알아볼 수 있습니다. 여기에는 문제 설명,
+심각도 근거 및 CVE, 관련 참조, 심각도, 업데이트된 Google 기기, 업데이트된
+AOSP 버전(해당하는 경우), 신고된 날짜가 포함된 표가 제시됩니다. 가능한 경우
+AOSP 변경사항 목록과 같이 문제를 해결한 공개 변경사항을 버그 ID에
+연결합니다. 하나의 버그와 관련된 변경사항이 여러 개인 경우 추가
+참조가 버그 ID 다음에 오는 번호에 연결되어 있습니다.</p>
+
+<h3 id="rce-in-giflib">GIFLIB의 원격 코드 실행 취약성</h3>
+
+<p>GIFLIB의 원격 코드 실행 취약성으로 인해 특별히 제작된 파일을 사용하는
+공격자가 미디어 파일 및 데이터 처리 중에 메모리 손상을 일으킬 수
+있습니다. 이 문제는 미디어 서버 프로세스 내에서 원격 코드를 실행할
+가능성이 있으므로 심각도 심각으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="18%" />
+  <col width="17%" />
+  <col width="10%" />
+  <col width="19%" />
+  <col width="18%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>업데이트된 AOSP 버전</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2015-7555</td>
+    <td><a href="https://android.googlesource.com/platform/external/giflib/+/dc07290edccc2c3fc4062da835306f809cea1fdc">A-34697653</a></td>
+    <td>심각</td>
+    <td>모두</td>
+    <td>4.4.4, 5.0.2, 5.1.1, 6.0, 6.0.1, 7.0, 7.1.1, 7.1.2</td>
+    <td>2016년 4월 13일</td>
+  </tr>
+</tbody></table>
+
+<h3 id="eop-in-mediatek-touchscreen-driver">MediaTek 터치스크린 드라이버의
+권한 승격 취약성</h3>
+
+<p>MediaTek 터치스크린 드라이버의 권한 승격 취약성으로 인해
+로컬 악성 애플리케이션이 커널 컨텍스트 내에서 임의의 코드를
+실행할 수 있습니다. 이 문제는 영구적인
+로컬 기기 손상을 일으킬 가능성이 있으므로 심각도 심각으로 평가되며,
+기기를 수리하려면 운영체제를 재설치해야 할 수도 있습니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-10274</td>
+    <td>A-30202412*<br />
+        M-ALPS02897901</td>
+    <td>심각</td>
+    <td>없음**</td>
+    <td>2016년 7월 16일</td>
+  </tr>
+</tbody></table>
+
+<p>* 이 문제를 해결하기 위한 패치는 공개되어 있지 않습니다. 업데이트는
+<a href="https://developers.google.com/android/nexus/drivers">Google 개발자 사이트</a>에서 제공되는 Nexus 기기용
+최신 바이너리 드라이버에
+
+포함되어 있습니다.</p>
+
+<p>*** 지원되는 Android 7.1.1 이상 Google 기기에 제공된 업데이트가 모두 설치되었다면 이러한
+취약성의 영향을 받지 않습니다.</p>
+
+<h3 id="eop-in-qualcomm-bootloader">Qualcomm 부트로더의
+권한 승격 취약성</h3>
+
+<p>Qualcomm 부트로더의 권한 승격 취약성으로 인해
+로컬 악성 애플리케이션이 커널 컨텍스트 내에서 임의의 코드를
+실행할 수 있습니다. 이 문제는 영구적인
+로컬 기기 손상을 일으킬 가능성이 있으므로 심각도 심각으로 평가되며,
+기기를 수리하려면 운영체제를 재설치해야 할 수도 있습니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-10275</td>
+    <td>A-34514954<br />
+        <a href="https://source.codeaurora.org/quic/la//kernel/lk/commit/?id=1a0a15c380e11fc46f8d8706ea5ae22b752bdd0b">
+QC-CR#1009111</a></td>
+    <td>심각</td>
+    <td>Nexus 5X, Nexus 6, Pixel, Pixel XL, Android One</td>
+    <td>2016년 9월 13일</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-10276</td>
+    <td>A-32952839<br />
+        <a href="https://source.codeaurora.org/quic/la//kernel/lk/commit/?id=5dac431748027e8b50a5c4079967def4ea53ad64">
+QC-CR#1094105</a></td>
+    <td>심각</td>
+    <td>Nexus 5X, Nexus 6P, Pixel, Pixel XL</td>
+    <td>2016년 11월 16일</td>
+  </tr>
+</tbody></table>
+
+<h3 id="eop-in-kernel-sound-subsystem">커널 사운드 하위 시스템의
+권한 승격 취약성</h3>
+
+<p>커널 사운드 하위 시스템의 권한 승격 취약성으로 인해
+로컬 악성 애플리케이션이 커널 컨텍스트 내에서 임의의 코드를
+실행할 수 있습니다. 이 문제는 영구적인
+로컬 기기 손상을 일으킬 가능성이 있으므로 심각도 심각으로 평가되며,
+기기를 수리하려면 운영체제를 재설치해야 할 수도 있습니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-9794</td>
+    <td>A-34068036<br />
+        <a href="https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux-stable.git/commit/?id=a27178e05b7c332522df40904f27674e36ee3757">
+업스트림 커널</a></td>
+    <td>심각</td>
+    <td>Nexus 5X, Nexus 6, Nexus 6P, Nexus 9, Pixel, Pixel XL, Pixel C, Android
+One, Nexus Player</td>
+    <td>2016년 12월 3일</td>
+  </tr>
+</tbody></table>
+
+<h3 id="eop-in-motorola-bootloader">Motorola 부트로더의
+권한 승격 취약성</h3>
+
+<p>Motorola 부트로더의 권한 승격 취약성으로 인해
+로컬 악성 애플리케이션이 부트로더 컨텍스트 내에서 임의의 코드를
+실행할 수 있습니다. 이 문제는 영구적인
+로컬 기기 손상을 일으킬 가능성이 있으므로 심각도 심각으로 평가되며,
+기기를 수리하려면 운영체제를 재설치해야 할 수도 있습니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-10277</td>
+    <td>A-33840490*<br />
+        </td>
+    <td>심각</td>
+    <td>Nexus 6</td>
+    <td>2016년 12월 21일</td>
+  </tr>
+</tbody></table>
+
+<p>* 이 문제를 해결하기 위한 패치는 공개되지 않습니다. 업데이트는
+<a href="https://developers.google.com/android/nexus/drivers">Google 개발자 사이트</a>에서 제공되는 Nexus 기기용
+최신 바이너리 드라이버에
+
+포함되어 있습니다.</p>
+
+<h3 id="eop-in-nvidia-video-driver">NVIDIA 동영상 드라이버의
+권한 승격 취약성</h3>
+
+<p>NVIDIA 동영상 드라이버의 권한 승격 취약성으로 인해
+로컬 악성 애플리케이션이 커널 컨텍스트 내에서 임의의 코드를
+실행할 수 있습니다. 이 문제는 영구적인
+로컬 기기 손상을 일으킬 가능성이 있으므로 심각도 심각으로 평가되며,
+기기를 수리하려면 운영체제를 재설치해야 할 수도 있습니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0331</td>
+    <td>A-34113000*<br />
+        N-CVE-2017-0331</td>
+    <td>심각</td>
+    <td>Nexus 9</td>
+    <td>2017년 1월 4일</td>
+  </tr>
+</tbody></table>
+
+<p>* 이 문제를 해결하기 위한 패치는 공개되지 않습니다. 업데이트는
+<a href="https://developers.google.com/android/nexus/drivers">Google 개발자 사이트</a>에서 제공되는 Nexus 기기용
+최신 바이너리 드라이버에
+
+포함되어 있습니다.</p>
+
+<h3 id="eop-in-qualcomm-power-driver">Qualcomm 전원 드라이버의 권한 승격 취약성</h3>
+
+<p>커널 Qualcomm 전원 드라이버의 권한 승격 취약성으로 인해
+로컬 악성 애플리케이션이 커널 컨텍스트 내에서 임의의 코드를
+실행할 수 있습니다. 이 문제는 영구적인
+로컬 기기 손상을 일으킬 가능성이 있으므로 심각도 심각으로 평가되며,
+기기를 수리하려면 운영체제를 재설치해야 할 수도 있습니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0604</td>
+    <td>A-35392981<br />
+        <a href="https://source.codeaurora.org/quic/la//kernel/msm-3.18/commit/?id=6975e2dd5f37de965093ba3a8a08635a77a960f7">
+QC-CR#826589</a></td>
+    <td>심각</td>
+    <td>없음*</td>
+    <td>2017년 2월 15일</td>
+  </tr>
+</tbody></table>
+
+<p>* 지원되는 Android 7.1.1 이상 Google 기기에 제공된 업데이트가 모두 설치되었다면 이러한
+취약성의 영향을 받지 않습니다.</p>
+
+<h3 id="eop-in-kernel-trace-subsystem">커널 추적 하위 시스템의
+권한 승격 취약성</h3>
+
+<p>커널 추적 하위 시스템의 권한 승격 취약성으로 인해
+로컬 악성 애플리케이션이 커널 컨텍스트 내에서 임의의 코드를
+실행할 수 있습니다. 이 문제는 영구적인
+로컬 기기 손상을 일으킬 가능성이 있으므로 심각도 심각으로 평가되며,
+기기를 수리하려면 운영체제를 재설치해야 할 수도 있습니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0605</td>
+    <td>A-35399704<br />
+        <a href="https://source.codeaurora.org/quic/la//kernel/msm-3.10/commit/?id=2161ae9a70b12cf18ac8e5952a20161ffbccb477">
+QC-CR#1048480</a></td>
+    <td>심각</td>
+    <td>Nexus 5X, Nexus 6, Nexus 6P, Nexus 9, Pixel, Pixel XL, Pixel C, Android
+One, Nexus Player</td>
+    <td>2017년 2월 15일</td>
+  </tr>
+</tbody></table>
+
+<h3 id="vulnerabilities-in-qualcomm-components">Qualcomm 구성요소의
+취약성</h3>
+
+<p>다음 취약성은 Qualcomm 구성요소에 영향을 주며 Qualcomm AMSS
+2016년 8월, 9월, 10월, 12월 보안 게시판에 자세히 설명되어 있습니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-10240</td>
+    <td>A-32578446**<br />
+        QC-CR#955710</td>
+    <td>심각</td>
+    <td>Nexus 6P</td>
+    <td>Qualcomm 사내용</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-10241</td>
+    <td>A-35436149**<br />
+        QC-CR#1068577</td>
+    <td>심각</td>
+    <td>Nexus 5X, Nexus 6, Nexus 6P, Pixel, Pixel XL</td>
+    <td>Qualcomm 사내용</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-10278</td>
+    <td>A-31624008**<br />
+        QC-CR#1043004</td>
+    <td>높음</td>
+    <td>Pixel, Pixel XL</td>
+    <td>Qualcomm 사내용</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-10279</td>
+    <td>A-31624421**<br />
+        QC-CR#1031821</td>
+    <td>높음</td>
+    <td>Pixel, Pixel XL</td>
+    <td>Qualcomm 사내용</td>
+  </tr>
+</tbody></table>
+
+<p>* 이 취약성의 심각도 등급은 공급업체에서 결정한 것입니다.</p>
+
+<p>* 이 문제를 해결하기 위한 패치는 공개되지 않습니다. 업데이트는
+<a href="https://developers.google.com/android/nexus/drivers">Google 개발자 사이트</a>에서 제공되는 Nexus 기기용
+최신 바이너리 드라이버에
+
+포함되어 있습니다.</p>
+
+<p>*** 지원되는 Android 7.1.1 이상 Google 기기에 제공된 업데이트가 모두 설치되었다면 이러한
+취약성의 영향을 받지 않습니다.</p>
+
+<h3 id="rce-in-libxml2">libxml2의 원격 코드 실행 취약성</h3>
+
+<p>libxml2의 원격 코드 실행 취약성으로 인해 공격자가 특별히 제작된 파일을
+사용하여 권한이 설정되지 않은 프로세스의 컨텍스트 내에서 임의의 코드를 실행할 수
+있습니다. 이 문제는 해당 라이브러리를
+사용하는 애플리케이션에서 원격 코드를 실행할 가능성이 있으므로 심각도 높음으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="18%" />
+  <col width="17%" />
+  <col width="10%" />
+  <col width="19%" />
+  <col width="18%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>업데이트된 AOSP 버전</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-5131</td>
+    <td>A-32956747*</td>
+    <td>높음</td>
+    <td>없음**</td>
+    <td>4.4.4, 5.0.2, 5.1.1, 6.0, 6.0.1, 7.0</td>
+    <td>2016년 7월 23일</td>
+  </tr>
+</tbody></table>
+
+<p>* 이 문제를 해결하기 위한 패치는 공개되지 않습니다. 업데이트는
+<a href="https://developers.google.com/android/drivers">Google 개발자 사이트</a>에서 제공되는 Nexus 기기용 최신 바이너리
+드라이버에 포함되어 있습니다.</p>
+
+<p>** 지원되는 Android 7.1.1 이상 Google 기기에 제공된 업데이트가 모두 설치되었다면 이러한
+취약성의 영향을 받지 않습니다.</p>
+
+<h3 id="eop-in-mediatek-thermal-driver">MediaTek 열 드라이버의
+권한 승격 취약성</h3>
+
+<p>MediaTek 열 드라이버의 권한 승격 취약성으로 인해
+로컬 악성 애플리케이션이 커널 컨텍스트 내에서 임의의 코드를
+실행할 수 있습니다. 이 문제는 먼저 권한이 설정된 프로세스에 침투해야만 실행
+가능하므로 심각도 높음으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-10280</td>
+    <td>A-28175767*<br />
+        M-ALPS02696445</td>
+    <td>높음</td>
+    <td>없음**</td>
+    <td>2016년 4월 11일</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-10281</td>
+    <td>A-28175647*<br />
+        M-ALPS02696475</td>
+    <td>높음</td>
+    <td>없음**</td>
+    <td>2016년 4월 11일</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-10282</td>
+    <td>A-33939045*<br />
+        M-ALPS03149189</td>
+    <td>높음</td>
+    <td>없음**</td>
+    <td>2016년 12월 27일</td>
+  </tr>
+</tbody></table>
+
+<p>* 이 문제를 해결하기 위한 패치는 공개되지 않습니다. 업데이트는
+<a href="https://developers.google.com/android/nexus/drivers">Google 개발자 사이트</a>에서 제공되는 Nexus 기기용
+최신 바이너리 드라이버에
+
+포함되어 있습니다.</p>
+
+<p>** 지원되는 Android 7.1.1 이상 Google 기기에 제공된 업데이트가 모두 설치되었다면 이러한
+취약성의 영향을 받지 않습니다.</p>
+
+<h3 id="eop-in-qualcomm-wi-fi-driver">Qualcomm Wi-Fi 드라이버의
+권한 승격 취약성</h3>
+
+<p>Qualcomm Wi-Fi 드라이버의 권한 승격 취약성으로 인해
+로컬 악성 애플리케이션이 커널 컨텍스트 내에서 임의의 코드를 실행할 수
+있습니다. 이 문제는 먼저 권한이 설정된 프로세스에 침투해야만 실행
+가능하므로 심각도 높음으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-10283</td>
+    <td>A-32094986<br />
+        <a href="https://source.codeaurora.org/quic/la/platform/vendor/qcom-opensource/wlan/qcacld-2.0/commit/?id=93863644b4547324309613361d70ad9dc91f8dfd">
+QC-CR#2002052</a></td>
+    <td>높음</td>
+    <td>Nexus 5X, Pixel, Pixel XL, Android One</td>
+    <td>2016년 10월 11일</td>
+  </tr>
+</tbody></table>
+
+<h3 id="eop-in-qualcomm-video-driver">Qualcomm 동영상 드라이버의
+권한 승격 취약성</h3>
+
+<p>Qualcomm 동영상 드라이버의 권한 승격 취약성으로 인해
+로컬 악성 애플리케이션이 커널 컨텍스트 내에서 임의의 코드를
+실행할 수 있습니다. 이 문제는 먼저 권한이 설정된 절차에 침투해야만 실행
+가능하므로 심각도 높음으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-10284</td>
+    <td>A-32402303*<br />
+        QC-CR#2000664</td>
+    <td>높음</td>
+    <td>Nexus 5X, Nexus 6, Nexus 6P, Pixel, Pixel XL, Android One</td>
+    <td>2016년 10월 24일</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-10285</td>
+    <td>A-33752702<br />
+        <a href="https://source.codeaurora.org/quic/la/kernel/msm-3.18/commit/?id=67dfd3a65336e0b3f55ee83d6312321dc5f2a6f9">
+QC-CR#1104899</a></td>
+    <td>높음</td>
+    <td>Pixel, Pixel XL</td>
+    <td>2016년 12월 19일</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-10286</td>
+    <td>A-35400904<br />
+        <a href="https://source.codeaurora.org/quic/la//kernel/msm-4.4/commit/?id=5d30a3d0dc04916ddfb972bfc52f8e636642f999">
+QC-CR#1090237</a></td>
+    <td>높음</td>
+    <td>Pixel, Pixel XL</td>
+    <td>2017년 2월 15일</td>
+  </tr>
+</tbody></table>
+
+<p>* 이 문제를 해결하기 위한 패치는 공개되지 않습니다. 업데이트는
+<a href="https://developers.google.com/android/nexus/drivers">Google 개발자 사이트</a>에서 제공되는 Nexus 기기용
+최신 바이너리 드라이버에
+
+포함되어 있습니다.</p>
+
+<h3 id="eop-in-kernel-performance-subsystem">커널 성능 하위 시스템의
+권한 승격 취약성</h3>
+
+<p>커널 성능 하위 시스템의 권한 승격 취약성으로 인해 로컬 악성 애플리케이션이
+커널 컨텍스트 내에서 임의의 코드를 실행할 수 있습니다. 이 문제는 먼저 권한이 설정된 절차에 침투해야만 실행
+가능하므로 심각도 높음으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2015-9004</td>
+    <td>A-34515362<br />
+        <a href="https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux-stable.git/commit/?id=c3c87e770458aa004bd7ed3f29945ff436fd6511">
+업스트림 커널</a></td>
+    <td>높음</td>
+    <td>Nexus 5X, Nexus 6, Nexus 6P, Nexus 9, Pixel, Pixel XL, Pixel C, Android
+One, Nexus Player</td>
+    <td>2016년 11월 23일</td>
+  </tr>
+</tbody></table>
+
+<h3 id="eop-in-qualcomm-sound-driver">Qualcomm 사운드 드라이버의
+권한 승격 취약성</h3>
+
+<p>Qualcomm 사운드 드라이버의 권한 승격 취약성으로 인해
+로컬 악성 애플리케이션이 커널 컨텍스트 내에서 임의의 코드를
+실행할 수 있습니다. 이 문제는 먼저 권한이 설정된 절차에 침투해야만 실행
+가능하므로 심각도 높음으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-10287</td>
+    <td>A-33784446<br />
+        <a href="https://www.codeaurora.org/gitweb/quic/la/?p=kernel/msm-4.4.git;a=commit;h=937bc9e644180e258c68662095861803f7ba4ded">
+QC-CR#1112751</a></td>
+    <td>높음</td>
+    <td>Nexus 5X, Nexus 6P, Pixel, Pixel XL, Android One</td>
+    <td>2016년 12월 20일</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0606</td>
+    <td>A-34088848<br />
+        <a href="https://www.codeaurora.org/gitweb/quic/la/?p=kernel/msm-4.4.git;a=commit;h=d3237316314c3d6f75a58192971f66e3822cd250">
+QC-CR#1116015</a></td>
+    <td>높음</td>
+    <td>Nexus 5X, Nexus 6P, Pixel, Pixel XL, Android One</td>
+    <td>2017년 1월 3일</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-5860</td>
+    <td>A-34623424<br />
+        <a href="https://source.codeaurora.org/quic/la//kernel/msm-4.4/commit/?id=9f91ae0d7203714fc39ae78e1f1c4fd71ed40498">
+QC-CR#1100682</a></td>
+    <td>높음</td>
+    <td>Pixel, Pixel XL</td>
+    <td>2017년 1월 22일</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-5867</td>
+    <td>A-35400602<br />
+        <a href="https://source.codeaurora.org/quic/la//kernel/msm-3.18/commit/?id=065360da7147003aed8f59782b7652d565f56be5">
+QC-CR#1095947</a></td>
+    <td>높음</td>
+    <td>없음*</td>
+    <td>2017년 2월 15일</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0607</td>
+    <td>A-35400551<br />
+        <a href="https://source.codeaurora.org/quic/la//kernel/msm-4.4/commit/?id=b003c8d5407773d3aa28a48c9841e4c124da453d">
+QC-CR#1085928</a></td>
+    <td>높음</td>
+    <td>Pixel, Pixel XL</td>
+    <td>2017년 2월 15일</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0608</td>
+    <td>A-35400458<br />
+        <a href="https://source.codeaurora.org/quic/la//kernel/msm-4.4/commit/?id=b66f442dd97c781e873e8f7b248e197f86fd2980">
+QC-CR#1098363</a></td>
+    <td>높음</td>
+    <td>Nexus 5X, Nexus 6, Nexus 6P, Pixel, Pixel XL, Android One</td>
+    <td>2017년 2월 15일</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0609</td>
+    <td>A-35399801<br />
+        <a href="https://source.codeaurora.org/quic/la//kernel/msm-4.4/commit/?id=38a83df036084c00e8c5a4599c8ee7880b4ee567">
+QC-CR#1090482</a></td>
+    <td>높음</td>
+    <td>Nexus 5X, Nexus 6P, Pixel, Pixel XL, Android One</td>
+    <td>2017년 2월 15일</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-5859</td>
+    <td>A-35399758<br />
+        <a href="https://source.codeaurora.org/quic/la//kernel/msm-3.18/commit/?id=97fdb441a9fb330a76245e473bc1a2155c809ebe">
+QC-CR#1096672</a></td>
+    <td>높음</td>
+    <td>없음*</td>
+    <td>2017년 2월 15일</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0610</td>
+    <td>A-35399404<br />
+        <a href="https://source.codeaurora.org/quic/la//kernel/msm-4.4/commit/?id=65009746a6e649779f73d665934561ea983892fe">
+QC-CR#1094852</a></td>
+    <td>높음</td>
+    <td>Nexus 5X, Nexus 6, Nexus 6P, Pixel, Pixel XL, Android One</td>
+    <td>2017년 2월 15일</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0611</td>
+    <td>A-35393841<br />
+        <a href="https://source.codeaurora.org/quic/la//kernel/msm-4.4/commit/?id=1aa5df9246557a98181f03e98530ffd509b954c8">
+QC-CR#1084210</a></td>
+    <td>높음</td>
+    <td>Nexus 5X, Nexus 6, Nexus 6P, Pixel, Pixel XL, Android One</td>
+    <td>2017년 2월 15일</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-5853</td>
+    <td>A-35392629<br />
+        <a href="https://source.codeaurora.org/quic/la//kernel/msm-4.4/commit/?id=a8f3b894de319718aecfc2ce9c691514696805be">
+QC-CR#1102987</a></td>
+    <td>높음</td>
+    <td>없음*</td>
+    <td>2017년 2월 15일</td>
+  </tr>
+</tbody></table>
+
+<p>* 지원되는 Android 7.1.1 이상 Google 기기에 제공된 업데이트가 모두 설치되었다면 이러한
+취약성의 영향을 받지 않습니다.</p>
+
+<h3 id="eop-in-qualcomm-led-driver">Qualcomm LED 드라이버의
+권한 승격 취약성</h3>
+
+<p>Qualcomm LED 드라이버의 권한 승격 취약성으로 인해
+로컬 악성 애플리케이션이 커널 컨텍스트 내에서 임의의 코드를
+실행할 수 있습니다. 이 문제는 먼저 권한이 설정된 프로세스에 침투해야만 실행
+가능하므로 심각도 높음으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-10288</td>
+    <td>A-33863909<br />
+        <a href="https://source.codeaurora.org/quic/la//kernel/msm-3.18/commit/?id=db2cdc95204bc404f03613d5dd7002251fb33660">
+QC-CR#1109763</a></td>
+    <td>높음</td>
+    <td>Pixel, Pixel XL</td>
+    <td>2016년 12월 23일</td>
+  </tr>
+</tbody></table>
+
+<h3 id="eop-in-qualcomm-crypto-driver">Qualcomm 암호화 드라이버의
+권한 승격 취약성</h3>
+
+<p>Qualcomm 암호화 드라이버의 권한 승격 취약성으로 인해
+로컬 악성 애플리케이션이 커널 컨텍스트 내에서 임의의 코드를
+실행할 수 있습니다. 이 문제는 먼저 권한이 설정된 프로세스에 침투해야만 실행
+가능하므로 심각도 높음으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-10289</td>
+    <td>A-33899710<br />
+        <a href="https://source.codeaurora.org/quic/la/kernel/msm-3.18/commit/?id=a604e6f3889ccc343857532b63dea27603381816">
+QC-CR#1116295</a></td>
+    <td>높음</td>
+    <td>Nexus 5X, Nexus 6, Nexus 6P, Pixel, Pixel XL, Android One</td>
+    <td>2016년 12월 24일</td>
+  </tr>
+</tbody></table>
+
+<h3 id="eop-in-qualcomm-shared-memory-driver">Qualcomm 공유 메모리 드라이버의
+권한 승격 취약성</h3>
+
+<p>Qualcomm 공유 메모리 드라이버의 권한 승격 취약성으로 인해
+로컬 악성 애플리케이션이 커널 컨텍스트 내에서 임의의 코드를
+실행할 수 있습니다. 이 문제는 먼저 권한이 설정된 프로세스에 침투해야만 실행
+가능하므로 심각도 높음으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-10290</td>
+    <td>A-33898330<br />
+        <a href="https://source.codeaurora.org/quic/la/kernel/msm-3.18/commit/?id=a5e46d8635a2e28463b365aacdeab6750abd0d49">
+QC-CR#1109782</a></td>
+    <td>높음</td>
+    <td>Nexus 5X, Nexus 6P, Pixel, Pixel XL</td>
+    <td>2016년 12월 24일</td>
+  </tr>
+</tbody></table>
+
+<h3 id="eop-in-qualcomm-slimbus-driver">Qualcomm Slimbus 드라이버의
+권한 승격 취약성</h3>
+
+<p>Qualcomm Slimbus 드라이버의 권한 승격 취약성으로 인해
+로컬 악성 애플리케이션이 커널 컨텍스트 내에서 임의의 코드를
+실행할 수 있습니다. 이 문제는 먼저 권한이 설정된 프로세스에 침투해야만 실행
+가능하므로 심각도 높음으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-10291</td>
+    <td>A-34030871<br />
+        <a href="https://source.codeaurora.org/quic/la/kernel/msm-3.18/commit/?id=a225074c0494ca8125ca0ac2f9ebc8a2bd3612de">
+QC-CR#986837</a></td>
+    <td>높음</td>
+    <td>Nexus 5X, Nexus 6, Nexus 6P, Android One</td>
+    <td>2016년 12월 31일</td>
+  </tr>
+</tbody></table>
+
+<h3 id="eop-in-qualcomm-adsprpc-driver">Qualcomm ADSPRPC 드라이버의
+권한 승격 취약성</h3>
+
+<p>Qualcomm ADSPRPC 드라이버의 권한 승격 취약성으로 인해
+로컬 악성 애플리케이션이 커널 컨텍스트 내에서 임의의 코드를
+실행할 수 있습니다. 이 문제는 먼저 권한이 설정된 프로세스에 침투해야만 실행
+가능하므로 심각도 높음으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0465</td>
+    <td>A-34112914<br />
+        <a href="https://source.codeaurora.org/quic/la//kernel/msm-4.4/commit/?id=3823f0f8d0bbbbd675a42a54691f4051b3c7e544">
+QC-CR#1110747</a></td>
+    <td>높음</td>
+    <td>Nexus 5X, Nexus 6P, Pixel, Pixel XL, Android One</td>
+    <td>2017년 1월 5일</td>
+  </tr>
+</tbody></table>
+
+<h3 id="eop-in-qualcomm-secure-execution-environment-communicator-driver">Qualcomm Secure Execution Environment
+Communicator 드라이버의
+권한 승격 취약성</h3>
+
+<p>Qualcomm Secure Execution Environment Communicator 드라이버의
+권한 승격 취약성으로 인해 로컬 악성 애플리케이션이 커널 컨텍스트
+내에서 임의의 코드를 실행할 수 있습니다. 이 문제는 먼저 권한이 설정된
+프로세스에 침투해야만 실행 가능하므로 심각도 높음으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0612</td>
+    <td>A-34389303<br />
+        <a href="https://source.codeaurora.org/quic/la//kernel/msm-3.18/commit/?id=05efafc998dc86c3b75af9803ca71255ddd7a8eb">
+QC-CR#1061845</a></td>
+    <td>높음</td>
+    <td>Pixel, Pixel XL</td>
+    <td>2017년 1월 10일</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0613</td>
+    <td>A-35400457<br />
+        <a href="https://source.codeaurora.org/quic/la//kernel/msm-4.4/commit/?id=b108c651cae9913da1ab163cb4e5f7f2db87b747">
+QC-CR#1086140</a></td>
+    <td>높음</td>
+    <td>Nexus 5X, Nexus 6, Nexus 6P, Pixel, Pixel XL, Android One</td>
+    <td>2017년 2월 15일</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0614</td>
+    <td>A-35399405<br />
+        <a href="https://source.codeaurora.org/quic/la//kernel/msm-3.18/commit/?id=fc2ae27eb9721a0ce050c2062734fec545cda604">
+QC-CR#1080290</a></td>
+    <td>높음</td>
+    <td>Nexus 5X, Nexus 6, Nexus 6P, Pixel, Pixel XL, Android One</td>
+    <td>2017년 2월 15일</td>
+  </tr>
+</tbody></table>
+
+<h3 id="eop-in-mediatek-power-driver">MediaTek 전원 드라이버의
+권한 승격 취약성</h3>
+
+<p>MediaTek 전원 드라이버의 권한 승격 취약성으로 인해
+로컬 악성 애플리케이션이 커널 컨텍스트 내에서 임의의 코드를
+실행할 수 있습니다. 이 문제는 먼저 권한이 설정된 프로세스에 침투해야만 실행
+가능하므로 심각도 높음으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0615</td>
+    <td>A-34259126*<br />
+        M-ALPS03150278</td>
+    <td>높음</td>
+    <td>없음**</td>
+    <td>2017년 1월 12일</td>
+  </tr>
+</tbody></table>
+
+<p>* 이 문제를 해결하기 위한 패치는 공개되어 있지 않습니다. 업데이트는
+<a href="https://developers.google.com/android/nexus/drivers">Google 개발자 사이트</a>에서 제공되는 Nexus 기기용
+최신 바이너리 드라이버에
+
+포함되어 있습니다.</p>
+
+<p>** 지원되는 Android 7.1.1 이상 Google 기기에 제공된 업데이트가 모두 설치되었다면 이러한
+취약성의 영향을 받지 않습니다.</p>
+
+<h3 id="eop-in-mediatek-system-management-interrupt-driver">MediaTek 시스템 관리 중단 드라이버의
+권한 승격 취약성</h3>
+
+<p>MediaTek 시스템 관리 중단 드라이버의 권한 승격 취약성으로 인해
+로컬 악성 애플리케이션이 커널 컨텍스트 내에서 임의의 코드를
+실행할 수 있습니다. 이 문제는 먼저 권한이 설정된 프로세스에 침투해야만 실행
+가능하므로 심각도 높음으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0616</td>
+    <td>A-34470286*<br />
+        M-ALPS03149160</td>
+    <td>높음</td>
+    <td>없음**</td>
+    <td>2017년 1월 19일</td>
+  </tr>
+</tbody></table>
+
+<p>* 이 문제를 해결하기 위한 패치는 공개되지 않습니다. 업데이트는
+<a href="https://developers.google.com/android/nexus/drivers">Google 개발자 사이트</a>에서 제공되는 Nexus 기기용
+최신 바이너리 드라이버에
+
+포함되어 있습니다.</p>
+
+<p>** 지원되는 Android 7.1.1 이상 Google 기기에 제공된 업데이트가 모두 설치되었다면 이러한
+취약성의 영향을 받지 않습니다.</p>
+
+<h3 id="eop-in-mediatek-video-driver">MediaTek 동영상 드라이버의
+권한 승격 취약성</h3>
+
+<p>MediaTek 동영상 드라이버의 권한 승격 취약성으로 인해
+로컬 악성 애플리케이션이 커널 컨텍스트 내에서 임의의 코드를
+실행할 수 있습니다. 이 문제는 먼저 권한이 설정된 절차에 침투해야만 실행
+가능하므로 심각도 높음으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0617</td>
+    <td>A-34471002*<br />
+        M-ALPS03149173</td>
+    <td>높음</td>
+    <td>없음**</td>
+    <td>2017년 1월 19일</td>
+  </tr>
+</tbody></table>
+
+<p>* 이 문제를 해결하기 위한 패치는 공개되지 않습니다. 업데이트는
+<a href="https://developers.google.com/android/nexus/drivers">Google 개발자 사이트</a>에서 제공되는 Nexus 기기용
+최신 바이너리 드라이버에
+
+포함되어 있습니다.</p>
+
+<p>** 지원되는 Android 7.1.1 이상 Google 기기에 제공된 업데이트가 모두 설치되었다면 이러한
+취약성의 영향을 받지 않습니다.</p>
+
+<h3 id="eop-in-mediatek-command-queue-driver">MediaTek 명령 대기열 드라이버의
+권한 승격 취약성</h3>
+
+<p>MediaTek 명령 대기열 드라이버의 권한 승격 취약성으로 인해
+로컬 악성 애플리케이션이 커널 컨텍스트 내에서 임의의 코드를
+실행할 수 있습니다. 이 문제는 먼저 권한이 설정된 프로세스에 침투해야만 실행
+가능하므로 심각도 높음으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0618</td>
+    <td>A-35100728*<br />
+        M-ALPS03161536</td>
+    <td>높음</td>
+    <td>없음**</td>
+    <td>2017년 2월 7일</td>
+  </tr>
+</tbody></table>
+
+<p>* 이 문제를 해결하기 위한 패치는 공개되지 않습니다. 업데이트는
+<a href="https://developers.google.com/android/nexus/drivers">Google 개발자 사이트</a>에서 제공되는 Nexus 기기용
+최신 바이너리 드라이버에
+
+포함되어 있습니다.</p>
+
+<p>** 지원되는 Android 7.1.1 이상 Google 기기에 제공된 업데이트가 모두 설치되었다면 이러한
+취약성의 영향을 받지 않습니다.</p>
+
+<h3 id="eop-in-qualcomm-pin-controller-driver">Qualcomm 핀 컨트롤러 드라이버의
+권한 승격 취약성</h3>
+
+<p>Qualcomm 핀 컨트롤러 드라이버의 권한 승격 취약성으로 인해
+로컬 악성 애플리케이션이 커널 컨텍스트 내에서 임의의 코드를
+실행할 수 있습니다. 이 문제는 먼저 권한이 설정된 프로세스에 침투해야만 실행
+가능하므로 심각도 높음으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0619</td>
+    <td>A-35401152<br />
+        <a href="https://source.codeaurora.org/quic/la//kernel/msm-3.14/commit/?id=72f67b29a9c5e6e8d3c34751600c749c5f5e13e1">
+QC-CR#826566</a></td>
+    <td>높음</td>
+    <td>Nexus 6, Android One</td>
+    <td>2017년 2월 15일</td>
+  </tr>
+</tbody></table>
+
+<h3 id="eop-in-qualcomm-secure-channel-manager-driver">Qualcomm Secure Channel
+Manager 드라이버의 권한 승격 취약성</h3>
+
+<p>Qualcomm Secure Channel Manager 드라이버의 권한 승격 취약성으로 인해
+로컬 악성 애플리케이션이 커널 컨텍스트 내에서 임의의 코드를
+실행할 수 있습니다. 이 문제는 먼저 권한이 설정된 프로세스에 침투해야만 실행
+가능하므로 심각도 높음으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0620</td>
+    <td>A-35401052<br />
+        <a href="https://source.codeaurora.org/quic/la//kernel/msm-4.4/commit/?id=01b2c9a5d728ff6f2f1f28a5d4e927aaeabf56ed">
+QC-CR#1081711</a></td>
+    <td>높음</td>
+    <td>Nexus 5X, Nexus 6, Nexus 6P, Pixel, Pixel XL, Android One</td>
+    <td>2017년 2월 15일</td>
+  </tr>
+</tbody></table>
+
+<h3 id="eop-in-qualcomm-sound-codec-driver">Qualcomm 사운드 코덱 드라이버의
+권한 승격 취약성</h3>
+
+<p>Qualcomm 사운드 코덱 드라이버의 권한 승격 취약성으로 인해
+로컬 악성 애플리케이션이 커널 컨텍스트 내에서 임의의 코드를
+실행할 수 있습니다. 이 문제는 먼저 권한이 설정된 프로세스에 침투해야만 실행
+가능하므로 심각도 높음으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-5862</td>
+    <td>A-35399803<br />
+        <a href="https://source.codeaurora.org/quic/la//kernel/msm-4.4/commit/?id=4199451e83729a3add781eeafaee32994ff65b04">
+QC-CR#1099607</a></td>
+    <td>높음</td>
+    <td>Pixel, Pixel XL</td>
+    <td>2017년 2월 15일</td>
+  </tr>
+</tbody></table>
+
+<h3 id="eop-in-kernel-voltage-regulator-driver">커널 전압 조정기 드라이버의
+권한 승격 취약성</h3>
+
+<p>커널 전압 조정기 드라이버의 권한 승격 취약성으로 인해 로컬 악성 애플리케이션이
+커널 컨텍스트 내에서 임의의 코드를 실행할 수 있습니다. 이 문제는 먼저 권한이 설정된 프로세스에
+침투해야만 실행 가능하므로 심각도 높음으로
+평가됩니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2014-9940</td>
+    <td>A-35399757<br />
+        <a href="https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux-stable.git/commit/?id=60a2362f769cf549dc466134efe71c8bf9fbaaba">
+업스트림 커널</a></td>
+    <td>높음</td>
+    <td>Nexus 6, Nexus 9, Pixel C, Android One, Nexus Player</td>
+    <td>2017년 2월 15일</td>
+  </tr>
+</tbody></table>
+
+<h3 id="eop-in-qualcomm-camera-driver">Qualcomm 카메라 드라이버의
+권한 승격 취약성</h3>
+
+<p>Qualcomm 카메라 드라이버의 권한 승격 취약성으로 인해
+로컬 악성 애플리케이션이 커널 컨텍스트 내에서 임의의 코드를
+실행할 수 있습니다. 이 문제는 먼저 권한이 설정된 프로세스에 침투해야만 실행
+가능하므로 심각도 높음으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0621</td>
+    <td>A-35399703<br />
+        <a href="https://source.codeaurora.org/quic/la//kernel/msm-3.10/commit/?id=9656e2c2b3523af20502bf1e933e35a397f5e82f">
+QC-CR#831322</a></td>
+    <td>높음</td>
+    <td>Android One</td>
+    <td>2017년 2월 15일</td>
+  </tr>
+</tbody></table>
+
+<h3 id="eop-in-qualcomm-networking-driver">Qualcomm 네트워크 드라이버의
+권한 승격 취약성</h3>
+
+<p>Qualcomm 네트워크 드라이버의 권한 승격 취약성으로 인해
+로컬 악성 애플리케이션이 커널 컨텍스트 내에서 임의의 코드를
+실행할 수 있습니다. 이 문제는 먼저 권한이 설정된 프로세스에 침투해야만 실행
+가능하므로 심각도 높음으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-5868</td>
+    <td>A-35392791<br />
+        <a href="https://source.codeaurora.org/quic/la//kernel/msm-4.4/commit/?id=fbb765a3f813f5cc85ddab21487fd65f24bf6a8c">
+QC-CR#1104431</a></td>
+    <td>높음</td>
+    <td>Nexus 5X, Pixel, Pixel XL</td>
+    <td>2017년 2월 15일</td>
+  </tr>
+</tbody></table>
+
+<h3 id="eop-in-kernel-networking-subsystem">커널 네트워크
+하위 시스템의 권한 승격 취약성</h3>
+
+<p>커널 네트워크 하위 시스템의 권한 승격 취약성으로 인해
+로컬 악성 애플리케이션이 커널 컨텍스트 내에서 임의의 코드를
+실행할 수 있습니다. 이 문제는 먼저 권한이 설정된 프로세스에 침투해야만 실행
+가능하므로 심각도 높음으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-7184</td>
+    <td>A-36565222<br />
+        <a href="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=677e806da4d916052585301785d847c3b3e6186a">
+업스트림 커널</a> <a href="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=f843ee6dd019bcece3e74e76ad9df0155655d0df">
+[2]</a></td>
+    <td>높음</td>
+    <td>Nexus 5X, Nexus 6, Nexus 6P, Nexus 9, Pixel, Pixel XL, Android One</td>
+    <td>2017년 3월 23일</td>
+  </tr>
+</tbody></table>
+
+<h3 id="eop-in-goodix-touchscreen-driver">Goodix 터치스크린 드라이버의
+권한 승격 취약성</h3>
+
+<p>Goodix 터치스크린 드라이버의 권한 승격 취약성으로 인해
+로컬 악성 애플리케이션이 커널 컨텍스트 내에서 임의의 코드를
+실행할 수 있습니다. 이 문제는 먼저 권한이 설정된 프로세스에 침투해야만 실행
+가능하므로 심각도 높음으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0622</td>
+    <td>A-32749036<br />
+        <a href="https://source.codeaurora.org/quic/la/kernel/msm-3.18/commit/?id=40efa25345003a96db34effbd23ed39530b3ac10">
+QC-CR#1098602</a></td>
+    <td>높음</td>
+    <td>Android One</td>
+    <td>Google 사내용</td>
+  </tr>
+</tbody></table>
+
+<h3 id="eop-in-htc-bootloader">HTC 부트로더의
+권한 승격 취약성</h3>
+
+<p>HTC 부트로더의 권한 승격 취약성으로 인해
+로컬 악성 애플리케이션이 부트로더 컨텍스트 내에서 임의의 코드를
+실행할 수 있습니다. 이 문제는 먼저 권한이 설정된 프로세스에 침투해야만 실행
+가능하므로 심각도 높음으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0623</td>
+    <td>A-32512358*<br />
+        </td>
+    <td>높음</td>
+    <td>Pixel, Pixel XL</td>
+    <td>Google 사내용</td>
+  </tr>
+</tbody></table>
+
+<p>* 이 문제를 해결하기 위한 패치는 공개되지 않습니다. 업데이트는
+<a href="https://developers.google.com/android/nexus/drivers">Google 개발자 사이트</a>에서 제공되는 Nexus 기기용
+최신 바이너리 드라이버에
+
+포함되어 있습니다.</p>
+
+<h3 id="id-in-qualcomm-wi-fi-driver">Qualcomm Wi-Fi 드라이버의
+정보 공개 취약성</h3>
+
+<p>Qualcomm Wi-Fi 드라이버의 정보 공개 취약성으로 인해
+로컬 악성 애플리케이션이 권한 수준을 벗어난 데이터에
+액세스할 수 있습니다. 이 문제는 명시적인 사용자 권한 없이 민감한 데이터에 액세스하는 데
+사용될 수 있으므로 심각도 높음으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0624</td>
+    <td>A-34327795*<br />
+        QC-CR#2005832</td>
+    <td>높음</td>
+    <td>Nexus 5X, Pixel, Pixel XL</td>
+    <td>2017년 1월 16일</td>
+  </tr>
+</tbody></table>
+
+<p>* 이 문제를 해결하기 위한 패치는 공개되지 않습니다. 업데이트는
+<a href="https://developers.google.com/android/nexus/drivers">Google 개발자 사이트</a>에서 제공되는 Nexus 기기용
+최신 바이너리 드라이버에
+
+포함되어 있습니다.</p>
+
+<h3 id="id-in-mediatek-command-queue-driver">MediaTek 명령 대기열 드라이버의
+정보 공개 취약성</h3>
+
+<p>MediaTek 명령 대기열 드라이버의 정보 공개 취약성으로 인해
+로컬 악성 애플리케이션이 권한 수준을 벗어난 데이터에 액세스할
+수 있습니다. 이 문제는 명시적인 사용자 권한 없이 민감한 데이터에 액세스하는 데
+사용될 수 있으므로 심각도 높음으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0625</td>
+    <td>A-35142799*<br />
+        M-ALPS03161531</td>
+    <td>높음</td>
+    <td>없음**</td>
+    <td>2017년 2월 8일</td>
+  </tr>
+</tbody></table>
+
+<p>* 이 문제를 해결하기 위한 패치는 공개되지 않습니다. 업데이트는
+<a href="https://developers.google.com/android/nexus/drivers">Google 개발자 사이트</a>에서 제공되는 Nexus 기기용
+최신 바이너리 드라이버에
+
+포함되어 있습니다.</p>
+
+<p>** 지원되는 Android 7.1.1 이상 Google 기기에 제공된 업데이트가 모두 설치되었다면 이러한
+취약성의 영향을 받지 않습니다.</p>
+
+<h3 id="id-in-qualcomm-crypto-engine-driver">Qualcomm 암호화 엔진 드라이버의
+정보 공개 취약성</h3>
+
+<p>Qualcomm 암호화 엔진 드라이버의 정보 공개 취약성으로 인해 로컬 악성
+애플리케이션이 권한 수준을 벗어난 데이터에 액세스할 수 있습니다. 이 문제는 명시적인
+사용자 권한 없이 민감한 데이터에 액세스하는 데 사용될 수 있으므로
+심각도 높음으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0626</td>
+    <td>A-35393124<br />
+        <a href="https://source.codeaurora.org/quic/la//kernel/msm-4.4/commit/?id=64551bccab9b5b933757f6256b58f9ca0544f004">
+QC-CR#1088050</a></td>
+    <td>높음</td>
+    <td>Nexus 5X, Nexus 6, Nexus 6P, Pixel, Pixel XL, Android One</td>
+    <td>2017년 2월 15일</td>
+  </tr>
+</tbody></table>
+
+<h3 id="dos-in-qualcomm-wi-fi-driver">Qualcomm Wi-Fi 드라이버의
+서비스 거부(Dos) 취약성</h3>
+
+<p>Qualcomm Wi-Fi 드라이버의 서비스 거부 취약성으로 인해 근접 공격자가
+Wi-Fi 하위 시스템에 서비스 거부를 일으킬 수 있습니다. 이 문제는
+원격 서비스 거부를 일으킬 수 있으므로 심각도 높음으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-10292</td>
+    <td>A-34514463*<br />
+        QC-CR#1065466</td>
+    <td>높음</td>
+    <td>Nexus 5X, Pixel, Pixel XL</td>
+    <td>2016년 12월 16일</td>
+  </tr>
+</tbody></table>
+
+<p>* 이 문제를 해결하기 위한 패치는 공개되지 않습니다. 업데이트는
+<a href="https://developers.google.com/android/nexus/drivers">Google 개발자 사이트</a>에서 제공되는 Nexus 기기용
+최신 바이너리 드라이버에
+
+포함되어 있습니다.</p>
+
+<h3 id="id-in-kernel-uvc-driver">커널 UVC 드라이버의
+정보 공개 취약성</h3>
+
+<p>커널 UVC 드라이버의 정보 공개 취약성으로 인해
+로컬 악성 애플리케이션이 권한 수준을 벗어난 데이터에 액세스할 수 있습니다.
+이 문제는 먼저 권한이 설정된 프로세스에 침투해야만
+실행 가능하므로 심각도 보통으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0627</td>
+    <td>A-33300353*<br />
+        </td>
+    <td>보통</td>
+    <td>Nexus 5X, Nexus 6P, Nexus 9, Pixel C, Nexus Player</td>
+    <td>2016년 12월 2일</td>
+  </tr>
+</tbody></table>
+
+<p>* 이 문제를 해결하기 위한 패치는 공개되지 않습니다. 업데이트는
+<a href="https://developers.google.com/android/nexus/drivers">Google 개발자 사이트</a>에서 제공되는 Nexus 기기용
+최신 바이너리 드라이버에
+
+포함되어 있습니다.</p>
+
+<h3 id="id-in-qualcomm-video-driver">Qualcomm 동영상 드라이버의
+정보 공개 취약성</h3>
+
+<p>Qualcomm 동영상 드라이버의 정보 공개 취약성으로 인해
+로컬 악성 애플리케이션이 권한 수준을 벗어난 데이터에
+액세스할 수 있습니다. 이 문제는 먼저
+권한이 설정된 프로세스에 침투해야만 실행 가능하므로 심각도 보통으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-10293</td>
+    <td>A-33352393<br />
+        <a href="https://source.codeaurora.org/quic/la/kernel/msm-3.10/commit/?id=2469d5374745a2228f774adbca6fb95a79b9047f">
+QC-CR#1101943</a></td>
+    <td>보통</td>
+    <td>Nexus 5X, Nexus 6P, Android One</td>
+    <td>2016년 12월 4일</td>
+  </tr>
+</tbody></table>
+
+<h3 id="id-in-qualcomm-power-driver-(device-specific)">Qualcomm 전원 드라이버의
+정보 공개 취약성(기기별 문제)</h3>
+
+<p>Qualcomm 전원 드라이버의 정보 공개 취약성으로 인해
+로컬 악성 애플리케이션이 권한 수준을 벗어난 데이터에
+액세스할 수 있습니다. 이 문제는 먼저
+권한이 설정된 프로세스에 침투해야만 실행 가능하므로 심각도 보통으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-10294</td>
+    <td>A-33621829<br />
+        <a href="https://source.codeaurora.org/quic/la/kernel/msm-3.18/commit/?id=9e9bc51ffb8a298f0be5befe346762cdb6e1d49c">
+QC-CR#1105481</a></td>
+    <td>보통</td>
+    <td>Nexus 5X, Nexus 6P, Pixel, Pixel XL</td>
+    <td>2016년 12월 14일</td>
+  </tr>
+</tbody></table>
+
+<h3 id="id-in-qualcomm-led-driver">Qualcomm LED 드라이버의
+정보 공개 취약성</h3>
+
+<p>Qualcomm LED 드라이버의 정보 공개 취약성으로 인해
+로컬 악성 애플리케이션이 권한 수준을 벗어난 데이터에 액세스할 수 있습니다.
+이 문제는 먼저 권한이 설정된 프로세스에 침투해야만
+실행 가능하므로 심각도 보통으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-10295</td>
+    <td>A-33781694<br />
+        <a href="https://source.codeaurora.org/quic/la/kernel/msm-3.18/commit/?id=f11ae3df500bc2a093ddffee6ea40da859de0fa9">
+QC-CR#1109326</a></td>
+    <td>보통</td>
+    <td>Pixel, Pixel XL</td>
+    <td>2016년 12월 20일</td>
+  </tr>
+</tbody></table>
+
+<h3 id="id-in-qualcomm-shared-memory-driver">Qualcomm 공유 메모리 드라이버의
+정보 공개 취약성</h3>
+
+<p>Qualcomm 공유 메모리 드라이버의 정보 공개 취약성으로 인해
+로컬 악성 애플리케이션이 권한 수준을 벗어난 데이터에
+액세스할 수 있습니다. 이 문제는 먼저 권한이 설정된 프로세스에 침투해야만
+실행 가능하므로 심각도 보통으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-10296</td>
+    <td>A-33845464<br />
+        <a href="https://source.codeaurora.org/quic/la/kernel/msm-3.18/commit/?id=a5e46d8635a2e28463b365aacdeab6750abd0d49">
+QC-CR#1109782</a></td>
+    <td>보통</td>
+    <td>Nexus 5X, Nexus 6P, Pixel, Pixel XL, Android One</td>
+    <td>2016년 12월 22일</td>
+  </tr>
+</tbody></table>
+
+<h3 id="id-in-qualcomm-camera-driver">Qualcomm 카메라 드라이버의
+정보 공개 취약성</h3>
+
+<p>Qualcomm 카메라 드라이버의 정보 공개 취약성으로 인해
+로컬 악성 애플리케이션이 권한 수준을 벗어난 데이터에
+액세스할 수 있습니다. 이 문제는 먼저
+권한이 설정된 프로세스에 침투해야만 실행 가능하므로 심각도 보통으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0628</td>
+    <td>A-34230377<br />
+        <a href="https://source.codeaurora.org/quic/la//kernel/msm-4.4/commit/?id=012e37bf91490c5b59ba2ab68a4d214b632b613f">
+QC-CR#1086833</a></td>
+    <td>보통</td>
+    <td>Nexus 5X, Nexus 6, Pixel, Pixel XL</td>
+    <td>2017년 1월 10일</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0629</td>
+    <td>A-35214296<br />
+        <a href="https://source.codeaurora.org/quic/la//kernel/msm-4.4/commit/?id=012e37bf91490c5b59ba2ab68a4d214b632b613f">
+QC-CR#1086833</a></td>
+    <td>보통</td>
+    <td>Nexus 5X, Nexus 6, Pixel, Pixel XL</td>
+    <td>2017년 2월 8일</td>
+  </tr>
+</tbody></table>
+
+<h3 id="id-in-kernel-trace-subsystem">커널 추적 하위 시스템의
+정보 공개 취약성</h3>
+
+<p>커널 추적 하위 시스템의 정보 공개 취약성으로 인해 로컬 악성 애플리케이션이
+권한 수준을 벗어난 데이터에 액세스할 수 있습니다. 이 문제는 먼저
+권한이 설정된 프로세스에 침투해야만 실행 가능하므로 심각도 보통으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0630</td>
+    <td>A-34277115*<br />
+        </td>
+    <td>보통</td>
+    <td>Nexus 5X, Nexus 6, Nexus 6P, Nexus 9, Pixel, Pixel XL, Pixel C, Android
+One, Nexus Player</td>
+    <td>2017년 1월 11일</td>
+  </tr>
+</tbody></table>
+
+<p>* 이 문제를 해결하기 위한 패치는 공개되지 않습니다. 업데이트는
+<a href="https://developers.google.com/android/nexus/drivers">Google 개발자 사이트</a>에서 제공되는 Nexus 기기용
+최신 바이너리 드라이버에
+
+포함되어 있습니다.</p>
+
+<h3 id="id-in-qualcomm-sound-codec-driver">Qualcomm 사운드 코덱 드라이버의
+정보 공개 취약성</h3>
+
+<p>Qualcomm 사운드 코덱 드라이버의 정보 공개 취약성으로 인해
+로컬 악성 애플리케이션이 권한 수준을 벗어난 데이터에
+액세스할 수 있습니다. 이 문제는 먼저 권한이 설정된 프로세스에 침투해야만
+실행 가능하므로 심각도 보통으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-5858</td>
+    <td>A-35400153<br />
+        <a href="https://source.codeaurora.org/quic/la//kernel/msm-3.18/commit/?id=3154eb1d263b9c3eab2c9fa8ebe498390bf5d711">
+QC-CR#1096799</a> <a href="https://source.codeaurora.org/quic/la//kernel/msm-3.18/commit/?id=afc5bea71bc8f251dad1104568383019f4923af6">
+[2]</a></td>
+    <td>보통</td>
+    <td>Nexus 5X, Nexus 6, Nexus 6P, Pixel, Pixel XL, Android One</td>
+    <td>2017년 2월 15일</td>
+  </tr>
+</tbody></table>
+
+<h3 id="id-in-qualcomm-camera-driver-2">Qualcomm 카메라 드라이버의
+정보 공개 취약성</h3>
+
+<p>Qualcomm 카메라 드라이버의 정보 공개 취약성으로 인해
+로컬 악성 애플리케이션이 권한 수준을 벗어난 데이터에
+액세스할 수 있습니다. 이 문제는 먼저
+권한이 설정된 프로세스에 침투해야만 실행 가능하므로 심각도 보통으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0631</td>
+    <td>A-35399756<br />
+        <a href="https://source.codeaurora.org/quic/la//kernel/msm-4.4/commit/?id=8236d6ebc7e26361ca7078cbeba01509f10941d8">
+QC-CR#1093232</a></td>
+    <td>보통</td>
+    <td>Nexus 5X, Nexus 6P, Pixel, Pixel XL, Android One</td>
+    <td>2017년 2월 15일</td>
+  </tr>
+</tbody></table>
+
+<h3 id="id-in-qualcomm-sound-driver">Qualcomm 사운드 드라이버의
+정보 공개 취약성</h3>
+
+<p>Qualcomm 사운드 드라이버의 정보 공개 취약성으로 인해 로컬 악성 애플리케이션이
+권한 수준을 벗어난 데이터에 액세스할 수 있습니다. 이 문제는 먼저
+권한이 설정된 절차에 침투해야만 실행 가능하므로 심각도 보통으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-5347</td>
+    <td>A-35394329<br />
+        <a href="https://source.codeaurora.org/quic/la//kernel/msm-4.4/commit/?id=f14390f13e62460fc6b05fc0acde0e825374fdb6">
+QC-CR#1100878</a></td>
+    <td>보통</td>
+    <td>Nexus 5X, Nexus 6, Nexus 6P, Pixel, Pixel XL, Android One</td>
+    <td>2017년 2월 15일</td>
+  </tr>
+</tbody></table>
+
+<h3 id="id-in-qualcomm-spcom-driver">Qualcomm SPCom 드라이버의
+정보 공개 취약성</h3>
+
+<p>Qualcomm SPCom 드라이버의 정보 공개 취약성으로 인해
+로컬 악성 애플리케이션이 권한 수준을 벗어난 데이터에
+액세스할 수 있습니다. 이 문제는 먼저
+권한이 설정된 프로세스에 침투해야만 실행 가능하므로 심각도 보통으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-5854</td>
+    <td>A-35392792<br />
+        <a href="https://source.codeaurora.org/quic/la//kernel/msm-4.4/commit/?id=28d23d4d7999f683b27b6e0c489635265b67a4c9">
+QC-CR#1092683</a></td>
+    <td>보통</td>
+    <td>없음*</td>
+    <td>2017년 2월 15일</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-5855</td>
+    <td>A-35393081<br />
+        <a href="https://source.codeaurora.org/quic/la//kernel/msm-4.4/commit/?id=a5edb54e93ba85719091fe2bc426d75fa7059834">
+QC-CR#1094143</a></td>
+    <td>보통</td>
+    <td>없음*</td>
+    <td>2017년 2월 15일</td>
+  </tr>
+</tbody></table>
+
+<p>*** 지원되는 Android 7.1.1 이상 Google 기기에 제공된 업데이트가 모두 설치되었다면 이러한
+취약성의 영향을 받지 않습니다.</p>
+
+<h3 id="id-in-qualcomm-sound-codec-driver-2">Qualcomm 사운드 코덱 드라이버의
+정보 공개 취약성</h3>
+
+<p>Qualcomm 사운드 코덱 드라이버의 정보 공개 취약성으로 인해
+로컬 악성 애플리케이션이 권한 수준을 벗어난 데이터에
+액세스할 수 있습니다. 이 문제는 먼저 권한이 설정된 프로세스에 침투해야만
+실행 가능하므로 심각도 보통으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0632</td>
+    <td>A-35392586<br />
+        <a href="https://source.codeaurora.org/quic/la//kernel/msm-3.10/commit/?id=970d6933e53c1f7ca8c8b67f49147b18505c3b8f">
+QC-CR#832915</a></td>
+    <td>보통</td>
+    <td>Android One</td>
+    <td>2017년 2월 15일</td>
+  </tr>
+</tbody></table>
+
+<h3 id="id-in-broadcom-wi-fi-driver">Broadcom Wi-Fi 드라이버의
+정보 공개 취약성</h3>
+
+<p>Broadcom Wi-Fi 드라이버의 정보 공개 취약성으로 인해
+로컬 악성 구성요소가 권한 수준을 벗어난 데이터에
+액세스할 수 있습니다. 이 문제는 먼저
+권한이 설정된 프로세스에 침투해야만 실행 가능하므로 심각도 보통으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0633</td>
+    <td>A-36000515*<br />
+        B-RB#117131</td>
+    <td>보통</td>
+    <td>Nexus 6, Nexus 6P, Nexus 9, Pixel C, Nexus Player</td>
+    <td>2017년 2월 23일</td>
+  </tr>
+</tbody></table>
+
+<p>* 이 문제를 해결하기 위한 패치는 공개되지 않습니다. 업데이트는
+<a href="https://developers.google.com/android/nexus/drivers">Google 개발자 사이트</a>에서 제공되는 Nexus 기기용
+최신 바이너리 드라이버에
+
+포함되어 있습니다.</p>
+
+<h3 id="id-in-synaptics-touchscreen-driver">Synaptics 터치스크린
+드라이버의 정보 공개 취약성</h3>
+
+<p>Synaptics 터치스크린 드라이버의 정보 공개 취약성으로 인해
+로컬 악성 애플리케이션이 권한 수준을 벗어난 데이터에 액세스할
+수 있습니다. 이 문제는 먼저 권한이 설정된 프로세스에 침투해야만
+실행 가능하므로 심각도 보통으로 평가됩니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0634</td>
+    <td>A-32511682*<br />
+        </td>
+    <td>보통</td>
+    <td>Pixel, Pixel XL</td>
+    <td>Google 사내용</td>
+  </tr>
+</tbody></table>
+
+<p>* 이 문제를 해결하기 위한 패치는 공개되지 않습니다. 업데이트는
+<a href="https://developers.google.com/android/nexus/drivers">Google 개발자 사이트</a>에서 제공되는 Nexus 기기용
+최신 바이너리 드라이버에
+
+포함되어 있습니다.</p>
+
+<h3 id="vulnerabilities-in-qualcomm-components-2">Qualcomm 구성요소의
+취약성</h3>
+
+<p>Qualcomm 구성요소에 영향을 주는 다음 취약성은 2014년~2016년에
+Qualcomm AMSS 보안 게시판을 통해 배포되었습니다. 각 취약성의
+수정사항을 Android 보안 패치 수준과 연결하기 위해 이러한
+취약성이 Android 보안 게시판에 포함되었습니다.</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>참조</th>
+    <th>심각도</th>
+    <th>업데이트된 Google 기기</th>
+    <th>신고된 날짜</th>
+  </tr>
+  <tr>
+    <td>CVE-2014-9923</td>
+    <td>A-35434045**<br />
+        QC-CR#403910</td>
+    <td>심각</td>
+    <td>없음***</td>
+    <td>Qualcomm 사내용</td>
+  </tr>
+  <tr>
+    <td>CVE-2014-9924</td>
+    <td>A-35434631**<br />
+        QC-CR#596102</td>
+    <td>심각</td>
+    <td>없음***</td>
+    <td>Qualcomm 사내용</td>
+  </tr>
+  <tr>
+    <td>CVE-2014-9925</td>
+    <td>A-35444657**<br />
+        QC-CR#638130</td>
+    <td>심각</td>
+    <td>없음***</td>
+    <td>Qualcomm 사내용</td>
+  </tr>
+  <tr>
+    <td>CVE-2014-9926</td>
+    <td>A-35433784**<br />
+        QC-CR#631527</td>
+    <td>심각</td>
+    <td>없음***</td>
+    <td>Qualcomm 사내용</td>
+  </tr>
+  <tr>
+    <td>CVE-2014-9927</td>
+    <td>A-35433785**<br />
+        QC-CR#661111</td>
+    <td>심각</td>
+    <td>없음***</td>
+    <td>Qualcomm 사내용</td>
+  </tr>
+  <tr>
+    <td>CVE-2014-9928</td>
+    <td>A-35438623**<br />
+        QC-CR#696972</td>
+    <td>심각</td>
+    <td>없음***</td>
+    <td>Qualcomm 사내용</td>
+  </tr>
+  <tr>
+    <td>CVE-2014-9929</td>
+    <td>A-35443954**<br />
+        QC-CR#644783</td>
+    <td>심각</td>
+    <td>없음***</td>
+    <td>Qualcomm 사내용</td>
+  </tr>
+  <tr>
+    <td>CVE-2014-9930</td>
+    <td>A-35432946**<br />
+        QC-CR#634637</td>
+    <td>심각</td>
+    <td>없음***</td>
+    <td>Qualcomm 사내용</td>
+  </tr>
+  <tr>
+    <td>CVE-2015-9005</td>
+    <td>A-36393500**<br />
+        QC-CR#741548</td>
+    <td>심각</td>
+    <td>없음***</td>
+    <td>Qualcomm 사내용</td>
+  </tr>
+  <tr>
+    <td>CVE-2015-9006</td>
+    <td>A-36393450**<br />
+        QC-CR#750559</td>
+    <td>심각</td>
+    <td>없음***</td>
+    <td>Qualcomm 사내용</td>
+  </tr>
+  <tr>
+    <td>CVE-2015-9007</td>
+    <td>A-36393700**<br />
+        QC-CR#807173</td>
+    <td>심각</td>
+    <td>없음***</td>
+    <td>Qualcomm 사내용</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-10297</td>
+    <td>A-36393451**<br />
+        QC-CR#1061123</td>
+    <td>심각</td>
+    <td>없음***</td>
+    <td>Qualcomm 사내용</td>
+  </tr>
+  <tr>
+    <td>CVE-2014-9941</td>
+    <td>A-36385125**<br />
+        QC-CR#509915</td>
+    <td>높음</td>
+    <td>없음***</td>
+    <td>Qualcomm 사내용</td>
+  </tr>
+  <tr>
+    <td>CVE-2014-9942</td>
+    <td>A-36385319**<br />
+        QC-CR#533283</td>
+    <td>높음</td>
+    <td>없음***</td>
+    <td>Qualcomm 사내용</td>
+  </tr>
+  <tr>
+    <td>CVE-2014-9943</td>
+    <td>A-36385219**<br />
+        QC-CR#546527</td>
+    <td>높음</td>
+    <td>없음***</td>
+    <td>Qualcomm 사내용</td>
+  </tr>
+  <tr>
+    <td>CVE-2014-9944</td>
+    <td>A-36384534**<br />
+        QC-CR#613175</td>
+    <td>높음</td>
+    <td>없음***</td>
+    <td>Qualcomm 사내용</td>
+  </tr>
+  <tr>
+    <td>CVE-2014-9945</td>
+    <td>A-36386912**<br />
+        QC-CR#623452</td>
+    <td>높음</td>
+    <td>없음***</td>
+    <td>Qualcomm 사내용</td>
+  </tr>
+  <tr>
+    <td>CVE-2014-9946</td>
+    <td>A-36385281**<br />
+        QC-CR#520149</td>
+    <td>높음</td>
+    <td>없음***</td>
+    <td>Qualcomm 사내용</td>
+  </tr>
+  <tr>
+    <td>CVE-2014-9947</td>
+    <td>A-36392400**<br />
+        QC-CR#650540</td>
+    <td>높음</td>
+    <td>없음***</td>
+    <td>Qualcomm 사내용</td>
+  </tr>
+  <tr>
+    <td>CVE-2014-9948</td>
+    <td>A-36385126**<br />
+        QC-CR#650500</td>
+    <td>높음</td>
+    <td>없음***</td>
+    <td>Qualcomm 사내용</td>
+  </tr>
+  <tr>
+    <td>CVE-2014-9949</td>
+    <td>A-36390608**<br />
+        QC-CR#652426</td>
+    <td>높음</td>
+    <td>없음***</td>
+    <td>Qualcomm 사내용</td>
+  </tr>
+  <tr>
+    <td>CVE-2014-9950</td>
+    <td>A-36385321**<br />
+        QC-CR#655530</td>
+    <td>높음</td>
+    <td>없음***</td>
+    <td>Qualcomm 사내용</td>
+  </tr>
+  <tr>
+    <td>CVE-2014-9951</td>
+    <td>A-36389161**<br />
+        QC-CR#525043</td>
+    <td>높음</td>
+    <td>없음***</td>
+    <td>Qualcomm 사내용</td>
+  </tr>
+  <tr>
+    <td>CVE-2014-9952</td>
+    <td>A-36387019**<br />
+        QC-CR#674836</td>
+    <td>높음</td>
+    <td>없음***</td>
+    <td>Qualcomm 사내용</td>
+  </tr>
+</tbody></table>
+
+<p>* 이 취약성의 심각도 등급은 공급업체에서 결정한 것입니다.</p>
+
+<p>* 이 문제를 해결하기 위한 패치는 공개되지 않습니다. 업데이트는
+<a href="https://developers.google.com/android/nexus/drivers">Google 개발자 사이트</a>에서 제공되는 Nexus 기기용
+최신 바이너리 드라이버에
+
+포함되어 있습니다.</p>
+
+<p>*** 지원되는 Android 7.1.1 이상 Google 기기에 제공된 업데이트가 모두 설치되었다면 이러한
+취약성의 영향을 받지 않습니다.</p>
+
+<h2 id="common-questions-and-answers">일반적인 질문 및 답변</h2>
+<p>이 섹션에서는 게시판을 읽은 뒤 제기될 수 있는 일반적인 질문에 답변을 제시합니다.</p>
+
+<p><strong>1. 내 기기가 업데이트되어 이 문제가 해결되었는지 어떻게 알 수 있나요?
+</strong></p>
+
+<p>기기의 보안 패치 수준을 확인하는 방법을 알아보려면
+<a href="https://support.google.com/pixelphone/answer/4457705#pixel_phones&nexus_devices">Pixel 및 Nexus 업데이트 일정</a>의
+안내를
+읽어 보세요.</p>
+
+<ul>
+<li>2017-05-01 보안 패치 수준과 관련된 모든 문제는 2017-05-01
+  보안 패치 수준 이상에서 해결됩니다.</li>
+<li>2017-05-05 보안 패치 수준 및 그 이전의 모든 패치 수준과 관련된
+모든 문제는 2017-05-05 보안 패치 수준 이상에서 해결됩니다.
+</li>
+</ul>
+
+<p>이러한 업데이트를 포함하는 기기 제조업체는 패치 문자열 수준을
+다음과 같이 설정해야 합니다.</p>
+<ul>
+<li>[ro.build.version.security_patch]:[2017-05-01]</li>
+<li>[ro.build.version.security_patch]:[2017-05-05]</li>
+</ul>
+
+<p><strong>2. 이 게시판에 두 가지 보안 패치 수준이 있는 이유가 무엇인가요?</strong></p>
+
+<p>이 게시판에서는 Android 파트너가 모든 Android 기기에서 유사하게 발생하는
+취약성 문제의 일부를 더욱 빠르고 유연하게 해결하기 위한 두 가지 보안 패치 수준이
+포함되어 있습니다. Android 파트너는 이 게시판에 언급된 문제를 모두 수정하고
+최신 보안 패치 수준을 사용하는 것이 좋습니다.</p>
+<ul>
+<li>2017년 5월 1일 보안 패치 수준을 사용하는 기기는 이 보안 패치 수준과
+관련된 모든 문제와 이전 보안 게시판에서 보고된 모든 문제의 수정사항을
+포함해야 합니다.</li>
+<li>2017년 5월 5일 이후의 보안 패치 수준을 사용하는 기기는
+이 보안 게시판과 이전 보안 게시판에 언급된 모든 관련 패치를
+포함해야 합니다.</li>
+</ul>
+
+<p>파트너는 해결하는 모든 문제의 수정사항을 단 한 번의 업데이트에서 번들로 묶는 것이 좋습니다.</p>
+
+<p><strong>3. 문제별로 영향을 받는 Google 기기는 어떻게 알 수 있나요?</strong></p>
+
+<p><a href="#2017-05-01-details">2017-05-01</a> 및
+<a href="#2017-05-05-details">2017-05-05</a>
+보안 취약성 세부정보 섹션에 있는 각 테이블의 <em>업데이트된 Google
+기기</em> 열을 확인하면 됩니다. 이 열에는 영향을 받는 Google 기기의 범위가
+문제별로 업데이트되어 표시됩니다. 이 열에는 다음과 같은 옵션이 있습니다.</p>
+<ul>
+<li><strong>모든 Google 기기</strong>: 문제가 모든 Google 기기 및 Pixel 기기에
+영향을 미치는 경우, 표의 <em>업데이트된 Google 기기</em> 열에
+'모두'라고 표시됩니다. '모두'에는 다음과 같은 <a href="https://support.google.com/pixelphone/answer/4457705#pixel_phones&nexus_devices">지원되는 기기</a>가 포함됩니다. Nexus 5X,
+Nexus 6, Nexus 6P, Nexus 9, Android One, Nexus Player,
+Pixel C, Pixel, Pixel XL.</li>
+<li><strong>일부 Google 기기</strong>: 문제가 모든 Google 기기에 영향을 미치는 것이
+아닌 경우, 영향을 받는 Google 기기가 <em>업데이트된 Google 기기</em> 열에
+표시됩니다.</li>
+<li><strong>Google 기기 해당 없음</strong>: 문제가 Android 7.0을 실행하는 Google 기기에
+영향을 미치지 않는 경우, 표의 <em>업데이트된 Google 기기</em> 열에 '없음'이라고
+표시됩니다. </li>
+</ul>
+<p><strong>4. 참조 열의 항목이 매핑하는 대상은 무엇인가요?</strong></p>
+
+<p>취약성 세부정보 표의 <em>참조</em> 열에 있는 항목은 참조 값이 속한
+조직을 나타내는 접두어를 포함할 수 있습니다. 이러한 접두어는
+다음과 같이 매핑됩니다.</p>
+
+<table>
+  <tbody><tr>
+   <th>접두어</th>
+   <th>참조 문서</th>
+  </tr>
+  <tr>
+   <td>A-</td>
+   <td>Android 버그 ID</td>
+  </tr>
+  <tr>
+   <td>QC-</td>
+   <td>Qualcomm 참조 번호</td>
+  </tr>
+  <tr>
+   <td>M-</td>
+   <td>MediaTek 참조 번호</td>
+  </tr>
+  <tr>
+   <td>N-</td>
+   <td>NVIDIA 참조 번호</td>
+  </tr>
+  <tr>
+   <td>B-</td>
+   <td>Broadcom 참조 번호</td>
+  </tr>
+</tbody></table>
+<h2 id="revisions">수정 내역</h2>
+<ul>
+<li>2017년 5월 1일: 게시판이 게시됨</li>
+<li>2017년 5월 2일: 게시판이 수정되어 AOSP 링크 포함됨</li>
+</ul>
+
+</body></html>

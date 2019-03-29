@@ -1,0 +1,79 @@
+<html devsite>
+  <head>
+    <title>Namespaces for Native Libraries</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>
+Android 7.0 introduced namespaces for native libraries to limit internal API
+visibility and resolve situations when apps accidentally end up using platform
+libraries instead of their own. See the <a
+href="http://android-developers.blogspot.com/2016/06/improving-stability-with-private-cc.html">Improving
+Stability with Private C/C++ Symbol Restrictions in Android 7.0</a> Android
+Developers blog post for application-specific changes.</p>
+
+<h2 id="architecture">Architecture</h2>
+
+<p>
+The change separates system libraries from application libraries and makes it
+hard to use internal system libraries by accident (and vice versa).
+</p>
+
+<img src="images/namespace-libraries.png" alt="Namespaces for native libraries" id="namespace-libraries" />
+<p class="img-caption">
+  <strong>Figure 1.</strong> Namespaces for native libraries
+</p>
+
+<p>
+Namespaces for native libraries prevent apps from using private-platform native
+APIs (as was done with OpenSSL). It also removes situations where apps
+accidentally end up using platform libraries instead of their own (as witnessed
+with <code>libpng</code>).
+</p>
+
+<h2 id="adding-additional-native-libraries">Adding additional native
+libraries</h2>
+
+<p>
+In addition to standard public native libraries, vendors may choose to provide
+additional native libraries accessible to apps by putting them under the
+<code>/vendor</code> library folder (/vendor/lib for 32 bit libraries and,
+/vendor/lib64 for 64 bit) and listing them in:
+<code>/vendor/etc/public.libraries.txt</code>
+</p>
+
+<h2 id="updating-app-non-public">Updating apps to not use non-public native libraries</h2>
+
+<p>
+This feature is enabled only for applications targeting SDK version 24 or later;
+for backward compatibility, see <a
+href="http://android-developers.blogspot.com/2016/06/improving-stability-with-private-cc.html">Table
+1. What to expect if your app is linking against private native libraries</a>.
+The list of Android native libraries accessible to apps (also know as
+public native libraries) is listed in CDD section 3.1.1.  Apps targeting 24 or
+later and using any non-public libraries should be updated. Please see <a
+href="https://developer.android.com/preview/behavior-changes.html#ndk">NDK Apps
+Linking to Platform Libraries </a> for more details.
+</p>
+
+  </body>
+</html>

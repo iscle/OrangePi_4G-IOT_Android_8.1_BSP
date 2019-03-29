@@ -1,0 +1,82 @@
+<html devsite>
+  <head>
+    <title>Implementing Virtual Displays</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>Android added platform support for virtual displays in Hardware Composer
+v1.3 (support can be used by Miracast). The virtual display composition is
+similar to the physical display: Input layers are described in
+<code>prepare()</code>, SurfaceFlinger conducts GPU composition, and layers and
+GPU framebuffer are provided to Hardware Composer in <code>set()</code>.</p>
+
+<p>Instead of the output going to the screen, it is sent to a gralloc buffer.
+Hardware Composer writes output to a buffer and provides the completion fence.
+The buffer is sent to an arbitrary consumer: video encoder, GPU, CPU, etc.
+Virtual displays can use 2D/blitter or overlays if the display pipeline can
+write to memory.</p>
+
+<h2 id=modes>Modes</h2>
+
+<p>Each frame is in one of three modes after <code>prepare()</code>:</p>
+
+<ul>
+<li><em>GLES</em>. All layers composited by GPU, which writes directly to the
+output buffer while Hardware Composer does nothing. This is equivalent to
+virtual display composition with Hardware Composer version older than v1.3.</li>
+<li><em>MIXED</em>. GPU composites some layers to framebuffer, and Hardware
+Composer composites framebuffer and remaining layers. GPU writes to scratch
+buffer (framebuffer); Hardware Composer reads scratch buffer and writes to the
+output buffer. Buffers may have different formats, e.g. RGBA and YCbCr.</li>
+<li><em>HWC</em>. All layers composited by Hardware Composer, which writes
+directly to the output buffer.</li>
+</ul>
+
+<h2 id=output_format>Output format</h2>
+<p>Output format depends on the mode:</p>
+
+<ul>
+<li><em>MIXED and HWC modes</em>. If the consumer needs CPU access, the consumer
+chooses the format. Otherwise, the format is IMPLEMENTATION_DEFINED. Gralloc
+can choose best format based on usage flags. For example, choose a YCbCr format
+if the consumer is video encoder, and Hardware Composer can write the format
+efficiently.</li>
+<li><em>GLES mode</em>. EGL driver chooses output buffer format in
+<code>dequeueBuffer()</code>, typically RGBA8888. The consumer must be able to
+accept this format.</li>
+</ul>
+
+<h2 id=egl_requirement>EGL requirement</h2>
+
+<p>Hardware Composer v1.3 virtual displays require that
+<code>eglSwapBuffers()</code> does not dequeue the next buffer immediately.
+Instead, it should defer dequeueing the buffer until rendering begins.
+Otherwise, EGL always owns the next output buffer. SurfaceFlinger can’t get the
+output buffer for Hardware Composer in MIXED/HWC mode.</p>
+
+<p>If Hardware Composer always sends all virtual display layers to GPU, all
+frames will be in GLES mode. Although not recommended, you may use this
+method if you need to support Hardware Composer v1.3 for some other reason but
+can’t conduct virtual display composition.</p>
+
+  </body>
+</html>

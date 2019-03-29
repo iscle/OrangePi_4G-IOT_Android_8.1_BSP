@@ -1,0 +1,195 @@
+<html devsite>
+  <head>
+    <title>Runtime Permissions</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>The Android application permission model in Android 6.0 and later is designed to make
+permissions more understandable, useful, and secure for users. The model moved Android
+applications that require dangerous permissions (see
+<a href="#affected-permissions">Affected permissions</a>) from an
+<em>install</em> time permission model to <em>runtime</em> permission model:</p>
+
+<ul>
+<li><strong>Install Time Permissions</strong> (<em>Android 5.1 and earlier</em>).
+Users grant dangerous permissions to an app when installing or updating the app.
+OEMs/carriers can pre-install apps with pre-granted permissions without
+notifying the user.</li>
+<li><strong>Runtime Permissions</strong> (Android <em>6.0 and later</em>). Users
+grant dangerous permissions to an app when the app is running. Applications
+decide when to request permissions (such as when the app launches or the user
+accesses a specific feature), but must allow the user to grant/deny application
+access to specific permission groups. OEMs/carriers can pre-install apps but
+cannot pre-grant permissions (see <a href="#creating-exceptions">Creating
+exceptions</a>).</li>
+</ul>
+
+<p>Runtime permissions provide users additional context and visibility into the
+permissions applications are seeking or have been granted. The runtime model
+also encourages developers to help users understand why applications require the
+requested permissions and to provide greater transparency about the benefits and
+hazards of granting or denying permissions.</p>
+<p>Users can revoke application permissions using the Apps menu in Settings.</p>
+
+<h2 id="affected-permissions">Affected permissions</h2>
+
+<p>Android 6.0 and later requires dangerous permissions to use a runtime permissions
+model. Dangerous permissions are higher-risk permissions (such as
+<code>READ_CALENDAR</code>) that grant requesting applications access to private
+user data or control over the device that can negatively impact the user. To
+view a list of dangerous permissions, run the command:</p>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+adb shell pm list permissions -g -d
+</pre>
+
+<p>Android 6.0 and later does not change the behavior of normal permissions (all
+non-dangerous permissions including normal, system, and signature permissions).
+Normal permissions are lower-risk permissions (such as
+<code>SET_WALLPAPER</code>) that grant requesting applications access to
+isolated application-level features with minimal risk to other applications, the
+system, or the user. As in Android 5.1 and earlier releases, the system
+automatically grants normal permissions to a requesting application at
+installation and does not prompt the user for approval. For details on
+permissions, refer to
+<a href="http://developer.android.com/guide/topics/manifest/permission-element.html">&lt;permission&gt;
+element documentation</a>.</p>
+
+<h2 id="requirements">Requirements</h2>
+
+<p>The runtime permission model applies to all applications, including
+pre-installed apps and apps delivered to the device as part of the setup
+process. Application software requirements include:</p>
+<ul>
+<li>Runtime permission model must be consistent across all devices running
+Android 6.0 and later. Enforced by Android Compatibility Test Suite (CTS) tests.</li>
+<li>Apps must prompt users to grant application permissions at runtime. For
+details, see <a href="#updating-apps">Updating applications</a>. Limited
+exceptions may be granted to default applications and handlers that provide
+basic device functionality fundamental to the expected operation of the device
+(i.e. the device's default Dialer app for handling <code>ACTION_CALL</code> may
+have Phone permission access). For details, see
+<a href="#creating-exceptions">Creating exceptions</a>.</li>
+<li>Pre-loaded apps with "dangerous permission" must target API level 23 and
+maintain the runtime permission model (i.e. the UI flow during app installation
+should not deviate from the AOSP implementation of PackageInstaller, users can
+revoke dangerous permissions of pre-installed apps, etc.).</li>
+<li>Headless applications must use an activity to request permissions or share a
+UID with another application that has the necessary permissions. For details,
+see <a href="#headless-apps">Headless applications</a>.</li>
+</ul>
+
+<h2 id="permissions-migration">Permissions migration</h2>
+
+<p>Permissions granted to applications on Android 5.x remain granted after
+updating to Android 6.0 or later, but users can revoke those permissions at any time.</p>
+
+<h2 id="integration">Integration</h2>
+
+<p>When integrating the application runtime permissions model for Android 6.0 and later, you
+must update pre-installed applications to work with the new model. You can also
+define exceptions for apps that are the default handlers/providers for core
+functionality, define custom permissions, and customize the theme used in the
+PackageInstaller.</p>
+
+<h3 id="updating-apps">Updating applications</h3>
+
+<p>Applications on the system image and pre-installed applications are not
+automatically pre-granted permissions. We encourage you to work with
+pre-installed app developers (OEM, Carrier, and third party) to make the
+required app modifications using
+<a href="https://developer.android.com/training/permissions/index.html">developer
+guidelines</a>. Specifically, you must ensure that pre-installed applications
+are modified to avoid crashes and other issues when users revoke permissions.</p>
+
+<h4 id="preloaded-apps">Pre-loaded applications</h4>
+<p>Pre-loaded apps that use dangerous permissions must target API level 23 or higher and
+maintain the Android 6.0 and later AOSP permission model (i.e. the UI flow during an app
+installation should not deviate from the AOSP implementation of
+PackageInstaller, users can even revoke the dangerous permissions of
+pre-installed apps, etc.).</p>
+
+<h4 id="headless-apps">Headless applications</h4>
+<p>Only activities can request permissions; services cannot directly request
+permissions.</p>
+<ul>
+<li>In Android 5.1 and earlier releases, headless applications can request
+permissions when installed or pre-installed without the use of an activity.</li>
+<li>In Android 6.0 and later, headless applications must use one of the following methods
+to request permissions:<ul>
+<li>Add an activity to request permissions (preferred method).</li>
+<li>Share a UID with another application that has the necessary permissions. Use
+this method only when you need the platform to handle multiple APKs as a single
+application.</li>
+</ul></li>
+</ul>
+<p>The goal is to avoid confusing users with permission requests that appear out
+of context.</p>
+
+<h3 id="customizing-package-install">Customizing PackageInstaller</h3>
+<p>If desired, you can customize the Permissions UI <strong>theme</strong> by
+updating the default device themes (<code>Theme.DeviceDefault.Settings</code>
+and <code>Theme.DeviceDefault.Light.Dialog.NoActionBar</code>) used by
+PackageInstaller. However, because consistency is critical for app developers,
+you cannot customize the placement, position, and rules of when the Permissions
+UI appears.</p>
+<p>To include <strong>strings</strong> for additional languages, contribute the
+strings to AOSP.</p>
+
+<h3 id="creating-exceptions">Creating exceptions</h3>
+<p>You can pre-grant permissions to applications that are default handlers or
+providers for core OS functionality using the
+<code>DefaultPermissionGrantPolicy.java</code> in PackageManager. Examples:</p>
+
+<pre class="devsite-click-to-copy">
+ACTION_CALL (Dialer) Default
+Phone, Contacts, SMS, Microphone
+</pre>
+<pre class="devsite-click-to-copy">
+SMS_DELIVER_ACTION (SMS/MMS) Default
+Phone, Contacts, SMS
+</pre>
+
+<h3 id="defining-custom-perms">Defining custom permissions</h3>
+<p>You can define custom permissions and groups as <em>normal</em> or
+<em>dangerous</em> and add OEM/Carrier-specific permissions to existing
+permissions groups, just as you could in Android 5.x and earlier releases.</p>
+
+<p>In Android 6.0 and later, if you add a new dangerous permission, it must be handled in
+the same way as other dangerous permissions (requested during app runtime and
+revocable by users). Specifically:</p>
+
+<ul>
+<li>You can add new permissions to a current group, but you cannot modify the
+AOSP mapping of dangerous permissions and dangerous permissions group (e.g. you
+cannot remove a permission from a group and assign to other group).</li>
+<li>You can add new permission groups in applications installed on the device,
+but you cannot add new permissions groups in the platform manifest.</li>
+</ul>
+
+<h2 id="testing-perms">Testing permissions</h2>
+<p>Android includes Compatibility Test Suite (CTS) tests that verify
+individual permissions are mapped to the correct Groups. Passing these tests is
+a requirement for Android 6.0 and later CTS compatibility.</p>
+
+  </body>
+</html>

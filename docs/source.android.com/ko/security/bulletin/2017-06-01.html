@@ -1,0 +1,1367 @@
+<html devsite><head>
+    <title>Android 보안 게시판 — 2017년 6월</title>
+    <meta name="project_path" value="/_project.yaml"/>
+    <meta name="book_path" value="/_book.yaml"/>
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+<p><em>2017년 6월 5일 게시됨 | 2017년 6월 7일 업데이트됨</em></p>
+
+<p>Android 보안 게시판에서는 Android 기기에 영향을 미치는 보안 취약성
+세부정보를 다룹니다. 아래 목록의 문제는 2017년 6월 5일
+보안 패치 수준 이상에서 모두 해결되었습니다. <a href="https://support.google.com/pixelphone/answer/4457705#pixel_phones&nexus_devices">Pixel 및 Nexus 업데이트 일정</a>을
+참조하여 기기의 보안 패치 수준을 확인하는 방법을 알아보세요.</p>
+
+<p>파트너에게는 게시판에 설명된 문제에 관한 알림을
+최소 한 달 전에 전달했습니다. 이러한 문제를 해결하기 위한 소스 코드 패치는
+Android 오픈소스 프로젝트(AOSP) 저장소에 배포되고 이 게시판에도 링크될 예정입니다. 이
+게시판에는 AOSP 외부의 패치 링크도 포함되어 있습니다.</p>
+
+<p>이 중 가장 심각한 문제는 미디어 프레임워크의 심각한 보안 취약성으로,
+특별히 제작된 파일을 사용하는 원격 공격자가 미디어 파일 및 데이터 처리 중에
+메모리 손상을 일으킬 수 있습니다. <a href="/security/overview/updates-resources.html#severity">심각도 평가</a>는
+개발 목적으로 플랫폼 및 서비스 완화를 사용할 수 없거나
+우회에 성공한 경우 취약성 악용으로 인해 대상 기기가 받는 영향을
+기준으로 합니다.</p>
+
+<p>실제 고객이 새로 보고된 이러한 문제로 인해 악용당했다는 신고는
+접수되지 않았습니다. Android 플랫폼의 보안을 개선하는
+<a href="/security/enhancements/index.html">Android 보안 플랫폼 보호</a> 및
+<a href="https://www.android.com/play-protect">Google Play Protect</a> 관련 세부정보를
+보려면 <a href="#mitigations">Android 및 Google Play Protect 완화</a>
+섹션을 참조하세요.</p>
+
+<p>모든 고객은 기기에서 이 업데이트를 수락하는 것이 좋습니다.</p>
+
+<p class="note"><strong>참고:</strong> 최신 무선 업데이트(OTA) 관련 정보 및
+Google 기기의 펌웨어 이미지는 <a href="#google-device-updates">Google 기기 업데이트</a> 섹션을 참조하세요.</p>
+
+<h2 id="announcements">공지사항</h2>
+<ul>
+  <li>가독성을 높이기 위해 월간 보안 게시판을
+  간소화했습니다. 이 업데이트의 일환으로 취약성 정보가
+  영향을 받은 구성요소별로 분류되고 보안 패치 수준 내에서
+  구성요소 이름별로 정렬되며, Google 기기별 정보는
+  <a href="#google-device-updates">전용 섹션</a>에 호스팅됩니다.</li>
+  <li>이 게시판에는 Android 파트너가 모든 Android 기기에서 유사하게 발생하는
+  취약성 문제의 일부를 더욱 빠르고 유연하게 해결하도록 하기 위해
+  두 가지 보안 패치 수준 문자열이 포함되어 있습니다. 자세한 내용은 <a href="#common-questions-and-answers">일반적인 질문 및 답변</a>을
+  참조하세요.
+    <ul>
+      <li><strong>2017-06-01</strong>: 부분 보안 패치 수준 문자열입니다. 이 보안 패치 수준 문자열은
+      2017-06-01 및 이전의 보안 패치 수준 문자열과 관련된 문제가
+      모두 해결되었음을 나타냅니다.</li>
+      <li><strong>2017-06-05</strong>: 전체 보안 패치 수준 문자열입니다. 이 보안 패치 수준 문자열은
+      2017-06-01과 2017-06-05 및 이전의 보안 패치 수준
+      문자열과 관련된 문제가 모두
+      해결되었음을 나타냅니다.</li>
+    </ul>
+  </li>
+</ul>
+
+<h2 id="mitigations">Android 및 Google Play Protect 완화</h2>
+<p>다음은 <a href="https://www.android.com/play-protect">Google Play Protect</a>와 같은 <a href="/security/enhancements/index.html">Android 보안 플랫폼</a>
+및 서비스 보호 기능에서 제공하는 완화에 관한
+요약입니다.
+이러한 기능을 통해 Android에서 보안 취약성이
+악용될 가능성을 줄입니다.</p>
+<ul>
+  <li>Android 플랫폼 최신 버전의 향상된 기능으로 Android의 여러 문제를
+  악용하기 더욱 어려워졌습니다. 가능하다면 모든 사용자는 최신 버전의 Android로
+  업데이트하는 것이 좋습니다.</li>
+  <li>Android 보안팀에서는 <a href="https://www.android.com/play-protect">Google Play Protect</a>를 통해
+  악용사례를 적극 모니터링하고
+  <a href="/security/reports/Google_Android_Security_PHA_classifications.pdf">잠재적으로 위험한 애플리케이션</a>에 관해
+  사용자에게 경고를 보냅니다. Google Play Protect는 <a href="http://www.android.com/gms">Google 모바일 서비스</a>가 적용된
+  기기에 기본적으로 사용 설정되어 있으며
+  Google Play 외부에서 가져온 앱을 설치하는 사용자에게 특히 중요합니다.</li>
+</ul>
+
+<h2 id="2017-06-01-details">2017-06-01 보안 패치 수준—취약성 세부정보</h2>
+<p>다음 섹션에서는 2017-06-01 패치 수준에 적용되는
+각 보안 취약성에 관해 자세히 알아볼 수 있습니다. 취약성은 영향을 받는
+구성요소 아래에 분류되어 있습니다. 여기에는 문제 설명 및
+CVE, 관련 참조, <a href="#vulnerability-type">취약성 유형</a>, <a href="/security/overview/updates-resources.html#severity">심각도</a>, 업데이트된 AOSP 버전(해당하는 경우)이
+포함된 표가 제시됩니다. 가능한 경우 AOSP 변경사항 목록과 같이
+문제를 해결한 공개 변경사항을 버그 ID에 연결합니다. 하나의
+버그와 관련된 변경사항이 여러 개인 경우 추가 참조가 버그 ID 다음에 오는
+번호에 연결됩니다.</p>
+
+<h3 id="bluetooth">블루투스</h3>
+<p>이 섹션의 가장 심각한 취약성으로 인해 로컬 악성 앱이
+권한 수준을 벗어난 데이터에 액세스할 수 있습니다.</p>
+
+<table>
+  <colgroup><col width="17%" />
+  <col width="19%" />
+  <col width="9%" />
+  <col width="14%" />
+  <col width="39%" />
+  </colgroup><tbody><tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>형식</th>
+   <th>심각도</th>
+   <th>업데이트된 AOSP 버전</th>
+  </tr>
+  <tr>
+   <td>CVE-2017-0639</td>
+   <td><a href="https://android.googlesource.com/platform/packages/apps/Bluetooth/+/f196061addcc56878078e5684f2029ddbf7055ff">A-35310991</a></td>
+   <td>ID</td>
+   <td>높음</td>
+   <td>4.4.4, 5.0.2, 5.1.1, 6.0, 6.0.1, 7.0, 7.1.1, 7.1.2</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-0645</td>
+   <td><a href="https://android.googlesource.com/platform/packages/apps/Bluetooth/+/14b7d7e1537af60b7bca6c7b9e55df0dc7c6bf41">A-35385327</a></td>
+   <td>EoP</td>
+   <td>보통</td>
+   <td>6.0.1, 7.0, 7.1.1, 7.1.2</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-0646</td>
+   <td><a href="https://android.googlesource.com/platform/system/bt/+/2bcdf8ec7db12c5651c004601901f1fc25153f2c">A-33899337</a></td>
+   <td>ID</td>
+   <td>보통</td>
+   <td>4.4.4, 5.0.2, 5.1.1, 6.0, 6.0.1, 7.0, 7.1.1, 7.1.2</td>
+  </tr>
+</tbody></table>
+<h3 id="libraries">라이브러리</h3>
+<p>이 섹션의 가장 심각한 취약성으로 인해 특별히 제작된 파일을 사용하는 원격 공격자가
+권한이 설정되지 않은 프로세스의 컨텍스트 내에서 임의의 코드를
+실행할 수 있습니다.</p>
+
+<table>
+  <colgroup><col width="17%" />
+  <col width="19%" />
+  <col width="9%" />
+  <col width="14%" />
+  <col width="39%" />
+  </colgroup><tbody><tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>형식</th>
+   <th>심각도</th>
+   <th>업데이트된 AOSP 버전</th>
+  </tr>
+  <tr>
+   <td>CVE-2015-8871</td>
+   <td>A-35443562<a href="#asterisk">*</a></td>
+   <td>RCE</td>
+   <td>높음</td>
+   <td>5.0.2, 5.1.1, 6.0, 6.0.1</td>
+  </tr>
+  <tr>
+   <td>CVE-2016-8332</td>
+   <td>A-37761553<a href="#asterisk">*</a></td>
+   <td>RCE</td>
+   <td>높음</td>
+   <td>5.0.2, 5.1.1, 6.0, 6.0.1</td>
+  </tr>
+  <tr>
+   <td>CVE-2016-5131</td>
+   <td><a href="https://android.googlesource.com/platform/external/libxml2/+/0eff71008becb7f2c2b4509708da4b79985948bb">A-36554209</a></td>
+   <td>RCE</td>
+   <td>높음</td>
+   <td>4.4.4, 5.0.2, 5.1.1, 6.0, 6.0.1, 7.0, 7.1.1, 7.1.2</td>
+  </tr>
+  <tr>
+   <td>CVE-2016-4658</td>
+   <td><a href="https://android.googlesource.com/platform/external/libxml2/+/8ea80f29ea5fdf383ee3ae59ce35e55421a339f8">A-36554207</a></td>
+   <td>RCE</td>
+   <td>높음</td>
+   <td>4.4.4, 5.0.2, 5.1.1, 6.0, 6.0.1, 7.0, 7.1.1, 7.1.2</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-0663</td>
+   <td><a href="https://android.googlesource.com/platform/external/libxml2/+/521b88fbb6d18312923f0df653d045384b500ffc">A-37104170</a></td>
+   <td>RCE</td>
+   <td>높음</td>
+   <td>4.4.4, 5.0.2, 5.1.1, 6.0, 6.0.1, 7.0, 7.1.1, 7.1.2</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-7376</td>
+   <td><a href="https://android.googlesource.com/platform/external/libxml2/+/51e0cb2e5ec18eaf6fb331bc573ff27b743898f4">A-36555370</a></td>
+   <td>RCE</td>
+   <td>높음</td>
+   <td>4.4.4, 5.0.2, 5.1.1, 6.0, 6.0.1, 7.0, 7.1.1, 7.1.2</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-5056</td>
+   <td><a href="https://android.googlesource.com/platform/external/libxml2/+/3f571b1bb85cf56903f06bab3a820182115c5541">A-36809819</a></td>
+   <td>RCE</td>
+   <td>보통</td>
+   <td>4.4.4, 5.0.2, 5.1.1, 6.0, 6.0.1, 7.0, 7.1.1, 7.1.2</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-7375</td>
+   <td><a href="https://android.googlesource.com/platform/external/libxml2/+/308396a55280f69ad4112d4f9892f4cbeff042aa">A-36556310</a></td>
+   <td>RCE</td>
+   <td>보통</td>
+   <td>4.4.4, 5.0.2, 5.1.1, 6.0, 6.0.1, 7.0, 7.1.1, 7.1.2</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-0647</td>
+   <td><a href="https://android.googlesource.com/platform/system/core/+/3d6a43155c702bce0e7e2a93a67247b5ce3946a5">A-36392138</a></td>
+   <td>ID</td>
+   <td>보통</td>
+   <td>5.0.2, 5.1.1, 6.0, 6.0.1, 7.0, 7.1.1, 7.1.2</td>
+  </tr>
+  <tr>
+   <td>CVE-2016-1839</td>
+   <td><a href="https://android.googlesource.com/platform/external/libxml2/+/ff20cd797822dba8569ee518c44e6864d6b4ebfa">A-36553781</a></td>
+   <td>DoS</td>
+   <td>보통</td>
+   <td>4.4.4, 5.0.2, 5.1.1, 6.0, 6.0.1, 7.0, 7.1.1, 7.1.2</td>
+  </tr>
+</tbody></table>
+<h3 id="media-framework">미디어 프레임워크</h3>
+<p>이 섹션의 가장 심각한 취약성으로 인해 특별히 제작된 파일을 사용하는
+원격 공격자가 미디어 파일 및 데이터 처리 중에 메모리 손상을 일으킬 수
+있습니다.</p>
+
+<table>
+  <colgroup><col width="17%" />
+  <col width="19%" />
+  <col width="9%" />
+  <col width="14%" />
+  <col width="39%" />
+  </colgroup><tbody><tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>형식</th>
+   <th>심각도</th>
+   <th>업데이트된 AOSP 버전</th>
+  </tr>
+  <tr>
+   <td>CVE-2017-0637</td>
+   <td><a href="https://android.googlesource.com/platform/external/libhevc/+/ebaa71da6362c497310377df509651974401d258">A-34064500</a></td>
+   <td>RCE</td>
+   <td>심각</td>
+   <td>5.0.2, 5.1.1, 6.0, 6.0.1, 7.0, 7.1.1, 7.1.2</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-0391</td>
+   <td><a href="https://android.googlesource.com/platform/external/libhevc/+/14bc1678a80af5be7401cf750ab762ae8c75cc5a">A-32322258</a></td>
+   <td>DoS</td>
+   <td>높음</td>
+   <td>5.0.2, 5.1.1, 6.0, 6.0.1, 7.0, 7.1.1, 7.1.2</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-0640</td>
+   <td>A-33129467<a href="#asterisk">*</a></td>
+   <td>DoS</td>
+   <td>높음</td>
+   <td>6.0, 6.0.1, 7.0, 7.1.1</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-0641</td>
+   <td><a href="https://android.googlesource.com/platform/external/libvpx/+/698796fc930baecf5c3fdebef17e73d5d9a58bcb">A-34360591</a></td>
+   <td>DoS</td>
+   <td>높음</td>
+   <td>4.4.4, 5.0.2, 5.1.1, 6.0, 6.0.1, 7.0, 7.1.1, 7.1.2</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-0642</td>
+   <td><a href="https://android.googlesource.com/platform/external/libhevc/+/913d9e8d93d6b81bb8eac3fc2c1426651f5b259d">A-34819017</a></td>
+   <td>DoS</td>
+   <td>높음</td>
+   <td>5.0.2, 5.1.1, 6.0, 6.0.1, 7.0, 7.1.1, 7.1.2</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-0643</td>
+   <td>A-35645051<a href="#asterisk">*</a></td>
+   <td>DoS</td>
+   <td>높음</td>
+   <td>5.0.2, 5.1.1, 6.0, 6.0.1, 7.0, 7.1.1</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-0644</td>
+   <td>A-35472997<a href="#asterisk">*</a></td>
+   <td>DoS</td>
+   <td>높음</td>
+   <td>4.4.4, 5.0.2, 5.1.1, 6.0, 6.0.1</td>
+  </tr>
+</tbody></table>
+<h3 id="system-ui">시스템 UI</h3>
+<p>이 섹션의 가장 심각한 취약성으로 인해 특별히 제작된 파일을 사용하는 공격자가
+권한이 설정되지 않은 프로세스의 컨텍스트 내에서 임의의 코드를 실행할 수
+있습니다.</p>
+
+<table>
+  <colgroup><col width="17%" />
+  <col width="19%" />
+  <col width="9%" />
+  <col width="14%" />
+  <col width="39%" />
+  </colgroup><tbody><tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>형식</th>
+   <th>심각도</th>
+   <th>업데이트된 AOSP 버전</th>
+  </tr>
+  <tr>
+   <td>CVE-2017-0638</td>
+   <td><a href="https://android.googlesource.com/platform/external/libgdx/+/a98943dd4aece3024f023f00256607d50dcbcd1e">A-36368305</a></td>
+   <td>RCE</td>
+   <td>높음</td>
+   <td>7.1.1, 7.1.2</td>
+  </tr>
+</tbody></table>
+<h2 id="2017-06-05-details">2017-06-05 보안 패치 수준—취약성 세부정보</h2>
+<p>다음 섹션에서는 2017-06-05 패치 수준에 적용되는
+각 보안 취약성에 관해 자세히 알아볼 수 있습니다. 취약성은
+영향을 받는 구성요소 아래에 분류되어 있으며 CVE, 관련 참조,
+<a href="#vulnerability-type">취약성 유형</a>, <a href="/security/overview/updates-resources.html#severity">심각도</a>, 구성요소(해당하는 경우),
+업데이트된 AOSP 버전(해당하는 경우)와 같은
+세부정보가 포함되어 있습니다. 가능한 경우
+AOSP 변경사항 목록과 같이 문제를 해결한 공개 변경사항을 버그 ID에
+연결합니다. 하나의 버그와 관련된 변경사항이 여러 개인 경우 추가
+참조가 버그 ID 다음에 오는 번호에 연결됩니다.</p>
+
+<h3 id="kernel-components">커널 구성요소</h3>
+<p>이 섹션의 가장 심각한 취약성으로 인해 로컬 악성 앱이
+커널 컨텍스트 내에서 임의의 코드를 실행할 수 있습니다.</p>
+
+<table>
+  <colgroup><col width="17%" />
+  <col width="19%" />
+  <col width="9%" />
+  <col width="14%" />
+  <col width="39%" />
+  </colgroup><tbody><tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>형식</th>
+   <th>심각도</th>
+   <th>구성요소</th>
+  </tr>
+  <tr>
+   <td>CVE-2017-0648</td>
+   <td>A-36101220<a href="#asterisk">*</a></td>
+   <td>EoP</td>
+   <td>높음</td>
+   <td>FIQ 디버거</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-0651</td>
+   <td>A-35644815<a href="#asterisk">*</a></td>
+   <td>ID</td>
+   <td>낮음</td>
+   <td>ION 하위 시스템</td>
+  </tr>
+</tbody></table>
+<h3 id="libraries-05">라이브러리</h3>
+<p>이 섹션의 가장 심각한 취약성으로 인해 특별이 제작된 파일을 사용하는
+원격 공격자가 민감한 정보에 액세스할 수 있습니다.</p>
+
+<table>
+  <colgroup><col width="17%" />
+  <col width="19%" />
+  <col width="9%" />
+  <col width="14%" />
+  <col width="39%" />
+  </colgroup><tbody><tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>형식</th>
+   <th>심각도</th>
+   <th>업데이트된 AOSP 버전</th>
+  </tr>
+  <tr>
+   <td>CVE-2015-7995</td>
+   <td>A-36810065<a href="#asterisk">*</a></td>
+   <td>ID</td>
+   <td>보통</td>
+   <td>4.4.4</td>
+  </tr>
+</tbody></table>
+<h3 id="mediatek-components">MediaTek 구성요소</h3>
+<p>이 섹션의 가장 심각한 취약성으로 인해 로컬 악성 앱이
+커널 컨텍스트 내에서 임의의 코드를 실행할 수 있습니다.</p>
+
+<table>
+  <colgroup><col width="17%" />
+  <col width="19%" />
+  <col width="9%" />
+  <col width="14%" />
+  <col width="39%" />
+  </colgroup><tbody><tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>형식</th>
+   <th>심각도</th>
+   <th>구성요소</th>
+  </tr>
+  <tr>
+   <td>CVE-2017-0636</td>
+   <td>A-35310230<a href="#asterisk">*</a><br />
+       M-ALPS03162263</td>
+   <td>EoP</td>
+   <td>높음</td>
+   <td>명령 대기열 드라이버</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-0649</td>
+   <td>A-34468195<a href="#asterisk">*</a><br />
+       M-ALPS03162283</td>
+   <td>EoP</td>
+   <td>보통</td>
+   <td>사운드 드라이버</td>
+  </tr>
+</tbody></table>
+<h3 id="nvidia-components">NVIDIA 구성요소</h3>
+<p>이 섹션의 가장 심각한 취약성으로 인해 로컬 악성 앱이
+커널 컨텍스트 내에서 임의의 코드를 실행할 수 있습니다.</p>
+
+<table>
+  <colgroup><col width="17%" />
+  <col width="19%" />
+  <col width="9%" />
+  <col width="14%" />
+  <col width="39%" />
+  </colgroup><tbody><tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>형식</th>
+   <th>심각도</th>
+   <th>구성요소</th>
+  </tr>
+  <tr>
+   <td>CVE-2017-6247</td>
+   <td>A-34386301<a href="#asterisk">*</a><br />
+       N-CVE-2017-6247</td>
+   <td>EoP</td>
+   <td>높음</td>
+   <td>사운드 드라이버</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-6248</td>
+   <td>A-34372667<a href="#asterisk">*</a><br />
+       N-CVE-2017-6248</td>
+   <td>EoP</td>
+   <td>보통</td>
+   <td>사운드 드라이버</td>
+  </tr>
+</tbody></table>
+<h3 id="qualcomm-components">Qualcomm 구성요소</h3>
+<p>이 섹션의 가장 심각한 취약성으로 인해 인접한 공격자가 커널 컨텍스트 내에서
+임의의 코드를 실행할 수 있습니다.</p>
+
+<table>
+  <colgroup><col width="17%" />
+  <col width="19%" />
+  <col width="9%" />
+  <col width="14%" />
+  <col width="39%" />
+  </colgroup><tbody><tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>형식</th>
+   <th>심각도</th>
+   <th>구성요소</th>
+  </tr>
+  <tr>
+   <td>CVE-2017-7371</td>
+   <td>A-36250786<br />
+   <a href="https://source.codeaurora.org/quic/la/kernel/msm-4.4/commit/?id=e02e63b8014f7a0a5ea17a5196fb4ef1283fd1fd">QC-CR#1101054</a></td>
+   <td>RCE</td>
+   <td>심각</td>
+   <td>블루투스 드라이버</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-7365</td>
+   <td>A-32449913<br />
+   <a href="https://source.codeaurora.org/quic/la//kernel/lk/commit/?id=da49bf21d1c19a6293d33c985066dc0273c476db">QC-CR#1017009</a></td>
+   <td>EoP</td>
+   <td>높음</td>
+   <td>부트로더</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-7366</td>
+   <td>A-36252171<br />
+   <a href="https://source.codeaurora.org/quic/la/kernel/msm-3.18/commit/?id=f4c9ffd6cd7960265f38e285ac43cbecf2459e45">QC-CR#1036161</a>
+[<a href="https://source.codeaurora.org/quic/la/kernel/msm-3.18/commit/?id=7c4d5736d32f91f0cafe6cd86d00e26389970b00">2</a>]</td>
+   <td>EoP</td>
+   <td>높음</td>
+   <td>GPU 드라이버</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-7367</td>
+   <td>A-34514708<br />
+   <a href="https://source.codeaurora.org/quic/la//kernel/lk/commit/?id=07174af1af48c60a41c7136f0c80ffdf4ccc0b57">QC-CR#1008421</a></td>
+   <td>DoS</td>
+   <td>높음</td>
+   <td>부트로더</td>
+  </tr>
+  <tr>
+   <td>CVE-2016-5861</td>
+   <td>A-36251375<br />
+   <a href="https://source.codeaurora.org/quic/la//kernel/msm-4.4/commit/?id=cf3c97b8b6165f13810e530068fbf94b07f1f77d">QC-CR#1103510</a></td>
+   <td>EoP</td>
+   <td>보통</td>
+   <td>동영상 드라이버</td>
+  </tr>
+  <tr>
+   <td>CVE-2016-5864</td>
+   <td>A-36251231<br />
+   <a href="https://source.codeaurora.org/quic/la/kernel/msm-4.4/commit/?id=cbc21ceb69cb7bca0643423a7ca982abce3ce50a">QC-CR#1105441</a></td>
+   <td>EoP</td>
+   <td>보통</td>
+   <td>사운드 드라이버</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-6421</td>
+   <td>A-36251986<br />
+   <a href="https://source.codeaurora.org/quic/la//kernel/msm-4.4/commit/?id=be42c7ff1f0396484882451fd18f47144c8f1b6b">QC-CR#1110563</a></td>
+   <td>EoP</td>
+   <td>보통</td>
+   <td>MStar 터치스크린 드라이버</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-7364</td>
+   <td>A-36252179<br />
+   <a href="https://source.codeaurora.org/quic/la/kernel/msm-4.4/commit/?id=3ce6c47d2142fcd2c4c1181afe08630aaae5a267">QC-CR#1113926</a></td>
+   <td>EoP</td>
+   <td>보통</td>
+   <td>동영상 드라이버</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-7368</td>
+   <td>A-33452365<br />
+   <a href="https://source.codeaurora.org/quic/la/kernel/msm-3.18/commit/?id=143ef972be1621458930ea3fc1def5ebce7b0c5d">QC-CR#1103085</a></td>
+   <td>EoP</td>
+   <td>보통</td>
+   <td>사운드 드라이버</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-7369</td>
+   <td>A-33751424<br />
+   <a href="https://source.codeaurora.org/quic/la//kernel/msm-3.10/commit/?id=75ed08a822cf378ffed0d2f177d06555bd77a006">QC-CR#2009216</a>
+[<a href="https://source.codeaurora.org/quic/la//kernel/msm-3.18/commit/?id=ae8f1d5f60644983aba7fbab469d0e542a187c6e">2</a>]</td>
+   <td>EoP</td>
+   <td>보통</td>
+   <td>사운드 드라이버</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-7370</td>
+   <td>A-34328139<br />
+   <a href="https://source.codeaurora.org/quic/la/kernel/msm-3.18/commit/?id=970edf007fbe64b094437541a42477d653802d85">QC-CR#2006159</a></td>
+   <td>EoP</td>
+   <td>보통</td>
+   <td>동영상 드라이버</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-7372</td>
+   <td>A-36251497<br />
+   <a href="https://source.codeaurora.org/quic/la//kernel/msm-3.18/commit/?id=1806be003731d6d4be55e5b940d14ab772839e13">QC-CR#1110068</a></td>
+   <td>EoP</td>
+   <td>보통</td>
+   <td>동영상 드라이버</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-7373</td>
+   <td>A-36251984<br />
+   <a href="https://source.codeaurora.org/quic/la//kernel/msm-4.4/commit/?id=e5eb0d3aa6fe62ee437a2269a1802b1a72f61b75">QC-CR#1090244</a></td>
+   <td>EoP</td>
+   <td>보통</td>
+   <td>동영상 드라이버</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-8233</td>
+   <td>A-34621613<br />
+   <a href="https://source.codeaurora.org/quic/la/kernel/msm-3.18/commit/?id=64b7bc25e019dd07e8042e0a6ec6dc6a1dd0c385">QC-CR#2004036</a></td>
+   <td>EoP</td>
+   <td>보통</td>
+   <td>카메라 드라이버</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-8234</td>
+   <td>A-36252121<br />
+   <a href="https://source.codeaurora.org/quic/la/kernel/msm-3.10/commit/?id=6266f954a52641f550ef71653ea83c80bdd083be">QC-CR#832920</a></td>
+   <td>EoP</td>
+   <td>보통</td>
+   <td>카메라 드라이버</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-8235</td>
+   <td>A-36252376<br />
+   <a href="https://source.codeaurora.org/quic/la/kernel/msm-4.4/commit/?id=7e4424a1b5f6a6536066cca7aac2c3a23fd39f6f">QC-CR#1083323</a></td>
+   <td>EoP</td>
+   <td>보통</td>
+   <td>카메라 드라이버</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-8236</td>
+   <td>A-35047217<br />
+   <a href="https://source.codeaurora.org/quic/la//kernel/msm-3.18/commit/?id=cf0d31bc3b04cf2db7737d36b11a5bf50af0c1db">QC-CR#2009606</a></td>
+   <td>EoP</td>
+   <td>보통</td>
+   <td>IPA 드라이버</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-8237</td>
+   <td>A-36252377<br />
+   <a href="https://source.codeaurora.org/quic/la//kernel/msm-3.18/commit/?id=342d16ac6fb01e304ec75344c693257e00628ecf">QC-CR#1110522</a></td>
+   <td>EoP</td>
+   <td>보통</td>
+   <td>네트워크 드라이버</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-8242</td>
+   <td>A-34327981<br />
+   <a href="https://source.codeaurora.org/quic/la/kernel/msm-3.18/commit/?id=6a3b8afdf97e77c0b64005b23fa6d32025d922e5">QC-CR#2009231</a></td>
+   <td>EoP</td>
+   <td>보통</td>
+   <td>Secure Execution Environment Communication 드라이버</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-8239</td>
+   <td>A-36251230<br />
+   <a href="https://source.codeaurora.org/quic/la/kernel/msm-3.18/commit/?id=01db0e012f86b8ba6974e5cb9905261a552a0610">QC-CR#1091603</a></td>
+   <td>ID</td>
+   <td>보통</td>
+   <td>카메라 드라이버</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-8240</td>
+   <td>A-36251985<br />
+   <a href="https://source.codeaurora.org/quic/la/kernel/msm-3.18/commit/?id=22b8b6608174c1308208d5bc6c143f4998744547">QC-CR#856379</a></td>
+   <td>ID</td>
+   <td>보통</td>
+   <td>핀 컨트롤러 드라이버</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-8241</td>
+   <td>A-34203184<br />
+   <a href="https://source.codeaurora.org/quic/la//platform/vendor/qcom-opensource/wlan/qcacld-2.0/commit/?id=90213394b7efb28fa511b2eaebc1343ae3b54724">QC-CR#1069175</a></td>
+   <td>ID</td>
+   <td>낮음</td>
+   <td>Wi-Fi 드라이버</td>
+  </tr>
+</tbody></table>
+<h3 id="synaptics-components">Synaptics 구성요소</h3>
+<p>이 섹션의 가장 심각한 취약성으로 인해 로컬 악성 앱이
+권한 수준을 벗어난 데이터에 액세스할 수 있습니다.</p>
+
+<table>
+  <colgroup><col width="17%" />
+  <col width="19%" />
+  <col width="9%" />
+  <col width="14%" />
+  <col width="39%" />
+  </colgroup><tbody><tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>형식</th>
+   <th>심각도</th>
+   <th>구성요소</th>
+  </tr>
+  <tr>
+   <td>CVE-2017-0650</td>
+   <td>A-35472278<a href="#asterisk">*</a></td>
+   <td>EoP</td>
+   <td>낮음</td>
+   <td>터치스크린 드라이버</td>
+  </tr>
+</tbody></table>
+<h3 id="qualcomm-closed-source-components">Qualcomm 비공개 소스
+구성요소</h3>
+<p>다음의 취약성은 Qualcomm 구성요소에 영향을 주며 Qualcomm AMSS
+2014~2016년 보안 게시판에 자세히 설명되어 있습니다. 이러한 취약성은
+각 취약성의 수정사항을 Android 보안 패치 수준과 연결하기 위해 Android 보안
+게시판에 포함되었습니다. 이러한 취약성의 수정사항은 Qualcomm에서 직접 받을 수 있습니다.</p>
+
+<table>
+  <colgroup><col width="17%" />
+  <col width="19%" />
+  <col width="9%" />
+  <col width="14%" />
+  <col width="39%" />
+  </colgroup><tbody><tr>
+   <th>CVE</th>
+   <th>참조</th>
+   <th>형식</th>
+   <th>심각도</th>
+   <th>구성요소</th>
+  </tr>
+  <tr>
+   <td>CVE-2014-9960</td>
+   <td>A-37280308<a href="#asterisk">*</a><br />
+       QC-CR#381837</td>
+   <td>해당 없음</td>
+   <td>심각</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9961</td>
+   <td>A-37279724<a href="#asterisk">*</a><br />
+       QC-CR#581093</td>
+   <td>해당 없음</td>
+   <td>심각</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9953</td>
+   <td>A-36714770<a href="#asterisk">*</a><br />
+       QC-CR#642173</td>
+   <td>해당 없음</td>
+   <td>심각</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9967</td>
+   <td>A-37281466<a href="#asterisk">*</a><br />
+       QC-CR#739110</td>
+   <td>해당 없음</td>
+   <td>심각</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2015-9026</td>
+   <td>A-37277231<a href="#asterisk">*</a><br />
+       QC-CR#748397</td>
+   <td>해당 없음</td>
+   <td>심각</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2015-9027</td>
+   <td>A-37279124<a href="#asterisk">*</a><br />
+       QC-CR#748407</td>
+   <td>해당 없음</td>
+   <td>심각</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2015-9008</td>
+   <td>A-36384689<a href="#asterisk">*</a><br />
+       QC-CR#762111</td>
+   <td>해당 없음</td>
+   <td>심각</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2015-9009</td>
+   <td>A-36393600<a href="#asterisk">*</a><br />
+       QC-CR#762182</td>
+   <td>해당 없음</td>
+   <td>심각</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2015-9010</td>
+   <td>A-36393101<a href="#asterisk">*</a><br />
+       QC-CR#758752</td>
+   <td>해당 없음</td>
+   <td>심각</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2015-9011</td>
+   <td>A-36714882<a href="#asterisk">*</a><br />
+       QC-CR#762167</td>
+   <td>해당 없음</td>
+   <td>심각</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2015-9024</td>
+   <td>A-37265657<a href="#asterisk">*</a><br />
+       QC-CR#740680</td>
+   <td>해당 없음</td>
+   <td>심각</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2015-9012</td>
+   <td>A-36384691<a href="#asterisk">*</a><br />
+       QC-CR#746617</td>
+   <td>해당 없음</td>
+   <td>심각</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2015-9013</td>
+   <td>A-36393251<a href="#asterisk">*</a><br />
+       QC-CR#814373</td>
+   <td>해당 없음</td>
+   <td>심각</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2015-9014</td>
+   <td>A-36393750<a href="#asterisk">*</a><br />
+       QC-CR#855220</td>
+   <td>해당 없음</td>
+   <td>심각</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2015-9015</td>
+   <td>A-36714120<a href="#asterisk">*</a><br />
+       QC-CR#701858</td>
+   <td>해당 없음</td>
+   <td>심각</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2015-9029</td>
+   <td>A-37276981<a href="#asterisk">*</a><br />
+       QC-CR#827837</td>
+   <td>해당 없음</td>
+   <td>심각</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2016-10338</td>
+   <td>A-37277738<a href="#asterisk">*</a><br />
+       QC-CR#987699</td>
+   <td>해당 없음</td>
+   <td>심각</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2016-10336</td>
+   <td>A-37278436<a href="#asterisk">*</a><br />
+       QC-CR#973605</td>
+   <td>해당 없음</td>
+   <td>심각</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2016-10333</td>
+   <td>A-37280574<a href="#asterisk">*</a><br />
+       QC-CR#947438</td>
+   <td>해당 없음</td>
+   <td>심각</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2016-10341</td>
+   <td>A-37281667<a href="#asterisk">*</a><br />
+       QC-CR#991476</td>
+   <td>해당 없음</td>
+   <td>심각</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2016-10335</td>
+   <td>A-37282802<a href="#asterisk">*</a><br />
+       QC-CR#961142</td>
+   <td>해당 없음</td>
+   <td>심각</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2016-10340</td>
+   <td>A-37280614<a href="#asterisk">*</a><br />
+       QC-CR#989028</td>
+   <td>해당 없음</td>
+   <td>심각</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2016-10334</td>
+   <td>A-37280664<a href="#asterisk">*</a><br />
+       QC-CR#949933</td>
+   <td>해당 없음</td>
+   <td>심각</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2016-10339</td>
+   <td>A-37280575<a href="#asterisk">*</a><br />
+       QC-CR#988502</td>
+   <td>해당 없음</td>
+   <td>심각</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2016-10298</td>
+   <td>A-36393252<a href="#asterisk">*</a><br />
+       QC-CR#1020465</td>
+   <td>해당 없음</td>
+   <td>심각</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2016-10299</td>
+   <td>A-32577244<a href="#asterisk">*</a><br />
+       QC-CR#1058511</td>
+   <td>해당 없음</td>
+   <td>심각</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9954</td>
+   <td>A-36388559<a href="#asterisk">*</a><br />
+       QC-CR#552880</td>
+   <td>해당 없음</td>
+   <td>높음</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9955</td>
+   <td>A-36384686<a href="#asterisk">*</a><br />
+       QC-CR#622701</td>
+   <td>해당 없음</td>
+   <td>높음</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9956</td>
+   <td>A-36389611<a href="#asterisk">*</a><br />
+       QC-CR#638127</td>
+   <td>해당 없음</td>
+   <td>높음</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9957</td>
+   <td>A-36387564<a href="#asterisk">*</a><br />
+       QC-CR#638984</td>
+   <td>해당 없음</td>
+   <td>높음</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9958</td>
+   <td>A-36384774<a href="#asterisk">*</a><br />
+       QC-CR#638135</td>
+   <td>해당 없음</td>
+   <td>높음</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9962</td>
+   <td>A-37275888<a href="#asterisk">*</a><br />
+       QC-CR#656267</td>
+   <td>해당 없음</td>
+   <td>높음</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9963</td>
+   <td>A-37276741<a href="#asterisk">*</a><br />
+       QC-CR#657771</td>
+   <td>해당 없음</td>
+   <td>높음</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9959</td>
+   <td>A-36383694<a href="#asterisk">*</a><br />
+       QC-CR#651900</td>
+   <td>해당 없음</td>
+   <td>높음</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9964</td>
+   <td>A-37280321<a href="#asterisk">*</a><br />
+       QC-CR#680778</td>
+   <td>해당 없음</td>
+   <td>높음</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9965</td>
+   <td>A-37278233<a href="#asterisk">*</a><br />
+       QC-CR#711585</td>
+   <td>해당 없음</td>
+   <td>높음</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2014-9966</td>
+   <td>A-37282854<a href="#asterisk">*</a><br />
+       QC-CR#727398</td>
+   <td>해당 없음</td>
+   <td>높음</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2015-9023</td>
+   <td>A-37276138<a href="#asterisk">*</a><br />
+       QC-CR#739802</td>
+   <td>해당 없음</td>
+   <td>높음</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2015-9020</td>
+   <td>A-37276742<a href="#asterisk">*</a><br />
+       QC-CR#733455</td>
+   <td>해당 없음</td>
+   <td>높음</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2015-9021</td>
+   <td>A-37276743<a href="#asterisk">*</a><br />
+       QC-CR#735148</td>
+   <td>해당 없음</td>
+   <td>높음</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2015-9025</td>
+   <td>A-37276744<a href="#asterisk">*</a><br />
+       QC-CR#743985</td>
+   <td>해당 없음</td>
+   <td>높음</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2015-9022</td>
+   <td>A-37280226<a href="#asterisk">*</a><br />
+       QC-CR#736146</td>
+   <td>해당 없음</td>
+   <td>높음</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2015-9028</td>
+   <td>A-37277982<a href="#asterisk">*</a><br />
+       QC-CR#762764</td>
+   <td>해당 없음</td>
+   <td>높음</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2015-9031</td>
+   <td>A-37275889<a href="#asterisk">*</a><br />
+       QC-CR#866015</td>
+   <td>해당 없음</td>
+   <td>높음</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2015-9032</td>
+   <td>A-37279125<a href="#asterisk">*</a><br />
+       QC-CR#873202</td>
+   <td>해당 없음</td>
+   <td>높음</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2015-9033</td>
+   <td>A-37276139<a href="#asterisk">*</a><br />
+       QC-CR#892541</td>
+   <td>해당 없음</td>
+   <td>높음</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2015-9030</td>
+   <td>A-37282907<a href="#asterisk">*</a><br />
+       QC-CR#854667</td>
+   <td>해당 없음</td>
+   <td>높음</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2016-10332</td>
+   <td>A-37282801<a href="#asterisk">*</a><br />
+       QC-CR#906713<br />
+       QC-CR#917701<br />
+       QC-CR#917702</td>
+   <td>해당 없음</td>
+   <td>높음</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2016-10337</td>
+   <td>A-37280665<a href="#asterisk">*</a><br />
+       QC-CR#977632</td>
+   <td>해당 없음</td>
+   <td>높음</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+  <tr>
+   <td>CVE-2016-10342</td>
+   <td>A-37281763<a href="#asterisk">*</a><br />
+       QC-CR#988941</td>
+   <td>해당 없음</td>
+   <td>높음</td>
+   <td>비공개 소스 구성요소</td>
+  </tr>
+</tbody></table>
+<h2 id="google-device-updates">Google 기기 업데이트</h2>
+<p>이 표에는 최신 무선 업데이트(OTA)의 보안 패치 수준 및 Google 기기의
+펌웨어 이미지가 포함되어 있습니다. The Google 기기 펌웨어 이미지는
+<a href="https://developers.google.com/android/nexus/images">Google 개발자 사이트</a>에서 받을 수
+있습니다.</p>
+
+<table>
+  <colgroup><col width="25%" />
+  <col width="75%" />
+  </colgroup><tbody><tr>
+   <th>Google 기기</th>
+   <th>보안 패치 수준</th>
+  </tr>
+  <tr>
+   <td>Pixel/Pixel XL</td>
+   <td>2017년 6월 5일</td>
+  </tr>
+  <tr>
+   <td>Nexus 5X</td>
+   <td>2017년 6월 5일</td>
+  </tr>
+  <tr>
+   <td>Nexus 6</td>
+   <td>2017년 6월 5일</td>
+  </tr>
+  <tr>
+   <td>Nexus 6P</td>
+   <td>2017년 6월 5일</td>
+  </tr>
+  <tr>
+   <td>Nexus 9</td>
+   <td>2017년 6월 5일</td>
+  </tr>
+  <tr>
+   <td>Nexus Player</td>
+   <td>2017년 6월 5일</td>
+  </tr>
+  <tr>
+   <td>Pixel C</td>
+   <td>2017년 6월 5일</td>
+  </tr>
+</tbody></table>
+<h2 id="acknowledgements">감사의 말씀</h2>
+<p>참여해 주신 다음 연구원에게 감사드립니다.</p>
+
+<table>
+  <colgroup><col width="17%" />
+  <col width="83%" />
+  </colgroup><tbody><tr>
+   <th>CVE</th>
+   <th>연구원</th>
+  </tr>
+  <tr>
+   <td>CVE-2017-0643, CVE-2017-0641</td>
+   <td>Trend Micro의 Ecular Xu(徐健)</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-0645, CVE-2017-0639</td>
+   <td><a href="http://www.ms509.com">MS509Team</a>의 En He(<a href="https://twitter.com/heeeeen4x">@heeeeen4x</a>),
+Bo Liu</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-0649</td>
+   <td>Qihoo 360 Technology Co. Ltd. IceSword Lab의
+Gengjia Chen(<a href="https://twitter.com/chengjia4574">@chengjia4574</a>), <a href="http://weibo.com/jfpan">pjf</a></td>
+  </tr>
+  <tr>
+   <td>CVE-2017-0646</td>
+   <td>Tencent PC Manager의 Godzheng(郑文选 -<a href="https://twitter.com/VirtualSeekers">@VirtualSeekers</a>)</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-0636</td>
+   <td>Shellphish Grill Team의 Jake Corina, Nick Stephens</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-8233</td>
+   <td>Qihoo 360 IceSword Lab의 Jianqiang Zhao(<a href="https://twitter.com/jianqiangzhao">@jianqiangzhao</a>), <a href="http://weibo.com/jfpan">pjf </a></td>
+  </tr>
+  <tr>
+   <td>CVE-2017-7368</td>
+   <td><a href="http://c0reteam.org">C0RE Team</a>의 Lubo Zhang(<a href="mailto:zlbzlb815@163.com">zlbzlb815@163.com</a>), Yuan-Tsung Lo(<a href="mailto:computernik@gmail.com">computernik@gmail.com</a>),
+Xuxian Jiang</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-8242</td>
+   <td>Tesla's Product Security Team의
+Nathan Crandall(<a href="https://twitter.com/natecray">@natecray</a>)</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-0650</td>
+   <td>Ben Gurion University Cyber Lab의 Omer Shwartz, Amir Cohen,
+Dr. Asaf Shabtai, Dr. Yossi Oren</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-0648</td>
+   <td>HCL Technologies <a href="https://alephsecurity.com/">Aleph Research</a>의 Roee Hay(<a href="https://twitter.com/roeehay">@roeehay</a>)</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-7369, CVE-2017-6249, CVE-2017-6247, CVE-2017-6248</td>
+   <td>TrendMicro의 sevenshen(<a href="https://twitter.com/lingtongshen">@lingtongshen</a>)</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-0642, CVE-2017-0637, CVE-2017-0638</td>
+   <td>Vasily Vasiliev</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-0640</td>
+   <td><a href="http://www.trendmicro.com">Trend Micro</a> <a href="http://blog.trendmicro.com/trendlabs-security-intelligence/category/mobile/">Mobile
+Threat Response Team</a>의 V.E.O(<a href="https://twitter.com/vysea">@VYSEa</a>)</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-8236</td>
+   <td>Tencent Security Platform Department의 Xiling Gong</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-0647</td>
+   <td>Qihoo 360 Qex Team의
+Yangkang(<a href="https://twitter.com/dnpushme">@dnpushme</a>), Liyadong</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-7370</td>
+   <td>Qihoo 360 Technology Co. Ltd. IceSword Lab의
+Yonggang Guo(<a href="https://twitter.com/guoygang">@guoygang</a>)</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-0651</td>
+   <td><a href="http://c0reteam.org">C0RE Team</a>의 Yuan-Tsung Lo(<a href="mailto:computernik@gmail.com">computernik@gmail.com</a>),
+Xuxian Jiang</td>
+  </tr>
+  <tr>
+   <td>CVE-2017-8241</td>
+   <td>Google의 Zubin Mithra</td>
+  </tr>
+</tbody></table>
+<h2 id="common-questions-and-answers">일반적인 질문 및 답변</h2>
+<p>이 섹션에서는 게시판을 읽은 뒤 제기될 수 있는 일반적인 질문에 대한 답변을 제시합니다.</p>
+
+<p><strong>1. 내 기기가 업데이트되어 이 문제가 해결되었는지 어떻게 알 수 있나요?
+</strong></p>
+
+<p>기기의 보안 패치 수준을 확인하는 방법을 알아보려면
+<a href="https://support.google.com/pixelphone/answer/4457705#pixel_phones&nexus_devices">Pixel 및 Nexus 업데이트 일정</a>의
+안내를 읽어 보세요.</p>
+<ul>
+<li>2017-06-01 보안 패치 수준과 관련된 모든 문제는 2017-06-01
+보안 패치 수준 이상에서 해결됩니다.</li>
+<li>2017-06-05 보안 패치 수준 및 그 이전의 모든 패치 수준과 관련된
+모든 문제는 2017-06-05 보안 패치 수준 이상에서 해결됩니다.</li></ul>
+<p>이러한 업데이트를 포함하는 기기 제조업체는 패치 문자열 수준을
+다음과 같이 설정해야 합니다.</p>
+<ul>
+<li>[ro.build.version.security_patch]:[2017-06-01]</li>
+<li>[ro.build.version.security_patch]:[2017-06-05]</li></ul>
+<p><strong>2. 이 게시판에 두 가지 보안 패치 수준이 있는 이유가 무엇인가요?</strong></p>
+
+<p>이 게시판에서는 Android 파트너가 모든 Android 기기에서 유사하게 발생하는
+취약성 문제의 일부를 더욱 빠르고 유연하게 해결하도록 하기 위해 두 가지 보안 패치 수준이 포함되어 있습니다. Android 파트너는 이 게시판에 언급된 문제를 모두 수정하고
+최신 보안 패치 수준을 사용하는 것이 좋습니다.</p>
+<ul>
+<li>2017년 6월 1일 보안 패치 수준을 사용하는 기기는 이 보안 패치 수준과
+관련된 모든 문제와 이전 보안 게시판에서 보고된 모든 문제의 수정사항을
+포함해야 합니다.</li>
+<li>2017년 6월 5일 이후의 보안 패치 수준을 사용하는 기기는 이 보안 게시판과
+이전 보안 게시판에 언급된 모든 관련 패치를 포함해야 합니다.</li></ul>
+<p>파트너는 해결하는 모든 문제의 수정사항을 단 한 번의 업데이트에서 번들로 묶는 것이
+좋습니다.</p>
+
+<p id="vulnerability-type"><strong>3. <em>유형</em> 열의 항목은 무엇을 의미하나요?</strong></p>
+
+<p>취약성 세부정보 표의 <em>유형</em> 열에 있는 항목은
+보안 취약성 분류를 참조합니다.</p>
+
+<table>
+  <colgroup><col width="25%" />
+  <col width="75%" />
+  </colgroup><tbody><tr>
+   <th>약어</th>
+   <th>정의</th>
+  </tr>
+  <tr>
+   <td>RCE</td>
+   <td>원격 코드 실행</td>
+  </tr>
+  <tr>
+   <td>EoP</td>
+   <td>권한 승격</td>
+  </tr>
+  <tr>
+   <td>ID</td>
+   <td>정보 공개</td>
+  </tr>
+  <tr>
+   <td>DoS</td>
+   <td>서비스 거부</td>
+  </tr>
+  <tr>
+   <td>해당 없음</td>
+   <td>분류 없음</td>
+  </tr>
+</tbody></table>
+<p><strong>4. <em>참조</em> 열의 항목은 무엇을 의미하나요?</strong></p>
+
+<p>취약성 세부정보 표의 <em>참조</em> 열에 있는 항목은 참조 값이 속한
+조직을 나타내는 접두어를 포함할 수 있습니다.</p>
+
+<table>
+  <colgroup><col width="25%" />
+  <col width="75%" />
+  </colgroup><tbody><tr>
+   <th>접두어</th>
+   <th>참조</th>
+  </tr>
+  <tr>
+   <td>A-</td>
+   <td>Android 버그 ID</td>
+  </tr>
+  <tr>
+   <td>QC-</td>
+   <td>Qualcomm 참조 번호</td>
+  </tr>
+  <tr>
+   <td>M-</td>
+   <td>MediaTek 참조 번호</td>
+  </tr>
+  <tr>
+   <td>N-</td>
+   <td>NVIDIA 참조 번호</td>
+  </tr>
+  <tr>
+   <td>B-</td>
+   <td>Broadcom 참조 번호</td>
+  </tr>
+</tbody></table>
+<p id="asterisk"><strong>5. <em>참조</em> 열에서 Android 버그 ID 옆에 있는 <a href="#asterisk">*</a> 표시는
+무엇을 의미하나요?</strong></p>
+
+<p>공개되지 않은 문제는 <em>참조</em> 열의 Android 버그 ID 옆에 <a href="#asterisk">*</a> 표시가 있습니다. 일반적으로 해당 문제의 업데이트는 <a href="https://developers.google.com/android/nexus/drivers">Google 개발자 사이트</a>에서
+제공하는 Nexus 기기용 최신 바이너리 드라이버에 포함되어 있습니다.</p>
+
+<h2 id="versions">버전</h2>
+<table>
+  <colgroup><col width="25%" />
+  <col width="25%" />
+  <col width="50%" />
+  </colgroup><tbody><tr>
+   <th>버전</th>
+   <th>날짜</th>
+   <th>메모</th>
+  </tr>
+  <tr>
+   <td>1.0/</td>
+   <td>2017년 6월 5일</td>
+   <td>게시판이 게시됨</td>
+  </tr>
+  <tr>
+    <td>1.1</td>
+    <td>2017년 6월 7일</td>
+    <td>게시판이 수정되어 AOSP 링크 포함됨</td>
+  </tr>
+</tbody></table>
+
+</body></html>

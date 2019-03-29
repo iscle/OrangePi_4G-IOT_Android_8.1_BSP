@@ -1,0 +1,120 @@
+<html devsite>
+  <head>
+    <title>Call Notifications</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>Android 7.0 moves functionality related to call notifications from the
+Telecom system service in the Android platform to the Dialer application.
+Previously, the responsibility for displaying call-related notifications was
+split between Telecom and the default Dialer app, creating inconsistencies in
+behavior. In Android 7.0, the Dialer assumes all responsibility for handling
+call notifications.</p>
+
+<h2 id=android_6>Behavior in Android 6.x and earlier</h2>
+<p>In earlier Android releases, Telecom and Dialer split responsibilities as
+described below:</p>
+
+<table>
+<tr>
+<th>Functionality</th>
+<th>Done by Telecom</th>
+<th>Done by Dialer</th>
+</tr>
+
+<tr>
+<td>Incoming call notification</td>
+<td>Yes (ringing, vibrate)</td>
+<td>Yes (notification display, caller ID)</td>
+</tr>
+
+<tr>
+<td>Send to voicemail</td>
+<td>Yes</td>
+<td>No</td>
+</tr>
+
+<tr>
+<td>Custom ringtone</td>
+<td>Yes</td>
+<td>No</td>
+</tr>
+
+<tr>
+<td>Missed call notifications</td>
+<td>Yes</td>
+<td>No</td>
+</tr>
+
+<tr>
+<td>Message Waiting Indicator (call voicemail)</td>
+<td>Yes (telephony)</td>
+<td>No</td>
+</tr>
+
+<tr>
+<td>Visual voicemail notifications</td>
+<td>No</td>
+<td>Yes</td>
+</tr>
+
+</tbody>
+</table>
+
+<p>Examples of inconsistent behavior caused by this responsibility split
+included:</p>
+<ul>
+<li>Telecom was responsible for starting the ringer/vibrator, but the dialer was
+responsible for displaying the incoming call notification. If the dialer is slow
+to startup, this can result in ringing starting several seconds before the
+incoming call notification is displayed.</li>
+<li>Telecom was responsible for displaying missed call notifications. As
+proprietary features (such as Google caller ID) do not work on these
+notifications, this could result in inconsistencies between Telecom
+notifications and Dialer UI (such as the call log).</li>
+</ul>
+
+<h2 id=android_7>Behavior in Android 7.0 and later</h2>
+<p>The Android Open Source Project (AOSP) Dialer implements the new
+functionality. For details, refer to the following documentation:</p>
+<ul>
+<li>Missed call notifications<br>
+<a href="https://android.googlesource.com/platform/packages/services/Telecomm/+/nougat-release/src/com/android/server/telecom/ui/MissedCallNotifierImpl.java">Telecom/src/com/android/server/telecom/ui/MissedCallNotifierImpl.java</a><br>
+<a href="https://android.googlesource.com/platform/packages/apps/Dialer/+/nougat-release/src/com/android/dialer/calllog/MissedCallNotificationReceiver.java">Dialer/src/com/android/dialer/calllog/MissedCallNotificationReceiver.java</a><br>
+<a href="https://android.googlesource.com/platform/packages/apps/Dialer/+/nougat-release/src/com/android/dialer/calllog/MissedCallNotifier.java">Dialer/src/com/android/dialer/calllog/MissedCallNotifier.java</a></li>
+<li>Playing ringtones:<br>
+<a href="https://android.googlesource.com/platform/frameworks/base/+/nougat-release/telecomm/java/android/telecom/InCallService.java">frameworks/base/telecomm/java/android/telecom/InCallService.java</a><br>
+<a href="https://android.googlesource.com/platform/packages/services/Telecomm/+/nougat-release/src/com/android/server/telecom/InCallController.java">Telecom/src/com/android/server/telecom/InCallController.java</a><br>
+<a href="https://android.googlesource.com/platform/packages/apps/Dialer/+/nougat-release/InCallUI/src/com/android/incallui/ringtone/">Dialer/InCallUI/src/com/android/incallui/ringtone</a><br>
+<a href="https://android.googlesource.com/platform/packages/apps/Dialer/+/nougat-release/InCallUI/src/com/android/incallui/StatusBarNotifier.java">Dialer/InCallUI/src/com/android/incallui/StatusBarNotifier.java</a></li>
+<li>VVM notifications<br>
+<a href="https://android.googlesource.com/platform/frameworks/base/+/nougat-release/telephony/java/android/telephony/TelephonyManager.java">frameworks/base/telephony/java/android/telephony/TelephonyManager.java</a><br>
+<a href="https://android.googlesource.com/platform/packages/services/Telephony/+/nougat-release/src/com/android/phone/PhoneInterfaceManager.java">Telephony/src/com/android/phone/PhoneInterfaceManager.java</a><br>
+<a href="https://android.googlesource.com/platform/packages/apps/Dialer/+/nougat-release/src/com/android/dialer/calllog/DefaultVoicemailNotifier.java">Dialer/src/com/android/dialer/calllog/DefaultVoicemailNotifier.java</a></li>
+</ul>
+
+<h2 id=implement>Implementation</h2>
+<p>Device implementers may need to update Telecom/Telephony components that
+expose APIs available for use by by the default Dialer.</p>
+
+  </body>
+</html>

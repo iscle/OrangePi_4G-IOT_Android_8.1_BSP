@@ -1,0 +1,130 @@
+<html devsite>
+  <head>
+    <title>Performance Management</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>Managing the power and performance of Android devices can help ensure
+applications run consistently and smoothly on a wide range of hardware. In
+Android 7.0 and later, OEMs can implement support for sustained performance hints that
+enable apps to maintain a consistent device performance and specify an exclusive
+core to improve performance for CPU-intensive, foreground applications.</p>
+
+<h2 id=sustained_performance>Sustained performance</h2>
+<p>For long-running applications (games, camera, RenderScript, audio
+processing), performance can vary dramatically as device temperature limits are
+reached and system on chip (SoC) engines are throttled. App developers creating
+high-performance, long-running apps are limited because the capabilities of the
+underlying platform are a moving target when the device begins to heat up.</p>
+
+<p>To address these limitations, Android 7.0 introduced support for sustained
+performance, enabling OEMs to provide hints on device performance capabilities
+for long-running applications. App developers can use these hints to tune
+applications for a predictable, consistent level of device performance over long
+periods of time.</p>
+
+<h3 id=architecture>Architecture</h3>
+<p>An Android application can request the platform to enter a sustained
+performance mode where the Android device can keep a consistent level of
+performance for prolonged periods of time.</p>
+
+<p><img src="../images/power_sustained_perf.png"></p>
+<p class="img-caption"><strong>Figure 1.</strong> Sustained performance mode
+architecture</p>
+
+<h3 id=implementation>Implementation</h3>
+<p>To support sustained performance in Android 7.0 and later, OEMs must:</p>
+<ul>
+<li>Make device-specific changes to the power HAL to either lock the maximum
+CPU/GPU frequencies <strong>or</strong> perform other optimizations to prevent
+thermal throttling.</li>
+<li>Implement the new hint <code>POWER_HINT_SUSTAINED_PERFORMANCE</code> in
+power HAL.</li>
+<li>Declare support by returning TRUE through the
+<code>isSustainedPerformanceModeSupported()</code> API.</li>
+<li>Implement <code>Window.setSustainedPerformanceMode</code>.</li>
+</ul>
+
+<p>In the Nexus reference implementation, the power hint caps the
+maximum frequencies of the CPU and GPU at the highest sustainable levels. Keep
+in mind that lowering the MAX bar in CPU/GPU frequency will lower the frame
+rate, but this lower rate is preferred in this mode due to its sustainability.
+For example, a device using normal max clocks might be able to render at 60
+FPS for a few minutes, but after the device heats up,  it may throttle to 30 FPS
+by the end of 30 minutes. When using sustained mode, the device can, for
+example, render consistently at 45 FPS for the entire 30 minutes. The goal is a
+frame rate when using the mode that is as high (or higher) than the frame rate
+when not using the mode, and consistent over time so that developers don't have
+to chase a moving target.</p>
+<p>We strongly recommend implementing sustained mode such that the device
+achieves the highest possible sustained performance—not just the minimum values
+required to pass the test (e.g. choose the highest possible MAX frequency caps
+that do not cause the device to thermally throttle over time).</p>
+
+<p class="note"><strong>Note</strong>: Capping MAX clock rates is not required
+to implement sustained mode.</p>
+
+<h3 id=validation>Validation</h3>
+<p>OEMs can use a CTS test (Android 7.0 and later) to verify their implementation of the
+sustained performance API. The test runs a workload for approximately 30 minutes
+and benchmarks the performance with and without sustained mode enabled:</p>
+<ul>
+<li>With sustained mode enabled, the frame rate must remain relatively constant
+(test measures the percentage of change in frame rate over time and requires a
+&lt;5% change).</li>
+<li>With sustained mode enabled, the frame rate must not be lower than the frame
+rate at the end of 30 minutes with the mode disabled.</li>
+</ul>
+<p>In addition, you can manually test your implementation with several CPU- and
+GPU-intensive workloads to ensure the device does not thermally throttle after
+30 minutes of use. In internal testing, we used sample workloads including
+games and benchmarking apps (e.g.
+<a href="https://gfxbench.com/result.jsp">gfxbench</a>).</p>
+
+<h2 id=exclusive_core>Exclusive cores</h2>
+<p>For CPU-intensive, time-sensitive workloads, getting preempted by another
+thread can be the difference between making frame deadlines or not. For apps
+that have strict latency and frame rate requirements (such as audio or virtual
+reality apps), having an exclusive CPU core can guarantee an acceptable level of
+performance.</p>
+<p>Devices running Android 7.0 or later can now reserve one core explicitly for the top
+foreground application, improving performance for all foreground apps and giving
+apps with high intensity workloads more control over how their work is allocated
+across CPU cores.</p>
+<p>To support an exclusive core on a device:</p>
+<ul>
+<li>Enable <code>cpusets</code> and configure a <code>cpuset</code> that
+contains only the top foreground application.</li>
+<li>Ensure one core (this is the exclusive core) is reserved for threads from
+this <code>cpuset</code>.</li>
+<li>Implement the getExclusiveCores API to return the core number of the
+exclusive core.</li>
+</ul>
+<p>To determine which processes are scheduled on which cores, use
+<code>systrace</code> while running any workload and verify no userspace threads
+from applications other than the top foreground application are scheduled on the
+exclusive core.</p>
+<p>To view a reference implementation for the Nexus 6P, refer to
+<code>android//device/huawei/angler/power/power.c</code>.</p>
+
+  </body>
+</html>

@@ -1,0 +1,133 @@
+<html devsite>
+  <head>
+    <title>Vulkan</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>Android 7.0 adds support for
+<a href="https://www.khronos.org/vulkan/">Vulkan</a>, a low-overhead,
+cross-platform API for high-performance 3D graphics. Like OpenGL ES, Vulkan
+provides tools for creating high-quality, real-time graphics in applications.
+Vulkan advantages include reductions in CPU overhead and support for the
+<a href="https://www.khronos.org/spir">SPIR-V Binary Intermediate</a> language.
+</p>
+
+<p>System on chip vendors (SoCs) such as GPU Independent Hardware Vendors (IHVs)
+can write Vulkan drivers for Android; OEMs simply need to integrate these
+drivers for specific devices. For details on how a Vulkan driver interacts with
+the system, how GPU-specific tools should be installed, and Android-specific
+requirements, see <a href="/devices/graphics/implement-vulkan.html">Implementing
+Vulkan.</a></p>
+
+<p>Application developers can take advantage of Vulkan to create apps that
+execute commands on the GPU with significantly reduced overhead. Vulkan also
+provides a more direct mapping to the capabilities found in current graphics
+hardware, minimizing opportunities for driver bugs and reducing developer
+testing time (e.g. less time required to troubleshoot Vulkan bugs).</p>
+
+<p>For general information on Vulkan, refer to the
+<a href="http://khr.io/vulkanlaunchoverview">Vulkan Overview</a> or see the list
+of <a href="#resources">Resources</a> below.</p>
+
+<h2 id=vulkan_components>Vulkan components</h2>
+<p>Vulkan support includes the following components:</p>
+<p><img src="/devices/graphics/images/ape_graphics_vulkan.png"></p>
+<p class=img-caption>Figure 1: Vulkan components</p>
+
+<ul>
+<li><strong>Vulkan Validation Layers</strong> (<em>provided in the Android
+NDK</em>). A set of libraries used by developers during the development of
+Vulkan apps. The Vulkan runtime library and the Vulkan driver from graphics
+vendors do not contain runtime error-checking to keep Vulkan runtime efficient.
+Instead, the validation libraries are used (only during development) to find
+errors in an application's use of the Vulkan API. The Vulkan Validation
+libraries are linked into the app during development and perform this error
+checking. After all API usage issues are found, the aplication no longer needs
+to include these libraries in the app.</li>
+<li><strong>Vulkan Runtime </strong><em>(provided by Android)</em>. A native
+library <code>(libvulkan.so</code>) that provides a new public native API
+called <a href="https://www.khronos.org/vulkan">Vulkan</a>. Most functionality
+is implemented by a driver provided by the GPU vendor; the runtime wraps the
+driver, provides API interception capabilities (for debugging and other
+developer tools), and manages the interaction between the driver and platform
+dependencies such as BufferQueue.</li>
+<li><strong>Vulkan Driver </strong><em>(provided by SoC)</em>. Maps the Vulkan
+API onto hardware-specific GPU commands and interactions with the kernel
+graphics driver.</li>
+</ul>
+
+<h2 id=modified_components>Modified components</h2>
+<p>Android 7.0 modifies the following existing graphics components to support
+Vulkan:</p>
+
+<ul>
+<li><strong>BufferQueue</strong>. The Vulkan Runtime interacts with the existing
+BufferQueue component via the existing <code>ANativeWindow</code> interface.
+Includes minor modifications (new enum values and new methods) to
+<code>ANativeWindow</code> and BufferQueue, but no architectural changes.</li>
+<li><strong>Gralloc HAL</strong>. Includes a new, optional interface for
+discovering whether a given format can be used for a particular
+producer/consumer combination without actually allocating a buffer.</li>
+</ul>
+
+<p>For details on these components, see
+<a href="/devices/graphics/arch-bq-gralloc.html">BufferQueue and
+gralloc</a> (for details on <code>ANativeWindow</code>, see
+<a href="/devices/graphics/arch-egl-opengl.html">EGLSurface and OpenGL
+ES</a>).
+
+<h2 id=apis>Vulkan API</h2>
+<p>The Android platform includes an
+<a href="https://developer.android.com/ndk/guides/graphics/index.html">Android-specific
+implementation</a> of the <a href="https://www.khronos.org/vulkan/">Vulkan API
+specification</a> from the Khronos Group. Android applications must use the
+<a href="/devices/graphics/implement-vulkan.html#wsi">Window System
+Integration (WSI) extensions</a> to output their rendering.</p>
+
+<h2 id=resources>Resources</h2>
+<p>Use the following resources to learn more about Vulkan:</p>
+<ul>
+
+<li>
+<a href="https://android.googlesource.com/platform/frameworks/native/+/master/vulkan/#">Vulkan
+Loader </a>(libvulkan.so) at <code>platform/frameworks/native/vulkan</code>.
+Contains Android's Vulkan loader, as well as some Vulkan-related tools useful to
+platform developers.</li>
+
+<li><a href="https://android.googlesource.com/platform/frameworks/native/+/master/vulkan/doc/implementors_guide/implementors_guide.html">Vulkan
+Implementor's Guide</a>. Intended for GPU IHVs writing Vulkan drivers for
+Android and OEMs integrating those drivers for specific devices. It describes
+how a Vulkan driver interacts with the system, how GPU-specific tools should be
+installed, and Android-specific requirements.</li>
+
+<li><a href="https://developer.android.com/ndk/guides/graphics/index.html">Vulkan
+Graphics API Guide</a>. Includes information on getting started with using
+Vulkan in an Android app, details on Vulkan design guidelines on the Android
+platform, how to use Vulkan's shader compilers, and how to use use validation
+layers to help assure stability in apps using Vulkan.</li>
+
+<li><a href="https://www.khronos.org/#slider_vulkan">Vulkan News</a>. Covers
+events, patches, tutorials, and more Vulkan-related news articles.</li>
+</ul>
+
+  </body>
+</html>

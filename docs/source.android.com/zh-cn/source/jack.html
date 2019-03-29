@@ -1,0 +1,303 @@
+<html devsite><head>
+    <title>使用 Jack 编译</title>
+    <meta name="project_path" value="/_project.yaml"/>
+    <meta name="book_path" value="/_book.yaml"/>
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+<h2 id="the_jack_toolchain">Jack 工具链</h2>
+
+<p class="warning">
+  根据<a href="https://android-developers.googleblog.com/2017/03/future-of-java-8-language-feature.html">此公告</a>，<b>Jack 工具链已被弃用</b>。不过，在我们提供替代工具之前，您可以继续使用它<a href="https://developer.android.com/preview/j8-jack.html">启用 Java 8 语言功能</a>。
+</p>
+
+<p>Jack 是一种新型 Android 工具链，用于将 Java 源代码编译成 Android dex 字节码。它取代了之前由 javac、ProGuard、jarjar 和 dx 等多种工具组成的 Android 工具链。</p>
+
+<p>Jack 工具链具有以下优势：</p>
+
+<ul>
+  <li> <strong>完全开放源代码</strong><br />
+它是在 AOSP 中提供的；并且欢迎用户贡献资源。
+  </li><li> <strong>提高编译速度</strong><br />
+
+Jack 提供以下具体支持来减少编译时间：dex 预处理、增量编译和 Jack 编译服务器。
+  </li><li> <strong>支持压缩、混淆、重新打包和多 dex 处理</strong><br />
+不再需要使用单独的软件包（如 ProGuard）
+</li></ul>
+
+<p class="note">请注意，从 Android 7.0 (N) 开始，Jack 支持使用 JaCoCo 衡量代码覆盖率。如需了解详情，请参阅<a href="https://android.googlesource.com/platform/prebuilts/sdk/+/master/tools/README-jack-code-coverage.md">使用 JaCoCo 衡量代码覆盖率</a>和 <a href="https://developer.android.com/preview/j8-jack.html">Java 8 语言功能</a>。</p>
+
+<img src="/images/jack-overview.png" height="75%" width="75%" alt="Jack 概览"/>
+<p class="img-caption"><strong>图 1. </strong>Jack 概览</p>
+
+<h2 id="the_jack_library_format">.jack 库格式</h2>
+
+<p>Jack 具有自己的 .jack 文件格式，其中包含相应库的预编译 dex 代码，可实现更快速的编译 (dex 预处理)。</p>
+
+<img src="/images/jack-library-file.png" height="75%" width="75%" alt="Jack 库文件内容"/>
+<p class="img-caption"><strong>图 2. </strong>Jack 库文件内容</p>
+
+<h2 id="jill">Jill</h2>
+
+<p>Jill 工具可将现有的 .jar 库转换为新的库格式，如下图所示。</p>
+
+<img src="/images/jill.png" alt="使用 Jill 导入现有的 .jar 库"/>
+<p class="img-caption"><strong>图 3. </strong>导入现有 .jar 库的工作流程</p>
+
+<h2 id="using_jack_in_your_android_build">使用 Jack 进行 Android 编译</h2>
+
+<div class="note">如需了解在 Android 7.0 (N) 及更高版本中使用 Jack 的说明，请参阅 <a href="https://android.googlesource.com/platform/prebuilts/sdk/+/master/tools/README-jack-server.md">Jack 服务器文档</a>。对于 Android 6.0 (M)，请使用本部分中的说明。</div>
+
+<p>要使用 Jack，您只需使用标准的 Makefile 命令来编译树或您的项目即可，无需进行任何其他操作。Jack 是适合 M 的默认 Android 编译工具链。</p>
+
+<p>首次使用 Jack 时，它会在您的计算机上启动一个本地 Jack 编译服务器：</p>
+
+<ul>
+  <li>该服务器能够让 Jack 实现内在加速，因为它可以避免在每次编译时启动新的主机 JRE JVM、加载 Jack 代码、初始化 Jack 以及准备 JIT。此外，它还会在小规模编译期间（例如增量模式下）尽可能优化编译所需时间。
+  </li><li>该服务器还是在短时间内控制并行 Jack 编译数量的解决方案，因此可以避免计算机过载（内存或磁盘问题），因为它会限制并行编译的数量。
+</li></ul>
+
+<p>如果没有任何编译工作，在空闲一段时间之后，Jack 服务器会自行关闭。它使用了 localhost 接口上的两个 TCP 端口，因此无法从外部访问。您可以通过修改<code> $HOME/.jack</code> 文件来修改所有这些参数（并行编译的数量、超时、端口号等）。</p>
+
+<h3 id="$home_jack_file">$HOME/.jack 文件</h3>
+
+<p><code>$HOME/.jack</code> 文件包含 Jack 服务器变量的设置，采用纯 bash 语法编写。</p>
+
+<p>以下是可用设置及其定义和默认值：</p>
+
+<ul>
+  <li> <strong><code>SERVER=true</code></strong><code> </code>：启用 Jack 的服务器功能。
+  </li><li> <strong><code>SERVER_PORT_SERVICE=8072</code>
+</strong>设置服务器的用于编译的 TCP 端口号。
+  </li><li> <strong><code>SERVER_PORT_ADMIN=8073</code></strong>：
+设置服务器的用于管理的 TCP 端口号。
+  </li><li> <strong><code>SERVER_COUNT=1</code></strong>：
+目前未使用。
+  </li><li> <strong><code>SERVER_NB_COMPILE=4</code></strong>：
+允许的最大并行编译数量。
+  </li><li> <strong><code>SERVER_TIMEOUT=60</code></strong>：
+无编译工作时服务器在自行关闭之前必须等待的空闲秒数。
+  </li><li> <strong><code>SERVER_LOG=${SERVER_LOG:=$SERVER_DIR/jack-$SERVER_PORT_SERVICE.log}</code></strong>：
+在其中写入服务器日志的文件。默认情况下，此变量可被环境变量重载。
+  </li><li> <strong><code>JACK_VM_COMMAND=${JACK_VM_COMMAND:=java}</code></strong>：
+用于在主机上启动 JVM 的默认命令。默认情况下，此变量可被环境变量重载。
+</li></ul>
+
+<h3 id="jack_troubleshooting">Jack 问题排查</h3>
+
+<p><strong>如果您的计算机在编译期间无响应，或者如果 Jack 编译因“Out of memory error”（内存不足错误）而失败</strong></p>
+
+<p>您可以通过修改<code> $HOME/.jack</code> 并将<code> SERVER_NB_COMPILE</code> 改为较低的值来减少同时进行的 Jack 编译的数量，以针对所遇到的问题予以改善。</p>
+
+<p><strong>如果您的编译因“Cannot launch background server”（无法启动后台服务器）而失败</strong></p>
+
+<p>最可能的原因是您的计算机上的 TCP 端口都被占用了。请尝试通过修改 <code>$HOME/.jack </code>（<code>SERVER_PORT_SERVICE</code> 和 <code>SERVER_PORT_ADMIN</code> 变量）进行更改。</p>
+
+<p>如果问题没有解决，请报告此问题并附上您的编译日志和 Jack 服务器日志（请参阅下文中的“查找 Jack 日志”，了解从何处找到服务器日志文件）。要解决这种情况，请通过修改 <code>$HOME/.jack</code> 并将 <code>SERVER</code> 更改为 false 来停用 jack 编译服务器。遗憾的是，这将大大减慢您的编译速度，并可能强制您使用加载控制（<code>make</code> 的选项“<code>-l</code>”）启动 <code>make -j</code>。</p>
+
+<p><strong>如果您的编译卡住了，没有任何进展</strong></p>
+
+<p>请报告此问题，并向我们提供以下附加信息（如果可能的话）：</p>
+
+<ul>
+  <li>卡住时所在的命令行。
+  </li><li>此命令行的输出。
+  </li><li>运行 <code>jack-admin server-stat</code> 的结果。
+  </li><li><code>$HOME/.jack</code> 文件。
+  </li><li>服务器日志（已转储服务器状态）的内容。要获取日志内容，请执行以下操作：<ul>
+    <li>通过运行 <code>jack-admin list-server</code> 查找 Jack 后台服务器进程。
+    </li><li>向此服务器发送 <code>kill -3</code> 命令，将其状态转储到日志文件中。
+    </li><li>要找到该服务器日志文件，请参阅下文中的“查找 Jack 日志”。
+  </li></ul>
+  </li><li>运行 <code>ls -lR $TMPDIR/jack-$USER.</code> 的结果。
+  </li><li>运行 <code>ps j -U $USER.</code> 的结果。
+</li></ul>
+
+<p>您应该能够通过停止 Jack 后台服务器（使用 <code>jack-admin kill-server</code>），然后移除临时目录（<code>/tmp</code> 或 <code>$TMPDIR</code>）的 <code>jack-$USER</code> 中包含的临时目录来解决卡住的情况。</p>
+
+<p><strong>如果您有任何其他问题</strong></p>
+
+<p>要报告错误或请求功能，请使用我们的公开问题跟踪工具（位于 <a href="http://b.android.com">http://b.android.com</a> 上），以及 <a href="https://code.google.com/p/android/issues/entry?template=Jack%20bug%20report">Jack 工具错误报告</a>或 <a href="https://code.google.com/p/android/issues/entry?template=Jack%20feature%20request">Jack 工具功能请求</a>模板。请在错误报告中附上 Jack 日志。</p>
+<table>
+ <tbody><tr>
+    <td><strong>查找 Jack 日志</strong>
+<ul>
+  <li>如果您曾使用 dist 目标运行了 Make 命令，则 Jack 日志位于 <code>$ANDROID_BUILD_TOP/out/dist/logs/jack-server.log</code>
+  </li><li>如果没有，则您可以通过运行 <code>jack-admin server-log</code> 找到该日志
+</li></ul>
+</td>
+ </tr>
+</tbody></table>
+
+<p>对于可重现的 Jack 错误，您可以通过设置一个变量来获取更详细的日志，如下所示：</p>
+
+<pre class="prettyprint">
+$ export ANDROID_JACK_EXTRA_ARGS="--verbose debug --sanity-checks on -D
+sched.runner=single-threaded"
+</pre>
+
+<p>然后使用标准 Makefile 命令编译树或您的项目，并附上其标准输出和错误。</p>
+
+<p>要移除详细的编译日志，请使用以下命令：</p>
+
+<pre class="prettyprint">
+$ unset ANDROID_JACK_EXTRA_ARGS
+</pre>
+
+<h3 id="jack_limitations">Jack 的使用限制</h3>
+
+<ul>
+  <li>Jack 服务器默认为单用户模式，因此一台计算机上只能有一位用户使用。如果有多个用户要使用，请为每位用户选择不同的端口号，并相应调整 SERVER_NB_COMPILE。您还可以通过在 $HOME/.jack 中设置 SERVER=false 来停用 Jack 服务器。
+  </li><li>当前的 vm-tests-tf 集成方案会导致 CTS 编译速度较慢。
+  </li><li>不支持 JaCoCo 等字节码处理工具。
+</li></ul>
+
+<h2 id="using_jack_features">使用 Jack 功能</h2>
+
+<p>Jack 支持 Java 编程语言 1.7，并集成了下面列出的额外功能。</p>
+
+<h3 id="predexing">dex 预处理</h3>
+
+<p>在生成 Jack 库文件时，系统也会生成该库的 .dex 文件并将其作为 dex 预处理文件存储在 .jack 库文件中。在进行编译时，Jack 会重复使用每个库的 dex 预处理文件。</p>
+
+<p>所有库均经过 dex 预处理。</p>
+
+<img src="/images/pre-dex.png" height="75%" width="75%" alt="包含 dex 预处理文件的 Jack 库"/>
+<p class="img-caption"><strong>图 4. </strong>包含 dex 预处理文件的 Jack 库</p>
+
+<h4 id="limitations">使用限制</h4>
+
+<p>目前，如果在编译过程中使用了压缩/混淆/重新打包功能，则 Jack 不会重复使用库的 dex 预处理文件。</p>
+
+<h3 id="incremental_compilation">增量编译</h3>
+
+<p>增量编译指的是，仅重新编译自上次编译后出现过更改的组件及其依赖项。当只有少数组件出现过更改时，进行增量编译可能比完整编译快得多。</p>
+
+<h4 id="limitations">使用限制</h4>
+
+<p>当压缩、混淆、重新打包或对旧版 multi-dex 启用后，增量编译会被停用。
+
+Benny: 如何理解 multi-dex legacy</p>
+
+<h4 id="enabling_incremental_builds">启用增量编译</h4>
+
+<p>目前，增量编译默认处于未启用状态。要启用增量编译，请将以下行内容添加到您要进行增量编译的项目的 Android.mk 文件中：</p>
+
+<pre class="prettyprint">
+LOCAL_JACK_ENABLED := incremental
+</pre>
+
+<p class="note"><strong>注意</strong>：首次使用 Jack 编译项目时，如果某些依赖项未编译，请使用 <code>mma</code> 进行编译，之后您可以使用标准编译命令。</p>
+
+<h3 id="shrinking_and_obfuscation">压缩和混淆</h3>
+
+<p>Jack 支持压缩和混淆，并使用 proguard 配置文件来实现压缩和混淆功能。以下是支持的选项和忽略的选项：</p>
+
+<h4 id="supported_common_options">支持的常用选项</h4>
+
+<p>常用选项包括：</p>
+
+<ul>
+  <li> <code>@</code>
+  </li><li> <code>-include</code>
+  </li><li> <code>-basedirectory</code>
+  </li><li> <code>-injars</code>
+  </li><li> <code>-outjars // only 1 output jar supported</code>
+  </li><li> <code>-libraryjars</code>
+  </li><li> <code>-keep</code>
+  </li><li> <code>-keepclassmembers</code>
+  </li><li> <code>-keepclasseswithmembers</code>
+  </li><li> <code>-keepnames</code>
+  </li><li> <code>-keepclassmembernames</code>
+  </li><li> <code>-keepclasseswithmembernames</code>
+  </li><li> <code>-printseeds</code>
+</li></ul>
+
+<h4 id="supported_shrinking_options">支持的压缩选项</h4>
+
+<p>压缩选项包括：</p>
+
+<ul>
+  <li> <code>-dontshrink</code>
+</li></ul>
+
+<h4 id="supported_obfuscation_options">支持的混淆选项</h4>
+
+<p>混淆选项包括：</p>
+
+<ul>
+  <li> <code>-dontobfuscate</code>
+  </li><li> <code>-printmapping</code>
+  </li><li> <code>-applymapping</code>
+  </li><li> <code>-obfuscationdictionary</code>
+  </li><li> <code>-classobfuscationdictionary</code>
+  </li><li> <code>-packageobfuscationdictionary</code>
+  </li><li> <code>-useuniqueclassmembernames</code>
+  </li><li> <code>-dontusemixedcaseclassnames</code>
+  </li><li> <code>-keeppackagenames</code>
+  </li><li> <code>-flattenpackagehierarchy</code>
+  </li><li> <code>-repackageclasses</code>
+  </li><li> <code>-keepattributes</code>
+  </li><li> <code>-adaptclassstrings</code>
+</li></ul>
+
+<h4 id="ignored_options">忽略的选项</h4>
+
+<p>忽略的选项包括：</p>
+
+<ul>
+  <li> <code>-dontoptimize // Jack does not optimize</code>
+  </li><li> <code>-dontpreverify // Jack does not preverify</code>
+  </li><li> <code>-skipnonpubliclibraryclasses</code>
+  </li><li> <code>-dontskipnonpubliclibraryclasses</code>
+  </li><li> <code>-dontskipnonpubliclibraryclassmembers</code>
+  </li><li> <code>-keepdirectories</code>
+  </li><li> <code>-target</code>
+  </li><li> <code>-forceprocessing</code>
+  </li><li> <code>-printusage</code>
+  </li><li> <code>-whyareyoukeeping</code>
+  </li><li> <code>-optimizations</code>
+  </li><li> <code>-optimizationpasses</code>
+  </li><li> <code>-assumenosideeffects</code>
+  </li><li> <code>-allowaccessmodification</code>
+  </li><li> <code>-mergeinterfacesaggressively</code>
+  </li><li> <code>-overloadaggressively</code>
+  </li><li> <code>-microedition</code>
+  </li><li> <code>-verbose</code>
+  </li><li> <code>-dontnote</code>
+  </li><li> <code>-dontwarn</code>
+  </li><li> <code>-ignorewarnings</code>
+  </li><li> <code>-printconfiguration</code>
+  </li><li> <code>-dump</code>
+</li></ul>
+
+<p class="note"><strong>注意</strong>：其他选项会引发错误。</p>
+
+<h3 id="repackaging">重新打包</h3>
+
+<p>Jack 使用 jarjar 配置文件进行重新打包。</p>
+
+<p class="note"><strong>注意</strong>：Jack 与“rule”规则类型兼容，但与“zap”或“keep”规则类型不兼容。如果您需要使用“zap”或“keep”规则类型，请提交一项功能请求，并在其中说明您在应用中如何使用该功能。</p>
+
+<h3 id="multidex_support">多 dex 支持</h3>
+
+<p>由于 dex 文件的方法数上限为 65K，因此方法数超过 65K 的应用必须拆分成多个 dex 文件（要详细了解多 dex，请参阅<a href="http://developer.android.com/tools/building/multidex.html">构建方法数超过 65K 的应用</a>）。</p>
+
+<p>Jack 支持本地多 dex 和旧版多 dex。</p>
+
+</body></html>

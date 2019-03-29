@@ -1,0 +1,227 @@
+<html devsite>
+  <head>
+    <title>Understanding 64-bit Builds</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<h2 id=overview>Overview</h2>
+
+<p>From the build system’s perspective, the most notable change is that now it
+supports building binaries for two target CPU architectures (64-bit and 32-bit)
+in the same build. That’s also known as <em>Multilib build</em>.</p>
+
+<p>For native static libraries and shared libraries, the build system sets up
+rules to build binaries for both architectures. The product configuration
+(<code>PRODUCT_PACKAGES</code>), together with the dependency graph, determines which
+binaries are built and installed to the system image.</p>
+
+<p>For executables and apps, the build system builds only the 64-bit version by
+default, but you can override this setting by using a global
+<code>BoardConfig.mk</code> variable or a module-scoped variable.</p>
+
+<p class="caution"><strong>Caution:</strong> If an app exposes an API to other
+apps that can be either 32- or 64-bit, the app must have the
+<code>android:multiarch</code> property set to a value of <code>true</code>
+within its manifest to avoid potential errors.</p>
+
+<h2 id=product_configuration>Product Configuration</h2>
+
+
+<p>In <code>BoardConfig.mk</code>, we added the following variables to
+configure the second CPU architecture and ABI:</p>
+
+<pre>
+TARGET_2ND_ARCH
+TARGET_2ND_ARCH_VARIANT
+TARGET_2ND_CPU_VARIANT
+TARGET_2ND_CPU_ABI
+TARGET_2ND_CPU_ABI2
+</pre>
+
+
+<p>You can see an example in <code>build/target/board/generic_arm64/BoardConfig.mk</code>.</p>
+
+<p>If you want the build system to build 32-bit executables and apps by default,
+set the following variable:</p>
+
+<pre class="devsite-click-to-copy">
+TARGET_PREFER_32_BIT := true
+</pre>
+
+<p>However, you can override this setting  by using module-specific variables in
+<code>Android.mk</code>.</p>
+
+<p>In a Multilib build, module names in <code>PRODUCT_PACKAGES</code> cover
+both the 32-bit and 64-bit binaries, as long as they are defined by the build
+system. For libraries pulled in by dependency, a 32-bit library is installed
+only if it’s required by another 32-bit library or executable. The same is true
+for 64-bit libraries.</p>
+
+<p>However, module names on the <code>make</code> command line cover only the
+64-bit version. For example, after running <code>lunch
+aosp_arm64-eng</code>,<code>make libc</code> builds only the 64-bit libc. To
+build the 32-bit libc, you need to run <code>make libc_32</code>.</p>
+
+<h2 id=module_definition_in_android_mk>Module Definition in Android.mk</h2>
+
+<p>You can use the <code>LOCAL_MULTILIB</code> variable to configure your build
+for 32-bit and/or 64-bit and override the global
+<code>TARGET_PREFER_32_BIT</code>.</p>
+
+<p>Set <code>LOCAL_MULTILIB</code> to one of the following:</p>
+
+<ul>
+  <li>"both”: build both 32-bit and 64-bit.</li>
+  <li>“32”: build only 32-bit.</li>
+  <li>“64”: build only 64-bit.</li>
+  <li>“first”: build for only the first arch (32-bit in 32-bit devices and 64-bit
+in 64-bit devices).</li>
+  <li>“”: the default; the build system decides what arch to build based on the
+module class and other <code>LOCAL_</code> variables, such as <code>LOCAL_MODULE_TARGET_ARCH</code>,
+<code>LOCAL_32_BIT_ONLY</code>, etc.</li>
+</ul>
+
+<p>In a Multilib build, conditionals like <code>ifeq $(TARGET_ARCH)</code> don’t work any
+more. </p>
+
+<p>If you want to build your module for some specific arch(s), the following
+variables can help you:</p>
+
+<ul>
+  <li><code>LOCAL_MODULE_TARGET_ARCH</code><br>It can be set to a list of archs, something
+like “arm x86 arm64”. Only if the arch being built is among that list will the
+current module be included by the build system.</li>
+
+  <li><code>LOCAL_MODULE_UNSUPPORTED_TARGET_ARCH</code><br>The opposite of
+<code>LOCAL_MODULE_TARGET_ARCH</code>. Only if the arch being built is not among the list,
+the current module will be included.</li>
+</ul>
+
+<p>There are minor variants of the above two variables:</p>
+
+<ul>
+  <li><code>LOCAL_MODULE_TARGET_ARCH_WARN</code></li>
+  <li><code>LOCAL_MODULE_UNSUPPORTED_TARGET_ARCH_WARN</code></li>
+</ul>
+
+<p>The build system will give warning if the current module is skipped due to
+archs limited by them.</p>
+
+<p>To set up arch-specific build flags, use the arch-specific <code>LOCAL_</code> variables. An
+arch-specific <code>LOCAL_</code> variable is a normal <code>LOCAL_</code> variable with an arch suffix,
+for example:</p>
+
+<ul>
+  <li> <code>LOCAL_SRC_FILES_arm, LOCAL_SRC_FILES_x86,</code>
+  <li> <code>LOCAL_CFLAGS_arm, LOCAL_CFLAGS_arm64,</code>
+  <li> <code>LOCAL_LDFLAGS_arm, LOCAL_LDFLAGS_arm64,</code>
+</ul>
+
+<p>Those variables will be applied only if a binary is  currently being built for
+that arch.</p>
+
+<p>Sometimes it’s more convenient to set up flags based on whether the binary is
+currently being built for 32-bit or 64-bit. In that case you can use the <code>LOCAL_</code>
+variable with a <code>_32</code> or <code>_64</code> suffix, for example:</p>
+
+<ul>
+  <li> <code>LOCAL_SRC_FILES_32, LOCAL_SRC_FILES_64,</code>
+  <li> <code>LOCAL_CFLAGS_32, LOCAL_CFLAGS_64,</code>
+  <li> <code>LOCAL_LDFLAGS_32, LOCAL_LDFLAGS_64,</code>
+</ul>
+
+<p>Note that not all of the <code>LOCAL_</code> variables support the arch-specific variants.
+For an up-to-date list of such variables, refer to <code>build/core/clear_vars.mk</code>.</p>
+
+<h2 id=install_path>Install path</h2>
+
+
+<p>In the past, you could use <code>LOCAL_MODULE_PATH</code> to install a library to a
+location other than the default one. For example, <code>LOCAL_MODULE_PATH :=
+$(TARGET_OUT_SHARED_LIBRARIES)/hw</code>.</p>
+
+<p>In Multilib build, use <code>LOCAL_MODULE_RELATIVE_PATH</code> instead:</p>
+
+<pre class="devsite-click-to-copy">
+LOCAL_MODULE_RELATIVE_PATH := hw
+</pre>
+
+
+<p>so that both the 64-bit and 32-bit libraries can be installed to the right
+place.</p>
+
+<p>If you build an executable as both 32-bit and 64-bit, you’ll need to use one of
+the following variables to distinguish the install path:</p>
+
+<ul>
+  <li><code>LOCAL_MODULE_STEM_32, LOCAL_MODULE_STEM_64</code><br>Specifies the installed file name.
+  <li><code>LOCAL_MODULE_PATH_32, LOCAL_MODULE_PATH_64</code><br>Specifies the install path.
+</ul>
+
+<h2 id=generated_sources>Generated sources </h2>
+
+<p>In a Multilib build,  if you generate source files to
+<code>$(local-intermediates-dir)</code> (or <code>$(intermediates-dir-for)
+</code>with explicit variables), it won’t reliably work any more. That’s
+because the intermediate generated sources will be required by both 32-bit and
+64-bit build, but <code>$(local-intermediates-dir)</code> only points to one of
+the two intermediate directories.</p>
+
+<p>Happily, the build system now provides a dedicated, Multilib-friendly,
+intermediate directory for generating sources. You can call<code>
+$(local-generated-sources-dir)</code> or
+<code>$(generated-sources-dir-for)</code> to get the directory’s path. Their
+usages are similar to <code>$(local-intermediates-dir)</code> and
+<code>$(intermediates-dir-for)</code>. </p>
+
+<p>If a source file is generated to the new dedicated directory and picked up
+by <code>LOCAL_GENERATED_SOURCES</code>, it is built for both 32-bit and 64-bit
+in multilib build.</p>
+
+<h2 id=prebuilts>Prebuilts</h2>
+
+
+<p>In Multilib, you can’t use <code>TARGET_ARCH</code> (or together with
+<code>TARGET_2ND_ARCH</code>) to tell the build system what arch the prebuilt
+binary is targeted for. Use the aforementioned <code>LOCAL_</code> variable
+<code>LOCAL_MODULE_TARGET_ARCH</code> or
+<code>LOCAL_MODULE_UNSUPPORTED_TARGET_ARCH</code> instead.</p>
+
+<p>With these variables, the build system can choose the corresponding 32-bit
+prebuilt binary even if it’s currently doing a 64-bit Multilib build.</p>
+
+<p>If you want to use the chosen arch to compute the source path for the prebuilt
+binary , you can call<code> $(get-prebuilt-src-arch)</code>.</p>
+
+<h2 id=dex-preopt>Dex-preopt</h2>
+
+
+<p>For 64-bit devices, by default we generate both 32-bit and 64-bit odex files
+for the boot image and any Java libraries. For APKs, by default we generate
+odex only for the primary 64-bit arch. If an app will be launched in both
+32-bit and 64-bit processes, please use <code>LOCAL_MULTILIB := both</code> to make sure
+both 32-bit and 64-bit odex files are generated. That flag also tells the build
+system to include both 32-bit and 64-bit JNI libraries, if the app has any.</p>
+
+
+  </body>
+</html>

@@ -1,0 +1,224 @@
+<html devsite><head>
+    <title>文件级加密</title>
+    <meta name="project_path" value="/_project.yaml"/>
+    <meta name="book_path" value="/_book.yaml"/>
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+<p>Android 7.0 及更高版本支持文件级加密 (FBE)。采用文件级加密时，可以使用不同的密钥对不同的文件进行加密，并且可以对这些文件进行单独解密。
+</p>
+<p>本文介绍了如何在新设备上启用文件级加密，以及如何更新系统应用，以充分利用新的 Direct Boot API 并尽可能为用户提供最佳、最安全的体验。
+</p>
+<h2 id="direct-boot">直接启动</h2>
+<p>借助文件级加密，Android 7.0 中引入了一项称为<a href="https://developer.android.com/training/articles/direct-boot.html">直接启动</a>的新功能。该功能处于启用状态时，已加密设备在启动后将直接进入锁定屏幕。之前，在使用<a href="full-disk.html">全盘加密</a> (FDE) 的已加密设备上，用户在访问任何数据之前都需要先提供凭据，从而导致手机无法执行除最基本操作之外的所有其他操作。例如，闹钟无法运行，无障碍服务不可用，手机无法接电话，而只能进行基本的紧急拨号操作。
+</p>
+<p>引入文件级加密 (FBE) 和新 API 后，便可以将应用设为加密感知型应用，这样一来，它们将能够在受限环境中运行。这些应用将可以在用户提供凭据之前运行，同时系统仍能保护私密用户信息。
+</p>
+<p>在启用了 FBE 的设备上，每位用户均有两个可供应用使用的存储位置：</p>
+<ul>
+  <li>凭据加密 (CE) 存储空间：这是默认存储位置，只有在用户解锁设备后才可用。</li>
+  <li>设备加密 (DE) 存储空间：在直接启动模式期间以及用户解锁设备后均可用。</li>
+</ul>
+<p>这种区分能够使工作资料更加安全，因为这样一来，加密不再只基于启动时密码，从而能够同时保护多位用户。
+</p>
+<p>Direct Boot API 允许加密感知型应用访问上述每个区域。应用生命周期会发生一些变化，以便在用户的 CE 存储空间因用户在锁定屏幕上首次输入凭据而解锁时，或者在工作资料提供<a href="https://developer.android.com/about/versions/nougat/android-7.0.html#android_for_work">工作挑战</a>时，通知应用。<em></em>无论是否实现了 FBE，运行 Android 7.0 的设备都必须要支持这些新的 API 和生命周期。不过，如果没有 FBE，DE 和 CE 存储空间将始终处于解锁状态。
+</p>
+<p>Android 开放源代码项目 (AOSP) 中提供了 EXT4 文件系统中的文件级加密的完整实现。在满足相关要求的设备上，只需启用该实现即可使用该功能。选择使用 FBE 的制造商可能想要了解根据所用系统芯片 (SoC) 优化该功能的方法。
+</p>
+<p>AOSP 中的所有必要程序包均已更新为直接启动感知型程序包。不过，如果设备制造商使用的是这些应用的定制版本，则需要确保至少存在能够提供以下服务的直接启动感知型程序包：</p>
+
+<ul>
+<li>电话服务和拨号器</li><li>用于在锁定屏幕中输入密码的输入法</li></ul>
+
+<h2 id="examples-and-source">示例和源代码</h2>
+
+<p>Android 提供了文件级加密的参考实现，其中 vold (system/vold) 负责提供用于管理 Android 上的存储设备和存储卷的功能。添加 PDE 会为 vold 提供一些新命令，以便支持对多位用户的 CE 密钥和 DE 密钥进行密钥管理。除了为使用内核中的 <a href="#kernel-support">EXT4 加密</a>功能而进行的核心更改外，许多系统程序包（包括锁定屏幕和 SystemUI）也经过了修改，以支持 FBE 和“直接启动”功能。其中包括：</p>
+
+<ul>
+<li>AOSP 拨号器 (packages/apps/Dialer)</li><li>桌面时钟 (packages/apps/DeskClock)</li><li>LatinIME (packages/inputmethods/LatinIME)*</li><li>“设置”应用 (packages/apps/Settings)*</li><li>SystemUI (frameworks/base/packages/SystemUI)*</li></ul>
+<p>
+<em>*使用 <code><a href="#supporting-direct-boot-in-system-applications">defaultToDeviceProtectedStorage</a></code> 清单属性的系统应用</em>
+</p>
+<p>通过在 AOSP 源代码树的框架或程序包目录中运行 <code>mangrep directBootAware</code> 命令，可以找到更多加密感知型应用和服务的示例。
+</p>
+<h2 id="dependencies">依赖关系</h2>
+<p>要安全地使用 AOSP 提供的 FBE 实现，设备需要满足以下依赖关系：</p>
+
+<ul>
+<li>对 EXT4 加密的<strong>内核支持</strong>（内核配置选项：EXT4_FS_ENCRYPTION）</li><li>基于 1.0 或 2.0 版 HAL 的 <strong><a href="/security/keystore/index.html">Keymaster 支持</a></strong>。不支持 Keymaster 0.3，因为它既不提供必要的功能，也不能保证为加密密钥提供充分保护。
+</li><li>必须在<a href="/security/trusty/index.html">可信执行环境</a> (TEE) 中实现 <strong>Keymaster/<a href="/security/keystore/index.html">Keystore</a> 和 Gatekeeper</strong>，以便为 DE 密钥提供保护，从而使未经授权的操作系统（刷到设备上的定制操作系统）无法直接请求 DE 密钥。
+</li><li>内核<strong>加密性能</strong>必须要在使用 AES XTS 时至少达到 50MB/s，以确保良好的用户体验。
+</li><li><strong>硬件信任根</strong>和<strong>验证启动</strong>需要绑定到 Keymaster 初始化进程，以确保未经授权的操作系统无法获取设备加密凭据。</li>
+</ul>
+
+<p class="note">
+<strong>注意</strong>：存储政策会应用到文件夹及其所有子文件夹。对于以未加密形式存入 OTA 文件夹以及存入系统解密密钥存放文件夹的内容，制造商应加以限制。大多数内容都应存放在凭据加密存储空间（而非设备加密存储空间）内。
+</p>
+
+<h2 id="implementation">实现</h2>
+<p>最重要的一点是，应根据<a href="https://developer.android.com/training/articles/direct-boot.html">直接启动</a>开发者文档将诸如闹钟、电话、无障碍功能等应用设为 android:directBootAware。
+</p>
+<h3 id="kernel-support">内核支持</h3>
+<p>AOSP 提供的文件级加密实现会用到 Linux 4.4 内核中的 EXT4 加密功能。推荐的解决方案是使用基于 4.4 或更高版本的内核。EXT4 加密还反向移植到了 Android 公共代码库内的 3.10 内核以及受支持的 Nexus 内核。
+</p>
+<p>对于希望将该功能引入到其设备内核的设备制造商来说，AOSP 内核/公共 Git 代码库中的 android-3.10.y 分支可作为一个很好的着手点。不过，务必要在最新的稳定版 Linux 内核（目前是 <a href="https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/log/?id=refs/tags/v4.6">linux-4.6</a>）中应用 EXT4 和 JBD2 项目提供的最新补丁程序。Nexus 设备内核已经包含其中很多补丁程序。
+</p>
+<table>
+  <tbody><tr>
+   <th>设备</th>
+   <th>内核</th>
+  </tr>
+  <tr>
+   <td>Android Common</td>
+   <td><strong>kernel/common</strong> android-3.10.y (<a href="https://android.googlesource.com/kernel/common/+/android-3.10.y">Git</a>)</td>
+  </tr>
+  <tr>
+   <td>Nexus 5X (bullhead)</td>
+   <td><strong>kernel/msm</strong> android-msm-bullhead-3.10-n-preview-2 (<a href="https://android.googlesource.com/kernel/msm/+/android-msm-bullhead-3.10-n-preview-2">Git</a>)</td>
+  </tr>
+  <tr>
+   <td>Nexus 6P (angler)</td>
+   <td><strong>kernel/msm</strong> android-msm-angler-3.10-n-preview-2 (<a href="https://android.googlesource.com/kernel/msm/+/android-msm-angler-3.10-n-preview-2">Git</a>)</td>
+  </tr>
+</tbody></table>
+<p>请注意，以上每个内核都使用了到 3.10 的反向移植。Linux 3.18 中的 EXT4 和 JBD2 驱动程序已移植到基于 3.10 的现有内核中。由于内核各个部分之间存在依赖关系，因此这种反向移植会导致系统停止支持 Nexus 设备不使用的一些功能。其中包括：</p>
+
+<ul>
+<li>EXT3 驱动程序，不过 EXT4 仍可以装载并使用 EXT3 文件系统</li><li>全局文件系统 (GFS) 支持</li><li>EXT4 中的 ACL 支持</li>
+</ul>
+
+<p>除了对 EXT4 加密提供功能支持外，设备制造商还可以考虑实现加密加速功能，以便加快文件级加密的速度并改善用户体验。
+</p>
+<h3 id="enabling-file-based-encryption">启用文件级加密</h3>
+<p>通过将不带参数的 <code>fileencryption</code> 标记添加到 <code>userdata</code> 分区最后一列的 <code>fstab</code> 行中，可以启用 FBE。要查看示例，请访问 <a href="https://android.googlesource.com/device/lge/bullhead/+/nougat-release/fstab_fbe.bullhead">https://android.googlesource.com/device/lge/bullhead/+/nougat-release/fstab_fbe.bullhead</a>
+</p>
+<p>测试设备上的 FBE 实现情况时，可以指定以下标记：<code>forcefdeorfbe="&lt;path/to/metadata/partition&gt;"</code>
+</p>
+<p>此标记会将设备设为使用 FDE，但允许针对开发者转换为 FBE。默认情况下，此标记的行为类似于 <code>forceencrypt</code>，会使设备进入 FDE 模式。不过，它将提供一个调试选项，以便在开发者预览中允许将设备切换到 FBE 模式。另外，还可以使用以下命令在 fastboot  中启用 FBE：</p>
+<p>
+<code>$ fastboot --wipe-and-use-fbe</code>
+</p>
+<p>此标记仅用于开发目的，可提供一个在实际 FBE 设备发布之前演示 FBE 功能的平台。此标记在将来可能会被弃用。
+</p>
+<h3 id="integrating-with-keymaster">与 Keymaster 集成</h3>
+<p><code>vold</code> 负责处理密钥生成和内核密钥环管理工作。AOSP 的 FBE 实现要求设备支持 1.0 或更高版本的 Keymaster HAL。更低版本的 Keymaster HAL 不受支持。</p>
+<p>首次启动时，在启动过程的早期阶段会生成并安装用户 0 的密钥。到 <code>init</code> 的 <code>on-post-fs</code> 阶段完成时，Keymaster 必须已做好处理请求的准备。在 Nexus 设备上，这是通过设置一个脚本块处理的：</p>
+
+<ul>
+<li>确保 Keymaster 在 <code>/data</code> 装载之前启动</li><li>指定文件加密算法套件：AOSP 的文件级加密实现会用到采用 XTS 模式的 AES-256 算法<p class="note">
+<strong>注意</strong>：所有加密都基于采用 XTS 模式的 AES-256 算法。XTS 的定义方式决定了它需要两个 256 位密钥；因此实际上 CE 密钥和 DE 密钥都是 512 位密钥。
+</p>
+</li>
+</ul>
+
+<h3 id="encryption-policy">加密政策</h3>
+<p>EXT4 加密在目录级应用加密政策。首次创建设备的 <code>userdata</code> 分区时，会由 <code>init</code> 脚本应用基本结构和政策。这些脚本将触发创建首位用户（用户 0）的 CE 密钥和 DE 密钥，并定义要使用这些密钥加密哪些目录。创建其他用户和资料时，会生成必要的其他密钥并将其存储在密钥代码库中；接下来会创建它们的凭据和设备存储位置，并且加密政策会将这些密钥关联到相应目录。
+</p>
+<p>在 AOSP 当前提供的文件级加密实现中，加密政策被硬编码到了以下位置：</p>
+<p>
+<code>/system/extras/ext4_utils/ext4_crypt_init_extensions.cpp</code>
+</p>
+<p>可以在该文件中添加例外情况，以彻底防止特定目录被加密，具体方法是将相应目录添加到 <code>directories_to_exclude</code> 列表中。如果进行了此类修改，设备制造商应添加 <a href="/security/selinux/device-policy.html">SELinux 政策</a>，以便仅向需要使用未加密目录的应用授予访问权限（应排除所有不可信的应用）。
+</p>
+<p>目前唯一可接受的使用这种方法的情况是在支持旧版 OTA 功能方面。
+</p>
+<h3 id="supporting-direct-boot-in-system-applications">在系统应用中支持直接启动</h3>
+
+<h4 id="making-applications-direct-boot-aware">将应用设为直接启动感知型应用</h4>
+<p>为了实现系统应用的快速迁移，新增了两个可在应用级别设置的属性。<code>defaultToDeviceProtectedStorage</code> 属性仅适用于系统应用，<code>directBootAware</code> 属性则适用于所有应用。
+</p>
+
+<pre>
+&lt;application
+    android:directBootAware="true"
+    android:defaultToDeviceProtectedStorage="true"&gt;
+</pre>
+
+<p>应用级别的 <code>directBootAware</code> 属性的含义是将相应应用中的所有组件均标记为加密感知型组件。
+</p>
+<p><code>defaultToDeviceProtectedStorage</code> 属性用于将默认的应用存储位置重定向到 DE 存储空间（而非 CE 存储空间）。使用此标记的系统应用必须要仔细审核存储在默认位置的所有数据，并将敏感数据的路径更改为使用 CE 存储空间。使用此选项的设备制造商应仔细检查要存储的数据，以确保其中不含任何个人信息。
+</p>
+<p>在这种模式下运行时，以下系统 API 可在需要时用于明确管理由 CE 存储空间支持的 Context（这些 API 与设备保护存储空间适用的同类 API 相对应）。
+</p>
+
+<ul>
+<li><code>Context.createCredentialProtectedStorageContext()</code>
+</li><li><code>Context.isCredentialProtectedStorage()</code></li>
+</ul>
+<h4 id="supporting-multiple-users">支持多位用户</h4>
+<p>多用户环境中的每位用户均会获得一个单独的加密密钥。每位用户均会获得两个密钥：一个 DE 密钥和一个 CE 密钥。用户 0 由于是特殊用户，因此必须要先登录设备。这部分适用于使用<a href="/devices/tech/admin/index.html">设备管理功能</a>的情况。
+</p>
+<p>加密感知型应用按照以下方式与各用户进行互动：<code>INTERACT_ACROSS_USERS</code> 和 <code>INTERACT_ACROSS_USERS_FULL</code> 允许应用与设备上的所有用户互动。不过，这些应用只能访问已解锁用户的 CE 加密目录。
+</p>
+<p>应用或许能够与各个 DE 区域自由互动，但一位用户已解锁并不意味着设备上的所有用户均已解锁。应用在尝试访问这些区域之前，应先检查该状态。
+</p>
+<p>每个工作资料用户 ID 也会获得两个密钥：一个 DE 密钥和一个 CE 密钥。当满足工作挑战时，资料用户会被解锁，并且 Keymaster（在 TEE 中）可以提供资料的 TEE 密钥。
+</p>
+<h3 id="handling-updates">处理更新</h3>
+<p>恢复分区无法访问用户数据分区中采用 DE 保护的存储空间。强烈建议实现 FBE 的设备支持新版 OTA 机制（采用即将推出的 A/B 系统更新方式）。由于可以在正常操作期间应用 OTA 更新，因此恢复分区无需访问已加密存储卷中的数据。
+</p>
+<p>如果使用旧版 OTA 解决方案（该解决方案要求恢复分区访问用户数据分区中的 OTA 文件），则需要执行以下操作：</p>
+
+<ul>
+<li>在用户数据分区中创建一个顶级目录（例如“misc_ne”）。
+</li><li>将该顶级目录添加到加密政策例外情况中（请参阅上文中的<a href="#encryption-policy">加密政策</a>）。
+</li><li>在该目录中创建一个用于存放 OTA 更新包的目录。
+</li><li>添加 SELinux 规则和文件环境，以便控制对该文件夹及其内容的访问。应当只有接收 OTA 更新的进程或应用能够对该文件夹进行读取和写入操作。
+</li><li>任何其他应用或进程都不应具有访问该文件夹的权限。</li>
+</ul>
+
+<p>在该文件夹中创建一个目录，以便存放 OTA 更新包。
+</p>
+<h2 id="validation">验证</h2>
+<p>为了确保实现的 FBE 功能版本能够按预期工作，需要部署多种 <a href="https://android.googlesource.com/platform/cts/+/nougat-cts-release/hostsidetests/appsecurity/src/android/appsecurity/cts/DirectBootHostTest.java">CTS 加密测试</a>。
+</p>
+<p>可以顺利为您的主板编译内核后，请另行为 x86 编译内核并在 QEMU 下运行该内核，然后您就可以使用以下命令通过 <a hre="https://git.kernel.org/cgit/fs/ext2/xfstests-bld.git/plain/quick-start?h=META">xfstest</a> 进行测试了：</p>
+<pre>
+$ kvm-xfstests -c encrypt -g auto
+</pre>
+<p>此外，设备制造商可以在启用了 FBE 的设备上进行以下手动测试：</p>
+
+<ul>
+  <li>检查 <code>ro.crypto.state</code> 是否存在<ul>
+      <li>确认 <code>ro.crypto.state</code> 是否已加密</li>
+    </ul>
+  </li>
+  <li>检查 <code>ro.crypto.type</code> 是否存在<ul>
+      <li>确认 <code>ro.crypto.type</code> 是否已设为 <code>file</code></li>
+    </ul>
+  </li>
+</ul>
+
+<p>此外，测试人员可以在主用户已设置锁定屏幕的情况下启动一个 <code>userdebug</code> 实例。然后通过 <code>adb</code> shell 命令进入设备，并使用 <code>su</code> 获得 root 权限。确认 <code>/data/data</code> 中是否包含加密的文件名；如果没有，则表示存在问题。
+</p>
+<h2 id="aosp-implementation-details">AOSP 实现详情</h2>
+<p>本部分详细介绍了 AOSP 的文件级加密实现，并讲解了文件级加密的运作方式。设备制造商应该无需执行任何更改，即可在其设备上使用 FBE 和“直接启动”功能。
+</p>
+<h3 id="ext4-encryption">EXT4 加密</h3>
+<p>AOSP 的文件级加密实现会用到内核中的 EXT4 加密功能，并配置为：</p><ul>
+<li>借助采用 XTS 模式的 AES-256 算法加密文件内容</li><li>借助采用 CBC-CTS 模式的 AES-256 算法加密文件名</li></ul>
+<h3 id="key-derivation">密钥派生</h3>
+<p>硬盘加密密钥（512 位 AES-XTS 密钥）以加密形式存储：通过另一个存放在 TEE 中的密钥（256 位 AES-GCM 密钥）进行加密。要使用该 TEE 密钥，需要具备以下三项：</p><ul>
+<li>身份验证令牌</li><li>扩展凭据</li><li>secdiscardable hash</li></ul>
+<p>身份验证令牌是一个经过加密和身份验证的令牌，由 <a href="/security/authentication/gatekeeper.html">Gatekeeper</a> 在用户成功登录时生成。<em></em>除非用户提供的身份验证令牌正确无误，否则 TEE 将拒绝用户使用该密钥。如果用户没有任何凭据，则不使用也不需要使用身份验证令牌。
+</p>
+<p>扩展凭据是使用 <code>scrypt</code> 算法进行加盐和扩展处理的用户凭据。<em></em>实际上，凭据在被传递到 <code>vold</code>（以便传递到 <code>scrypt</code>）之前，会在锁定设置服务中接受一次哈希处理。扩展凭据会以加密形式绑定到 TEE 中的相应密钥，并享有适用于 <code>KM_TAG_APPLICATION_ID</code> 的所有保证。如果用户没有凭据，则不使用也不需要使用扩展凭据。
+</p>
+<p><code>secdiscardable hash</code> 是 16 KB 随机文件的 512 位哈希，和用于重建相应密钥的其他信息（例如种子）存储在一起。在相应密钥被删除时，该文件会一并被安全地删除，或以新的方式被加密；采用这种附加的保护措施后，攻击者要恢复相应密钥，必须要先恢复这个被安全删除的文件中的每一个位。secdiscardable hash 同样会以加密形式绑定到 TEE 中的相应密钥，并享有适用于 <code>KM_TAG_APPLICATION_ID</code> 的所有保证。请参阅<a href="/security/keystore/implementer-ref.html">面向 Keystore 实现人员的参考资料</a>。
+
+</p></body></html>

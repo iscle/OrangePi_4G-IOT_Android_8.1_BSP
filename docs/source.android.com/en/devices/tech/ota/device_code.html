@@ -1,0 +1,1136 @@
+<html devsite>
+  <head>
+    <title>Device-Specific Code</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>The recovery system includes several hooks for inserting device-specific
+code so that OTA updates can also update parts of the device other than the
+Android system (e.g., the baseband or radio processor).</p>
+<p>The following sections and examples customize the <b>tardis</b> device
+produced by the <b>yoyodyne</b> vendor.</p>
+
+<h2>Partition map</h2>
+<p>As of Android 2.3, the platform supports eMMc flash devices and the ext4
+filesystem that runs on those devices. It also supports Memory Technology Device
+(MTD) flash devices and the yaffs2 filesystem from older releases.</p>
+<p>The partition map file is specified by TARGET_RECOVERY_FSTAB; this file is
+used by both the recovery binary and the package-building tools. You can
+specify the name of the map file in TARGET_RECOVERY_FSTAB in BoardConfig.mk.</p>
+<p>A sample partition map file might look like this:</p>
+
+<pre class="devsite-click-to-copy">
+device/yoyodyne/tardis/recovery.fstab
+</pre>
+
+<pre class="devsite-click-to-copy">
+# mount point       fstype  device       [device2]        [options (3.0+ only)]
+
+/sdcard     vfat    /dev/block/mmcblk0p1 /dev/block/mmcblk0
+/cache      yaffs2  cache
+/misc       mtd misc
+/boot       mtd boot
+/recovery   emmc    /dev/block/platform/s3c-sdhci.0/by-name/recovery
+/system     ext4    /dev/block/platform/s3c-sdhci.0/by-name/system length=-4096
+/data       ext4    /dev/block/platform/s3c-sdhci.0/by-name/userdata
+</pre>
+
+<p>With the exception of <code>/sdcard</code>, which is optional, all mount
+points in this example must be defined (devices may also add extra partitions).
+There are five supported filesystem types:</p>
+<dl>
+<dt>yaffs2</dt>
+<dd>A yaffs2 filesystem atop an MTD flash device. "device" must be the name of
+the MTD partition and must appear in <code>/proc/mtd</code>.</dd>
+<dt>mtd</dt>
+<dd>A raw MTD partition, used for bootable partitions such as boot and
+recovery. MTD is not actually mounted, but the mount point is used as a key to
+locate the partition. "device" must be the name of the MTD partition in
+<code>/proc/mtd</code>.</dd>
+<dt>ext4</dt>
+<dd>An ext4 filesystem atop an eMMc flash device. "device" must be the path of
+the block device.</dd>
+<dt>emmc</dt>
+<dd>A raw eMMc block device, used for bootable partitions such as boot and
+recovery. Similar to the mtd type, eMMc is never actually mounted, but the
+mount point string is used to locate the device in the table.</dd>
+<dt>vfat</dt>
+<dd>A FAT filesystem atop a block device, typically for external storage such
+as an SD card. The device is the block device; device2 is a second block
+device the system attempts to mount if mounting the primary device fails (for
+compatibility with SD cards which may or may not be formatted with a partition
+table).
+<p>All partitions must be mounted in the root directory (i.e. the mount point
+value must begin with a slash and have no other slashes). This restriction
+applies only to mounting filesystems in recovery; the main system is free to
+mount them anywhere. The directories <code>/boot</code>, <code>/recovery</code>,
+and <code>/misc</code> should be raw types (mtd or emmc), while the
+directories <code>/system</code>, <code>/data</code>, <code>/cache</code>, and
+<code>/sdcard</code> (if available) should be filesystem types (yaffs2, ext4,
+or vfat).</p></dd></dl>
+
+<p>Starting in Android 3.0, the recovery.fstab file gains an additional
+optional field, <i>options</i>. Currently the only defined option is <i>length
+</i>, which lets you explicitly specify the length of the partition.
+This length is used when reformatting the partition (e.g., for the userdata
+partition during a data wipe/factory reset operation, or for the system
+partition during installation of a full OTA package). If the length value is
+negative, then the size to format is taken by adding the length value to the
+true partition size. For instance, setting "length=-16384" means the last 16k
+of that partition will <i>not</i> be overwritten when that partition is
+reformatted. This supports features such as encryption of the userdata
+partition (where encryption metadata is stored at the end of the
+partition that should not be overwritten).</p>
+
+<p class="note"><strong>Note:</strong> The <b>device2</b> and <b>options</b>
+fields are optional, creating ambiguity in parsing. If the entry in the fourth
+field on the line begins with a ‘/' character, it is considered a <b>device2
+</b> entry; if the entry does not begin with a ‘/' character, it is considered
+an <b>options</b> field.</p>
+
+<h2 id="boot-animation">Boot animation</h2>
+
+<p>Device manufacturers have the ability to customize the animation shown when
+an Android device is booting. To do this, construct a .zip file organized and
+located according to the specifications in <a
+href="https://android.googlesource.com/platform/frameworks/base/+/master/cmds/bootanimation/FORMAT.md">bootanimation
+format</a>.</p>
+
+<p>For <a
+  href="https://developer.android.com/things/hardware/index.html">Android
+  Things</a> devices, you may upload the zipped file in the Android
+Things console to have the images included in the selected product.</p>
+
+<p class="note"><strong>Note:</strong> These images must meet Android <a
+href="/source/brands">brand guidelines</a>.</p>
+
+<h2 id="recovery-ui">Recovery UI</h2>
+<p>To support devices with different available hardware (physical buttons,
+LEDs, screens, etc.), you can customize the recovery interface to display
+status and access the manually-operated hidden features for each device.</p>
+<p>Your goal is to build a small static library with a couple of C++ objects
+to provide the device-specific functionality. The file <code>
+<b>bootable/recovery/default_device.cpp</b></code> is used by default, and
+makes a good starting point to copy when writing a version of this file for
+your device.</p>
+
+<pre class="devsite-click-to-copy">
+device/yoyodyne/tardis/recovery/recovery_ui.cpp
+</pre>
+
+<pre class="prettyprint">
+#include &lt;linux/input.h&gt;
+
+#include "common.h"
+#include "device.h"
+#include "screen_ui.h"
+</pre>
+
+
+<h3 id="header-item-functions">Header and item functions</h3>
+<p>The Device class requires functions for returning headers and items that
+appear in the hidden recovery menu. Headers describe how to operate the menu
+(i.e. controls to change/select the highlighted item).</p>
+
+<pre class="prettyprint">
+static const char* HEADERS[] = { "Volume up/down to move highlight;",
+                                 "power button to select.",
+                                 "",
+                                 NULL };
+
+static const char* ITEMS[] =  {"reboot system now",
+                               "apply update from ADB",
+                               "wipe data/factory reset",
+                               "wipe cache partition",
+                               NULL };
+</pre>
+
+<p class="note"><strong>Note:</strong> Long lines are truncated (not wrapped),
+so keep the width of your device screen in mind.</p>
+
+<h3 id="customize-checkkey">Customizing CheckKey</h3>
+<p>Next, define your device's RecoveryUI implementation. This example assumes
+the <b>tardis</b> device has a screen, so you can inherit from the built-in
+ScreenRecoveryUIimplementation (see instructions for
+<a href="#devices-without-screens">devices without a screen</a>.) The only
+function to customize from ScreenRecoveryUI is <code>CheckKey()</code>, which
+does the initial asynchronous key handling:</p>
+
+<pre class="prettyprint">
+class TardisUI : public ScreenRecoveryUI {
+  public:
+    virtual KeyAction CheckKey(int key) {
+        if (key == KEY_HOME) {
+            return TOGGLE;
+        }
+        return ENQUEUE;
+    }
+};
+</pre>
+
+
+<h4 id="key-constants">KEY constants</h4>
+<p>The KEY_* constants are defined in <code>linux/input.h</code>.<code>
+CheckKey()</code> is called no matter what is going on in the rest of
+recovery: when the menu is toggled off, when it is on, during package
+installation, during userdata wiping, etc. It can return one of four constants:
+</p>
+
+<ul>
+<li><b>TOGGLE</b>. Toggle the display of the menu and/or text log on or off
+</li>
+<li><b>REBOOT</b>. Immediately reboot the device</li>
+<li><b>IGNORE</b>. Ignore this keypress</li>
+<li><b>ENQUEUE</b>. Enqueue this keypress to be consumed synchronously (i.e.,
+by the recovery menu system if the display is enabled)</li>
+</ul>
+
+<p><code>CheckKey()</code> is called each time a key-down event is followed by
+a key-up event for the same key. (The sequence of events A-down B-down B-up
+A-up results only in <code>CheckKey(B)</code> being called.) <code>CheckKey()
+</code> can call <code>IsKeyPressed()</code>, to find out if other keys are
+being held down. (In the above sequence of key events, if <code>CheckKey(B)
+</code> called <code>IsKeyPressed(A)</code> it would have returned true.)</p>
+<p><code>CheckKey()</code> can maintain state in its class; this can be useful
+to detect sequences of keys. This example shows a slightly more complex
+setup: the display is toggled by holding down power and pressing volume-up,
+and the device can be rebooted immediately by pressing the power button five
+times in a row (with no other intervening keys):</p>
+
+<pre class="prettyprint">
+class TardisUI : public ScreenRecoveryUI {
+  private:
+    int consecutive_power_keys;
+
+  public:
+    TardisUI() : consecutive_power_keys(0) {}
+
+    virtual KeyAction CheckKey(int key) {
+        if (IsKeyPressed(KEY_POWER) &amp;&amp; key == KEY_VOLUMEUP) {
+            return TOGGLE;
+        }
+        if (key == KEY_POWER) {
+            ++consecutive_power_keys;
+            if (consecutive_power_keys &gt;= 5) {
+                return REBOOT;
+            }
+        } else {
+            consecutive_power_keys = 0;
+        }
+        return ENQUEUE;
+    }
+};
+</pre>
+
+
+<h3 id="screenrecoveryui">ScreenRecoveryUI</h3>
+<p>When using your own images (error icon, installation animation, progress
+bars) with ScreenRecoveryUI, you can set the variable <code>animation_fps</code>
+to control the speed in frames per second (FPS) of animations.</p>
+
+<p class="note"><strong>Note:</strong> The current
+<code>interlace-frames.py</code> script enables you to store the
+<code>animation_fps</code> information in the image itself. In earlier versions
+of Android it was necessary to set <code>animation_fps</code> yourself.</p>
+
+<p>To set the variable <code>animation_fps</code>, override the
+<code>ScreenRecoveryUI::Init()</code> function in your subclass. Set the value,
+then call the <code>parent Init() </code> function to complete initialization.
+The default value (20 FPS) corresponds to the default recovery images; when
+using these images you don't need to provide an <code>Init()</code> function.
+For details on images, see <a href="#recovery-ui-images">Recovery UI
+Images</a>.</p>
+
+
+<h3 id="device-class">Device Class</h3>
+<p>After you have a RecoveryUI implementation, define your device class
+(subclassed from the built-in Device class). It should create a single
+instance of your UI class and return that from the <code>GetUI()</code>
+function:</p>
+
+<pre class="prettyprint">
+class TardisDevice : public Device {
+  private:
+    TardisUI* ui;
+
+  public:
+    TardisDevice() :
+        ui(new TardisUI) {
+    }
+
+    RecoveryUI* GetUI() { return ui; }
+</pre>
+
+<h3 id="startrecovery">StartRecovery</h3>
+<p>The <code>StartRecovery()</code> method is called at the start of recovery,
+after the UI has been initialized and after the arguments have been parsed,
+but before any action has been taken. The default implementation does nothing,
+so you do not need to provide this in your subclass if you have nothing to do:
+</p>
+
+<pre class="prettyprint">
+   void StartRecovery() {
+       // ... do something tardis-specific here, if needed ....
+    }
+</pre>
+
+<h3 id="supply-manage-recovery-menu">Supplying and managing recovery menu</h3>
+<p>The system calls two methods to get the list of header lines and the list
+of items. In this implementation, it returns the static arrays defined at the
+top of the file:</p>
+
+<pre class="prettyprint">
+const char* const* GetMenuHeaders() { return HEADERS; }
+const char* const* GetMenuItems() { return ITEMS; }
+</pre>
+
+<h4 id="handlemenukey">HandleMenuKey</h4>
+<p>Next, provide a <code>HandleMenuKey()</code> function, which takes a
+keypress and the current menu visibility, and decides what action to take:</p>
+
+<pre class="prettyprint">
+   int HandleMenuKey(int key, int visible) {
+        if (visible) {
+            switch (key) {
+              case KEY_VOLUMEDOWN: return kHighlightDown;
+              case KEY_VOLUMEUP:   return kHighlightUp;
+              case KEY_POWER:      return kInvokeItem;
+            }
+        }
+        return kNoAction;
+    }
+</pre>
+
+<p>The method takes a key code (which has previously been processed and
+enqueued by the <code>CheckKey()</code> method of the UI object), and the
+current state of the menu/text log visibility. The return value is an integer.
+If the value is 0 or higher, that is taken as the position of a menu item,
+which is invoked immediately (see the <code>InvokeMenuItem()</code> method
+below). Otherwise it can be one of the following predefined constants:</p>
+
+<ul>
+<li><b>kHighlightUp</b>. Move the menu highlight to the previous item</li>
+<li><b>kHighlightDown</b>. Move the menu highlight to the next item</li>
+<li><b>kInvokeItem</b>. Invoke the currently highlighted item</li>
+<li><b>kNoAction</b>. Do nothing with this keypress</li>
+</ul>
+
+<p>As implied by the visible argument, <code>HandleMenuKey()</code> is
+called even if the menu is not visible. Unlike <code>CheckKey()</code>, it is
+<i>not</i> called while recovery is doing something such as wiping data or
+installing a package—it's called only when recovery is idle and waiting for
+input.</p>
+
+<h4 id="trackball-mechanism">Trackball Mechanisms</h4>
+<p>If your device has a trackball-like input mechanism (generates input events
+with type EV_REL and code REL_Y), recovery synthesizes KEY_UP and KEY_DOWN
+keypresses whenever the trackball-like input device reports motion in the Y
+axis. All you need to do is map KEY_UP and KEY_DOWN events onto menu actions.
+This mapping does <i>not</i> happen for <code>CheckKey()</code>, so you can't
+use trackball motions as triggers for rebooting or toggling the display.</p>
+
+<h4 id="modifier-keys">Modifier Keys</h4>
+<p>To check for keys being held down as modifiers, call the <code>IsKeyPressed()
+</code> method of your own UI object. For example, on some
+devices pressing Alt-W in recovery would start a data wipe whether the menu
+was visible or not. YOu could implement like this:</p>
+
+<pre class="prettyprint">
+   int HandleMenuKey(int key, int visible) {
+        if (ui->IsKeyPressed(KEY_LEFTALT) &amp;&amp; key == KEY_W) {
+            return 2;  // position of the "wipe data" item in the menu
+        }
+        ...
+    }
+</pre>
+
+<p class="note"><strong>Note:</strong> If <b>visible</b> is false, it doesn't
+make sense to return the special values that manipulate the menu (move
+highlight, invoke highlighted item) since the user can't see the highlight.
+However, you can return the values if desired.</p>
+
+<h4 id="invokemenuitem">InvokeMenuItem</h4>
+<p>Next, provide an <code>InvokeMenuItem()</code> method that maps integer
+positions in the array of items returned by <code>GetMenuItems()</code> to
+actions. For the array of items in the tardis example, use:</p>
+
+<pre class="prettyprint">
+   BuiltinAction InvokeMenuItem(int menu_position) {
+        switch (menu_position) {
+          case 0: return REBOOT;
+          case 1: return APPLY_ADB_SIDELOAD;
+          case 2: return WIPE_DATA;
+          case 3: return WIPE_CACHE;
+          default: return NO_ACTION;
+        }
+    }
+</pre>
+
+<p>This method can return any member of the BuiltinAction enum to tell the
+system to take that action (or the NO_ACTION member if you want the system to
+do nothing). This is the place to provide additional recovery functionality
+beyond what's in the system: Add an item for it in your menu, execute it here
+when that menu item is invoked, and return NO_ACTION so the system does nothing
+else.</p>
+<p>BuiltinAction contains the following values:</p>
+<ul>
+<li><b>NO_ACTION</b>. Do nothing.</li>
+<li><b>REBOOT</b>. Exit recovery and reboot the device normally.</li>
+<li><b>APPLY_EXT, APPLY_CACHE, APPLY_ADB_SIDELOAD</b>. Install an update
+package from various places. For details, see
+<a href="#sideloading">Sideloading</a>.</li>
+<li><b>WIPE_CACHE</b>. Reformat the cache partition only. No confirmation
+required as this is relatively harmless.</li>
+<li><b>WIPE_DATA</b>. Reformat the userdata and cache partitions, also known
+as a factory data reset. The user is asked to confirm this action before
+proceeding.</li>
+</ul>
+<p>The last method, <code>WipeData()</code>, is optional and is called
+whenever a data wipe operation is initiated (either from recovery via the menu
+or when the user has chosen to do a factory data reset from the main system).
+This method is called before the user data and cache partitions are wiped. If
+your device stores user data anywhere other than those two partitions, you
+should erase it here. You should return 0 to indicate success and another
+value for failure, though currently the return value is ignored. The user data
+and cache partitions are wiped whether you return success or failure.</p>
+
+<pre class="prettyprint">
+   int WipeData() {
+       // ... do something tardis-specific here, if needed ....
+       return 0;
+    }
+</pre>
+
+<h4 id="make-device">Make Device</h4>
+<p>Finally, include some boilerplate at the end of the recovery_ui.cpp file
+for the <code>make_device()</code> function that creates and returns an
+instance of your Device class:</p>
+
+<pre class="prettyprint">
+class TardisDevice : public Device {
+   // ... all the above methods ...
+};
+
+Device* make_device() {
+    return new TardisDevice();
+}
+</pre>
+
+<h3 id="build-link-device-recovery">Build and link to device recovery</h3>
+<p>After completing the recovery_ui.cpp file, built it and link it to recovery
+on your device. In Android.mk, create a static library that contains only this
+C++ file:</p>
+
+<pre class="devsite-click-to-copy">
+device/yoyodyne/tardis/recovery/Android.mk
+</pre>
+
+<pre class="devsite-click-to-copy">
+LOCAL_PATH := $(call my-dir)
+include $(CLEAR_VARS)
+
+LOCAL_MODULE_TAGS := eng
+LOCAL_C_INCLUDES += bootable/recovery
+LOCAL_SRC_FILES := recovery_ui.cpp
+
+# should match TARGET_RECOVERY_UI_LIB set in BoardConfig.mk
+LOCAL_MODULE := librecovery_ui_tardis
+
+include $(BUILD_STATIC_LIBRARY)
+</pre>
+
+<p>Then, in the board configuration for this device, specify your static
+library as the value of TARGET_RECOVERY_UI_LIB.</p>
+
+<pre class="devsite-click-to-copy">
+device/yoyodyne/tardis/BoardConfig.mk
+ [...]
+
+# device-specific extensions to the recovery UI
+TARGET_RECOVERY_UI_LIB := librecovery_ui_tardis
+</pre>
+
+
+<h2 id="recovery-ui-images">Recovery UI images</h2>
+<p>The recovery user interface consists of images. Ideally, users never interact
+with the UI: During a normal update, the phone boots into recovery, fills the
+installation progress bar, and boots back into the new system without input
+from the user. In the event of a system update problem, the only user action
+that can be taken is to call customer care.</p>
+<p>An image-only interface obviates the need for localization. However, as of
+Android 5.0 the update can display a string of text (e.g. "Installing system
+update...") along with the image. For details, see <a href="#recovery-text">
+Localized recovery text</a>.</p>
+
+<h3 id="recovery-5.x">Android 5.0 and later</h3>
+<p>The Android 5.0 and later recovery UI uses two main images: the <strong>error</strong> image
+and the <strong>installing</strong> animation.</p>
+
+<table>
+<tbody>
+<tr>
+<td>
+<img src="/devices/tech/images/icon_error.png" alt="image shown during ota error">
+<p class="img-caption"><strong>Figure 1.</strong> icon_error.png</p>
+</td>
+<td>
+<img src="/devices/tech/images/icon_installing_5x.png" alt="image shown during ota install"
+height="275">
+<p class="img-caption"><strong>Figure 2.</strong> icon_installing.png</p>
+</td>
+</tr>
+</tbody>
+</table>
+
+<p>The installing animation is represented as a single PNG image with
+different frames of the animation interlaced by row (which is why Figure 2
+appears squished). For example, for a 200x200 seven-frame animation, create
+a single 200x1400 image where first frame is rows 0, 7, 14, 21, ...; the second
+frame is rows 1, 8, 15, 22, ...; etc. The combined image includes a text chunk
+that indicates the number of animation frames and the number of frames per
+second (FPS). The tool <code>bootable/recovery/interlace-frames.py</code>
+takes a set of input frames and combines them into the necessary composite
+image used by recovery.</p>
+
+<p>Default images are available in different densities and are located in
+<code>bootable/recovery/res-$DENSITY/images</code> (e.g.,
+<code>bootable/recovery/res-hdpi/images</code>). To use a static image during
+installation, you need only provide the icon_installing.png image and set the
+number of frames in the animation to 0 (the error icon is not animated; it is
+always a static image).</p>
+
+
+<h3 id="recovery-4.x">Android 4.x and earlier</h3>
+<p>The Android 4.x and earlier recovery UI uses the <b>error</b> image (shown
+above) and the <b>installing</b> animation plus several overlay images:</p>
+
+<table>
+<tbody>
+<tr>
+<td rowspan="2">
+<img src="/devices/tech/images/icon_installing.png" alt="image shown during ota install">
+<p class="img-caption"><strong>Figure 3.</strong> icon_installing.png</p>
+</td>
+<td>
+<img src="/devices/tech/images/icon_installing_overlay01.png" alt="image shown as first
+overlay">
+<p class="img-caption"><strong>Figure 4.</strong> icon-installing_overlay01.png
+</p>
+</td>
+</tr>
+<tr>
+<td>
+<img src="/devices/tech/images/icon_installing_overlay07.png" alt="image shown as seventh
+overlay">
+<p class="img-caption"><strong>Figure 5.</strong> icon_installing_overlay07.png
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+
+
+<p>During installation, the on-screen display is constructed by drawing the
+icon_installing.png image, then drawing one of the overlay frames on top of it
+at the proper offset. Here, a red box is superimposed to highlight where the
+overlay is placed on top of the base image:</p>
+
+<table style="border-collapse:collapse;">
+<tbody>
+<tr>
+<td><img align="center" src="/devices/tech/images/composite01.png" alt="composite image of
+install plus first overlay">
+<p class="img-caption"><strong>Figure 6.</strong> Installing animation frame 1
+(icon_installing.png + icon_installing_overlay01.png)
+</td>
+<td><img align="center" src="/devices/tech/images/composite07.png" alt="composite image of
+install plus seventh overlay">
+<p class="img-caption"><strong>Figure 7.</strong> Installing animation frame 7
+(icon_installing.png + icon_installing_overlay07.png)
+</td>
+</tr>
+</tbody>
+</table>
+
+<p>Subsequent frames are displayed by drawing <i>only</i> the next overlay
+image atop what's already there; the base image is not redrawn.</p>
+
+<p>The number of frames in the animation, desired speed, and x- and y-offsets
+of the overlay relative to the base are set by member variables of the
+ScreenRecoveryUI class. When using custom images instead of default images,
+override the <code>Init()</code> method in your subclass to change these
+values for your custom images (for details, see <a href="#screenrecoveryui">
+ScreenRecoveryUI</a>). The script <code>bootable/recovery/make-overlay.py
+</code> can assist in converting a set of image frames to the "base image +
+overlay images" form needed by recovery, including computing of the necessary
+offsets.</p>
+
+<p>Default images are located in <code>bootable/recovery/res/images</code>. To
+use a static image during installation, you need only provide the
+icon_installing.png image and set the number of frames in the animation to 0
+(the error icon is not animated; it is always a static image).</p>
+
+
+<h3 id="recovery-text">Localized recovery text</h3>
+<p>Android 5.x displays a string of text (e.g., "Installing system update...")
+along with the image.  When the main system boots into recovery it passes the
+user's current locale as a command-line option to recovery. For each message
+to display, recovery includes a second composite image with pre-rendered text
+strings for that message in each locale.</p>
+
+<p>Sample image of recovery text strings:</p>
+
+<img src="/devices/tech/images/installing_text.png" alt="image of recovery text">
+<p class="img-caption"><strong>Figure 8.</strong> Localized text for recovery
+messages</p>
+
+<p>Recovery text can display the following messages:</p>
+<ul>
+<li>Installing system update...</li>
+<li>Error!</li>
+<li>Erasing... (when doing a data wipe/factory reset)</li>
+<li>No command (when a user boots into recovery manually)</li>
+</ul>
+
+<p>The Android app in <code>development/tools/recovery_l10/</code> renders
+localizations of a message and creates the composite image. For details on
+using this app, refer to the comments in <code>development/tools/recovery_l10n/
+src/com/android/recovery_l10n/Main.java</code>.
+
+<p>When a user boots into recovery manually, the locale might not be available
+and no text is displayed. Do not make the text messages critical to the
+recovery process.</p>
+
+<p class="note"><strong>Note:</strong> The hidden interface that displays log
+messages and allows the user to select actions from the menu is available only
+in English.</p>
+
+
+<h2 id="progress-bars">Progress bars</h2>
+<p>Progress bars can appear below the main image (or animation). The progress
+bar is made by combining two input images, which must be of the same size:</p>
+
+<img src="/devices/tech/images/progress_empty.png" alt="empty progress bar">
+<p class="img-caption"><strong>Figure 9.</strong> progress_empty.png</p>
+<img src="/devices/tech/images/progress_fill.png" alt="full progress bar">
+<p class="img-caption"><strong>Figure 10.</strong> progress_fill.png</p>
+
+<p>The left end of the <i>fill</i> image is displayed next to the right end of
+the <i>empty</i> image to make the progress bar. The position of the boundary
+between the two images is changed to indicate the progress. For example, with
+the above pairs of input images, display:</p>
+
+<img src="/devices/tech/images/progress_1.png" alt="progress bar at 1%">
+<p class="img-caption"><strong>Figure 11.</strong> Progress bar at 1%></p>
+<img src="/devices/tech/images/progress_10.png" alt="progress bar at 10%">
+<p class="img-caption"><strong>Figure 12.</strong> Progress bar at 10%</p>
+<img src="/devices/tech/images/progress_50.png" alt="progress bar at 50%">
+<p class="img-caption"><strong>Figure 13.</strong> Progress bar at 50%</p>
+
+<p>You can provide device-specific versions of these images by placing them
+into (in this example) <code>device/yoyodyne/tardis/recovery/res/images</code>
+. Filenames must match the ones listed above; when a file is found in that
+directory, the build system uses it in preference to the corresponding default
+image. Only PNGs in RGB or RGBA format with 8-bit color depth are supported.
+</p>
+
+<p class="note"><strong>Note:</strong> In Android 5.x, if the locale is known
+to recovery and is a right-to-left (RTL) language (Arabic, Hebrew, etc.), the
+progress bar fills from right to left.</p>
+
+
+<h2 id="devices-without-screens">Devices without screens</h2>
+<p>Not all Android devices have screens. If your device is a headless appliance
+or has an audio-only interface, you may need to do more extensive customization
+of recovery UI. Instead of creating a subclass of ScreenRecoveryUI, subclass its
+parent class RecoveryUI directly.</p>
+<p>RecoveryUI has methods for handling a lower-level UI operations such as
+"toggle the display," "update the progress bar," "show the menu," "change the
+menu selection," etc. You can override these to provide an appropriate
+interface for your device. Maybe your device has LEDs where you can use
+different colors or patterns of flashing to indicate state, or maybe you can
+play audio. (Perhaps you don't want to support a menu or the "text display"
+mode at all; you can prevent accessing them with <code>CheckKey()</code> and
+<code>HandleMenuKey()</code> implementations that never toggle the display on
+or select a menu item. In this case, many of the RecoveryUI methods you need
+to provide can just be empty stubs.)</p>
+<p>See <code>bootable/recovery/ui.h</code> for the declaration of RecoveryUI
+to see what methods you must support. RecoveryUI is abstract—some methods are
+pure virtual and must be provided by subclasses—but it does contain the code
+to do processing of key inputs. You can override that too, if your device
+doesn't have keys or you want to process them differently.</p>
+
+<h2 id="updater">Updater</h2>
+<p>You can use device-specific code in the installation of the update package
+by providing your own extension functions that can be called from within your
+updater script. Here's a sample function for the tardis device:</p>
+
+<pre class="devsite-click-to-copy">
+device/yoyodyne/tardis/recovery/recovery_updater.c
+</pre>
+<pre class="prettyprint">
+#include &lt;stdlib.h&gt;
+#include &lt;string.h&gt;
+
+#include "edify/expr.h"
+</pre>
+
+<p>Every extension function has the same signature. The arguments are the name
+by which the function was called, a <code>State*</code> cookie, the number of
+incoming arguments, and an array of <code>Expr*</code> pointers representing
+the arguments. The return value is a newly-allocated <code>Value*</code>.</p>
+
+<pre class="prettyprint">
+Value* ReprogramTardisFn(const char* name, State* state, int argc, Expr* argv[]) {
+    if (argc != 2) {
+        return ErrorAbort(state, "%s() expects 2 args, got %d", name, argc);
+    }
+</pre>
+
+<p>Your arguments have not been evaluated at the time your function is
+called—your function's logic determines which of them get evaluated and how
+many times. Thus, you can use extension functions to implement your own
+control structures. <code>Call Evaluate()</code> to evaluate an <code>Expr*
+</code> argument, returning a <code>Value*</code>. If <code>Evaluate()</code>
+returns NULL, you should free any resources you're holding and immediately
+return NULL (this propagates aborts up the edify stack). Otherwise, you take
+ownership of the Value returned and are responsible for eventually calling
+<code>FreeValue()</code> on it.</p>
+
+<p>Suppose the function needs two arguments: a string-valued <b>key</b> and a
+blob-valued <b>image</b>. You could read arguments like this:</p>
+
+<pre class="prettyprint">
+   Value* key = EvaluateValue(state, argv[0]);
+    if (key == NULL) {
+        return NULL;
+    }
+    if (key->type != VAL_STRING) {
+        ErrorAbort(state, "first arg to %s() must be string", name);
+        FreeValue(key);
+        return NULL;
+    }
+    Value* image = EvaluateValue(state, argv[1]);
+    if (image == NULL) {
+        FreeValue(key);    // must always free Value objects
+        return NULL;
+    }
+    if (image->type != VAL_BLOB) {
+        ErrorAbort(state, "second arg to %s() must be blob", name);
+        FreeValue(key);
+        FreeValue(image)
+        return NULL;
+    }
+</pre>
+
+<p>Checking for NULL and freeing previously evaluated arguments can get tedious
+for multiple arguments. The <code>ReadValueArgs()</code> function can make this
+easier. Instead of the code above, you could have written this:</p>
+
+<pre class="prettyprint">
+   Value* key;
+    Value* image;
+    if (ReadValueArgs(state, argv, 2, &amp;key, &amp;image) != 0) {
+        return NULL;     // ReadValueArgs() will have set the error message
+    }
+    if (key->type != VAL_STRING || image->type != VAL_BLOB) {
+        ErrorAbort(state, "arguments to %s() have wrong type", name);
+        FreeValue(key);
+        FreeValue(image)
+        return NULL;
+    }
+</pre>
+
+<p><code>ReadValueArgs()</code> doesn't do type-checking, so you must do that
+here; it's more convenient to do it with one <b>if</b> statement at
+the cost of producing a somewhat less specific error message when it fails.
+But <code>ReadValueArgs()</code> does handle evaluating each argument and
+freeing all the previously-evaluated arguments (as well as setting a useful
+error message) if any of the evaluations fail. You can use a <code>
+ReadValueVarArgs()</code> convenience function for evaluating a variable
+number of arguments (it returns an array of <code>Value*</code>).</p>
+
+<p>After evaluating the arguments, do the work of the function:</p>
+
+<pre class="devsite-click-to-copy">
+   // key-&gt;data is a NUL-terminated string
+    // image-&gt;data and image-&gt;size define a block of binary data
+    //
+    // ... some device-specific magic here to
+    // reprogram the tardis using those two values ...
+</pre>
+
+<p>The return value must be a <code>Value*</code> object; ownership of this
+object will pass to the caller. The caller takes ownership of any data pointed
+to by this <code>Value*</code>—specifically the datamember.</p>
+<p>In this instance, you want to return a true or false value to indicate
+success. Remember the convention that the empty string is <i>false</i> and all
+other strings are <i>true</i>. You must malloc a Value object with a malloc'd
+copy of the constant string to return, since the caller will <code>free()
+</code> both. Don't forget to call <code>FreeValue()</code> on the objects you
+got by evaluating your arguments!</p>
+
+<pre class="prettyprint">
+   FreeValue(key);
+    FreeValue(image);
+
+    Value* result = malloc(sizeof(Value));
+    result->type = VAL_STRING;
+    result->data = strdup(successful ? "t" : "");
+    result->size = strlen(result->data);
+    return result;
+}
+</pre>
+
+<p>The convenience function <code>StringValue()</code> wraps a string into a
+new Value object. Use to write the above code more succinctly:</p>
+
+<pre class="prettyprint">
+   FreeValue(key);
+    FreeValue(image);
+
+    return StringValue(strdup(successful ? "t" : ""));
+}
+</pre>
+
+<p>To hook functions into the edify interpreter, provide the function
+<code>Register_<i>foo</i></code> where <i>foo</i> is the name of the
+static library containing this code. Call <code>RegisterFunction()</code> to
+register each extension function. By convention, name device-specific
+functions <code><i>device</i>.<i>whatever</i></code> to avoid conflicts with
+future built-in functions added.</p>
+
+<pre class="prettyprint">
+void Register_librecovery_updater_tardis() {
+    RegisterFunction("tardis.reprogram", ReprogramTardisFn);
+}
+</pre>
+
+<p>You can now configure the makefile to build a static library with your
+code. (This is the same makefile used to customize the recovery UI in the
+previous section; your device may have both static libraries defined here.)</p>
+
+<pre class="devsite-click-to-copy">
+device/yoyodyne/tardis/recovery/Android.mk
+</pre>
+
+<pre class="devsite-click-to-copy">
+include $(CLEAR_VARS)
+LOCAL_SRC_FILES := recovery_updater.c
+LOCAL_C_INCLUDES += bootable/recovery
+</pre>
+
+<p>The name of the static library must match the name of the
+<code>Register_<i>libname</i></code> function contained within it.</p>
+
+<pre class="devsite-click-to-copy">
+LOCAL_MODULE := librecovery_updater_tardis
+include $(BUILD_STATIC_LIBRARY)
+</pre>
+
+<p>Finally, configure the build of recovery to pull in your library. Add your
+library to TARGET_RECOVERY_UPDATER_LIBS (which may contain multiple libraries;
+they all get registered). If your code depends on other static libraries that
+are not themselves edify extensions (i.e., they don't have a
+<code>Register_<i>libname</i></code> function), you can list those in
+TARGET_RECOVERY_UPDATER_EXTRA_LIBS to link them to updater without calling
+their (non-existent) registration function. For example, if your
+device-specific code wanted to use zlib to decompress data, you would include
+libz here.</p>
+
+<pre class="devsite-click-to-copy">
+device/yoyodyne/tardis/BoardConfig.mk
+</pre>
+
+<pre class="devsite-click-to-copy">
+ [...]
+
+# add device-specific extensions to the updater binary
+TARGET_RECOVERY_UPDATER_LIBS += librecovery_updater_tardis
+TARGET_RECOVERY_UPDATER_EXTRA_LIBS +=
+</pre>
+
+<p>The updater scripts in your OTA package can now call your function as any
+other. To reprogram your tardis device, the update script might contain:
+<code>tardis.reprogram("the-key", package_extract_file("tardis-image.dat"))
+</code>. This uses the single-argument version of the built-in function <code>
+package_extract_file()</code>, which returns the contents of a file extracted
+from the update package as a blob to produce the second argument to the new
+extension function.</p>
+
+<h2>OTA package generation</h2>
+<p>The final component is getting the OTA package generation tools to know
+about your device-specific data and emit updater scripts that include calls to
+your extension functions.</p>
+<p>First, get the build system to know about a device-specific blob of data.
+Assuming your data file is in <code>device/yoyodyne/tardis/tardis.dat</code>,
+declare the following in your device's AndroidBoard.mk:</p>
+
+<pre class="devsite-click-to-copy">
+device/yoyodyne/tardis/AndroidBoard.mk
+</pre>
+<pre class="devsite-click-to-copy">
+  [...]
+
+$(call add-radio-file,tardis.dat)
+</pre>
+
+<p>You could also put it in an Android.mk instead, but then it must to be
+guarded by a device check, since all the Android.mk files in the tree are
+loaded no matter what device is being built. (If your tree includes multiple
+devices, you only want the tardis.dat file added when building the tardis
+device.)</p>
+
+<pre class="devsite-click-to-copy">
+device/yoyodyne/tardis/Android.mk
+</pre>
+<pre class="devsite-click-to-copy">
+  [...]
+
+# an alternative to specifying it in AndroidBoard.mk
+ifeq (($TARGET_DEVICE),tardis)
+  $(call add-radio-file,tardis.dat)
+endif
+</pre>
+
+<p>These are called radio files for historical reasons; they may have nothing
+to do with the device radio (if present). They are simply opaque blobs of data
+the build system copies into the target-files .zip used by the OTA generation
+tools. When you do a build, tardis.dat is stored in the target-files.zip as
+<code>RADIO/tardis.dat</code>. You can call <code>add-radio-file</code>
+multiple times to add as many files as you want.</p>
+
+<h3 id="python-module">Python module</h3>
+<p>To extend the release tools, write a Python module (must be named
+releasetools.py) the tools can call into if present. Example:</p>
+
+<pre class="devsite-click-to-copy">
+device/yoyodyne/tardis/releasetools.py
+</pre>
+<pre class="prettyprint">
+import common
+
+def FullOTA_InstallEnd(info):
+  # copy the data into the package.
+  tardis_dat = info.input_zip.read("RADIO/tardis.dat")
+  common.ZipWriteStr(info.output_zip, "tardis.dat", tardis_dat)
+
+  # emit the script code to install this data on the device
+  info.script.AppendExtra(
+      """tardis.reprogram("the-key", package_extract_file("tardis.dat"));""")
+</pre>
+
+<p>A separate function handles the case of generating an incremental OTA
+package. For this example, suppose you need to reprogram the tardis only when
+the tardis.dat file has changed between two builds.</p>
+<pre class="prettyprint">
+def IncrementalOTA_InstallEnd(info):
+  # copy the data into the package.
+  source_tardis_dat = info.source_zip.read("RADIO/tardis.dat")
+  target_tardis_dat = info.target_zip.read("RADIO/tardis.dat")
+
+  if source_tardis_dat == target_tardis_dat:
+      # tardis.dat is unchanged from previous build; no
+      # need to reprogram it
+      return
+
+  # include the new tardis.dat in the OTA package
+  common.ZipWriteStr(info.output_zip, "tardis.dat", target_tardis_dat)
+
+  # emit the script code to install this data on the device
+  info.script.AppendExtra(
+      """tardis.reprogram("the-key", package_extract_file("tardis.dat"));""")
+</pre>
+
+<h4 id="module-functions">Module functions</h4>
+<p>You can provide the following functions in the module (implement only the
+ones you need).</p>
+<dl>
+<dt><code>FullOTA_Assertions()</code></dt>
+<dd>Called near the start of generating a full OTA. This is a good place to
+emit assertions about the current state of the device. Do not emit script
+commands that make changes to the device.</dd>
+<dt><code>FullOTA_InstallBegin()</code></dt>
+<dd>Called after all the assertions about the device state have passed but
+before any changes have been made. You can emit commands for device-specific
+updates that must run before anything else on the device has been changed.</dd>
+<dt><code>FullOTA_InstallEnd()</code></dt>
+<dd>Called at the end of the script generation, after the script commands to
+update the boot and system partitions have been emitted. You can also emit
+additional commands for device-specific updates.</dd>
+<dt><code>IncrementalOTA_Assertions()</code></dt>
+<dd>Similar to <code>FullOTA_Assertions()</code> but called when generating an
+incremental update package.</dd>
+<dt><code>IncrementalOTA_VerifyBegin()</code></dt>
+<dd>Called after all assertions about the device state have passed but before
+any changes have been made. You can emit commands for device-specific updates
+that must run before anything else on the device has been changed.</dd>
+<dt><code>IncrementalOTA_VerifyEnd()</code></dt>
+<dd>Called at the end of the verification phase, when the script has finished
+confirming the files it is going to touch have the expected starting contents.
+At this point nothing on the device has been changed. You can also emit code for
+additional device-specific verifications.</dd>
+<dt><code>IncrementalOTA_InstallBegin()</code></dt>
+<dd>Called after files to be patched have been verified as having the expected
+<i>before</i> state but before any changes have been made. You can emit
+commands for device-specific updates that must run before anything else on the
+device has been changed.</dd>
+<dt><code>IncrementalOTA_InstallEnd()</code></dt>
+<dd>Similar to its full OTA package counterpart, this is called at the end of
+the script generation, after the script commands to update the boot and system
+partitions have been emitted. You can also emit additional commands for
+device-specific updates.</dd>
+</dl>
+
+<p class="note"><strong>Note:</strong> If the device loses power, OTA
+installation may restart from the beginning. Be prepared to cope with devices
+on which these commands have already been run, fully or partially.</p>
+
+<h4 id="pass-functions-to-info">Pass functions to info objects</h4>
+<p>Pass functions to a single info object that contains various useful items:
+</p>
+<ul>
+<li><b>info.input_zip</b>. (Full OTAs only) The <code>zipfile.ZipFile</code>
+object for the input target-files .zip.</li>
+<li><b>info.source_zip</b>. (Incremental OTAs only) The <code>zipfile.ZipFile
+</code> object for the source target-files .zip (the build already on the
+device when the incremental package is being installed).</li>
+<li><b>info.target_zip</b>. (Incremental OTAs only) The <code>zipfile.ZipFile
+</code> object for the target target-files .zip (the build the incremental
+package puts on the device).</li>
+<li><b>info.output_zip</b>. Package being created; a <code>zipfile.ZipFile
+</code> object opened for writing. Use common.ZipWriteStr(info.output_zip,
+<i>filename</i>, <i>data</i>) to add a file to the package.</li>
+<li><b>info.script</b>. Script object to which you can append commands. Call
+<code>info.script.AppendExtra(<i>script_text</i>)</code> to output text into
+the script. Make sure output text ends with a semicolon so it does not run
+into commands emitted afterwards.</li>
+</ul>
+
+<p>For details on the info object, refer to the
+<a href="http://docs.python.org/library/zipfile.html">Python Software Foundation
+documentation for ZIP archives</a>.</p>
+
+<h4 id="specify-module-location">Specify module location</h4>
+<p>Specify the location of your device's releasetools.py script in your
+BoardConfig.mk file:</p>
+
+<pre class="devsite-click-to-copy">
+device/yoyodyne/tardis/BoardConfig.mk
+</pre>
+
+<pre class="devsite-click-to-copy">
+ [...]
+
+TARGET_RELEASETOOLS_EXTENSIONS := device/yoyodyne/tardis
+</pre>
+
+<p>If TARGET_RELEASETOOLS_EXTENSIONS is not set, it defaults to the <code>
+$(TARGET_DEVICE_DIR)/../common</code> directory (<code>device/yoyodyne/common
+</code> in this example). It's best to explicitly define the location of the
+releasetools.py script. When building the tardis device, the releasetools.py
+script is included in the target-files .zip file (<code>META/releasetools.py
+</code>).</p>
+<p>When you run the release tools (either <code>img_from_target_files</code>
+or <code>ota_from_target_files</code>), the releasetools.py script in the
+target-files .zip, if present, is preferred over the one from the Android
+source tree. You can also explicitly specify the path to the device-specific
+extensions with the <code>-s</code> (or <code>--device_specific</code>)
+option, which takes the top priority. This enables you to correct errors and
+make changes in the releasetools extensions and apply those changes to old
+target-files.</p>
+<p>Now, when you run <code>ota_from_target_files</code>, it automatically
+picks up the device-specific module from the target_files .zip file and uses
+it when generating OTA packages:</p>
+
+<pre class="devsite-click-to-copy">
+<code class="devsite-terminal">./build/tools/releasetools/ota_from_target_files -i PREVIOUS-tardis-target_files.zip dist_output/tardis-target_files.zip incremental_ota_update.zip</code>
+</pre>
+
+<p>Alternatively, you can specify device-specific extensions when you run
+<code>ota_from_target_files</code>.</p>
+
+<pre class="devsite-click-to-copy">
+<code class="devsite-terminal">./build/tools/releasetools/ota_from_target_files -s device/yoyodyne/tardis -i PREVIOUS-tardis-target_files.zip dist_output/tardis-target_files.zip incremental_ota_update.zip</code>
+</pre>
+
+<p class="note"><strong>Note:</strong> For a complete list of options, refer
+to the <code>ota_from_target_files</code> comments in <code>
+build/tools/releasetools/ota_from_target_files</code>.</p>
+
+
+<h2 id="sideloading">Sideloading</h2>
+<p>Recovery has a <b>sideloading</b> mechanism for manually installing an
+update package without downloading it over-the-air by the main system.
+Sideloading is useful for debugging or making changes on devices where the
+main system can't be booted.</p>
+<p>Historically, sideloading has been done through loading packages off the
+device's SD card; in the case of a non-booting device, the package can be put
+onto the SD card using some other computer and then the SD card inserted into
+the device. To accommodate Android devices without removable external storage,
+recovery supports two additional mechanisms for sideloading: loading packages
+from the cache partition, and loading them over USB using adb.</p>
+<p>To invoke each sideload mechanism, your device's <code>
+Device::InvokeMenuItem()</code> method can return the following values of
+BuiltinAction:</p>
+
+<ul>
+<li><b>APPLY_EXT</b>. Sideload an update package from external storage (<code>
+/sdcard</code> directory). Your recovery.fstab must define the <code>/sdcard
+</code> mount point. This is not usable on devices that emulate an SD card
+with a symlink to <code>/data</code> (or some similar mechanism). <code>/data
+</code> is typically not available to recovery because it may be encrypted.
+The recovery UI displays a menu of .zip files in <code>/sdcard</code> and
+allows the user to select one.</li>
+<li><b>APPLY_CACHE</b>. Similar to loading a package from <code>/sdcard</code>
+except that the <code>/cache</code> directory (which <i>is</i> always
+available to recovery) is used instead. From the regular system, <code>/cache
+</code> is only writable by privileged users, and if the device isn't bootable
+then the <code>/cache</code> directory can't be written to at all (which makes
+this mechanism of limited utility).</li>
+<li><b>APPLY_ADB_SIDELOAD</b>. Allows user to send a package to the device via
+a USB cable and the adb development tool. When this mechanism is invoked,
+recovery starts up its own mini version of the adbd daemon to let adb on a
+connected host computer talk to it. This mini version supports only a single
+command: <code>adb sideload <i>filename</i></code>. The named file is sent
+from the host machine to the device, which then verifies and installs it just
+as if it had been on local storage.</li>
+</ul>
+
+<p>A few caveats:</p>
+<ul>
+<li>Only USB transport is supported.</li>
+<li>If your recovery runs adbd normally (usually true for userdebug and eng
+builds), that will be shut down while the device is in adb sideload mode and
+will be restarted when adb sideload has finished receiving a package. While in
+adb sideload mode, no adb commands other than <code>sideload</code> work (
+<code>logcat</code>, <code>reboot</code>, <code>push</code>, <code>pull</code>
+, <code>shell</code>, etc. all fail).</li>
+<li>You cannot exit adb sideload mode on the device. To abort, you can send
+<code>/dev/null</code> (or anything else that's not a valid package) as the
+package, and then the device will fail to verify it and stop the installation
+procedure. The RecoveryUI implementation's <code>CheckKey()</code> method
+will continue to be called for keypresses, so you can provide a key sequence
+that reboots the device and works in adb sideload mode.</li>
+</ul>
+  </body>
+</html>

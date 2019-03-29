@@ -1,0 +1,289 @@
+<html devsite>
+  <head>
+    <title>RIL Refactoring</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>Android 7.0 included a refactoring of the Radio Interface Layer (RIL), using a set of
+subfeatures to improve RIL functionality. Partner code changes are required to implement these
+features, which are optional but encouraged. Refactoring changes are backward compatible, so prior
+implementations of the refactored features continue to work.</p>
+
+<p>The following subfeatures are included in the RIL refactoring feature. You
+can implement any or all of the subfeatures:</p>
+
+<ul>
+<li>Enhanced RIL error codes: Code can return more specific error codes
+than the existing <code>GENERIC_FAILURE</code> code. This enhances error
+troubleshooting by providing more specific information about the cause
+of errors.</li>
+
+<li>Enhanced RIL versioning: The RIL versioning mechanism is enhanced to
+provide more accurate and easier to configure version information.</li>
+
+<li>Redesigned RIL communication using wakelocks: RIL communication using
+wakelocks is enhanced to improve device battery performance.</li>
+</ul>
+
+<h2 id="examples">Examples and source</h2>
+
+<p>Documentation for RIL versioning is also in code comments in <a
+href="https://android.googlesource.com/platform/hardware/ril/+/master/include/telephony/ril.h"><code>https://android.googlesource.com/platform/hardware/ril/+/master/include/telephony/ril.h</code></a>.</p>
+
+<h2 id="implementation">Implementation</h2>
+
+<p>The following sections describe how to implement the subfeatures of the
+RIL refactoring feature.</p>
+
+<h3 id="errorcodes">Implementing enhanced RIL error codes</h3>
+
+<h4 id="errorcodes-problem">Problem</h4>
+
+<p>Almost all RIL request calls can return the <code>GENERIC_FAILURE</code>
+error code in response to an error. This is an issue with all solicited
+responses returned by the OEMs. It is difficult to debug an issue from
+the bug report if the same <code>GENERIC_FAILURE</code> error code is
+returned by RIL calls for different reasons. It can take considerable time
+for vendors to even identify what part of the code could have returned a
+<code>GENERIC_FAILURE</code> code.</p>
+
+<h4 id="errorcodes-solution">Solution</h4>
+
+<p>OEMs should return a distinct error code value associated
+with each of the different errors that are currently categorized as
+<code>GENERIC_FAILURE</code>.</p>
+
+<p>If OEMs do not want to publicly reveal their custom error codes, they may
+return errors as a distinct set of integers (for example, from 1 to x) that
+are mapped as <code>OEM_ERROR_1</code> to <code>OEM_ERROR_X</code>. The
+vendor should make sure each such masked error code returned maps to a unique
+error reason in their code. The purpose of doing this is
+to speed up debugging RIL issues whenever generic errors are returned
+by the OEM. It can take too much time to identify what exactly caused
+<code>GENERIC_FAILURE</code>, and sometimes it's impossible to figure out.<p>
+
+<p>In <code>ril.h</code>, more error codes are
+added for enums <code>RIL_LastCallFailCause</code> and
+<code>RIL_DataCallFailCause</code> so that vendor code avoids returning
+generic errors like <code>CALL_FAIL_ERROR_UNSPECIFIED</code> and
+<code>PDP_FAIL_ERROR_UNSPECIFIED</code>.</p>
+
+<h3 id="version">Implementing enhanced RIL versioning</h3>
+
+<h4 id="version-problem">Problem</h4>
+
+<p>RIL versioning is not accurate enough. The mechanism for vendors to
+report their RIL version is not clear, causing vendors to report an incorrect
+version. A workaround method of estimating the version is used, but it can
+be inaccurate.</p>
+
+<h4 id="version-solution">Solution</h4>
+
+<p>There is a documented section in <code>ril.h</code> describing what a
+particular RIL version value corresponds to. Each
+RIL version is documented, including what changes correspond
+to that version. Vendors must update their version in code when making
+changes corresponding to that version, and return that version while doing
+<code>RIL_REGISTER</code>.</p>
+
+<h3 id="wakelocks">Implementing redesigned RIL communication using
+wakelocks</h3>
+
+<h4 id="wakelocks-prob-sum">Problem summary</h4>
+
+<p>Timed wakelocks are used in RIL communication in an imprecise way,
+which negatively affects battery performance. RIL requests can be either
+solicited or unsolicited. Solicited requests should be classified as one of
+the following:</p>
+
+<ul>
+<li>synchronous: Those that do not take considerable time to respond back. For
+example, <code>RIL_REQUEST_GET_SIM_STATUS</code>.</li>
+
+<li>asynchronous: Those that take considerable time to respond back. For
+example, <code>RIL_REQUEST_QUERY_AVAILABLE_NETWORKS</code>.</li>
+</ul>
+
+<p>Follow these steps to implement redesigned wakelocks:</p>
+
+<ol>
+<li>
+Classify solicited RIL commands as either synchronous or asynchronous
+depending on how much time they take to respond.
+<p>Here are some things to consider while making
+that decision:</p>
+
+<ul>
+<li>As explained in the solution of asynchronous solicited RIL requests,
+because the requests take considerable time, RIL Java releases the wakelock
+after receiving ack from vendor code. This might cause the application
+processor to go from idle to suspend state. When the response is available
+from vendor code, RIL Java (the application processor) will re-acquire the
+wakelock and process the response, and later go to idle state again. This
+process of moving from idle to suspend state and back to idle can consume
+a lot of power.</li>
+
+<li>If the response time isn't long enough then holding the wakelock and
+staying in idle state for the entire time it takes to respond can be more
+power efficient than going in suspend state by releasing the wakelock and
+then waking up when the response arrives. So vendors should use
+platform-specific power measurement to find out the threshold value of time 't' when
+power consumed by staying in idle state for the entire time 't' consumes
+more power than moving from idle to suspend and back to idle in same time
+'t'. When that time 't' is discovered, RIL commands that take more than time
+'t' can be classified as asynchronous, and the rest of the RIL commands can
+be classified as synchronous.</li>
+</ul>
+</li>
+
+<li>Understand the RIL communications scenarios described in the <a
+href="#ril-comm-scenarios">RIL communication scenarios</a> section.</li>
+
+<li>Follow the solutions in the scenarios by modifying your code to handle
+RIL solicited and unsolicited requests.</li>
+</ol>
+
+<h4 id="ril-comm-scenarios">RIL communication scenarios</h4>
+
+<p>For implementation details of the functions used in the
+following diagrams, see the source code of <code>ril.cpp</code>:
+<code>acquireWakeLock()</code>, <code>decrementWakeLock()</code>,
+<code>clearWakeLock(</code>)</p>
+
+<h5>Scenario 1: RIL request from Java APIs and solicited asynchronous response
+to that request</h5>
+
+<p><img src="images/ril-refactor-scenario-1.png"></p>
+
+<h6>Problem</h6>
+
+<p>If the RIL solicited response is expected to take considerable time (for
+example, <code>RIL_REQUEST_GET_AVAILABLE_NETWORKS</code>), then wakelock
+is held for a long time on the Application processor side, which is a
+problem. Also, modem problems result in a long wait.</p>
+
+<h6>Solution part 1</h6>
+
+<p>In this scenario, wakelock equivalent is held by Modem code (RIL request
+and asynchronous response back).</p>
+
+<p><img src="images/ril-refactor-scenario-1-solution-1.png"></p>
+
+<p>As shown in the above sequence diagram:</p>
+
+<ol>
+<li>RIL request is sent, and the modem needs to acquire wakelock to process
+the request.</li>
+
+<li>The modem code sends acknowledgement that causes the Java side to decrement
+the wakelock counter and release it if the wakelock counter value is 0.</li>
+
+<li>After the modem processes the request, it sends an interrupt to the
+vendor code that acquires wakelock and sends a response to ril.cpp. ril.cpp
+then acquires wakelock and sends a response to the Java side.</li>
+
+<li>When the response reaches the Java side, wakelock is acquired and response
+is sent back to caller.</li>
+
+<li>After that response is processed by all modules, acknowledgement is
+sent back to <code>ril.cpp</code> over a socket. <code>ril.cpp</code> then
+releases the wakelock that was acquired in step 3.</li>
+</ol>
+
+<p>Note that the wakelock timeout duration for the request-ack sequence
+would be smaller than the currently used timeout duration because the ack
+should be received back fairly quickly.</p>
+
+<h6>Solution part 2</h6>
+
+<p>In this scenario, wakelock is not held by modem and response is quick
+(synchronous RIL request and response).</p>
+
+<p><img src="images/ril-refactor-scenario-1-solution-2.png"></p>
+
+<p>As shown in the above sequence diagram:</p>
+
+<ol>
+<li>RIL request is sent by calling <code>acquireWakeLock()</code> on the
+Java side.</li>
+
+<li>Vendor code doesn't need to acquire wakelock and can process the request
+and respond quickly.</li>
+
+<li>When the response is received by the Java side,
+<code>decrementWakeLock()</code> is called, which decreases wakelock counter
+and releases wakelock if the counter value is 0.</li>
+</ol>
+
+<p>Note that this synchronous vs. asynchronous behavior is hardcoded for a
+particular RIL command and decided on a call-by-call basis.</p>
+
+<h5>Scenario 2: RIL unsolicited response</h5>
+
+<p><img src="images/ril-refactor-scenario-2.png"></p>
+
+<p>As shown in the above diagram, RIL unsolicited responses have a wakelock
+type flag in the response that indicates whether a wakelock needs to be
+acquired or not for the particular response received from the vendor. If
+the flag is set, then a timed wakelock is set and response is sent over a
+socket to the Java side. When the timer expires, the wakelock is released.</p>
+
+<h6>Problem</h6>
+
+<p>The timed wakelock illustrated in Scenario 2 could be too long or too
+short for different RIL unsolicited responses.</p>
+
+<h6>Solution</h6>
+
+<p><img src="images/ril-refactor-scenario-2-solution.png"></p>
+
+<p>As shown, the problem can be solved by sending an acknowledgement from
+the Java code to the native side (<code>ril.cpp</code>), instead of holding
+a timed wakelock on the native side while sending an unsolicited response.</p>
+
+<h2 id="validation">Validation</h2>
+
+<p>The following sections describe how to validate the implementation of
+the RIL refactoring feature's subfeatures.</p>
+
+<h3 id="validate-error">Validating enhanced RIL error codes</h3>
+
+<p>After adding new error codes to replace the <code>GENERIC_FAILURE</code>
+code, verify that the new error codes are returned by the RIL call instead
+of <code>GENERIC_FAILURE</code>.</p>
+
+<h3 id="validate-version">Validating enhanced RIL versioning</h3>
+
+<p>Verify that the RIL version corresponding to your RIL code is returned
+during <code>RIL_REGISTER</code> rather than the <code>RIL_VERSION</code>
+defined in <code>ril.h</code>.</p>
+
+<h3 id="validate-wakelocks">Validating redesigned wakelocks</h3>
+
+<p>Verify that RIL calls are identified as synchronous or asynchronous.</p>
+
+<p>Because battery power consumption can be hardware/platform dependent,
+vendors should do some internal testing to find out if using the new wakelock
+semantics for asynchronous calls leads to battery power savings.</p>
+
+  </body>
+</html>

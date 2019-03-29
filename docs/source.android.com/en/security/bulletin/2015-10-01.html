@@ -1,0 +1,707 @@
+<html devsite>
+  <head>
+    <title>Nexus Security Bulletin - October 2015</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p><em>Published October 05, 2015 | Updated April 28, 2016</em></p>
+
+<p>We have released a security update to Nexus devices through an over-the-air
+(OTA) update as part of our Android Security Bulletin Monthly Release process.
+The Nexus firmware images have also been released to the <a href="https://developers.google.com/android/nexus/images">Google Developer site</a>. Builds LMY48T or later (such as LMY48W) and Android M with Security Patch
+Level of October 1, 2015 or later address these issues. Refer to the <a href="https://support.google.com/nexus/answer/4457705">Nexus documentation</a> for instructions on how to check the security patch level. </p>
+
+<p>Partners were notified about these issues on September 10, 2015 or earlier.
+Source code patches for these issues have been released to the Android Open
+Source Project (AOSP) repository.</p>
+
+<p>The most severe of these issues is a Critical security vulnerability that could
+enable remote code execution on an affected device through multiple methods
+such as email, web browsing, and MMS when processing media files. The
+<a href="/security/overview/updates-resources.html#severity">severity
+assessment</a> is based on the effect that exploiting the vulnerability would
+possibly have on an affected device, assuming the platform and service
+mitigations are disabled for development purposes or if successfully bypassed.</p>
+
+<p>We have had no reports of active customer exploitation of these newly reported
+issues. Refer to the <a href="#mitigations">Mitigations</a> section for details on the <a href="/security/enhancements/index.html">Android security platform protections</a> and service protections such as SafetyNet, which improve the security of the
+Android platform. We encourage all customers to accept these updates to their
+devices. </p>
+
+
+<h2 id=mitigations>Mitigations</h2>
+
+
+<p>This is a summary of the mitigations provided by the <a href="/security/enhancements/index.html">Android security platform</a> and service protections such as SafetyNet. These capabilities reduce the
+likelihood that security vulnerabilities can be successfully exploited on
+Android. </p>
+
+<ul>
+  <li> Exploitation for many issues on Android is made more difficult by enhancements
+in newer versions of the Android platform. We encourage all users to update to
+the latest version of Android where possible.
+  <li> The Android Security team is actively monitoring for abuse with Verify Apps and
+SafetyNet which will warn about potentially harmful applications about to be
+installed. Device rooting tools are prohibited within Google Play. To protect
+users who install applications from outside of Google Play, Verify Apps is
+enabled by default and will warn users about known rooting applications. Verify
+Apps attempts to identify and block installation of known malicious
+applications that exploit a privilege escalation vulnerability. If such an
+application has already been installed, Verify Apps will notify the user and
+attempt to remove any such applications.
+  <li> As appropriate, Google has updated the Hangouts and Messenger applications so
+that media is not automatically passed to vulnerable processes (such as
+mediaserver.)
+</ul>
+
+<h2 id=acknowledgements>Acknowledgements</h2>
+
+
+<p>We would like to thank these researchers for their contributions:</p>
+
+<ul>
+  <li> Brennan Lautner: CVE-2015-3863
+  <li> Chiachih Wu and Xuxian Jiang of C0RE Team from Qihoo 360: CVE-2015-3868, CVE-2015-3869, CVE-2015-3862
+  <li> Yajin Zhou, Lei Wu, and Xuxian Jiang of C0RE Team from Qihoo 360: CVE-2015-3865
+  <li> Daniel Micay (daniel.micay@copperhead.co) at Copperhead Security: CVE-2015-3875
+  <li> dragonltx of Alibaba Mobile Security Team: CVE-2015-6599
+  <li> Ian Beer and Steven Vittitoe of Google Project Zero: CVE-2015-6604
+  <li> Joaquín Rinaudo (@xeroxnir) and Iván Arce (@4Dgifts) of Programa STIC at
+Fundación Dr. Manuel Sadosky, Buenos Aires Argentina: CVE-2015-3870
+  <li> Josh Drake of Zimperium: CVE-2015-3876, CVE-2015-6602
+  <li> Jordan Gruskovnjak of Exodus Intelligence (@jgrusko): CVE-2015-3867
+  <li> Peter Pi of Trend Micro: CVE-2015-3872, CVE-2015-3871
+  <li> Ping Li of  Qihoo 360 Technology Co. Ltd: CVE-2015-3878
+  <li> Seven Shen: CVE-2015-6600, CVE-2015-3847
+  <li> Wangtao(neobyte) of Baidu X-Team: CVE-2015-6598
+  <li> Wish Wu of Trend Micro Inc. (@wish_wu): CVE-2015-3823
+  <li> Michael Roland of JR-Center u'smile at University of Applied Sciences, Upper Austria/ Hagenberg: CVE-2015-6606
+</ul>
+
+<p>We would also like to acknowledge the contributions of the Chrome Security
+Team, Google Security Team, Project Zero, and other individuals within Google
+for reporting several issues fixed in this bulletin.</p>
+
+<h2 id=security_vulnerability_details>Security Vulnerability Details</h2>
+
+
+<p>In the sections below, we provide details for each of the security
+vulnerabilities that apply to the 2015-10-01 patch level.
+There is a description of the issue, a severity rationale, and a table
+with the CVE, associated bug, severity, affected versions, and date reported.
+Where available, we’ve linked the AOSP change that addressed the issue to the
+bug ID.  When multiple changes relate to a single bug, additional AOSP
+references are linked to numbers following the bug ID.</p>
+
+<h3 id=remote_code_execution_vulnerabilities_in_libstagefright>Remote Code Execution Vulnerabilities in libstagefright</h3>
+
+
+<p>Vulnerabilities in libstagefright exist that could allow an attacker, during
+media file and data processing of a specially crafted file, to cause memory
+corruption and remote code execution in the mediaserver service.</p>
+
+<p>These issues are rated as a Critical severity due to the possibility of remote
+code execution as a privileged service. The affected components have access to
+audio and video streams as well as access to privileges that third-party
+applications cannot normally access.</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>Bug(s) with AOSP links</th>
+    <th>Severity</th>
+    <th>Affected versions</th>
+    <th>Date reported</th>
+ </tr>
+ <tr>
+    <td rowspan="14">CVE-2015-3873</td>
+    <td><a href="https://android.googlesource.com/platform%2Fframeworks%2Fav/+/c23e3dd8af7397f023aae040c4a03dd14091cbed">ANDROID-20674086</a>  [<a href="https://android.googlesource.com/platform%2Fframeworks%2Fav/+/9abb7401df730b5c510f6b8dac2716a0928d9623">2</a>,<a href="https://android.googlesource.com/platform%2Fframeworks%2Fav/+/b62a73b860757143d3b140b2985fdae71e18d675">3</a>,<a href="https://android.googlesource.com/platform%2Fframeworks%2Fav/+/b2ae4351539de9aa4667fcb3e02ba40d9c6bd094">4</a>]</td>
+    <td rowspan="13">Critical</td>
+    <td rowspan="13">5.1 and below</td>
+    <td rowspan="13">Google Internal </td>
+ </tr>
+ <tr>
+    <td><a href="https://android.googlesource.com/platform%2Fframeworks%2Fav/+/3fd96683850cf27648e036180acb149fac362242">ANDROID-20674674</a>  [<a href="https://android.googlesource.com/platform%2Fframeworks%2Fav/+/65842db06c2d77e53cc5ac61692160d844cc7d0a">2</a>,<a href="https://android.googlesource.com/platform%2Fframeworks%2Fav/+/38eff9af5c032bf12f89d6e94df05f65eef51afc">3</a>,<a href="https://android.googlesource.com/platform%2Fframeworks%2Fav/+/91860b89488b3ee4644c539e89e657fbb79fb6ad">4</a>]</td>
+ </tr>
+ <tr>
+    <td><a href="https://android.googlesource.com/platform%2Fexternal%2Ftremolo/+/2e941e40ce76eb13b273479a4ee8fb6e40d33795">ANDROID-20718524 </a></td>
+ </tr>
+ <tr>
+    <td><a href="https://android.googlesource.com/platform%2Fexternal%2Ftremolo/+/06ca06ac6107f88530cc67225c47537621bb41a5">ANDROID-21048776</a></td>
+ </tr>
+ <tr>
+    <td><a href="https://android.googlesource.com/platform%2Fframeworks%2Fav/+/dc5e47f013bfbb74c5c35ad976aa98d480cb351b">ANDROID-21443020</a></td>
+ </tr>
+ <tr>
+    <td><a href="https://android.googlesource.com/platform%2Fframeworks%2Fav/+/f11e95b21007f24e5ab77298370855f9f085b2d7">ANDROID-21814993 </a></td>
+ </tr>
+ <tr>
+    <td><a href="https://android.googlesource.com/platform%2Fframeworks%2Fav/+/f810a8298aea13fa177060cdc10c8297eac69c49">ANDROID-22008959 </a></td>
+ </tr>
+ <tr>
+    <td><a href="https://android.googlesource.com/platform%2Fframeworks%2Fav/+/7913508110c80da87fb085514208adbd874d7d54">ANDROID-22077698</a></td>
+ </tr>
+ <tr>
+    <td><a href="https://android.googlesource.com/platform%2Fframeworks%2Fav/+/073e4f6748f5d7deb095c42fad9271cb99e22d07">ANDROID-22388975</a> </td>
+ </tr>
+ <tr>
+    <td><a href="https://android.googlesource.com/platform%2Fframeworks%2Fav/+/bf47eb9c67ed364f3c288954857aab9d9311db4c">ANDROID-22845824</a> </td>
+ </tr>
+ <tr>
+    <td><a href="https://android.googlesource.com/platform%2Fframeworks%2Fav/+/b158a9a5bcfe21480f57bc58d45517f1a81cca39">ANDROID-23016072</a></td>
+ </tr>
+ <tr>
+    <td><a href="https://android.googlesource.com/platform%2Fframeworks%2Fav/+/5a132594b531f1f48098a790927f82080cc27f61">ANDROID-23247055 </a></td>
+ </tr>
+ <tr>
+    <td><a href="https://android.googlesource.com/platform%2Fframeworks%2Fav/+/d2ebc0b9e147f9406db20ec4df61da50e3614ee4">ANDROID-23248776</a> </td>
+ </tr>
+ <tr>
+    <td><a href="https://android.googlesource.com/platform%2Fframeworks%2Fav/+/3179e3b3531b5fe93dc7f5b2c378e27010a406d5">ANDROID-20721050</a></td>
+    <td>Critical</td>
+    <td>5.0 and 5.1</td>
+    <td>Google Internal </td>
+ </tr>
+ <tr>
+    <td>CVE-2015-3823</td>
+    <td><a href="https://android.googlesource.com/platform%2Fframeworks%2Fav/+/407d475b797fdc595299d67151230dc6e3835ccd">ANDROID-21335999 </a></td>
+    <td>Critical</td>
+    <td>5.1 and below</td>
+    <td>May 20, 2015</td>
+ </tr>
+ <tr>
+    <td>CVE-2015-6600</td>
+    <td><a href="https://android.googlesource.com/platform%2Fframeworks%2Fav/+/e6f5d47a7f9eab8a0009f8a563de473cd47d3110">ANDROID-22882938 </a></td>
+    <td>Critical</td>
+    <td>5.1 and below</td>
+    <td>Jul 31, 2015</td>
+ </tr>
+ <tr>
+    <td>CVE-2015-6601</td>
+    <td><a href="https://android.googlesource.com/platform%2Fframeworks%2Fav/+/738a753a3ca7bf8f9f608ca941575626265294e4">ANDROID-22935234</a></td>
+    <td>Critical</td>
+    <td>5.1 and below</td>
+    <td>Aug 3, 2015</td>
+ </tr>
+ <tr>
+    <td>CVE-2015-3869</td>
+    <td><a href="https://android.googlesource.com/platform%2Fframeworks%2Fav/+/450e1015b7939292ca988dd1b4f0303a094478e9">ANDROID-23036083</a></td>
+    <td>Critical</td>
+    <td>5.1 and below</td>
+    <td>Aug 4, 2015</td>
+ </tr>
+ <tr>
+    <td>CVE-2015-3870</td>
+    <td><a href="https://android.googlesource.com/platform%2Fframeworks%2Fav/+/4bce636865bdf0e2a79fc9a5d9a69107649c850d">ANDROID-22771132</a></td>
+    <td>Critical</td>
+    <td>5.1 and below</td>
+    <td>Aug 5, 2015</td>
+ </tr>
+ <tr>
+    <td>CVE-2015-3871</td>
+    <td><a href="https://android.googlesource.com/platform%2Fframeworks%2Fav/+/c570778430a22b5488cae72982cf9fb8033dbda3">ANDROID-23031033</a></td>
+    <td>Critical</td>
+    <td>5.1 and below</td>
+    <td>Aug 6, 2015</td>
+ </tr>
+ <tr>
+    <td>CVE-2015-3868</td>
+    <td><a href="https://android.googlesource.com/platform%2Fframeworks%2Fav/+/937c6bedd4b6e5c6cb29a238eb459047dedd3486">ANDROID-23270724</a></td>
+    <td>Critical</td>
+    <td>5.1 and below</td>
+    <td>Aug 6, 2015</td>
+ </tr>
+ <tr>
+    <td>CVE-2015-6604</td>
+    <td><a href="https://android.googlesource.com/platform%2Fframeworks%2Fav/+/f51115bd8e44c2779b74477277c6f6046916e7cf">ANDROID-23129786</a></td>
+    <td>Critical</td>
+    <td>5.1 and below</td>
+    <td>Aug 11, 2015</td>
+ </tr>
+ <tr>
+    <td>CVE-2015-3867</td>
+    <td><a href="https://android.googlesource.com/platform%2Fframeworks%2Fav/+/7e9ac3509d72e8dc6f1316b5ce0a0066638b9737">ANDROID-23213430</a></td>
+    <td>Critical</td>
+    <td>5.1 and below</td>
+    <td>Aug 14, 2015</td>
+ </tr>
+ <tr>
+    <td>CVE-2015-6603</td>
+    <td><a href="https://android.googlesource.com/platform%2Fframeworks%2Fav/+/c37f7f6fa0cb7f55cdc5b2d4ccbf2c87c3bc6c3b">ANDROID-23227354 </a></td>
+    <td>Critical</td>
+    <td>5.1 and below</td>
+    <td>Aug 15,2015</td>
+ </tr>
+ <tr>
+    <td>CVE-2015-3876</td>
+    <td><a href="https://android.googlesource.com/platform%2Fframeworks%2Fav/+/c580c836c1941fb4912e1dd4e08626caf98a62c7">ANDROID-23285192</a></td>
+    <td>Critical</td>
+    <td>5.1 and below</td>
+    <td>Aug 15, 2015</td>
+ </tr>
+ <tr>
+    <td>CVE-2015-6598</td>
+    <td><a href="https://android.googlesource.com/platform%2Fframeworks%2Fav/+/ba6093a4c6997b9d36d9700ee8c974941bf82e3a">ANDROID-23306638</a></td>
+    <td>Critical</td>
+    <td>5.1 and below</td>
+    <td>Aug 18, 2015</td>
+ </tr>
+ <tr>
+    <td>CVE-2015-3872</td>
+    <td><a href="https://android.googlesource.com/platform%2Fframeworks%2Fav/+/4d46f6f18f5160b8992ec1e66ef1844212fc7d48">ANDROID-23346388</a></td>
+    <td>Critical</td>
+    <td>5.1 and below</td>
+    <td>Aug 19, 2015</td>
+ </tr>
+ <tr>
+    <td>CVE-2015-6599</td>
+    <td><a href="https://android.googlesource.com/platform%2Fframeworks%2Fav/+/af7e33f6043c0be1c0310d675884e3b263ca2438">ANDROID-23416608 </a></td>
+    <td>Critical</td>
+    <td>5.1 and below</td>
+    <td>Aug 21, 2015</td>
+ </tr>
+</table>
+
+
+<h3 id=remote_code_execution_vulnerabilities_in_sonivox>Remote Code Execution Vulnerabilities in Sonivox</h3>
+
+
+<p>Vulnerabilities in Sonivox exist that could allow an attacker, during media
+file processing of a specially crafted file, to cause memory corruption and
+remote code execution in the mediaserver service. This issue is rated as a
+Critical severity due to the possibility of remote code execution as a
+privileged service. The affected component has access to audio and video
+streams as well as access to privileges that third-party applications cannot
+normally access.</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>Bug(s) with AOSP links</th>
+    <th>Severity</th>
+    <th>Affected versions</th>
+    <th>Date reported</th>
+ </tr>
+ <tr>
+    <td rowspan="3">CVE-2015-3874</td>
+    <td><a href="https://android.googlesource.com/platform%2Fexternal%2Fsonivox/+/8cbef48ba6e3d3f844b895f8ca1a1aee74414fff">ANDROID-23335715</a> </td>
+    <td rowspan="3">Critical</td>
+    <td rowspan="3">5.1 and below</td>
+    <td rowspan="3">Multiple</td>
+ </tr>
+ <tr>
+    <td><a href="https://android.googlesource.com/platform%2Fexternal%2Fsonivox/+/5d2e7de37d4a28cf25cc5d0c64b3a29c1824dc0a">ANDROID-23307276</a> [<a href="https://android.googlesource.com/platform%2Fexternal%2Fsonivox/+/f333a822c38c3d92f40e8f1686348e6a62c291">2</a>]</td>
+ </tr>
+ <tr>
+    <td><a href="https://android.googlesource.com/platform%2Fexternal%2Fsonivox/+/8a9f53ee2c661e8b5b94d6e9fbb8af3baa34310d">ANDROID-23286323</a></td>
+ </tr>
+</table>
+
+
+<h3 id=remote_code_execution_vulnerabilities_in_libutils>Remote Code Execution Vulnerabilities in libutils </h3>
+
+
+<p>Vulnerabilities in libutils, a generic library, exist in audio file processing.
+These vulnerabilities could allow an attacker, during processing of a specially
+crafted file, to cause memory corruption and remote code execution in a service
+that uses this library such as mediaserver.</p>
+
+<p>The affected functionality is provided as an application API and there are
+multiple applications that allow it to be reached with remote content, most
+notably MMS and browser playback of media. This issue is rated as a Critical
+severity due to the possibility of remote code execution in a privileged
+service. The affected component has access to audio and video streams as well
+as access to privileges that third-party apps cannot normally access.</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>Bug(s) with AOSP links</th>
+    <th>Severity</th>
+    <th>Affected versions</th>
+    <th>Date reported</th>
+ </tr>
+ <tr>
+    <td>CVE-2015-3875</td>
+    <td><a href="https://android.googlesource.com/platform%2Fsystem%2Fcore/+/0cc9a6e6e1f8e675c1238e5e05418cabcc699b52">ANDROID-22952485</a></td>
+    <td>Critical</td>
+    <td>5.1 and below</td>
+    <td>Aug 15, 2015</td>
+ </tr>
+ <tr>
+    <td>CVE-2015-6602</td>
+    <td><a href="https://android.googlesource.com/platform%2Fsystem%2Fcore/+/e0dce90b0de2b2b7c2baae8035f810a55526effb">ANDROID-23290056</a> [<a href="https://android.googlesource.com/platform%2Fsystem%2Fcore/+/5b85b1d40d619c2064d321364f212ebfeb6ba185">2</a>]</td>
+    <td>Critical</td>
+    <td>5.1 and below</td>
+    <td>Aug 15, 2015</td>
+ </tr>
+</table>
+
+
+<h3 id=remote_code_execution_vulnerability_in_skia>Remote Code Execution Vulnerability in Skia</h3>
+
+
+<p>A vulnerability in the Skia component may be leveraged when processing a
+specially crafted media file, that could lead to memory corruption and remote
+code execution in a privileged process. This issue is rated as a Critical
+severity due to the possibility of remote code execution through multiple
+attack methods such as email, web browsing, and MMS when processing media
+files.</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>Bug(s) with AOSP links</th>
+    <th>Severity</th>
+    <th>Affected versions</th>
+    <th>Date reported</th>
+ </tr>
+ <tr>
+    <td>CVE-2015-3877</td>
+    <td><a href="https://android.googlesource.com/platform%2Fexternal%2Fskia/+/55ad31336a6de7037139820558c5de834797c09e">ANDROID-20723696</a></td>
+    <td>Critical</td>
+    <td>5.1 and below</td>
+    <td>Jul 30, 2015</td>
+ </tr>
+</table>
+
+
+<h3 id=remote_code_execution_vulnerabilities_in_libflac>Remote Code Execution Vulnerabilities in libFLAC</h3>
+
+
+<p>A vulnerability in libFLAC exists in media file processing. These
+vulnerabilities could allow an attacker, during processing of a specially
+crafted file, to cause memory corruption and remote code execution.</p>
+
+<p>The affected functionality is provided as an application API and there are
+multiple applications that allow it to be reached with remote content, such as
+browser playback of media. This issue is rated as a Critical severity due to
+the possibility of remote code execution in a privileged service. The affected
+component has access to audio and video streams as well as access to privileges
+that third-party apps cannot normally access.</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>Bug(s) with AOSP links</th>
+    <th>Severity</th>
+    <th>Affected versions</th>
+    <th>Date reported</th>
+ </tr>
+ <tr>
+    <td>CVE-2014-9028</td>
+    <td><a href="https://android.googlesource.com/platform%2Fexternal%2Fflac/+/fe03f73d86bb415f5d5145f0de091834d89ae3a9">ANDROID-18872897</a> [<a href="https://android.googlesource.com/platform%2Fexternal%2Fflac/+/5859ae22db0a2d16af3e3ca19d582de37daf5eb6">2</a>]</td>
+    <td>Critical</td>
+    <td>5.1 and below</td>
+    <td>Nov 14, 2014</td>
+ </tr>
+</table>
+
+
+<p>
+</p>
+
+<h3 id=elevation_of_privilege_vulnerability_in_keystore>Elevation of Privilege Vulnerability in KeyStore</h3>
+
+
+<p>An elevation of privilege vulnerability in the KeyStore component may be
+leveraged by a malicious application when calling into the KeyStore APIs. This
+application could cause memory corruption and arbitrary code execution in the
+context of KeyStore. This issue is rated as High severity because it can be
+used to access privileges which are not directly accessible to a third-party
+application.</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>Bug(s) with AOSP links</th>
+    <th>Severity</th>
+    <th>Affected versions</th>
+    <th>Date reported</th>
+ </tr>
+ <tr>
+    <td>CVE-2015-3863</td>
+    <td><a href="https://android.googlesource.com/platform%2Fsystem%2Fsecurity/+/0d5935262dbbcaf2cf6145529ffd71a728ef4609">ANDROID-22802399</a></td>
+    <td>High</td>
+    <td>5.1 and below</td>
+    <td>Jul 28, 2015</td>
+ </tr>
+</table>
+
+
+<h3 id=elevation_of_privilege_vulnerability_in_media_player_framework>Elevation of Privilege Vulnerability in Media Player Framework</h3>
+
+
+<p>An elevation of privilege vulnerability in the media player framework component
+could allow a malicious application to execute arbitrary code within the
+context of mediaserver. This issue is rated as High severity because it allows
+a malicious application to access privileges not accessible to a third-party
+application.</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>Bug(s) with AOSP links</th>
+    <th>Severity</th>
+    <th>Affected versions</th>
+    <th>Date reported</th>
+ </tr>
+ <tr>
+    <td>CVE-2015-3879</td>
+    <td><a href="https://android.googlesource.com/platform%2Fframeworks%2Fav/+/aa4da6fa7ca2454f0713de0a5a583b5b8160166b">ANDROID-23223325</a> [2]*</td>
+    <td>High</td>
+    <td>5.1 and below</td>
+    <td>Aug 14, 2015</td>
+ </tr>
+</table>
+
+
+<p>* A second change for this issue is not in AOSP. The update is contained in the
+latest binary drivers for Nexus devices available from the <a href="https://developers.google.com/android/nexus/drivers">Google Developer site</a>. 
+</p>
+
+<h3 id=elevation_of_privilege_vulnerability_in_android_runtime>Elevation of Privilege Vulnerability in Android Runtime</h3>
+
+
+<p>An elevation of privilege vulnerability in Android Runtime can enable a local
+malicious application to execute arbitrary code within the context of an
+elevated system application. This issue is rated as High severity because it
+can be used to gain elevated capabilities, such as <a href="http://developer.android.com/guide/topics/manifest/permission-element.html#plevel">Signature</a> or <a href="http://developer.android.com/guide/topics/manifest/permission-element.html#plevel">SignatureOrSystem</a> permissions privileges, which are not accessible to a third-party application.</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>Bug(s) with AOSP links</th>
+    <th>Severity</th>
+    <th>Affected versions</th>
+    <th>Date reported</th>
+ </tr>
+ <tr>
+    <td>CVE-2015-3865</td>
+    <td><a href="https://android.googlesource.com/platform%2Fframeworks%2Fbase/+/ff8dc21278b19b22ed8dc9f9475850838336d351">ANDROID-23050463</a> [<a href="https://android.googlesource.com/platform%2Fcts/+/3f7334822ba4cc53f81f22f3519093bf4e1d7f89">2</a>]</td>
+    <td>High</td>
+    <td>5.1 and below</td>
+    <td>Aug 8, 2015</td>
+ </tr>
+</table>
+
+
+<h3 id=elevation_of_privilege_vulnerabilities_in_mediaserver>Elevation of Privilege Vulnerabilities in Mediaserver</h3>
+
+
+<p>There are multiple vulnerabilities in mediaserver that can enable a local
+malicious application to execute arbitrary code within the context of a
+privileged native service. This issue is rated as High severity because it can
+be used to access privileges that are not directly accessible to a third-party
+application.</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>Bug(s) with AOSP links</th>
+    <th>Severity</th>
+    <th>Affected versions</th>
+    <th>Date reported</th>
+ </tr>
+ <tr>
+    <td rowspan="3">CVE-2015-6596</td>
+    <td><a href="https://android.googlesource.com/platform%2Fframeworks%2Fav/+/b97ee930e4f7ed1587b869c92b4aa1dc90b641cc">ANDROID-20731946</a></td>
+    <td rowspan="2">High</td>
+    <td rowspan="2">5.1 and below</td>
+    <td rowspan="2">Multiple</td>
+ </tr>
+ <tr>
+    <td>ANDROID-20719651*</td>
+ </tr>
+ <tr>
+    <td><a href="https://android.googlesource.com/platform%2Fframeworks%2Fav/+/9ef830c6dbd4f6000b94abee3df14b9e27a38294">ANDROID-19573085</a></td>
+    <td>High</td>
+    <td>5.0 - 6.0</td>
+    <td>Google Internal</td>
+ </tr>
+</table>
+
+
+<p>* The patch for this issue is not in AOSP. The update is contained in the
+latest binary drivers for Nexus devices available from the <a href="https://developers.google.com/android/nexus/drivers">Google Developer site</a>. 
+</p>
+
+<h3 id=elevation_of_privilege_vulnerability_in_secure_element_evaluation_kit>Elevation of Privilege Vulnerability in Secure Element Evaluation Kit</h3>
+
+
+<p>A vulnerability in the <a href="http://seek-for-android.github.io/">SEEK</a> (Secure Element Evaluation Kit, a.k.a. the SmartCard API) plugin could allow
+an application to obtain elevated permissions without requesting them. This
+issue is rated as High severity because it can be used to gain elevated
+capabilities, such as <a href="http://developer.android.com/guide/topics/manifest/permission-element.html#plevel">Signature</a> or <a href="http://developer.android.com/guide/topics/manifest/permission-element.html#plevel">SignatureOrSystem</a> permissions privileges, which are not accessible to third-party applications. </p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>Bug(s) with AOSP links</th>
+    <th>Severity</th>
+    <th>Affected versions</th>
+    <th>Date reported</th>
+ </tr>
+ <tr>
+    <td>CVE-2015-6606</td>
+    <td>ANDROID-22301786*</td>
+    <td>High</td>
+    <td>5.1 and below</td>
+    <td>Jun 30, 2015</td>
+ </tr>
+</table>
+
+
+<p>* The upgrade that addresses this issue is located at the <a href="http://seek-for-android.github.io/">SEEK for Android site</a>.
+</p>
+
+<h3 id=elevation_of_privilege_vulnerability_in_media_projection>Elevation of Privilege Vulnerability in Media Projection</h3>
+
+
+<p>A vulnerability in the Media Projection component can allow user data to be
+disclosed in the form of screen snapshots. The issue is a result of the
+operating system allowing overly long application names. The use of these long
+names by a local malicious application may prevent a warning about screen
+recording from being visible by the user. This issue is rated as Moderate
+severity because it can be used to improperly gain elevated permissions.</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>Bug(s) with AOSP links</th>
+    <th>Severity</th>
+    <th>Affected versions</th>
+    <th>Date reported</th>
+ </tr>
+ <tr>
+    <td>CVE-2015-3878</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/base/+/b3145760db5d58a107fd1ffd8eeec67d983d45f3">ANDROID-23345192</a></td>
+    <td>Moderate</td>
+    <td>5.0 - 6.0</td>
+    <td> Aug 18, 2015</td>
+ </tr>
+</table>
+
+
+<h3 id=elevation_of_privilege_vulnerability_in_bluetooth>Elevation of Privilege Vulnerability in Bluetooth</h3>
+
+
+<p>A vulnerability in Android's Bluetooth component could allow an application to
+delete stored SMS messages. This issue is rated as Moderate severity because it
+can be used to improperly gain elevated permissions.</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>Bug(s) with AOSP links</th>
+    <th>Severity</th>
+    <th>Affected versions</th>
+    <th>Date reported</th>
+ </tr>
+ <tr>
+    <td>CVE-2015-3847</td>
+    <td><a href="https://android.googlesource.com/platform%2Fpackages%2Fapps%2FBluetooth/+/19004c751f36aa2b01d3e03d4f761d8897542bd2">ANDROID-22343270</a></td>
+    <td>Moderate</td>
+    <td>5.1 and below</td>
+    <td>Jul 8, 2015</td>
+ </tr>
+</table>
+
+
+<h3 id=elevation_of_privilege_vulnerabilities_in_sqlite>
+Elevation of Privilege Vulnerabilities in SQLite</h3>
+
+
+<p>Multiple vulnerabilities were discovered in the SQLite parsing engine. These
+vulnerabilities may be exploitable by a local application that can cause
+another application or service to execute arbitrary SQL queries. Successful
+exploitation could result in arbitrary code execution in the context of the
+target application.</p>
+
+<p>A fix was uploaded to AOSP master on April 8, 2015, upgrading the SQLite
+version to 3.8.9: <a href="https://android-review.googlesource.com/#/c/145961/">https://android-review.googlesource.com/#/c/145961/</a></p>
+
+<p>This bulletin contains patches for the SQLite versions in Android 4.4 (SQLite
+3.7.11) and Android 5.0 and 5.1 (SQLite 3.8.6).</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>Bug(s) with AOSP links</th>
+    <th>Severity</th>
+    <th>Affected versions</th>
+    <th>Date reported</th>
+ </tr>
+ <tr>
+    <td>CVE-2015-6607</td>
+    <td><a href="https://android.googlesource.com/platform%2Fexternal%2Fsqlite/+/3fcd43a0f1ef02756029e12af3cb9ba9faa13364">ANDROID-20099586</a></td>
+    <td>Moderate</td>
+    <td> 5.1 and below</td>
+    <td>April 7, 2015<br />Publicly Known</td>
+ </tr>
+</table>
+
+
+<h3 id=denial_of_service_vulnerabilities_in_mediaserver>
+Denial of Service Vulnerabilities in Mediaserver</h3>
+
+
+<p>There are multiple vulnerabilities in mediaserver that can cause a Denial of
+Service by crashing the mediaserver process. These issues are rated as Low
+severity because the effect is experienced by a crash of the media server
+resulting in a local temporary denial of service.</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>Bug(s) with AOSP links</th>
+    <th>Severity</th>
+    <th>Affected versions</th>
+    <th>Date reported</th>
+ </tr>
+ <tr>
+    <td rowspan="3">CVE-2015-6605</td>
+    <td><a href="https://android.googlesource.com/platform%2Fexternal%2Ftremolo/+/36ec928f52271dd1feb4c86b18026564220629e9">ANDROID-20915134</a></td>
+    <td rowspan="2">Low</td>
+    <td rowspan="2">5.1 and below</td>
+    <td rowspan="2">Google Internal </td>
+ </tr>
+ <tr>
+    <td><a href="https://android.googlesource.com/platform%2Fframeworks%2Fav/+/3ce293842fed1b3abd2ff0aecd2a0c70a55086ee">ANDROID-23142203</a></td>
+ </tr>
+ <tr>
+    <td><a href="https://android.googlesource.com/platform%2Fexternal%2Flibhevc/+/2b67e532653b815e2341a0ac0b59d1b0ef82170d">ANDROID-22278703</a></td>
+    <td>Low</td>
+    <td>5.0 - 6.0</td>
+    <td>Google Internal</td>
+ </tr>
+ <tr>
+    <td>CVE-2015-3862</td>
+    <td><a href="https://android.googlesource.com/platform%2Fframeworks%2Fav/+/f26400c9d01a0e2f71690d5ebc644270f098d590">ANDROID-22954006</a></td>
+    <td>Low</td>
+    <td>5.1 and below</td>
+    <td>Aug 2, 2015</td>
+ </tr>
+</table>
+
+
+<h2 id=revisions>Revisions</h2>
+
+
+<ul>
+  <li> October 05, 2015: Bulletin published.
+  <li> October 07, 2015: Bulletin updated with AOSP references. Clarified the bug
+references for CVE-2014-9028.
+  <li> October 12, 2015: Updated acknowledgements for CVE-2015-3868, CVE-2015-3869,
+CVE-2015-3865, CVE-2015-3862.
+  <li> January 22, 2016: Updated acknowledgements for CVE-2015-6606.
+  <li> April 28, 2016: Added CVE-2015-6603 and corrected typo with CVE-2014-9028.
+</ul>
+
+  </body>
+</html>

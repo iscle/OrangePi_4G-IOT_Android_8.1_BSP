@@ -1,0 +1,143 @@
+<html devsite>
+  <head>
+    <title>BufferQueue and gralloc</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>Understanding the Android graphics system starts behind the scenes with
+BufferQueue and the gralloc HAL.</p>
+
+<p>The BufferQueue class is at the heart of everything graphical in Android. Its
+role is simple: Connect something that generates buffers of graphical data (the
+<em>producer</em>) to something that accepts the data for display or further
+processing (the <em>consumer</em>). Nearly everything that moves buffers of
+graphical data through the system relies on BufferQueue.</p>
+
+<p>The gralloc memory allocator performs buffer allocations and is
+implemented through a vendor-specific HAL interface (see
+<code>hardware/libhardware/include/hardware/gralloc.h</code>). The
+<code>alloc()</code> function takes expected arguments (width, height, pixel
+format) as well as a set of usage flags (detailed below).</p>
+
+<h2 id="BufferQueue">BufferQueue producers and consumers</h2>
+
+<p>Basic usage is straightforward: The producer requests a free buffer
+(<code>dequeueBuffer()</code>), specifying a set of characteristics including
+width, height, pixel format, and usage flags. The producer populates the buffer
+and returns it to the queue (<code>queueBuffer()</code>). Later, the consumer
+acquires the buffer (<code>acquireBuffer()</code>) and makes use of the buffer
+contents. When the consumer is done, it returns the buffer to the queue
+(<code>releaseBuffer()</code>).</p>
+
+<p>Recent Android devices support the <em>sync framework</em>, which enables the
+system to do nifty things when combined with hardware components that can
+manipulate graphics data asynchronously. For example, a producer can submit a
+series of OpenGL ES drawing commands and then enqueue the output buffer before
+rendering completes. The buffer is accompanied by a fence that signals when the
+contents are ready. A second fence accompanies the buffer when it is returned
+to the free list, so the consumer can release the buffer while the contents are
+still in use. This approach improves latency and throughput as the buffers
+move through the system.</p>
+
+<p>Some characteristics of the queue, such as the maximum number of buffers it
+can hold, are determined jointly by the producer and the consumer. However, the
+BufferQueue is responsible for allocating buffers as it needs them. Buffers are
+retained unless the characteristics change; for example, if the producer
+requests buffers with a different size, old buffers are freed and new buffers
+are allocated on demand.</p>
+
+<p>Producers and consumers can live in different processes. Currently, the
+consumer always creates and owns the data structure. In older versions of
+Android, only the producer side was binderized (i.e. producer could be in a
+remote process but consumer had to live in the process where the queue was
+created). Android 4.4 and later releases moved toward a more general
+implementation.</p>
+
+<p>Buffer contents are never copied by BufferQueue (moving that much data around
+would be very inefficient). Instead, buffers are always passed by handle.</p>
+
+<h2 id="gralloc_HAL">gralloc HAL usage flags</h2>
+
+<p>The gralloc allocator is not just another way to allocate memory on the
+native heap; in some situations, the allocated memory may not be cache-coherent
+or could be totally inaccessible from user space. The nature of the allocation
+is determined by the usage flags, which include attributes such as:</p>
+
+<ul>
+<li>How often the memory will be accessed from software (CPU)</li>
+<li>How often the memory will be accessed from hardware (GPU)</li>
+<li>Whether the memory will be used as an OpenGL ES (GLES) texture</li>
+<li>Whether the memory will be used by a video encoder</li>
+</ul>
+
+<p>For example, if your format specifies RGBA 8888 pixels, and you indicate the
+buffer will be accessed from software (meaning your application will touch
+pixels directly) then the allocator must create a buffer with 4 bytes per pixel
+in R-G-B-A order. If instead, you say the buffer will be only accessed from
+hardware and as a GLES texture, the allocator can do anything the GLES driver
+wants&mdash;BGRA ordering, non-linear swizzled layouts, alternative color
+formats, etc. Allowing the hardware to use its preferred format can improve
+performance.</p>
+
+<p>Some values cannot be combined on certain platforms. For example, the video
+encoder flag may require YUV pixels, so adding software access and specifying
+RGBA 8888 would fail.</p>
+
+<p>The handle returned by the gralloc allocator can be passed between processes
+through Binder.</p>
+
+<h2 id=tracking>Tracking BufferQueue with systrace</h2>
+
+<p>To really understand how graphics buffers move around, use systrace. The
+system-level graphics code is well instrumented, as is much of the relevant app
+framework code.</p>
+
+<p>A full description of how to use systrace effectively would fill a rather
+long document. Start by enabling the <code>gfx</code>, <code>view</code>, and
+<code>sched</code> tags. You'll also see BufferQueues in the trace. If you've
+used systrace before, you've probably seen them but maybe weren't sure what they
+were. As an example, if you grab a trace while
+<a href="https://github.com/google/grafika">Grafika's</a> "Play video
+(SurfaceView)" is running, the row labeled <em>SurfaceView</em> tells you how
+many buffers were queued up at any given time.</p>
+
+<p>The value increments while the app is active&mdash;triggering the rendering
+of frames by the MediaCodec decoder&mdash;and decrements while SurfaceFlinger is
+doing work, consuming buffers. When showing video at 30fps, the queue's value
+varies from 0 to 1 because the ~60fps display can easily keep up with the
+source. (Notice also that SurfaceFlinger only wakes when there's work to
+be done, not 60 times per second. The system tries very hard to avoid work and
+will disable VSYNC entirely if nothing is updating the screen.)</p>
+
+<p>If you switch to Grafika's "Play video (TextureView)" and grab a new trace,
+you'll see a row labeled
+com.android.grafika/com.android.grafika.PlayMovieActivity. This is the main UI
+layer, which is just another BufferQueue. Because TextureView renders into the
+UI layer (rather than a separate layer), you'll see all of the video-driven
+updates here.</p>
+
+<p>For more information about the systrace tool, refer to <a
+href="https://developer.android.com/studio/profile/systrace-commandline.html">Systrace
+documentation</a>.</p>
+
+  </body>
+</html>

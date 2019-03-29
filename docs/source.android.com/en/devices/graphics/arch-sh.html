@@ -1,0 +1,109 @@
+<html devsite>
+  <head>
+    <title>Surface and SurfaceHolder</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>The
+<a href="http://developer.android.com/reference/android/view/Surface.html">Surface</a>
+class has been part of the public API since 1.0.  Its description simply says,
+"Handle onto a raw buffer that is being managed by the screen compositor."  The
+statement was accurate when initially written but falls well short of the mark
+on a modern system.</p>
+
+<p>The Surface represents the producer side of a buffer queue that is often (but
+not always!) consumed by SurfaceFlinger.  When you render onto a Surface, the
+result ends up in a buffer that gets shipped to the consumer.  A Surface is not
+simply a raw chunk of memory you can scribble on.</p>
+
+<p>The BufferQueue for a display Surface is typically configured for
+triple-buffering; but buffers are allocated on demand.  So if the producer
+generates buffers slowly enough -- maybe it's animating at 30fps on a 60fps
+display -- there might only be two allocated buffers in the queue.  This helps
+minimize memory consumption.  You can see a summary of the buffers associated
+with every layer in the <code>dumpsys SurfaceFlinger</code> output.</p>
+
+<h2 id="canvas">Canvas Rendering</h2>
+
+<p>Once upon a time, all rendering was done in software, and you can still do this
+today.  The low-level implementation is provided by the Skia graphics library.
+If you want to draw a rectangle, you make a library call, and it sets bytes in a
+buffer appropriately.  To ensure that a buffer isn't updated by two clients at
+once, or written to while being displayed, you have to lock the buffer to access
+it.  <code>lockCanvas()</code> locks the buffer and returns a Canvas to use for drawing,
+and <code>unlockCanvasAndPost()</code> unlocks the buffer and sends it to the compositor.</p>
+
+<p>As time went on, and devices with general-purpose 3D engines appeared, Android
+reoriented itself around OpenGL ES.  However, it was important to keep the old
+API working, for apps as well as app framework code, so an effort was made to
+hardware-accelerate the Canvas API.  As you can see from the charts on the
+<a href="http://developer.android.com/guide/topics/graphics/hardware-accel.html">Hardware
+Acceleration</a>
+page, this was a bit of a bumpy ride.  Note in particular that while the Canvas
+provided to a View's <code>onDraw()</code> method may be hardware-accelerated, the Canvas
+obtained when an app locks a Surface directly with <code>lockCanvas()</code> never is.
+As of API 23, a hardware-accelerated Canvas can be obtained from a Surface using
+<code>lockHardwareCanvas()</code> instead.</p>
+
+<p>When you lock a Surface for Canvas access, the "CPU renderer" connects to the
+producer side of the BufferQueue and does not disconnect until the Surface is
+destroyed.  Most other producers (like GLES) can be disconnected and reconnected
+to a Surface, but the Canvas-based "CPU renderer" cannot.  This means you can't
+draw on a surface with GLES or send it frames from a video decoder if you've
+ever locked it for a Canvas.</p>
+
+<p>The first time the producer requests a buffer from a BufferQueue, it is
+allocated and initialized to zeroes.  Initialization is necessary to avoid
+inadvertently sharing data between processes.  When you re-use a buffer,
+however, the previous contents will still be present.  If you repeatedly call
+<code>lockCanvas()</code> and <code>unlockCanvasAndPost()</code> without
+drawing anything, you'll cycle between previously-rendered frames.</p>
+
+<p>The Surface lock/unlock code keeps a reference to the previously-rendered
+buffer.  If you specify a dirty region when locking the Surface, it will copy
+the non-dirty pixels from the previous buffer.  There's a fair chance the buffer
+will be handled by SurfaceFlinger or HWC; but since we need to only read from
+it, there's no need to wait for exclusive access.</p>
+
+<p>The main non-Canvas way for an application to draw directly on a Surface is
+through OpenGL ES.  That's described in the <a href="#eglsurface">EGLSurface and
+OpenGL ES</a> section.</p>
+
+<h2 id="surfaceholder">SurfaceHolder</h2>
+
+<p>Some things that work with Surfaces want a SurfaceHolder, notably SurfaceView.
+The original idea was that Surface represented the raw compositor-managed
+buffer, while SurfaceHolder was managed by the app and kept track of
+higher-level information like the dimensions and format.  The Java-language
+definition mirrors the underlying native implementation.  It's arguably no
+longer useful to split it this way, but it has long been part of the public API.</p>
+
+<p>Generally speaking, anything having to do with a View will involve a
+SurfaceHolder.  Some other APIs, such as MediaCodec, will operate on the Surface
+itself.  You can easily get the Surface from the SurfaceHolder, so hang on to
+the latter when you have it.</p>
+
+<p>APIs to get and set Surface parameters, such as the size and format, are
+implemented through SurfaceHolder.</p>
+
+  </body>
+</html>

@@ -1,0 +1,147 @@
+<html devsite>
+  <head>
+    <title>Implementing Night Light</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>
+Research suggests that blue light from screens can have a negative impact on
+sleep. Android 7.1.1 includes a feature called Night Light that reduces the
+amount of blue light emitted by the device display to better match the natural
+light of the user's time of day and location.
+</p>
+<p>
+Night Light requires a
+<a href="/devices/graphics/implement-hwc.html">Hardware
+Composer HAL 2.0</a> (HWC 2) implementation that can apply the matrix passed to
+<code>setColorTransform</code> to perform tinting without impacting power,
+performance, and app compatibility.
+</p>
+<h2 id="implementation">Implementation</h2>
+<p>
+Device manufacturers can enable the default implementation of the feature by
+using the following flags defined in:
+<code><a href="https://android.googlesource.com/platform/frameworks/base/+/master/core/res/res/values/config.xml">
+/android/frameworks/base/core/res/res/values/config.xml</a></code>
+
+<pre class="devsite-click-to-copy">
+&lt;!-- Control whether Night display is available. This should only be enabled
+      on devices with HWC 2 color transform  support. --&gt;
+ &lt;bool name="config_nightDisplayAvailable">false&lt;/bool&gt;
+ &lt;!-- Default mode to control how Night display is automatically activated.
+      One of the following values (see NightDisplayController.java):
+          0 - AUTO_MODE_DISABLED
+          1 - AUTO_MODE_CUSTOM
+          2 - AUTO_MODE_TWILIGHT
+ --&gt;
+ &lt;integer name="config_defaultNightDisplayAutoMode">0&lt;/integer&gt;
+ &lt;!-- Default time when Night display is automatically activated.
+      Represented as milliseconds from midnight (e.g. 79200000 == 10pm). --&gt;
+ &lt;integer name="config_defaultNightDisplayCustomStartTime">79200000&lt;/integer&gt;
+ &lt;!-- Default time when Night display is automatically deactivated.
+      Represented as milliseconds from midnight (e.g. 21600000 == 6am). --&gt;
+ &lt;integer name="config_defaultNightDisplayCustomEndTime">21600000&lt;/integer&gt;
+</pre>
+<p>
+The code is divided between framework, system services, SystemUI, and Settings:
+</p>
+<pre class="devsite-click-to-copy">
+platform/frameworks/base/core
+├ java/android/provider/Settings.java
+├ java/com/android/internal/app/NightDisplayController.java
+└ res/res/values/config.xml
+
+platform/frameworks/base/proto/src/metrics_constants.proto
+
+platform/frameworks/base/services
+├ core/java/com/android/server/display/DisplayManagerService.java
+├ core/java/com/android/server/display/DisplayTransformManager.java
+├ core/java/com/android/server/display/NightDisplayService.java
+└ java/com/android/server/SystemServer.java
+
+platform/frameworks/base/packages/SystemUI
+├ res/drawable/ic_qs_night_display_off.xml
+├ res/drawable/ic_qs_night_display_on.xml
+├ res/values/strings.xml
+└ src/com/android/systemui/qs/tiles/NightDisplayTile.java
+
+platform/packages/apps/Settings
+├ AndroidManifest.xml
+├ res/drawable/ic_settings_night_display.xml
+├ res/values/strings.xml
+├ res/xml/display_settings.xml
+├ res/xml/night_display_settings.xml
+├ src/com/android/settings/Settings.java
+├ src/com/android/settings/dashboard/conditional/NightDisplayCondition.java
+├ src/com/android/settings/display/NightDisplayPreference.java
+└ src/com/android/settings/display/NightDisplaySettings.java
+</pre>
+
+<h2 id="ui-features">UI features</h2>
+<p>
+Because Night Light is a user-facing feature, users need to be able to control
+it. There is a full implementation of the settings in the Android Open Source
+Project (AOSP)
+<a href="https://android.googlesource.com/platform/packages/apps/Settings/">packages/apps/Settings</a>
+project that device manufacturers can reference for their Settings
+implementation.
+</p>
+<h3 id="settings">Settings</h3>
+<p>
+The settings for Night Light are in <em>Settings &gt; Display &gt; Night
+Light</em>. From there, users can learn about Night Light, set its schedule,
+and turn it on or off.
+</p>
+<ul>
+  <li><strong>Turn On Automatically</strong>
+    <ul>
+     <li><strong>Never</strong>: Night Light will never turn on automatically and
+         must be activated with the  manual <strong>On / Off</strong> toggle.</li>
+     <li><strong>Custom schedule</strong>: Night Light turns on at a specified
+         <strong>Start time </strong>[default: 10:30 p.m.] and off at a specified
+         <strong>End time</strong> [default: 6:30 a.m.].</li>
+     <li><strong>Sunset to sunrise</strong>: Night Light turns on at sunset and off
+         at sunrise. The time for sunrise and sunset depends on the device location
+         and the time of year.</li>
+    </ul>
+  </li>
+  <li><strong>On / Off</strong>: Toggle that controls the current state of Night
+  Light. This state respects existing  automatic rules. For example, if Night
+  Light is toggled on at 5:30 p.m. (before the automatic rule would turn it on
+  at 10:30 p.m.), Night Light will still turn off at 6:30 a.m. And if Night
+  Light is toggled off at 5:30 a.m. (before it turns off at 6:30 a.m.), it will
+  still turn on at 10:30 p.m.</li>
+  <li><strong>Informational text</strong>: Teaches the user what Night Light does
+  and why.</li>
+</ul>
+<h3 id="settings-conditional">Settings conditional</h3>
+<p>
+Visible at the top of Settings when Night Light is on.
+</p>
+<h3 id="quick-settings-tile">Quick Settings tile</h3>
+<p>
+The Quick Settings tile behaves identically to the <strong>On / Off</strong>
+toggle in <em>Settings &gt; Display &gt; Night Light</em>.
+</p>
+
+  </body>
+</html>

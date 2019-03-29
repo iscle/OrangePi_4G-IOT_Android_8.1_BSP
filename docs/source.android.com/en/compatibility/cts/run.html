@@ -1,0 +1,402 @@
+<html devsite>
+  <head>
+    <title>Running CTS tests</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<h2 id=cts_tradefed>Getting started with CTS tradefed</h2>
+<p>See the <a
+href="/devices/tech/test_infra/tradefed/index.html">Trade Federation
+Overview</a> for an explanation of the Trade Federation (tradefed or TF for
+short) continuous test framework.</p>
+
+<p>To run a test plan:</p>
+<ol>
+  <li>Connect at least one device.
+  <li>Press the <strong>home</strong> button to set the device to the home screen at the start of CTS.
+  <li>While a device is running tests, it must not be used for any other tasks
+    and must be kept in a stationary position (to avoid triggering sensor activity)
+    with the cameras pointing at an object that could be focused.
+  <li>Do not press any keys on the device while the CTS is running. Pressing keys
+    or touching the screen of a test device will interfere with the running tests
+    and may lead to test failures.
+  <li>Launch the CTS console by running the <em>cts-tradefed</em> script from
+    the folder where the CTS package has been unzipped, e.g.
+    <code>$ ./android-cts/tools/cts-tradefed</code>
+  <li>Start the default test plan (contains all test packages) by appending: <code>run
+    cts --plan CTS</code> . This kicks off all CTS tests required for compatibility.
+      <ul>
+        <li>For CTS v1 (Android 6.0 and earlier), enter <code>list plans</code> to view a list of
+          test plans in the repository or <code>list package</code>s to view a list of
+          test packages in the repository.
+        <li>For CTS v2 (Android 7.0 and later), enter <code>list modules</code> to
+          see a list of test modules.
+      </ul>
+  </li>
+  <li>Alternately, run the CTS plan of your choosing from the command line
+    using: <code>cts-tradefed run cts --plan
+      <plan_name>
+      </code>
+<p class="note"><strong>Note:</strong> When running Android 6.0 (Marshmallow)
+CTS only, we recommend you use the <code>--skip-preconditions</code> option to
+skip the experimental pre-conditions feature that may cause issues for when
+executing CTS tests.</p>
+  <li>View test progress and results reported on the console.
+  <li>If your device is Android 5.0 or later and declares support for an ARM and a
+    x86 ABI, you should run both the ARM and x86 CTS packages.
+</ol>
+
+<h2 id=using-cts-v1>Using the CTS v1 console</h2>
+
+<p>For Android 6.0 or earlier, you'll use CTS v1.</p>
+<h3 id=selecting_cts_plans>Selecting plans</h3>
+<p>The following test plans are available:</p>
+<ul>
+  <li><em>CTS</em>—all tests required for compatibility. </li>
+  <li><em>Signature</em>—the signature verification of all public APIs </li>
+  <li><em>Android</em>—tests for the Android APIs </li>
+  <li><em>Java</em>—tests for the Java core library </li>
+  <li><em>VM</em>—tests for ART or Dalvik </li>
+  <li><em>Performance</em>—performance tests for your implementation </li>
+</ul>
+<p>These can be executed with the <code>run cts</code> command.</p>
+<h3 id=cts_reference>CTS v1 console command reference</h3>
+
+<p class="table-caption" id="console-commands">
+  <strong>Table 1.</strong> This table summarizes the CTS v1 console commands for
+various uses.</p>
+<table>
+  <tbody>
+    <tr>
+      <th>Host</th>
+      <th>Description</th>
+    </tr>
+    <tr>
+      <td><code>help</code></td>
+      <td>Display a summary of the most commonly used commands</td>
+    </tr>
+    <tr>
+      <td><code>help all</code></td>
+      <td>Display the complete list of available commands</td>
+    </tr>
+    <tr>
+      <td><code>exit</code></td>
+      <td>Gracefully exit the CTS console. Console will close when all currently running tests are finished</td>
+    </tr>
+    <tr>
+      <th>Run</th>
+      <th>Description</th>
+    </tr>
+    <tr>
+      <td><code>run cts</code></td>
+      <td>Run the specified tests and displays progress information. One of
+<code>--plan</code>, <code>--package</code>, <code>--class</code> or
+<code>--continue-session</code> needs to be specified
+        <p>The CTS console can accept other commands while tests are in progress </p>
+        <p>If no devices are connected, the CTS desktop machine (or host) will wait for a device to be connected before starting tests </p>
+        <p>If more than one device is connected, the CTS host will choose a device automatically</p></td>
+    </tr>
+    <tr>
+      <td><code>--plan &lt;test_plan_name&gt;</code></td>
+      <td>Run the specified test plan</td>
+    </tr>
+    <tr>
+      <td><code>--package/-p &lt;test_package_name&gt;  [--package/-p &lt;test_package2&gt;...]</code></td>
+      <td>Run the specified test packages</td>
+    </tr>
+    <tr>
+      <td><code>--class/-c &lt;class_name&gt; [--method/-m &lt;test_method_name&gt;</code></td>
+      <td>Run the specified test class and/or method</td>
+    </tr>
+    <tr>
+      <td><code>--continue-session</code></td>
+      <td>Run all not executed tests from previous CTS session; the sessions testResult.xml will be updated with the new results</td>
+    </tr>
+    <tr>
+      <td><code>--shards &lt;number_of_shards&gt;</code></td>
+      <td>Shard a CTS run into given number of independent chunks, to run on multiple devices in parallel</td>
+    </tr>
+    <tr>
+      <td><code>--serial/-s &lt;deviceID&gt;</code></td>
+      <td>Run CTS on the specific device</td>
+    </tr>
+    <tr>
+      <td><code>-t &lt;class_name&gt;#&lt;test_method_name&gt;</code></td>
+      <td>Run a specific test method</td>
+    </tr>
+    <tr>
+      <td><code>--force-abi 32|64</code></td>
+      <td>On 64-bit devices, run the test against only the 32-bit or 64-bit ABI</td>
+    </tr>
+    <tr>
+      <th>List</th>
+      <th>Description</th>
+    </tr>
+    <tr>
+      <td><code>list packages</code></td>
+      <td>List all available test packages in the repository</td>
+    </tr>
+    <tr>
+      <td><code>list plans</code></td>
+      <td>List all available test plans in the repository</td>
+    </tr>
+    <tr>
+      <td><code>list invocations</code></td>
+      <td>List 'run' commands currently being executed on devices</td>
+    </tr>
+    <tr>
+      <td><code>list commands</code></td>
+      <td>List all 'run' commands currently in the queue waiting to be assigned to devices</td>
+    </tr>
+    <tr>
+      <td><code>list results</code></td>
+      <td>List CTS results currently stored in repository</td>
+    </tr>
+    <tr>
+      <td><code>list devices</code></td>
+      <td>List currently connected devices and their state
+        <p> </p>
+        <p>'Available' devices are functioning, idle devices, available for running tests</p>
+        <p> </p>
+        <p>'Unavailable' devices are devices visible via adb, but are not responding to adb commands and won't be allocated for tests</p>
+        <p> </p>
+        <p>'Allocated' devices are devices currently running tests</td>
+    </tr>
+    <tr>
+      <th>Add</th>
+      <th>Description</th>
+    </tr>
+    <tr>
+      <td><code>add derivedplan --plan &lt;plan_name&gt;<br>
+        --result/-r<br>
+        [pass | fail | timeout | notExecuted]<br>
+        [--session/-s &lt;session_id&gt;]</code></td>
+      <td>Create a plan derived from given result session; use this option to rerun reports and validate test issues</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id=using-cts-v2>Using the CTS v2 console</h2>
+
+<p>For Android 7.0 or later, you'll use CTS v2.</p>
+<h3 id=selecting_ctsv2_plans>Selecting plans</h3>
+<p>Available test plans include the following:</p>
+<ul>
+  <li><em>cts</em>—Runs CTS from an pre-existing CTS installation.</li>
+  <li><em>cts-camera</em>— Runs CTS-camera from a pre-existing CTS installation.</li>
+  <li><em>cts-java</em>— Runs Core Java Tests from a pre-existing CTS installation.</li>
+  <li><em>cts-pdk</em>— Runs Tests useful on validating a PDK fusion build.</li>
+  <li><em>everything</em>— Common config for Compatibility suites.</li>
+</ul>
+<p>Other available configurations include the following:</p>
+<ul>
+  <li><em>basic-reporters</em>— Configuration with basic CTS reporters.</li>
+  <li><em>collect-tests-only</em>—Runs CTS from a pre-existing CTS installation.</li>
+  <li><em>common-compatibility-config</em>— Common config for Compatibility suites.</li>
+  <li><em>cts-filtered-sample</em>— Common config for Compatibility suites.</li>
+  <li><em>cts-known-failures</em>— Configuration with CTS known failures.</li>
+  <li><em>cts-preconditions</em>— CTS precondition configs.</li>
+  <li><em>host</em>— Runs a single host-based test on an existing device.</li>
+  <li><em>instrument</em>— Runs a single Android instrumentation test on an existing device.</li>
+  <li><em>native-benchmark</em>— Runs a native stress test on an existing device.</li>
+  <li><em>native-stress</em>— Runs a native stress test on an existing device.</li>
+  <li><em>recharge</em>— A fake test that waits for nearly-discharged devices and holds them for charging.</li>
+  <li><em>testdef</em>— Runs tests contained in test_def.xml files on an existing device.</li>
+  <li><em>util/wifi</em>— Utility config to configure Wi-Fi on device.</li>
+  <li><em>util/wipe</em>— Wipes user data on device.</li>
+</ul>
+<p>All of these plans and configs can be executed with the <code>run cts</code> command.</p>
+
+<h3 id=ctsv2_reference>CTS v2 console command reference</h3>
+
+<p class="table-caption" id="console-commands">
+  <strong>Table 1.</strong> This table summarizes the CTS V2 console commands for
+various uses.</p>
+<table>
+  <tbody>
+    <tr>
+      <th>Host</th>
+      <th>Description</th>
+    </tr>
+    <tr>
+      <td><code>help</code></td>
+      <td>Display a summary of the most commonly used commands</td>
+    </tr>
+    <tr>
+      <td><code>help all</code></td>
+      <td>Display the complete list of available commands</td>
+    </tr>
+    <tr>
+      <td><code>version</code></td>
+      <td>Show the version.</td>
+    </tr>
+    <tr>
+      <td><code>exit</code></td>
+      <td>Gracefully exit the CTS console. Console will close when all currently running tests are finished.</td>
+    </tr>
+    <tr>
+      <th>Run</th>
+      <th>Description</th>
+    </tr>
+    <tr>
+      <td><code>run cts</code></td>
+      <td><p>Run the default CTS plan (that is, the full CTS invocation).</p>
+      <p>The CTS console can accept other commands while tests are in progress.</p>
+        <p>If no devices are connected, the CTS desktop machine (or host) will wait
+           for a device to be connected before starting tests.</p>
+        <p>If more than one device is connected, the CTS host will choose a device automatically.</p></td>
+    </tr>
+    <tr>
+      <td><code>--plan &lt;test_plan_name&gt;</code></td>
+      <td>Run the specified test plan.</td>
+    </tr>
+    <tr>
+      <td><code>--module/-m &lt;test_module_name&gt;  [--module/-m &lt;test_module2&gt;...]</code></td>
+      <td>Run the specified test module or modules. For example, <code>run cts --module CtsGestureTestCases</code>
+          executes the gesture test module (this can be shortened to <code>run cts -m Gesture</code>).</br>
+          <code>run cts -m Gesture --test android.gesture.cts.GestureTest#testGetStrokes</code> runs the specific
+          package, class, or test.</td>
+    </tr>
+    <tr>
+      <td><code>--subplan  &lt;subplan_name&gt;</code></td>
+      <td>Run the specified subplan.</td>
+    </tr>
+    <tr>
+      <td><code>-- module/-m &lt;test_module_name&gt; -- test &lt;test_name&gt; </code></td>
+      <td>Run the specified module and test. For example,
+        <code>run cts -m Gesture --test android.gesture.cts.GestureTest#testGetStrokes</code> runs the specific
+         package, class, or test.</td>
+    </tr>
+    <tr>
+      <td><code>--retry</code></td>
+      <td>Retry all tests that failed or were not executed from the previous sessions.
+          Use <code>list results</code> to get the session id.</td>
+    </tr>
+    <tr>
+      <td><code>--shards &lt;number_of_shards&gt;</code></td>
+      <td>Shard a CTS run into given number of independent chunks, to run on multiple devices in parallel.</td>
+    </tr>
+    <tr>
+      <td><code>--serial/-s &lt;deviceID&gt;</code></td>
+      <td>Run CTS on the specific device.</td>
+    </tr>
+    <tr>
+      <td><code>--include-filter &lt;module_name&gt;  [--include-filter &lt;module2&gt;...]</code></td>
+      <td>Run only with the specified modules.</td>
+    </tr>
+    <tr>
+      <td><code>--exclude-filter &lt;module_name&gt;  [--exclude-filter &lt;module2&gt;...]</code></td>
+      <td>Exclude the specified modules from the run.</td>
+    </tr>
+    <tr>
+      <td><code>--log-level-display/-l &lt;log_level&gt;</code></td>
+      <td>Run with the minimum specified log level displayed to STDOUT. Valid values: [VERBOSE, DEBUG, INFO, WARN, ERROR, ASSERT].</td>
+    </tr>
+    <tr>
+      <td><code>--abi &lt;abi_name&gt;</code></td>
+      <td>Force the test to run on the given ABI, 32 or 64. By default CTS runs a test once for each ABI the device supports.</td>
+    </tr>
+    <tr>
+      <td><code>--logcat</code>, <code>--bugreport</code>, and <code>--screenshoot-on-failure</code></td>
+      <td>Give more visibility into failures and can help with diagnostics.</td>
+    </tr>
+    <tr>
+      <td><code>--device-token</code></td>
+      <td>Specifies a given device has the given token eg. <code>--device-token 1a2b3c4d:sim-card.</code>.</td>
+    </tr>
+    <tr>
+      <td><code>--skip-device-info</code></td>
+      <td>Skips collection of information about the device. Note: do not use this option when running CTS for approval.</td>
+    </tr>
+    <tr>
+      <td><code>--skip-preconditions</code></td>
+      <td>Bypasses verification and setup of the device's configuration, such as pushing media files or checking for Wi-Fi connection.</td>
+    </tr>
+    <tr>
+      <th>List</th>
+      <th>Description</th>
+    </tr>
+    <tr>
+      <td><code>list modules</code></td>
+      <td>List all available test modules in the repository.</td.>
+    </tr>
+    <tr>
+      <td><code>list plans</code> or <code>list configs</code></td>
+      <td>List all available test plans (configs) in the repository.</td>
+    </tr>
+    <tr>
+      <td><code>list subplans</code></td>
+      <td>List all available subplans in the repository.</td>
+    </tr>
+    <tr>
+      <td><code>list invocations</code></td>
+      <td>List 'run' commands currently being executed on devices.</td>
+    </tr>
+    <tr>
+      <td><code>list commands</code></td>
+      <td>List all 'run' commands currently in the queue waiting to be assigned to devices.</td>
+    </tr>
+    <tr>
+      <td><code>list results</code></td>
+      <td>List CTS results currently stored in repository.</td>
+    </tr>
+    <tr>
+      <td><code>list devices</code></td>
+      <td>List currently connected devices and their state.
+        <p> </p>
+        <p>'Available' devices are functioning, idle devices, available for running tests.</p>
+        <p> </p>
+        <p>'Unavailable' devices are devices visible via adb, but are not responding to adb commands and won't be allocated for tests.</p>
+        <p> </p>
+        <p>'Allocated' devices are devices currently running tests.</td>
+    </tr>
+    <tr>
+      <th>Dump</th>
+      <th>Description</th>
+    </tr>
+    <tr>
+      <td><code>dump logs</code></td>
+      <td>Dump the tradefed logs for all running invocations.</td>
+    </tr>
+    <tr>
+      <th>Add</th>
+      <th>Description</th>
+    </tr>
+    <tr>
+      <td><code>add subplan --name/-n &lt;subplan_name&gt;<br>
+        --result-type<br>
+        [pass | fail | timeout | notExecuted]<br>
+        [--session/-s &lt;session_id&gt;]</code></td>
+      <td>Create a subplan derived from previous session; this option generates
+        a subplan that can be used to run a subset of tests.<br><br> The only
+        required option is <code>--session</code>. Others are optional but, when
+        included, must be followed by a value.  The
+        <code>--result-type</code> option is repeatable; for example
+        <code>add subplan --session 0 --result-type passed --result-type
+        failed</code> is valid.</td>
+
+    </tr>
+  </tbody>
+</table>
+
+  </body>
+</html>

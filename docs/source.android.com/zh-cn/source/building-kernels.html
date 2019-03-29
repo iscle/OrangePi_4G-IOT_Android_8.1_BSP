@@ -1,0 +1,243 @@
+<html devsite><head>
+    <title>编译内核</title>
+    <meta name="project_path" value="/_project.yaml"/>
+    <meta name="book_path" value="/_book.yaml"/>
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+<p>本页详细介绍了如何仅编译内核。以下说明假设您尚未下载整个 AOSP；如果您已完成下载，则可以跳过 <code>git clone</code> 对应的步骤，但下载内核源代码的步骤除外。</p>
+
+<p>本部分中的所有示例均使用 <a href="/source/devices.html#hikey-boards">hikey</a> 内核。</p>
+
+<h2 id="figuring-out-which-kernel-to-build">选择内核</h2>
+<p>此表列出了内核源代码和二进制文件的名称及所在位置：<table>
+  <tbody><tr>
+    <th>设备</th>
+    <th>二进制文件所在的位置</th>
+    <th>源代码所在的位置</th>
+    <th>编译配置</th>
+  </tr>
+  <tr>
+    <td>marlin</td>
+    <td>device/google/marlin-kernel</td>
+    <td>kernel/msm</td>
+    <td>marlin_defconfig</td>
+  </tr>
+  <tr>
+    <td>sailfish</td>
+    <td>device/google/marlin-kernel</td>
+    <td>kernel/msm</td>
+    <td>marlin_defconfig</td>
+  </tr>
+  <tr>
+    <td>hikey</td>
+    <td>device/linaro/hikey-kernel</td>
+    <td>kernel/hikey-linaro</td>
+    <td>hikey_defconfig</td>
+  </tr>
+  <tr>
+    <td>angler</td>
+    <td>device/huawei/angler-kernel</td>
+    <td>kernel/msm</td>
+    <td>angler_defconfig</td>
+  </tr>
+  <tr>
+    <td>bullhead</td>
+    <td>device/lge/bullhead-kernel</td>
+    <td>kernel/msm</td>
+    <td>bullhead_defconfig</td>
+  </tr>
+  <tr>
+    <td>shamu</td>
+    <td>device/moto/shamu-kernel</td>
+    <td>kernel/msm</td>
+    <td>shamu_defconfig</td>
+  </tr>
+  <tr>
+    <td>fugu</td>
+    <td>device/asus/fugu-kernel</td>
+    <td>kernel/x86_64</td>
+    <td>fugu_defconfig</td>
+  </tr>
+  <tr>
+    <td>volantis</td>
+    <td>device/htc/flounder-kernel</td>
+    <td>kernel/tegra</td>
+    <td>flounder_defconfig</td>
+  </tr>
+  <tr>
+    <td>hammerhead</td>
+    <td>device/lge/hammerhead-kernel</td>
+    <td>kernel/msm</td>
+    <td>hammerhead_defconfig</td>
+  </tr>
+  <tr>
+    <td>flo</td>
+    <td>device/asus/flo-kernel/kernel</td>
+    <td>kernel/msm</td>
+    <td>flo_defconfig</td>
+  </tr>
+  <tr>
+    <td>deb</td>
+    <td>device/asus/flo-kernel/kernel</td>
+    <td>kernel/msm</td>
+    <td>flo_defconfig</td>
+  </tr>
+  <tr>
+    <td>manta</td>
+    <td>device/samsung/manta/kernel</td>
+    <td>kernel/exynos</td>
+    <td>manta_defconfig</td>
+  </tr>
+  <tr>
+    <td>mako</td>
+    <td>device/lge/mako-kernel/kernel</td>
+    <td>kernel/msm</td>
+    <td>mako_defconfig</td>
+  </tr>
+  <tr>
+    <td>grouper</td>
+    <td>device/asus/grouper/kernel</td>
+    <td>kernel/tegra</td>
+    <td>tegra3_android_defconfig</td>
+  </tr>
+  <tr>
+    <td>tilapia</td>
+    <td>device/asus/grouper/kernel</td>
+    <td>kernel/tegra</td>
+    <td>tegra3_android_defconfig</td>
+  </tr>
+  <tr>
+    <td>maguro</td>
+    <td>device/samsung/tuna/kernel</td>
+    <td>kernel/omap</td>
+    <td>tuna_defconfig</td>
+  </tr>
+  <tr>
+    <td>toro</td>
+    <td>device/samsung/tuna/kernel</td>
+    <td>kernel/omap</td>
+    <td>tuna_defconfig</td>
+  </tr>
+  <tr>
+    <td>panda</td>
+    <td>device/ti/panda/kernel</td>
+    <td>kernel/omap</td>
+    <td>panda_defconfig</td>
+  </tr>
+  <tr>
+    <td>stingray</td>
+    <td>device/moto/wingray/kernel</td>
+    <td>kernel/tegra</td>
+    <td>stingray_defconfig</td>
+  </tr>
+  <tr>
+    <td>wingray</td>
+    <td>device/moto/wingray/kernel</td>
+    <td>kernel/tegra</td>
+    <td>stingray_defconfig</td>
+  </tr>
+  <tr>
+    <td>crespo</td>
+    <td>device/samsung/crespo/kernel</td>
+    <td>kernel/samsung</td>
+    <td>herring_defconfig</td>
+  </tr>
+  <tr>
+    <td>crespo4g</td>
+    <td>device/samsung/crespo/kernel</td>
+    <td>kernel/samsung</td>
+    <td>herring_defconfig</td>
+  </tr>
+</tbody></table>
+
+</p><p>确定要使用的设备项目之后，请查看内核二进制文件的 Git 日志。设备项目采用 <code>device/&lt;vendor&gt;/&lt;name&gt;</code> 形式。</p>
+
+<pre><code>$ git clone https://android.googlesource.com/kernel/hikey-linaro
+$ cd hikey-linaro
+$ git log --max-count=1 kernel
+</code></pre>
+
+<p>内核二进制文件的提交消息中包含用于编译二进制文件的内核源代码的部分 Git 日志。该日志中的第一个条目是最新内容（也即用于编译内核的条目）。请记下提交消息，因为您在后续步骤中会用得到该消息。</p>
+
+<h2 id="id-version">确定内核版本</h2>
+
+<p>要确定系统映像中使用的内核版本，请对内核文件运行以下命令：</p>
+
+<pre><code>$ dd if=kernel bs=1 skip=$(LC_ALL=C grep -a -b -o $'\x1f\x8b\x08\x00\x00\x00\x00\x00' kernel | cut -d ':' -f 1) | zgrep -a 'Linux version'
+</code></pre>
+
+<p>对于 Nexus 5 (hammerhead)，请运行以下命令：</p>
+<pre><code>$ dd if=zImage-dtb bs=1 skip=$(LC_ALL=C od -Ad -x -w2 zImage-dtb | grep 8b1f | cut -d ' ' -f1 | head -1) | zgrep -a 'Linux version'
+</code></pre>
+
+<h2 id="downloading-sources">下载源代码</h2>
+<p>使用适当的 <code>git clone</code> 命令为您要编译的内核下载源代码：</p>
+
+<pre><code>$ git clone https://android.googlesource.com/kernel/common.git
+$ git clone https://android.googlesource.com/kernel/hikey-linaro
+$ git clone https://android.googlesource.com/kernel/x86_64.git
+$ git clone https://android.googlesource.com/kernel/exynos.git
+$ git clone https://android.googlesource.com/kernel/goldfish.git
+$ git clone https://android.googlesource.com/kernel/msm.git
+$ git clone https://android.googlesource.com/kernel/omap.git
+$ git clone https://android.googlesource.com/kernel/samsung.git
+$ git clone https://android.googlesource.com/kernel/tegra.git
+</code></pre>
+
+<ul>
+<li><code>goldfish</code> 项目包含适用于所模拟的平台的内核源代码。</li>
+<li><code>msm</code> 项目包含适用于 ADP1、ADP2、Nexus One、Nexus 4、Nexus 5、Nexus 6、Nexus 5X、Nexus 6P、Nexus 7 (2013)、Pixel 和 Pixel XL 的源代码，可用作使用 Qualcomm MSM 芯片组的起点。</li>
+<li><code>omap</code> 项目用于 PandaBoard 和 Galaxy Nexus，可用作使用 TI OMAP 芯片组的起点。</li>
+<li><code>samsung</code> 项目用于 Nexus S，可用作使用 Samsung Hummingbird 芯片组的起点。</li>
+<li><code>tegra</code> 项目用于 Xoom、Nexus 7 (2012)、Nexus 9，可用作使用 NVIDIA Tegra 芯片组的起点。</li>
+<li><code>exynos</code> 项目包含适用于 Nexus 10 的内核源代码，可用作使用 Samsung Exynos 芯片组的起点。</li>
+<li><code>x86_64</code> 项目包含适用于 Nexus Player 的内核源代码，可用作使用 Intel x86_64 芯片组的起点。</li>
+<li><code>hikey-linaro</code> 项目用于 HiKey 参考板，可用作使用 HiSilicon 620 芯片组的起点。</li>
+</ul>
+
+<h2 id="downloading-a-prebuilt-gcc">下载预编译 gcc</h2>
+<p>确保预编译工具链位于您的以下路径中：</p>
+<pre>$ export PATH=$(pwd)/prebuilts/gcc/linux-x86/arm/arm-eabi-4.6/bin:$PATH</pre>
+<p>或</p>
+<pre>$ export PATH=$(pwd)/prebuilts/gcc/darwin-x86/arm/arm-eabi-4.6/bin:$PATH</pre>
+
+<p>在 Linux 主机上，如果您没有 Android 源代码树，则可以从以下路径下载预编译工具链：</p><pre>$ git clone https://android.googlesource.com/platform/prebuilts/gcc/linux-x86/arm/arm-eabi-4.6</pre>
+
+<h2 id="building">编译内核</h2>
+<p>当您了解了内核的最后一条提交消息并已成功下载内核源代码和预编译的 gcc 后，就可以编译内核了。以下编译命令使用了 hikey 内核：</p>
+<pre><code>$ export ARCH=arm64
+$ export CROSS_COMPILE=aarch64-linux-android-
+$ cd hikey-linaro
+$ git checkout -b android-hikey-linaro-4.1 origin/android-hikey-linaro-4.1
+$ make hikey_defconfig
+$ make
+</code></pre>
+
+<p>要编译不同的内核，只需将 <code>hikey-linaro</code> 替换为您要编译的内核的名称即可。</p>
+
+<p>映像会输出到 <code>arch/arm64/boot/Image</code> 目录；内核二进制文件会输出到 <code>arch/arm64/boot/dts/hisilicon/hi6220-hikey.dtb</code> 文件。请将 <code>Image</code> 目录和 <code>hi6220-hikey.dtb</code> 文件复制到 <code>hikey-kernel</code> 目录。</p>
+
+<p>或者，您可以在使用 <code>make bootimage</code>（或编译启动映像的任何其他 <code>make</code> 命令行）时添加 <code>TARGET_PREBUILT_KERNEL</code> 变量。所有设备均支持该变量，因为它是通过 <code>device/common/populate-new-device.sh</code> 进行设置的。例如：</p>
+
+<pre><code>$ export TARGET_PREBUILT_KERNEL=$your_kernel_path/arch/arm/boot/zImage-dtb
+</code></pre>
+
+<p class="note"><strong>注意</strong>：内核名称因设备而异。要找到内核的正确文件名，请参阅内核源代码中的 <code>device/&lt;vendor&gt;/&lt;name&gt;</code>。</p>
+
+</body></html>

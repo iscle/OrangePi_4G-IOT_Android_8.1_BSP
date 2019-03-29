@@ -1,0 +1,153 @@
+<html devsite><head>
+    <title>开发</title>
+    <meta name="project_path" value="/_project.yaml"/>
+    <meta name="book_path" value="/_book.yaml"/>
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+<p>要处理 Android 代码，您需要同时使用 Git 和 Repo。在大多数情况下，您可以仅使用 Git（不必使用 Repo），或结合使用 Repo 和 Git 命令以组成复杂的命令。不过，使用 Repo 执行基本的跨网络操作可大大简化您的工作。</p>
+<p><strong>Git</strong> 是一个开放源代码的版本控制系统，专用于处理分布在多个代码库上的大型项目。在 Android 环境中，我们会使用 Git 执行本地操作，例如建立本地分支、提交、查看更改、修改。打造 Android 项目所面临的挑战之一就是确定如何最好地支持外部社区 - 从业余爱好者社区到生产大众消费类设备的大型原始设备制造商 (OEM)。我们希望组件可以替换，并希望有趣的组件能够在 Android 之外自行发展。我们最初决定使用一种分布式修订版本控制系统，经过筛选，最后选中了 Git。</p>
+<p><strong>Repo</strong> 是我们以 Git 为基础构建的代码库管理工具。Repo 可以在必要时整合多个 Git 代码库，将相关内容上传到我们的<a href="https://android-review.googlesource.com/">修订版本控制系统</a>，并自动执行 Android 开发工作流程的部分环节。Repo 并非用来取代 Git，只是为了让您在 Android 环境中更轻松地使用 Git。Repo 命令是一段可执行的 Python 脚本，您可以将其放在路径中的任何位置。使用 Android 源代码文件时，您可以使用 Repo 执行跨网络操作。例如，您可以借助单个 Repo 命令，将文件从多个代码库下载到本地工作目录。</p>
+<p><strong>Gerrit</strong> 是一个基于网页的代码审核系统，适用于使用 Git 的项目。Gerrit 允许所有授权用户提交更改（如果通过代码审核，这些更改会自动纳入项目中），以此鼓励他们更集中地使用 Git。此外，Gerrit 可以在浏览器中并排显示更改，并支持代码内注释，使得审核工作变得更轻松。</p>
+<p><strong>Android Studio</strong> 是用于开发 Android 应用的官方集成开发环境 (IDE)。如需了解详情，请参阅 <a href="http://developer.android.com/tools/studio/index.html">Android Studio 概览</a>。
+
+</p><h2 id="basic-workflow">基本工作流程</h2>
+<div class="attempt-right" style="width:200px">
+  <img src="/images/submit-patches-0.png" alt="基本工作流程示意图" height="153px"/>
+  <p class="img-caption">
+    <strong>图 1.</strong> Android 基本工作流程</p>
+</div>
+
+<p>与代码库进行交互的基本模式如下：</p>
+<ol>
+<li>
+<p>使用 <code>repo start</code> 新建一个主题分支。</p>
+</li>
+<li>
+<p>修改文件。</p>
+</li>
+<li>
+<p>使用 <code>git add</code> 暂存更改。</p>
+</li>
+<li>
+<p>使用 <code>git commit</code> 提交更改。</p>
+</li>
+<li>
+<p>使用 <code>repo upload</code> 将更改上传到审核服务器。</p>
+</li>
+</ol>
+<h2 id="task-reference">任务参考</h2>
+<p>以下任务列表简要总结了如何执行常见的 Repo 和 Git 任务。要了解如何使用 Repo 下载源代码，请参阅<a href="/source/downloading.html">下载源代码</a>和<a href="/source/using-repo.html">使用 Repo</a>。</p>
+<h2 id="synchronizing-your-client">同步客户端</h2>
+<p>要同步所有可用项目的文件，请运行以下命令：</p>
+<pre><code>$ repo sync
+</code></pre>
+<p>要同步所选项目的文件，请运行以下命令：</p>
+<pre><code>$ repo sync PROJECT0 PROJECT1 PROJECT2 ...
+</code></pre>
+<h2 id="creating-topic-branches">创建主题分支</h2>
+<p>当您开始进行更改（例如当您开始处理错误或使用新功能）时，请在本地工作环境中新建一个主题分支。主题分支不是原始文件的副本；它代表着特定提交。这样一来，您可以轻松创建本地分支并在这些分支之间切换。通过使用分支，您可以将工作的某个方面与其他方面分隔开来。请参阅<a href="http://www.kernel.org/pub/software/scm/git/docs/howto/separating-topic-branches.txt">分隔主题分支</a>（一篇有关使用主题分支的趣味文章）。</p>
+<p>要使用 Repo 新建一个主题分支，请转到要修改的项目并运行以下命令：</p>
+<pre><code>$ repo start BRANCH_NAME .
+</code></pre>
+<p>请注意，句点代表当前工作目录中的项目。要验证您的新分支是否已创建，请运行以下命令：</p>
+<pre><code>$ repo status .
+</code></pre>
+<h2 id="using-topic-branches">使用主题分支</h2>
+<p>要将分支分配给特定项目，请运行以下命令：</p>
+<pre><code>$ repo start BRANCH_NAME PROJECT_NAME
+</code></pre>
+<p>要查看所有项目的列表，请访问 <a href="https://android.googlesource.com/">android.googlesource.com</a>。再次提醒，如果您已转到特定的项目目录，可以简单地使用一个句点来表示当前项目。</p>
+
+<p>要切换到您已在本地工作环境中创建的另一个分支，请运行以下命令：</p>
+<pre><code>$ git checkout BRANCH_NAME
+</code></pre>
+<p>要查看现有分支的列表，请运行以下命令：</p>
+<pre><code>$ git branch
+</code></pre>
+<p>或</p>
+<pre><code>$ repo branches
+</code></pre>
+<p>当前分支的名称前面将标注星号。</p>
+<p class="note"><strong>注意</strong>：错误可能会导致 <code>repo sync</code> 重置本地主题分支。如果在您运行 <code>repo sync</code> 之后，<code>git branch</code> 显示 *（无分支），请再次运行 <code>git checkout</code>。</p>
+<h2 id="staging-files">暂存文件</h2>
+<p>默认情况下，Git 会检测到您在项目中所做的更改，但不会跟踪这些更改。要让 Git 保存您的更改，您必须将更改标记为包含在提交中。这也称为“暂存”。</p>
+<p>您可以通过运行以下命令来暂存更改：</p>
+<pre><code>git add
+</code></pre>
+<p>对于此命令，项目目录中的任何文件或目录都可作为参数。<code>git add</code> 并不像其名称表示的这样只是简单地将文件添加到 Git 代码库，它还可以用于暂存文件的修改和删除的内容。</p>
+<h2 id="viewing-client-status">查看客户端状态</h2>
+<p>要列出文件的状态，请运行以下命令：</p>
+<pre><code>$ repo status
+</code></pre>
+<p>要查看未提交的修改，请运行以下命令：</p>
+<pre><code>$ repo diff
+</code></pre>
+<p>如果您准备立即提交，运行 <code>repo diff</code> 命令可让系统显示您所做的不会包含在提交中的每一项本地更改。<em></em>如果您准备立即提交，要查看将包含在提交中的每一项更改，您需要运行 Git 命令 <code>git diff</code>。在运行该命令之前，请确保您已转到项目目录下：</p>
+<pre><code>$ cd ~/WORKING_DIRECTORY/PROJECT
+$ git diff --cached
+</code></pre>
+<h2 id="committing-changes">提交更改</h2>
+<p>在 Git 中，提交是修订版本控制的基本单位，包含目录结构的快照以及整个项目的文件内容。在 Git 中创建提交很简单，只需输入以下命令即可：</p>
+<pre><code>git commit
+</code></pre>
+<p>系统会提示您使用惯用的编辑器提供一条提交消息；请为您提交到 AOSP 的所有更改都提供一条会有帮助作用的消息。如果您没有添加日志消息，提交将会终止。</p>
+<h2 id="uploading-changes-to-gerrit">将更改上传到 Gerrit</h2>
+<p>上传之前，请先更新为最新修订版本：</p>
+<pre><code>repo sync
+</code></pre>
+<p>然后运行以下命令：</p>
+<pre><code>repo upload
+</code></pre>
+<p>运行此命令后，系统会随即列出您已提交的更改，并提示您选择要上传到审核服务器的分支。如果只有一个分支，您会看到一个简单的 <code>y/n</code> 提示符。</p>
+<h2 id="recovering-sync-conflicts">恢复同步冲突</h2>
+<p>如果 <code>repo sync</code> 显示同步冲突，请执行以下操作：</p>
+<ul>
+<li>查看未合并的文件（状态代码 = U）。</li>
+<li>根据需要修改存在冲突的地方。</li>
+<li>
+<p>在相关项目目录中进行更改，为相关文件运行 <code>git add</code> 和 <code>git commit</code>，然后对这些更改执行“衍合”(rebase) 命令。例如：</p>
+<pre><code>$ git add .
+$ git commit
+$ git rebase --continue
+</code></pre>
+</li>
+<li>
+<p>当衍合完成后，再一次开始整个同步过程：</p>
+<pre><code>$ repo sync PROJECT0 PROJECT1 ... PROJECTN
+</code></pre>
+</li>
+</ul>
+<h2 id="cleaning-up-your-client-files">清理您的客户端文件</h2>
+<p>要在更改合并到 Gerrit 中后更新您的本地工作目录，请运行以下命令：</p>
+<pre><code>$ repo sync
+</code></pre>
+<p>要安全移除已过时的主题分支，请运行以下命令：</p>
+<pre><code>$ repo prune
+</code></pre>
+<h2 id="deleting-a-client">删除客户端</h2>
+<p>由于所有状态信息都会存储在客户端中，您只需从文件系统中删除相应目录即可：</p>
+<pre><code>$ rm -rf WORKING_DIRECTORY
+</code></pre>
+<p><em></em>删除客户端将永久删除您尚未上传以供审核的任何更改。</p>
+<h2 id="git-and-repo-cheatsheet">Git 和 Repo 快速参考表</h2>
+<img src="/images/git-repo-1.png" alt="基本 Git 和 Repo 命令列表" id="figure2"/>
+<p class="img-caption">
+  <strong>图 2.</strong> 基本 Git 和 Repo 命令</p>
+
+</body></html>

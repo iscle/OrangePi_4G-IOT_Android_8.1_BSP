@@ -1,0 +1,159 @@
+<html devsite>
+  <head>
+    <title>Device Configuration</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>External storage is managed by a combination of the <code>vold</code> init
+service and <code>StorageManagerService</code> system service. Mounting of physical
+external storage volumes is handled by <code>vold</code>, which performs
+staging operations to prepare the media before exposing it to apps.</p>
+
+<h2 id=file_mappings>File mappings</h2>
+<p>For Android 4.2.2 and earlier, the device-specific <code>vold.fstab</code>
+configuration file defines mappings from sysfs devices to filesystem mount
+points, and each line follows this format:</p>
+<pre class="devsite-click-to-copy">
+dev_mount &lt;label&gt; &lt;mount_point&gt; &lt;partition&gt; &lt;sysfs_path&gt; [flags]
+</pre>
+<ul>
+<li><code>label</code>: Label for the volume.</li>
+<li><code>mount_point</code>: Filesystem path where the volume should be mounted.</li>
+<li><code>partition</code>: Partition number (1 based), or 'auto' for first usable partition.</li>
+<li><code>sysfs_path</code>: One or more sysfs paths to devices that can provide this mount
+point. Separated by spaces, and each must start with <code>/</code>.</li>
+<li><code>flags</code>: Optional comma separated list of flags, must not contain <code>/</code>.
+Possible values include <code>nonremovable</code> and <code>encryptable</code>.</li>
+</ul>
+<p>For Android releases 4.3 and later, the various fstab files used by init, vold and
+recovery were unified in the <code>/fstab.&lt;device&gt;</code> file. For external
+storage volumes that are managed by <code>vold</code>, the entries should have the
+following format:</p>
+<pre class="devsite-click-to-copy">
+&lt;src&gt; &lt;mnt_point&gt; &lt;type&gt; &lt;mnt_flags&gt; &lt;fs_mgr_flags&gt;
+</pre>
+<ul>
+<li><code>src</code>: A path under sysfs (usually mounted at /sys) to the device that
+can provide the mount point. The path must start with <code>/</code>.</li>
+<li><code>mount_point</code>: Filesystem path where the volume should be mounted.</li>
+<li><code>type</code>: The type of the filesystem on the volume. For external cards,
+this is usually <code>vfat</code>.</li>
+<li><code>mnt_flags</code>: <code>Vold</code> ignores this field and it should be set
+to <code>defaults</code></li>
+<li><code>fs_mgr_flags</code>: <code>Vold</code> ignores any lines in the unified fstab
+that do not include the <code>voldmanaged=</code> flag in this field. This flag must
+be followed by a label describing the card, and a partition number or the word
+<code>auto</code>. Here is an example: <code>voldmanaged=sdcard:auto</code>.
+Other possible flags are <code>nonremovable</code>,
+<code>encryptable=sdcard</code>, <code>noemulatedsd</code>, and <code>encryptable=userdata</code>.</li>
+</ul>
+
+<h2 id=configuration_details>Configuration details</h2>
+<p>External storage interactions at and above the framework level are handled
+through <code>MountService</code>. Due to configuration changes in Android 6.0 (like the
+removal of the storage_list.xml resource overlay), the configuration details
+are split into two categories.</p>
+
+<h3 id=android_5_x_and_earlier>Android 5.x and earlier</h3>
+
+<p>The device-specific <code>storage_list.xml</code> configuration
+file, typically provided through a <code>frameworks/base</code> overlay, defines the
+attributes and constraints of storage devices. The <code>&lt;StorageList&gt;</code> element
+contains one or more <code>&lt;storage&gt;</code> elements, exactly one of which should be marked
+primary. <code>&lt;storage&gt;</code> attributes include:</p>
+<ul>
+<li><code>mountPoint</code>: filesystem path of this mount.</li>
+<li><code>storageDescription</code>: string resource that describes this mount.</li>
+<li><code>primary</code>: true if this mount is the primary external storage.</li>
+<li><code>removable</code>: true if this mount has removable media, such as a physical SD
+card.</li>
+<li><code>emulated</code>: true if this mount is emulated and is backed by internal storage,
+possibly using a FUSE daemon.</li>
+<li><code>mtp-reserve</code>: number of MB of storage that MTP should reserve for free
+storage. Only used when mount is marked as emulated.</li>
+<li><code>allowMassStorage</code>: true if this mount can be shared via USB mass storage.</li>
+<li><code>maxFileSize</code>: maximum file size in MB.</li>
+</ul>
+<p>Devices may provide external storage by emulating a case-insensitive,
+permissionless filesystem backed by internal storage. One possible
+implementation is provided by the FUSE daemon in <code>system/core/sdcard</code>, which can
+be added as a device-specific <code>init.rc</code> service:</p>
+<pre class="devsite-click-to-copy">
+# virtual sdcard daemon running as media_rw (1023)
+service sdcard /system/bin/sdcard &lt;source_path&gt; &lt;dest_path&gt; 1023 1023
+    class late_start
+</pre>
+<p>Where <code>source_path</code> is the backing internal storage and <code>dest_path</code> is the
+target mount point.</p>
+<p>When configuring a device-specific <code>init.rc</code> script, the <code>EXTERNAL_STORAGE</code>
+environment variable must be defined as the path to the primary external
+storage. The <code>/sdcard</code> path must also resolve to the same location, possibly
+through a symlink. If a device adjusts the location of external storage between
+platform updates, symlinks should be created so that old paths continue working.</p>
+
+<h3 id=android_6_0>Android 6.0</h3>
+<p>Configuration of the storage subsystem is now concentrated in the
+device-specific <code>fstab</code> file, and several historical static configuration files/variables have been
+removed to support more dynamic behavior:</p>
+<ul>
+   <li>The <code>storage_list.xml</code> resource overlay has been removed and is no longer used by the framework.
+Storage devices are now configured dynamically when detected by <code>vold</code>.
+   <li>The <code>EMULATED_STORAGE_SOURCE/TARGET</code> environment variables have been removed and are no longer used by Zygote to
+configure user-specific mount points. Instead, user separation is now enforced
+with user-specific GIDs, and primary shared storage is mounted into place by <code>vold</code> at runtime.
+  <ul>
+     <li>Developers may continue to build paths dynamically or statically depending on
+their use case. Including the UUID in the path identifies each card to make
+location clearer for developers. (For example, <code>/storage/ABCD-1234/report.txt</code> is clearly a different file than <code>/storage/DCBA-4321/report.txt</code>.)
+  </ul>
+   <li>The hard-coded FUSE services have been removed from device-specific <code>init.rc</code> files and are instead forked dynamically from <code>vold</code> when needed.
+</ul>
+<p>In addition to these configuration changes, Android 6.0 includes the notion of
+adoptable storage. For Android 6.0 devices, any physical media that is not
+adopted is viewed as portable. </p>
+
+<h4 id=adoptable_storage>Adoptable storage </h4>
+<p>To indicate an adoptable storage device in the <code>fstab</code>, use the <code>encryptable=userdata</code> attribute in the <code>fs_mgr_flags</code> field. Here’s a typical definition:</p>
+<pre class="devsite-click-to-copy">
+/devices/platform/mtk-msdc.1/mmc_host*           auto      auto     defaults
+voldmanaged=sdcard1:auto,encryptable=userdata
+</pre>
+<p>When a storage device is adopted, the platform erases the contents and writes a
+GUID partition table that defines two partitions:</p>
+<ul>
+   <li>a small empty <code>android_meta</code> partition that is reserved for future use. The partition type GUID is
+19A710A2-B3CA-11E4-B026-10604B889DCF.
+   <li>a large <code>android_ext</code> partition that is encrypted using dm-crypt and formatted using either <code>ext4</code> or <code>f2fs</code> depending on the kernel capabilities. The partition type GUID is
+193D1EA4-B3CA-11E4-B075-10604B889DCF.
+</ul>
+<h4 id=portable_storage>Portable storage </h4>
+<p>In the <code>fstab</code>, storage devices with the <code>voldmanaged</code> attribute are considered to be portable by default unless another attribute
+like <code>encryptable=userdata</code> is defined. For example, here’s a typical definition for USB OTG devices:</p>
+<pre class="devsite-click-to-copy">
+/devices/*/xhci-hcd.0.auto/usb*             auto            auto    defaults
+                                                    voldmanaged=usb:auto
+</pre>
+<p>The platform uses <code>blkid</code> to detect filesystem types before mounting, and users can choose to format the
+media when the filesystem is unsupported.</p>
+
+  </body>
+</html>

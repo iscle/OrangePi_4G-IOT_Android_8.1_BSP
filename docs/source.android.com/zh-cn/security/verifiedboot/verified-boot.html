@@ -1,0 +1,361 @@
+<html devsite><head>
+    <title>验证启动</title>
+    <meta name="project_path" value="/_project.yaml"/>
+    <meta name="book_path" value="/_book.yaml"/>
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+<p>验证启动功能旨在保证设备软件（从硬件信任根直到系统分区）的完整性。在启动过程中，无论是在每个阶段，都会在进入下一个阶段之前先验证下一个阶段的完整性和真实性。</p>
+
+<p>当用户对软件进行了不应进行的更改时，可以使用该功能向他们发出警告，比如当用户获得一台二手设备后告知他们软件经受了不应进行的更改。此外，该功能还可以提供进行远程认证时使用的其他设备完整性信号。该功能再加上加密功能以及可信执行环境 (TEE) 信任根绑定功能，三者共同为用户数据添加了另一道防范恶意系统软件的保护屏障。</p>
+
+<p>如果在任意阶段验证失败，用户都会收到醒目的通知。</p>
+
+<h2 id="glossary">词汇表</h2>
+
+<table>
+  <colgroup><col width="15%" />
+  <col width="85%" />
+ </colgroup><tbody><tr>
+    <th>术语</th>
+    <th>定义</th>
+ </tr>
+ <tr>
+    <td>启动状态</td>
+    <td>设备的启动状态用于说明设备启动后向最终用户提供的保护级别。启动状态为“绿色”、“黄色”、“橙色”和“红色”。</td>
+ </tr>
+ <tr>
+    <td>设备状态</td>
+    <td>设备状态用于指明能够以多大的自由度将软件刷写到设备上。设备状态为“已锁定”和“已解锁”。</td>
+ </tr>
+ <tr>
+    <td>dm-verity</td>
+    <td>Linux 内核驱动程序，用于在分区运行时使用哈希树和已签名的元数据验证分区的完整性。</td>
+ </tr>
+ <tr>
+    <td>原始设备制造商 (OEM) 密钥</td>
+    <td>原始设备制造商 (OEM) 密钥是一个固定不变的防篡改密钥，可供引导加载程序使用（在验证启动映像时必须使用该密钥）。</td>
+ </tr>
+</tbody></table>
+
+<h2 id="overview">概述</h2>
+
+<p>除了设备状态（在设备中已存在，用于控制引导加载程序是否允许刷写新软件）外，验证启动功能还引入了启动状态的概念，以便指明设备完整性状态。</p>
+
+<h3 id="classes">级别</h3>
+
+<p>验证启动有两个实现级别。根据设备在多大程度上实现此规范，这两个级别的定义如下：</p>
+
+<p><strong>A 级</strong>会实现具有完整信任链（直到已验证的分区）的验证启动。也就是说，这种级别的实现支持“已锁定”设备状态，以及“绿色”和“红色”启动状态。</p>
+
+<p><strong>B 级</strong>会实现 A 级实现的内容，并且还支持“已解锁”设备状态和“橙色”启动状态。</p>
+
+<h3 id="verification_keys">验证密钥</h3>
+
+<p>引导加载程序的完整性始终都是使用硬件信任根进行验证。在验证启动分区和恢复分区时，引导加载程序可以使用原始设备制造商 (OEM) 密钥（该密钥是固定不变的）。它始终会先尝试使用原始设备制造商 (OEM) 密钥验证启动分区，并且仅当此项验证失败时，才会尝试使用其他可能的密钥进行验证。</p>
+
+<p>在 B 级实现中，当设备处于“已解锁”状态时，用户可以刷写使用其他密钥签名的软件。如果设备随后进入“已锁定”状态，并且使用原始设备制造商 (OEM) 密钥进行的验证失败了，引导加载程序会尝试使用分区签名中嵌入的证书进行验证。不过，在使用通过原始设备制造商 (OEM) 密钥以外的任何其他凭据签名的分区时，会收到通知或警告，如下文所述。</p>
+
+<h3 id="boot_state">启动状态</h3>
+
+<p>在每次尝试启动时，已验证的设备最终都将启动到以下 4 种状态之一：</p>
+
+<ul>
+  <li>绿色：表示实现了从引导加载程序到已验证分区的完整信任链，其中包括引导加载程序、启动分区和所有已验证的分区。
+
+  </li><li>黄色：表示已使用嵌入的证书验证启动分区，并且签名有效。在允许启动过程继续之前，引导加载程序会显示一条警告以及公钥的指纹。
+
+  </li><li>橙色：表示可以随意修改设备。设备完整性由用户进行带外验证。在允许启动过程继续之前，引导加载程序会向用户显示一条警告。
+
+  </li><li>红色：表示设备验证失败了。引导加载程序会显示一条警告并停止启动过程。
+</li></ul>
+
+<p>此外，还会以完全相同的方式验证恢复分区。</p>
+
+<h3 id="device_state">设备状态</h3>
+
+<p>可能的设备状态以及它们与 4 种验证启动状态的关系如下：</p>
+<ol>
+  <li>已锁定：表示无法刷写设备。在每次尝试启动时，“已锁定”设备都会启动到“绿色”、“黄色”或“红色”状态。
+
+  </li><li>已解锁：表示可以随意刷写设备，不需要进行验证。“已解锁”设备始终会启动到“橙色”启动状态。
+</li></ol>
+
+<img src="../images/verified_boot.png" alt="验证启动流程" id="figure1"/>
+<p class="img-caption"><strong>图 1.</strong> 验证启动流程</p>
+
+<h2 id="detailed_design">详细设计</h2>
+
+<p>要实现完整的信任链，需要启动分区（负责装载更多分区）上的引导加载程序和软件的支持。验证元数据也会附加到系统分区，并附加到应接受完整性验证的所有其他分区。</p>
+
+<h3 id="bootloader_requirements">引导加载程序要求</h3>
+
+<p>引导加载程序是设备状态的监护者，负责初始化 TEE 以及绑定其信任根。</p>
+
+<p>最重要的是，引导加载程序会在将执行工作移交给内核之前先验证启动分区和/或恢复分区的完整性，并会显示<a href="#boot_state">启动状态</a>部分中指定的警告。</p>
+
+<h4 id="changing_device_state">更改设备状态</h4>
+
+<p>要更改设备状态，需要使用 <code>fastboot flashing [unlock |
+lock]</code> 命令。为了保护用户数据，只要设备状态发生变化，<strong>都</strong>会先清除数据分区中的数据，并会在删除数据之前要求用户确认。</p>
+
+<ol>
+  <li>用户购买二手开发设备后，应该将设备状态从“已解锁”改为“已锁定”。锁定设备后，只要没有警告，用户应该就会确信设备处于设备制造商开发的状态。
+
+  </li><li>如果开发者希望停用设备上的验证功能，应该将设备状态从“已锁定”改为“已解锁”。
+</li></ol>
+
+<p>下表列出了用于更改设备状态的 <code>fastboot</code> 命令：</p>
+
+<table>
+  <colgroup><col width="25%" />
+  <col width="75%" />
+ </colgroup><tbody><tr>
+    <th><code>fastboot</code> 命令</th>
+    <th>说明</th>
+ </tr>
+ <tr>
+    <td><code>flashing lock</code></td>
+    <td>
+      <ul>
+        <li>先提示用户确认，在用户确认之后清除数据</li><li>清除引导加载程序可读取的防写位，指明设备已解锁</li></ul>
+    </td>
+ </tr>
+ <tr>
+    <td><code>flashing unlock</code></td>
+    <td>
+      <ul>
+        <li>如果用户尚未启用解锁设备设置，则中止解锁</li><li>先提示用户确认，在用户确认之后清除数据</li><li>设置引导加载程序可读取的防写位，指明设备已解锁</li></ul>
+    </td>
+ </tr>
+</tbody></table>
+
+<p>在更改分区内容时，引导加载程序会检查通过上述命令设置的位，如下表所述：</p>
+
+<table>
+  <colgroup><col width="25%" />
+  <col width="75%" />
+ </colgroup><tbody><tr>
+    <th><code>fastboot</code> 命令</th>
+    <th>说明</th>
+ </tr>
+ <tr>
+    <td><code>flash &lt;partition&gt;</code></td>
+    <td>如果通过 <code>flashing unlock</code> 设置的位已设置，则刷写相应分区。否则，不允许进行刷写操作。
+    </td>
+ </tr>
+</tbody></table>
+
+<p>对于可用于更改分区内容的所有 <code>fastboot</code> 命令，都应执行同样的检查。</p>
+
+<p class="note"><strong>注意</strong>：B 级实现支持更改设备状态。</p>
+
+<h4 id="binding_tee_root_of_trust">绑定 TEE 信任根</h4>
+
+<p>如果 TEE 可用，那么在启动分区/恢复分区验证和 TEE 初始化完成后，引导加载程序会将以下信息传递给 TEE，以便绑定 Keymaster 信任根：</p>
+
+<ol>
+  <li>为启动分区签名时使用的公钥</li><li>当前设备状态（“已锁定”或“已解锁”）</li></ol>
+
+<p>这会更改 TEE 派生的密钥。以磁盘加密为例，当设备状态发生变化时，这可以防止用户数据被解密。</p>
+
+<p class="note"><strong>注意</strong>：这意味着，如果系统软件或设备的状态发生变化，已加密的用户数据将无法再访问，因为 TEE 将尝试使用其他密钥来解密数据。</p>
+
+<h4 id="initializing-attestation">初始化认证</h4>
+<p>与绑定信任根时类似，如果 TEE 可用，引导加载程序会将以下信息传递给 TEE，以便初始化认证：</p>
+<ol>
+<li>当前启动状态（绿色、黄色、橙色）</li><li>操作系统版本</li><li>操作系统安全补丁程序级别</li></ol>
+<h4 id="booting_into_recovery">启动到恢复模式</h4>
+
+<p>应按照与验证启动分区时完全相同的方式验证恢复分区。</p>
+
+<h4 id="comm_boot_state">传达启动状态</h4>
+
+<p>系统软件需要能够确定之前各阶段的验证状态。引导加载程序会以内核命令行参数的形式（或通过 <code>firmware/android/verifiedbootstate</code> 下的设备树）指定当前启动状态，如下表所述：</p>
+
+<table>
+  <tbody><tr>
+    <th>内核命令行参数</th>
+    <th>说明</th>
+  </tr>
+  <tr>
+    <td><code>androidboot.verifiedbootstate=green</code></td>
+    <td>设备已启动到“绿色”启动状态。<br />已使用原始设备制造商 (OEM) 密钥验证启动分区，并且该密钥有效。</td>
+  </tr>
+  <tr>
+    <td><code>androidboot.verifiedbootstate=yellow</code></td>
+    <td>设备已启动到“黄色”启动状态。<br />已使用签名中嵌入的证书验证启动分区，并且该签名有效。</td>
+  </tr>
+  <tr>
+    <td><code>androidboot.verifiedbootstate=orange</code></td>
+    <td>设备已启动到“橙色”启动状态。<br />设备已解锁，并且未执行任何验证。</td>
+  </tr>
+</tbody></table>
+<p class="note"><strong>注意</strong>：处于“红色”启动状态时，设备无法启动到由内核执行相关工作，因此内核命令行中绝不会包含参数 <code>androidboot.verifiedbootstate=red</code>。</p>
+
+<h3 id="boot_partition">启动分区</h3>
+
+<p>当执行工作移交给启动分区后，其中的软件将负责设置其他分区的验证。由于系统分区比较大，因此通常不能采用与前面部分类似的方式对其进行验证，而是应改为在该分区被访问时使用 dm-verity 内核驱动程序或类似解决方案对其进行验证。</p>
+
+<p>如果使用 dm-verity 验证大型分区，需要先验证附加到每个已验证分区的 Verity 元数据的签名，然后再装载相应分区并为其设置 dm-verity。</p>
+
+<h4 id="managing_dm-verity">管理 dm-verity</h4>
+
+<p>在内核中作为设备映射器目标实现后，dm-verity 会在分区之上添加一个层，并根据在设置过程中传递给它的哈希树来验证每个读取块。如果 dm-verity 遇到未能通过验证的块，则会将其设为无法供用户空间访问。</p>
+
+<p>在启动过程中装载分区时，如果已在设备的 fstab 中为某个分区指定了 <code>verify</code> fs_mgr 标记，fs_mgr 会为该分区设置 dm-verity。Verity 元数据签名是根据 <code>/verity_key</code> 中的公钥进行验证的。</p>
+
+<h4 id="recovering_from_dm-verity_errors">从 dm-verity 错误恢复</h4>
+
+<p>由于系统分区比启动分区大得多，因此发生验证错误的可能性也更高。具体来说就是，出现意外磁盘损坏的可能性会更高。出现意外磁盘损坏会导致验证失败，并且如果分区中有关键块无法再访问，这还可能会导致其他功能设备无法使用。可以结合使用前向纠错与 dm-verity 来降低这种风险。建议提供这种备用恢复路径，不过这会导致元数据大小增加。</p>
+
+<p>默认情况下，dm-verity 会被配置为以“重启”模式运行。在该模式下，如果检测到损坏的块，dm-verity 会立即重启设备。这样一来，在设备损坏时就可以安全地向用户发出警告，或者回退到设备特定恢复分区（如果有）。
+</p>
+
+<p>如果设备启动时存在已知损坏，为了让用户仍可以访问自己的数据，dm-verity 会切换到 I/O 错误 (EIO) 模式。在 EIO 模式下，对于访问损坏的块的所有读取操作，dm-verity 都会返回 I/O 错误，但允许设备继续运行。要跟踪当前模式，需要持续存储 dm-verity 状态。可以通过 fs_mgr 或引导加载程序对该状态进行管理：</p>
+
+<ol>
+  <li>要在 fs_mgr 中管理 dm-verity 状态，需要为 <code>verify</code> 标记指定一个附加参数，以便让 fs_mgr 知道 dm-verity 状态要存储在哪里。例如，要将该状态存储在元数据分区中，需要指定 <code>verify=/path/to/metadata</code>。
+      <p class="note"><strong>注意</strong>：在首次检测到损坏之后，fs_mgr 会将 dm-verity 切换到 EIO 模式，并且会在任何已验证分区的元数据签名发生变化后将模式重置为“重启”。</p>
+  </li>
+  <li>要在引导加载程序中管理 dm-verity 状态，需要在 <code>androidboot.veritymode</code> 命令行参数中将当前模式传递到内核，如下所示：<table>
+        <tbody><tr>
+          <th>内核命令行参数</th>
+          <th>说明</th>
+        </tr>
+        <tr>
+          <td><code>androidboot.veritymode=enforcing</code></td>
+          <td>将 dm-verity 设置为默认的“重启”模式。</td>
+        </tr>
+        <tr>
+          <td><code>androidboot.veritymode=eio</code></td>
+          <td>将 dm-verity 设置为 EIO 模式。</td>
+        </tr>
+      </tbody></table>
+
+      <p class="note">
+      <strong>注意</strong>：要在引导加载程序中管理状态，还需要内核在设备因 dm-verity 而重启时正确设置重启原因。检测到损坏后，如果有任何已验证分区发生变化，引导加载程序都应切换回“重启”模式。</p>
+  </li>
+</ol>
+
+<p>如果出于任何原因未以“重启”模式启动 dm-verity，或如果无法验证 Verity 元数据，系统会向用户显示一条警告（如果允许设备启动），与在启动到“红色”启动状态之前显示的警告类似。必须获得用户同意，设备才能继续以 EIO 模式启动。如果在 30 秒内未获得用户同意，设备将会关机。
+</p>
+
+<p class="note">
+<strong>注意</strong>：为了防止未验证的数据泄露到用户空间，dm-verity 绝不会以记录模式启动。
+</p>
+
+<h3 id="verified_partition">已验证的分区</h3>
+
+<p>在已验证的设备中，系统分区一定已通过验证。不过，所有其他只读分区也应设为已验证。在已验证的设备中，所有包含可执行代码的只读分区都已通过验证，比如供应商分区和原始设备制造商 (OEM) 分区（如果存在）。</p>
+
+<p>要验证某个分区，需要为其附加已签名的 Verity 元数据。元数据由分区内容的哈希树以及一个 Verity 表组成（Verity 表中包含已签名的参数和哈希树的根）。如果在为分区设置 dm-verity 时未提供这些信息或提供的信息无效，设备将不会启动。</p>
+
+<h2 id="implementation_details">实现详细信息</h2>
+
+<h3 id="key_types_and_sizes">密钥类型和大小</h3>
+
+<p>AOSP 中使用的原始设备制造商 (OEM) 密钥是模数为 2048 位或更高且公开指数为 65537 (F4) 的 RSA 密钥，符合 CDD 中关于密钥安全系数不能低于此类密钥的要求。</p>
+
+<p>请注意，原始设备制造商 (OEM) 密钥遭到入侵后，通常无法再使用，因此务必要对该密钥采取保护措施，最好是使用硬件安全模块 (HSM) 或类似解决方案。另外，建议为每种类型的设备使用不同的密钥。</p>
+
+<h3 id="signature_format">签名格式</h3>
+
+<p>Android 可验证启动映像上的签名是一条经过 ASN.1 DER 编码的消息，可以使用与 <a href="https://android.googlesource.com/platform/bootable/recovery/+/f4a6ab27b335b69fbc419a9c1ef263004b561265/asn1_decoder.cpp">platform/bootable/recovery/asn1_decoder.cpp</a> 中提供的解码器类似的解码器对该消息进行解析<br />消息格式如下：</p>
+
+<pre>
+AndroidVerifiedBootSignature DEFINITIONS ::=
+     BEGIN
+          FormatVersion ::= INTEGER
+          Certificate ::= Certificate
+          AlgorithmIdentifier  ::=  SEQUENCE {
+               algorithm OBJECT IDENTIFIER,
+               parameters ANY DEFINED BY algorithm OPTIONAL
+          }
+          AuthenticatedAttributes ::= SEQUENCE {
+                 target CHARACTER STRING,
+                 length INTEGER
+          }
+
+          Signature ::= OCTET STRING
+     END
+</pre>
+
+<p><code>Certificate</code> 字段是一个完整的 X.509 证书（您可以在 <a href="http://tools.ietf.org/html/rfc5280#section-4.1.1.2">RFC5280</a> 第 4.1 部分中找到它的定义），其中包含用于签名的公钥。当设备处于“已锁定”状态时，引导加载程序会先使用原始设备制造商 (OEM) 密钥进行验证；如果改用嵌入的证书进行验证，设备将只能启动到“黄色”或“红色”状态。</p>
+
+<p>除了 <code>AuthenticatedAttributes</code> 字段外，其余结构与 <a href="http://tools.ietf.org/html/rfc5280#section-4.1.1.2">RFC5280</a> 第 4.1.1.2 部分和第 4.1.1.3 部分中定义的结构类似。该字段中包含要验证的映像的长度（整数形式）以及该映像所在的分区（启动分区、恢复分区等）。</p>
+
+<h3 id="signing_and_verifying_an_image">为映像签名和验证映像</h3>
+
+<p><strong>生成已签名的映像：</strong></p>
+<ol>
+  <li>生成未签名的映像。
+  </li><li>为映像填充 0，以便补齐到下一页的大小边界（如果已对齐，则忽略此步骤）。
+  </li><li>根据填充后的映像和所需的目标分区填写上述 <code>AuthenticatedAttributes</code> 部分的字段。
+  </li><li>将上述 <code>AuthenticatedAttributes</code> 结构附加到映像。
+  </li><li>为映像签名。
+</li></ol>
+
+<p><strong>验证映像：</strong></p>
+<ol>
+  <li>确定要加载的映像的大小，包括内边距（例如，通过读取标头来确定）。
+  </li><li>读取位于上述偏移量处的签名。
+  </li><li>验证 <code>AuthenticatedAttributes</code> 字段的内容。如果这些值无效，则视为签名验证错误。
+  </li><li>验证映像和 <code>AuthenticatedAttributes</code> 部分。
+</li></ol>
+
+<h3 id="user_experience">用户体验</h3>
+
+<p>设备处于“绿色”启动状态时，除了正常设备启动所需的用户互动外，用户应该不会看到任何其他用户互动。设备处于“橙色”和“黄色”启动状态时，用户会看到一条至少持续 5 秒的警告。如果用户在这段时间内与设备互动，该警告持续显示的时间至少会延长 30 秒，或者直到用户关闭该警告。设备处于“红色”启动状态时，该警告会显示至少 30 秒，之后设备将会关机。</p>
+
+<p>下表显示了其他状态下的用户互动屏幕示例：</p>
+
+<table>
+ <tbody><tr>
+    <th>设备状态</th>
+    <th>用户体验示例</th>
+    <th> </th>
+ </tr>
+ <tr>
+    <td>黄色</td>
+    <td><img src="../images/boot_yellow1.png" alt="“黄色”设备状态 1" id="figure2"/>
+        <p class="img-caption"><strong>图 2.</strong> 用户互动之前</p>
+    </td>
+    <td><img src="../images/boot_yellow2.png" alt="“黄色”设备状态 2" id="figure3"/>
+        <p class="img-caption"><strong>图 3.</strong> 用户互动之后</p>
+    </td>
+ </tr>
+ <tr>
+    <td>橙色</td>
+    <td><img src="../images/boot_orange.png" alt="“橙色”设备状态" id="figure4"/>
+        <p class="img-caption"><strong>图 4.</strong> 提示设备已解锁且无法验证的警告。</p>
+    </td>
+    <td> </td>
+ </tr>
+ <tr>
+    <td>红色</td>
+    <td><img src="../images/boot_red1.png" alt="“红色”设备状态" id="figure5"/>
+        <p class="img-caption"><strong>图 5.</strong> 提示验证启动失败的警告</p>
+    </td>
+    <td><img src="../images/boot_red2.png" alt="“红色”设备状态" id="figure6"/>
+        <p class="img-caption"><strong>图 6.</strong> 提示启动到 EIO 模式的警告</p>
+    </td>
+ </tr>
+</tbody></table>
+
+</body></html>

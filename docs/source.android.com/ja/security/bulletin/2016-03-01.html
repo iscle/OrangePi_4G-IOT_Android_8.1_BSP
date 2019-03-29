@@ -1,0 +1,712 @@
+<html devsite>
+  <head>
+    <title>Nexus のセキュリティに関する公開情報 - 2016 年 3 月</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p><em>2016 年 3 月 7 日公開 | 2016 年 3 月 8 日更新</em></p>
+
+<p>Android のセキュリティに関する月例情報公開の一環として、Nexus 端末に対する
+セキュリティ アップデートを無線（OTA）による更新で配信しました。
+Nexus ファームウェア イメージも <a href="https://developers.google.com/android/nexus/images">Google デベロッパー サイト</a>
+にリリースされています。
+LMY49H 以降のビルド、および Android Marshmallow（セキュリティ パッチ レベルが 2016 年 3 月 1 日
+以降）で下記の問題に対処しています。セキュリティ パッチ レベルを
+確認する方法について
+詳しくは、<a href="https://support.google.com/nexus/answer/4457705">Nexus のドキュメント</a>をご覧ください。</p>
+
+<p>パートナーにはこの公開情報に記載の問題について 2016 年 2 月 1 日までに
+通知済みです。下記の問題に対するソースコードのパッチは、今後 48 時間に
+わたって Android オープンソース プロジェクト（AOSP）レポジトリにリリースされます。
+AOSP リンクが利用可能になり次第、この公開情報を改訂します。</p>
+
+<p>下記の問題のうち最も重大なのは、メール、ウェブの閲覧、MMS などの複数の
+方法を通じて、攻撃を受けた端末でメディア ファイルの処理中にリモートコード
+実行が可能になる重大なセキュリティの脆弱性です。</p>
+
+<p>この新たに報告された問題によって実際のユーザー端末が不正使用された報告は
+ありません。<a href="#mitigations">Android セキュリティ プラットフォームの保護</a>
+と SafetyNet のようなサービスの保護について
+詳しくは、下記の<a href="/security/enhancements/index.html">リスクの軽減</a>をご覧ください。こうした保護は、Android プラットフォームの
+セキュリティを改善します。ご利用の端末で上記の更新を行うことをすべてのユーザーに
+おすすめします。</p>
+
+<h2 id="security_vulnerability_summary">セキュリティの脆弱性の概要</h2>
+
+<p>下記の表に、セキュリティの脆弱性、共通脆弱性識別子（CVE）、
+およびその重大度の評価の一覧を示します。
+<a href="/security/overview/updates-resources.html#severity">重大度の評価</a>は、
+攻撃を受けた端末でその脆弱性が悪用された場合の影響に基づくもので、
+プラットフォームやサービスでのリスク軽減策が、開発目的や不正に回避
+されたために無効にされた場合を前提としています。</p>
+<table>
+ <tr>
+    <th>問題</th>
+    <th>CVE</th>
+    <th>重大度</th>
+ </tr>
+ <tr>
+    <td>メディアサーバーでのリモートコード実行の脆弱性</td>
+    <td>CVE-2016-0815<br>
+        CVE-2016-0816</td>
+    <td>重大</td>
+ </tr>
+ <tr>
+    <td>libvpx でのリモートコード実行の脆弱性</td>
+    <td>CVE-2016-1621</td>
+    <td>重大</td>
+ </tr>
+ <tr>
+    <td>Conscrypt での権限昇格</td>
+    <td>CVE-2016-0818</td>
+    <td>重大</td>
+ </tr>
+ <tr>
+    <td>Qualcomm パフォーマンス コンポーネントでの<br>
+        権限昇格の脆弱性</td>
+    <td>CVE-2016-0819</td>
+    <td>重大</td>
+ </tr>
+ <tr>
+    <td>MediaTek Wi-Fi ドライバでの権限昇格の脆弱性</td>
+    <td>CVE-2016-0820</td>
+    <td>重大</td>
+ </tr>
+ <tr>
+    <td>キーリング コンポーネントでの権限昇格の脆弱性</td>
+    <td>CVE-2016-0728</td>
+    <td>重大</td>
+ </tr>
+ <tr>
+    <td>カーネルでのリスク軽減策迂回の脆弱性</td>
+    <td>CVE-2016-0821</td>
+    <td>高</td>
+ </tr>
+ <tr>
+    <td>MediaTek 接続ドライバでの権限昇格</td>
+    <td>CVE-2016-0822</td>
+    <td>高</td>
+ </tr>
+ <tr>
+    <td>カーネルでの情報開示の脆弱性</td>
+    <td>CVE-2016-0823</td>
+    <td>高</td>
+ </tr>
+ <tr>
+    <td>libstagefright での情報開示の脆弱性</td>
+    <td>CVE-2016-0824</td>
+    <td>高</td>
+ </tr>
+ <tr>
+    <td>Widevine での情報開示の脆弱性</td>
+    <td>CVE-2016-0825</td>
+    <td>高</td>
+ </tr>
+ <tr>
+    <td>メディアサーバーでの権限昇格の脆弱性</td>
+    <td>CVE-2016-0826<br>
+        CVE-2016-0827</td>
+    <td>高</td>
+ </tr>
+ <tr>
+    <td>メディアサーバーでの情報開示の脆弱性</td>
+    <td>CVE-2016-0828<br>
+        CVE-2016-0829</td>
+    <td>高</td>
+ </tr>
+ <tr>
+    <td>Bluetooth でのリモートのサービス拒否の脆弱性</td>
+    <td>CVE-2016-0830</td>
+    <td>高</td>
+ </tr>
+ <tr>
+    <td>Telephony での情報開示の脆弱性</td>
+    <td>CVE-2016-0831</td>
+    <td>中</td>
+ </tr>
+ <tr>
+    <td>セットアップ ウィザードでの権限昇格の脆弱性</td>
+    <td>CVE-2016-0832</td>
+    <td>中</td>
+ </tr>
+</table>
+
+
+<h3 id="mitigations">リスクの軽減</h3>
+
+
+<p>ここでは、<a href="/security/enhancements/index.html">Android セキュリティ プラットフォームの保護</a>
+と SafetyNet のような
+サービスの保護によるリスクの軽減について概説します。こうした機能は、
+Android でセキュリティの脆弱性が悪用される可能性を減らします。
+</p>
+
+<ul>
+  <li> Android プラットフォームの最新版での機能強化により、Android 上の
+多くの問題の悪用が困難になります。できる限り Android の最新版に更新することをすべてのユーザーにおすすめします。
+  <li> Android セキュリティ チームはアプリの確認と SafetyNet を使って不正使用を積極的に監視しています。こうした機能は、有害なおそれのあるアプリがインストールされる前に警告します。端末のルート権限を取得するツールは Google Play では禁止されています。Google Play 以外からアプリをインストールするユーザーを保護するため、アプリの確認はデフォルトで有効であり、ルート権限を取得する既知のアプリについてユーザーに警告します。アプリの確認は、権限昇格の脆弱性を悪用する既知の悪意のあるアプリのインストールを識別してブロックしようと試みます。こうしたアプリが既にインストールされている場合は、ユーザーに通知し、そのアプリの削除を試みます。
+  <li> Google ハングアウトやメッセンジャー アプリは状況を判断し、メディアサーバーなどのプロセスに、自動的にメディアを渡すことはありません。
+</li></li></li></ul>
+
+<h3 id="acknowledgements">謝辞</h3>
+
+
+<p>調査に関与された下記の皆様のご協力に感謝いたします。</p>
+
+<ul>
+  <li> Google Chrome セキュリティ チームの Abhishek Arya、Oliver Chang、Martin 
+Barbella: CVE-2016-0815
+  <li> CENSUS S.A. の Anestis Bechtsoudis（<a href="https://twitter.com/anestisb">@anestisb</a>）: CVE-2016-0816、CVE-2016-0824
+  <li> Android セキュリティ チームの Chad Brubaker: CVE-2016-0818
+  <li> Google Project Zero の Mark Brand: CVE-2016-0820
+  <li> <a href="http://www.360safe.com">Qihoo 360</a> <a href="http://c0reteam.org">C0RE チーム</a>の Mingjian Zhou（<a href="https://twitter.com/Mingjian_Zhou">@Mingjian_Zhou</a>）、Chiachih Wu（<a href="https://twitter.com/chiachih_wu">@chiachih_wu</a>）、Xuxian Jiang: CVE-2016-0826
+  <li> Trend Micro の Peter Pi（<a href="https://twitter.com/heisecode">@heisecode</a>）: CVE-2016-0827、CVE-2016-0828、CVE-2016-0829
+  <li> Scott Bauer（<a href="mailto:sbauer@eng.utah.edu">sbauer@eng.utah.edu</a>、<a href="mailto:sbauer@plzdonthack.me">sbauer@plzdonthack.me</a>）: CVE-2016-0822
+  <li> Trend Micro Inc. の Wish Wu（<a href="https://twitter.com/@wish_wu">@wish_wu</a>）: CVE-2016-0819
+  <li> Huawei の Yongzheng Wu、Tieyan Li: CVE-2016-0831
+  <li> Singapore Management University の Su Mon Kywe、Yingjiu Li: CVE-2016-0831
+  <li> Android セキュリティ チームの Zach Riggle（<a href="https://twitter.com/@ebeip90">@ebeip90</a>）: CVE-2016-0821
+</li></li></li></li></li></li></li></li></li></li></li></ul>
+
+<h2 id="security_vulnerability_details">セキュリティの脆弱性の詳細</h2>
+
+
+<p>上記の<a href="#security_vulnerability_summary">セキュリティの脆弱性の概要</a>で一覧に挙げた各項目について、下記に詳細を説明します。問題と重大度の根拠について説明し、CVE、関連するバグ、重大度、
+影響を受けるバージョン、および報告日の表を掲載します。
+該当する場合は、バグ ID の欄に、その問題に対処した AOSP での変更へのリンクが
+あります。複数の変更が同じバグに関係する場合は、バグ ID の後に続く番号で、
+追加の AOSP リファレンスへのリンクを示します。</p>
+
+<h3 id="remote_code_execution_vulnerability_in_mediaserver">メディアサーバーでのリモートコード実行の脆弱性</h3>
+
+
+<p>特別に細工したメディア ファイルやデータのメディアサーバーでの処理中に、
+攻撃者がメディアサーバーの脆弱性を悪用して、メモリ破壊やリモートコード
+実行を行えるおそれがあります。</p>
+
+<p>影響を受ける機能はオペレーティング システムの中核部分として提供されており、
+複数のアプリにおいて、リモート コンテンツ（特に MMS やブラウザでの
+メディアの再生）によってこの脆弱性が攻撃されるおそれがあります。</p>
+
+<p>メディアサーバーのサービス中にリモートコードを実行できるようになるため、
+この問題は重大と判断されています。メディアサーバーのサービスは
+音声や動画のストリームにアクセスできるほか、通常はサードパーティ製アプリが
+アクセスできないような権限にアクセスできます。</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>バグと AOSP リンク</th>
+    <th>重大度</th>
+    <th>更新されたバージョン</th>
+    <th>報告日</th>
+ </tr>
+ <tr>
+    <td>CVE-2016-0815</td>
+    <td><a href="https://android.googlesource.com/platform%2Fframeworks%2Fav/+/5403587a74aee2fb57076528c3927851531c8afb">ANDROID-26365349</a>
+    </td>
+    <td>重大</td>
+    <td>4.4.4、5.0.2、5.1.1、6.0、6.0.1</td>
+    <td>Google 社内</td>
+ </tr>
+ <tr>
+    <td>CVE-2016-0816</td>
+    <td><a href="https://android.googlesource.com/platform/external/libavc/+/4a524d3a8ae9aa20c36430008e6bd429443f8f1d">ANDROID-25928803</a>
+    </td>
+    <td>重大</td>
+    <td>6.0、6.0.1</td>
+    <td>Google 社内</td>
+ </tr>
+</table>
+
+
+<h3 id="remote_code_execution_vulnerabilities_in_libvpx">libvpx でのリモートコード実行の脆弱性</h3>
+
+
+<p>特別に細工したメディア ファイルやデータのメディアサーバーでの処理中に、
+攻撃者がメディアサーバーの脆弱性を悪用して、メモリ破壊やリモートコード
+実行を行えるおそれがあります。</p>
+
+<p>影響を受ける機能はオペレーティング システムの中核部分として提供されており、
+複数のアプリにおいて、リモート コンテンツ（特に MMS やブラウザでの
+メディアの再生）によってこの脆弱性が攻撃されるおそれがあります。</p>
+
+<p>メディアサーバーのサービス中にリモートコードを実行できるようになるため、
+この問題は重大と判断されています。メディアサーバーのサービスは
+音声や動画のストリームにアクセスできる他、通常はサードパーティ製アプリが
+アクセスできないような権限にアクセスできます。</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>バグと AOSP リンク</th>
+    <th>重大度</th>
+    <th>更新されたバージョン</th>
+    <th>報告日</th>
+ </tr>
+ <tr>
+    <td>CVE-2016-1621</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/av/+/5a6788730acfc6fd8f4a6ef89d2c376572a26b55">ANDROID-23452792</a>
+        <a href="https://android.googlesource.com/platform/external/libvpx/+/04839626ed859623901ebd3a5fd483982186b59d">[2]</a>
+        <a href="https://android.googlesource.com/platform/external/libvpx/+/5a9753fca56f0eeb9f61e342b2fccffc364f9426">[3]</a>
+    </td>
+    <td>重大</td>
+    <td>4.4.4、5.0.2、5.1.1、6.0</td>
+    <td>Google 社内</td>
+ </tr>
+</table>
+
+
+<h3 id="elevation_of_privilege_in_conscrypt">Conscrypt での権限昇格</h3>
+
+<p>Conscrypt に脆弱性があり、不正に信頼を得た中間認証局（CA）が特定の形式の不正な証明書を発行して、中間者攻撃を可能にするおそれがあります。権限の昇格や勝手なリモートコードの実行につながるおそれがあるため、この問題は重大と判断されています。</p>
+
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>バグと AOSP リンク</th>
+    <th>Severity</th>
+    <th>更新されたバージョン</th>
+    <th>報告日</th>
+ </tr>
+ <tr>
+    <td>CVE-2016-0818</td>
+    <td><a href="https://android.googlesource.com/platform/external/conscrypt/+/c4ab1b959280413fb11bf4fd7f6b4c2ba38bd779">ANDROID-26232830</a>
+        <a href="https://android.googlesource.com/platform/external/conscrypt/+/4c9f9c2201116acf790fca25af43995d29980ee0">[2]</a>
+    </td>
+    <td>重大</td>
+    <td>4.4.4、5.0.2、5.1.1、6.0、6.0.1</td>
+    <td>Google 社内</td>
+ </tr>
+</table>
+
+
+<h3 id="elevation_of_privilege_vulnerability_in_the_qualcomm_performance_component">Qualcomm パフォーマンス コンポーネントでの権限昇格の脆弱性</h3>
+
+
+<p>Qualcomm パフォーマンス コンポーネントに権限昇格の脆弱性があり、
+悪意のあるローカルアプリがカーネル内で勝手なコードを実行できるおそれが
+あります。ローカル端末の永久的な侵害につながるおそれがあり、
+オペレーティング システムの再消去によってしか修復できなくなるため、
+この問題は重大と判断されています。</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>バグ</th>
+    <th>重大度</th>
+    <th>更新されたバージョン</th>
+    <th>報告日</th>
+ </tr>
+ <tr>
+    <td>CVE-2016-0819</td>
+    <td>ANDROID-25364034*</td>
+    <td>重大</td>
+    <td>4.4.4、5.0.2、5.1.1、6.0、6.0.1</td>
+    <td>2015 年 10 月 29 日</td>
+ </tr>
+</table>
+
+
+<p>* この問題に対するパッチは AOSP にはありません。アップデートは 
+<a href="https://developers.google.com/android/nexus/drivers">Google デベロッパー サイト</a>から入手できる Nexus 端末用最新バイナリ ドライバに含まれています。</p>
+
+<h3 id="elevation_of_privilege_vulnerability_in_mediatek_wi-fi_kernel_driver">MediaTek の Wi-Fi 用カーネル ドライバでの権限昇格の脆弱性</h3>
+
+
+<p>MediaTek の Wi-Fi 用カーネル ドライバに脆弱性があり、カーネル内で
+悪意のあるローカルアプリが勝手なコードを実行できるおそれが
+あります。カーネル内で権限昇格と勝手なコードの実行が可能になるため、
+この問題は重大と判断されています。
+</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>バグ</th>
+    <th>重大度</th>
+    <th>更新されたバージョン</th>
+    <th>報告日</th>
+ </tr>
+ <tr>
+    <td>CVE-2016-0820</td>
+    <td>ANDROID-26267358*</td>
+    <td>重大</td>
+    <td>6.0.1</td>
+    <td>2015 年 12 月 18 日</td>
+ </tr>
+</table>
+
+
+<p>* この問題に対するパッチは AOSP にはありません。アップデートは 
+<a href="https://developers.google.com/android/nexus/drivers">Google デベロッパー サイト</a>から入手できる Nexus 端末用最新
+バイナリ ドライバに含まれています。</p>
+
+<h3 id="elevation_of_privilege_vulnerability_in_kernel_keyring_component">カーネル キーリング コンポーネントでの権限昇格の脆弱性</h3>
+
+
+<p>カーネル キーリング コンポーネントに権限昇格の脆弱性があり、悪意のある
+ローカルアプリがカーネル内で勝手なコードを実行できるおそれが
+あります。ローカル端末の永久的な侵害につながり、オペレーティング システムの
+再消去によってしか修復できなくなるおそれがあるため、この問題は
+重大と判断されています。ただし、Android バージョン 5.0 以上では、
+攻撃を受けたコードにサードパーティ製アプリがアクセスするのを SELinux 
+ルールが阻止します。</p>
+
+<p><strong>注:</strong> 参考までに、以下のように各カーネル バージョン用のパッチが AOSP で入手できます。
+<a href="https://android.googlesource.com/kernel/common/+/8a8431507f8f5910db5ac85b72dbdc4ed8f6b308">4.1</a>、
+<a href="https://android.googlesource.com/kernel/common/+/ba8bb5774ca7b1acc314c98638cf678ce0beb19a">3.18</a>、
+<a href="https://android.googlesource.com/kernel/common/+/93faf7ad3d603c33b33e49318e81cf00f3a24a73">3.14</a>、
+<a href="https://android.googlesource.com/kernel/common/+/9fc5f368bb89b65b591c4f800dfbcc7432e49de5">3.10</a></p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>バグ</th>
+    <th>重大度</th>
+    <th>更新されたバージョン</th>
+    <th>報告日</th>
+ </tr>
+ <tr>
+    <td>CVE-2016-0728</td>
+    <td>ANDROID-26636379 </td>
+    <td>重大</td>
+    <td>4.4.4、5.0.2、5.1.1、6.0、6.0.1</td>
+    <td>2016 年 1 月 11 日</td>
+ </tr>
+</table>
+
+
+<h3 id="mitigation_bypass_vulnerability_in_the_kernel">カーネルでのリスク軽減策迂回の脆弱性</h3>
+
+
+<p>カーネルにリスク軽減策迂回の脆弱性があり、攻撃者による
+プラットフォームの悪用を阻むためのセキュリティ対策が回避される
+おそれがあります。攻撃者がセキュリティ対策を回避してプラットフォームを
+悪用できるおそれがあるため、この問題の重大度は「高」と
+判断されています。</p>
+
+<p><strong>注:</strong> この問題に対するアップデートは
+<a href="https://github.com/torvalds/linux/commit/8a5e5e02fc83aaf67053ab53b359af08c6c49aaf">Linux アップストリームにあります</a>。</p>
+
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>バグ</th>
+    <th>重大度</th>
+    <th>更新されたバージョン</th>
+    <th>報告日</th>
+ </tr>
+ <tr>
+    <td>CVE-2016-0821</td>
+    <td>ANDROID-26186802</td>
+    <td>高</td>
+    <td>6.0.1</td>
+    <td>Google 社内</td>
+ </tr>
+</table>
+
+
+<h3 id="elevation_of_privilege_in_mediatek_connectivity_kernel_driver">MediaTek の接続用カーネル ドライバでの権限昇格</h3>
+
+
+<p>MediaTek の接続用カーネル ドライバに権限昇格の脆弱性があり、
+悪意のあるローカルアプリがカーネル内で勝手なコードを実行できる
+おそれがあります。通常、このようなカーネルでのコード実行のバグは
+重大と判断されますが、このバグは最初に conn_launcher サービスへの
+攻撃が必要なため、重大度を「高」に下げています。
+</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>バグ</th>
+    <th>重大度</th>
+    <th>更新されたバージョン</th>
+    <th>報告日</th>
+ </tr>
+ <tr>
+    <td>CVE-2016-0822</td>
+    <td>ANDROID-25873324*</td>
+    <td>高</td>
+    <td>6.0.1</td>
+    <td>2015 年 11 月 24 日</td>
+ </tr>
+</table>
+
+
+<p>* この問題に対するパッチは AOSP にはありません。アップデートは 
+<a href="https://developers.google.com/android/nexus/drivers">Google デベロッパー サイト</a>から入手できる Nexus 端末用最新
+バイナリ ドライバに含まれています。</p>
+
+<h3 id="information_disclosure_vulnerability_in_kernel">カーネルでの情報開示の脆弱性</h3>
+
+
+<p>カーネルに情報開示の脆弱性があり、攻撃者によるプラットフォームの
+悪用を阻むためのセキュリティ対策が回避されるおそれが
+あります。特権プロセスでの ASLR のような悪用対策技術をローカルに
+回避できるおそれがあるため、この問題は重大度が「高」と
+判断されています。</p>
+
+<p><strong>注:</strong> この問題に対する修正は、
+<a href="https://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/commit/?id=ab676b7d6fbf4b294bf198fb27ade5b0e865c7ce">Linux アップストリームにあります</a>。</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>バグ</th>
+    <th>重大度</th>
+    <th>更新されたバージョン</th>
+    <th>報告日</th>
+ </tr>
+ <tr>
+    <td>CVE-2016-0823</td>
+    <td>ANDROID-25739721*</td>
+    <td>高</td>
+    <td>6.0.1</td>
+    <td>Google 社内</td>
+ </tr>
+</table>
+<p>* この問題に対するパッチは AOSP にはありません。アップデートは 
+<a href="https://developers.google.com/android/nexus/drivers">Google デベロッパー サイト</a>から入手できる Nexus 端末用最新
+バイナリ ドライバに含まれています。</p>
+
+<h3 id="information_disclosure_vulnerability_in_libstagefright">libstagefright での情報開示の脆弱性</h3>
+
+
+<p>libstagefright に情報開示の脆弱性があり、攻撃者によるプラットフォームの
+悪用を阻むためのセキュリティ対策が回避されるおそれが
+あります。サードパーティ製アプリがアクセスできない <a href="http://developer.android.com/guide/topics/manifest/permission-element.html#plevel">signature</a> 権限や 
+<a href="http://developer.android.com/guide/topics/manifest/permission-element.html#plevel">signatureOrSystem</a> 権限などにも昇格できるようになるため、この問題の重大度は「高」と判断されています。</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>バグと AOSP リンク</th>
+    <th>重大度</th>
+    <th>更新されたバージョン</th>
+    <th>報告日</th>
+ </tr>
+ <tr>
+    <td>CVE-2016-0824</td>
+    <td><a href="https://android.googlesource.com/platform/external/libmpeg2/+/ffab15eb80630dc799eb410855c93525b75233c3">ANDROID-25765591</a>
+    </td>
+    <td>高</td>
+    <td>6.0、6.0.1</td>
+    <td>2015 年 11 月 18 日</td>
+ </tr>
+</table>
+
+
+<h3 id="information_disclosure_vulnerability_in_widevine">Widevine での情報開示の脆弱性</h3>
+
+
+<p>Widevine Trusted Application に情報開示の脆弱性があり、カーネル内で
+実行されるコードが TrustZone セキュア ストレージ内の情報にアクセス
+できるおそれがあります。<a href="http://developer.android.com/guide/topics/manifest/permission-element.html#plevel">signature</a> 権限や 
+<a href="http://developer.android.com/guide/topics/manifest/permission-element.html#plevel">signatureOrSystem</a> 権限などに
+昇格できるようになるため、
+この問題の重大度は「高」と
+判断されています。</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>バグ</th>
+    <th>重大度</th>
+    <th>更新されたバージョン</th>
+    <th>報告日</th>
+ </tr>
+ <tr>
+    <td>CVE-2016-0825</td>
+    <td>ANDROID-20860039*</td>
+    <td>高</td>
+    <td>6.0.1</td>
+    <td>Google 社内</td>
+ </tr>
+</table>
+
+
+<p>* この問題に対するパッチは AOSP にはありません。アップデートは 
+<a href="https://developers.google.com/android/nexus/drivers">Google デベロッパー サイト</a>から入手できる Nexus 端末用最新
+バイナリ ドライバに含まれています。</p>
+
+<h3 id="elevation_of_privilege_vulnerability_in_mediaserver">メディアサーバーでの権限昇格の脆弱性</h3>
+
+
+<p>メディアサーバーに権限昇格の脆弱性があり、昇格したシステムアプリ内で
+悪意のあるローカルアプリが勝手なコードを実行できるおそれが
+あります。サードパーティ製アプリがアクセスできない 
+<a href="http://developer.android.com/guide/topics/manifest/permission-element.html#plevel">signature</a> 権限や <a href="http://developer.android.com/guide/topics/manifest/permission-element.html#plevel">signatureOrSystem</a> 権限などに昇格できるようになるため、この問題の重大度は「高」と判断されています。</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>バグと AOSP リンク</th>
+    <th>重大度</th>
+    <th>更新されたバージョン</th>
+    <th>報告日</th>
+ </tr>
+ <tr>
+    <td>CVE-2016-0826</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/av/+/c9ab2b0bb05a7e19fb057e79b36e232809d70122">ANDROID-26265403</a> 
+        <a href="https://android.googlesource.com/platform/frameworks/av/+/899823966e78552bb6dfd7772403a4f91471d2b0">[2]</a>
+    </td>
+    <td>高</td>
+    <td>4.4.4、5.0.2、5.1.1、6.0、6.0.1</td>
+    <td>2015 年 12 月 17 日</td>
+ </tr>
+ <tr>
+    <td>CVE-2016-0827</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/av/+/9e29523b9537983b4c4b205ff868d0b3bca0383b">ANDROID-26347509</a></td>
+    <td>高</td>
+    <td>4.4.4、5.0.2、5.1.1、6.0、6.0.1</td>
+    <td>2015 年 12 月 28 日</td>
+ </tr>
+</table>
+
+
+<h3 id="information_disclosure_vulnerability_in_mediaserver">メディアサーバーでの情報開示の脆弱性</h3>
+
+
+<p>メディアサーバーに情報開示の脆弱性があり、攻撃者によるプラットフォームの
+悪用を阻むためのセキュリティ対策が回避されるおそれが
+あります。サードパーティ製アプリがアクセスできない <a href="http://developer.android.com/guide/topics/manifest/permission-element.html#plevel">signature</a> 権限や 
+<a href="http://developer.android.com/guide/topics/manifest/permission-element.html#plevel">signatureOrSystem</a> 権限などにも昇格できるようになるため、この問題の重大度は「高」と判断されています。</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>バグと AOSP リンク</th>
+    <th>重大度</th>
+    <th>更新されたバージョン</th>
+    <th>報告日</th>
+ </tr>
+ <tr>
+    <td>CVE-2016-0828</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/native/+/dded8fdbb700d6cc498debc69a780915bc34d755">ANDROID-26338113</a>
+    </td>
+    <td>高</td>
+    <td>5.0.2、5.1.1、6.0、6.0.1</td>
+    <td>2015 年 12 月 27 日</td>
+ </tr>
+ <tr>
+    <td>CVE-2016-0829</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/native/+/d06421fd37fbb7fd07002e6738fac3a223cb1a62">ANDROID-26338109</a></td>
+    <td>高</td>
+    <td>4.4.4、5.0.2、5.1.1、6.0、6.0.1</td>
+    <td>2015 年 12 月 27 日</td>
+ </tr>
+</table>
+
+
+<h3 id="remote_denial_of_service_vulnerability_in_bluetooth">Bluetooth でのリモートのサービス拒否の脆弱性</h3>
+
+
+<p>Bluetooth コンポーネントにサービスのリモート拒否の脆弱性があり、近くにいる攻撃者が
+攻撃対象の端末へのアクセスをブロックできるおそれがあります。攻撃者は 
+Bluetooth コンポーネントで特定した Bluetooth 端末でオーバーフローを発生させ、
+メモリの破壊やサービスの停止を図ることができます。Bluetooth サービスへの
+サービスの拒否につながり、端末の消去によってしか修復できなくなるおそれがあるため、
+この問題は重大度「高」と判断されています。</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>バグと AOSP リンク</th>
+    <th>重大度</th>
+    <th>更新されたバージョン</th>
+    <th>報告日</th>
+ </tr>
+ <tr>
+    <td>CVE-2016-0830</td>
+    <td><a href="https://android.googlesource.com/platform/system/bt/+/d77f1999ecece56c1cbb333f4ddc26f0b5bac2c5">ANDROID-26071376</a></td>
+    <td>高</td>
+    <td>6.0、6.0.1</td>
+    <td>Google 社内</td>
+ </tr>
+</table>
+
+
+<h3 id="information_disclosure_vulnerability_in_telephony">Telephony での情報開示の脆弱性</h3>
+
+
+<p>Telephony コンポーネントに情報開示の脆弱性があり、アプリが機密情報に
+アクセスできるおそれがあります。許可を得ずに不正にデータに
+アクセスできるようになるため、この問題の重大度は「中」と
+判断されています。</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>バグと AOSP リンク</th>
+    <th>重大度</th>
+    <th>更新されたバージョン</th>
+    <th>報告日</th>
+ </tr>
+ <tr>
+    <td>CVE-2016-0831</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/opt/telephony/+/79eecef63f3ea99688333c19e22813f54d4a31b1">ANDROID-25778215</a></td>
+    <td>中</td>
+    <td>5.0.2、5.1.1、6.0、6.0.1</td>
+    <td>2015 年 11 月 16 日</td>
+ </tr>
+</table>
+
+
+<h3 id="elevation_of_privilege_vulnerability_in_setup_wizard">セットアップ ウィザードでの権限昇格の脆弱性</h3>
+
+
+<p>セットアップ ウィザードに脆弱性があり、端末を物理的に操作できる攻撃者が、
+端末の設定にアクセスして端末を手動でリセットできるおそれが
+あります。初期状態へのリセット機能の保護が不正に回避できるようになるため、
+この問題の重大度は「中」と判断されています。</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>バグ</th>
+    <th>重大度</th>
+    <th>更新されたバージョン</th>
+    <th>報告日</th>
+ </tr>
+ <tr>
+    <td>CVE-2016-0832</td>
+    <td>ANDROID-25955042*</td>
+    <td>中</td>
+    <td>5.1.1、6.0、6.0.1</td>
+    <td>Google 社内</td>
+ </tr>
+</table>
+
+
+<p>* このアップデートではソースコードのパッチは提供されません。</p>
+
+<h2 id="common_questions_and_answers">一般的な質問と回答</h2>
+
+
+<p>上記の公開情報に対する一般的な質問とその回答について、以下で説明します。</p>
+
+<p><strong>1. 上記の問題に対処するように端末が更新されているかどうかをどのように判断すればよいですか？</strong></p>
+
+<p>LMY49H 以降のビルド、および Android 6.0（セキュリティ パッチ レベルが 2016 年 3 月 1 日
+以降）で上記の問題に対処しています。セキュリティ パッチ レベルを確認する方法について詳しくは、<a href="https://support.google.com/nexus/answer/4457705">Nexus のドキュメント</a>をご覧ください。この
+アップデートを組み込んだ端末メーカーは、パッチ文字列のレベルを 
+[ro.build.version.security_patch]:[2016-03-01] に設定する必要があります。</p>
+
+<h2 id="revisions">改訂</h2>
+
+
+<ul>
+  <li> 2016 年 3 月 7 日: 情報公開
+  <li> 2016 年 3 月 8 日: 公開情報を改訂し AOSP リンクを追加
+</li></li></ul>
+
+
+  </body>
+</html>

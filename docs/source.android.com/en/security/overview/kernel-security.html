@@ -1,0 +1,219 @@
+<html devsite>
+  <head>
+    <title>System and kernel security</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>At the operating system level, the Android platform provides the security of
+  the Linux kernel, as well as a secure inter-process communication (IPC)
+  facility to enable secure communication between applications running in
+  different processes. These security features at the OS level ensure that even
+  native code is constrained by the Application Sandbox. Whether that code is
+  the result of included application behavior or an exploitation of an
+  application vulnerability, the system is designed to prevent the rogue
+  application from harming other applications, the Android system, or the device
+  itself. See
+  <a href="/devices/tech/config/kernel.html">Kernel Configuration</a>
+  for measures you can take to strengthen the kernel on your devices. See the
+  <a href="/compatibility/cdd.html">Android Compatibility Definition
+  Document (CDD)</a> for required settings.</p>
+<h2 id="linux-security">Linux Security</h2>
+<p>The foundation of the Android platform is the Linux kernel. The Linux kernel
+  has been in widespread use for years, and is used in millions of
+  security-sensitive environments. Through its history of constantly being
+  researched, attacked, and fixed by thousands of developers, Linux has become a
+  stable and secure kernel trusted by many corporations and security
+  professionals.</p>
+<p>As the base for a mobile computing environment, the Linux kernel provides
+  Android with several key security features, including:</p>
+<ul>
+  <li>A user-based permissions model</li>
+  <li>Process isolation</li>
+  <li>Extensible mechanism for secure IPC</li>
+  <li>The ability to remove unnecessary and potentially insecure parts of the kernel</li>
+</ul>
+<p>As a multiuser operating system, a fundamental security objective of the Linux
+  kernel is to isolate user resources from one another. The Linux security
+  philosophy is to protect user resources from one another. Thus, Linux:</p>
+<ul>
+  <li>Prevents user A from reading user B's files</li>
+  <li>Ensures that user A does not exhaust user B's memory</li>
+  <li>Ensures that user A does not exhaust user B's CPU resources</li>
+  <li>Ensures that user A does not exhaust user B's devices (e.g. telephony, GPS,
+    Bluetooth)</li>
+</ul>
+<h2 id="the-application-sandbox">The Application Sandbox</h2>
+<p>The Android platform takes advantage of the Linux user-based protection as a
+  means of identifying and isolating application resources. The Android system
+  assigns a unique user ID (UID) to each Android application and runs it as that user
+  in a separate process. This approach is different from other operating systems
+  (including the traditional Linux configuration), where multiple applications
+  run with the same user permissions.</p>
+<p>This sets up a kernel-level Application Sandbox. The kernel enforces security
+  between applications and the system at the process level through standard Linux
+  facilities, such as user and group IDs that are assigned to applications. By
+  default, applications cannot interact with each other and applications have
+  limited access to the operating system. If application A tries to do something
+  malicious like read application B's data or dial the phone without permission
+  (which is a separate application), then the operating system protects against
+  this because application A does not have the appropriate user privileges. The
+  sandbox is simple, auditable, and based on decades-old UNIX-style user
+  separation of processes and file permissions.</p>
+<p>Because the Application Sandbox is in the kernel, this security model extends to
+  native code and to operating system applications. All of the software above the
+  kernel, such as operating system libraries, application
+  framework, application runtime, and all applications, run within the Application
+  Sandbox. On some platforms, developers are constrained to a specific
+  development framework, set of APIs, or language in order to enforce security.
+  On Android, there are no restrictions on how an application can be written that
+  are required to enforce security; in this respect, native code is just as
+  secure as interpreted code.</p>
+<p>In some operating systems, memory corruption errors in one application may
+  lead to corruption in other applications housed in the same memory space,
+  resulting in a complete compromise of the security of the device. Because all
+  applications and their resources are sandboxed at the OS level, a memory
+  corruption error will allow arbitrary code execution only in
+  the context of that particular application, with the permissions established by
+  the operating system.</p>
+<p>Like all security features, the Application Sandbox is not unbreakable.
+  However, to break out of the Application Sandbox in a properly configured
+  device, one must compromise the security of the Linux kernel.</p>
+<h2 id="system-partition-and-safe-mode">System Partition and Safe Mode</h2>
+<p>The system partition contains Android's kernel as well as the operating system
+  libraries, application runtime, application framework, and applications. This
+  partition is set to read-only. When a user boots the device into Safe Mode,
+  third-party applications may be launched manually by the device owner but are
+  not launched by default.</p>
+<h2 id="filesystem-permissions">Filesystem Permissions</h2>
+<p>In a UNIX-style environment, filesystem permissions ensure that one user cannot
+  alter or read another user's files. In the case of Android, each application
+  runs as its own user. Unless the developer explicitly shares files with other
+  applications, files created by one application cannot be read or altered by
+  another application.</p>
+<h2 id="se-linux">Security-Enhanced Linux</h2>
+<p>Android uses Security-Enhanced
+  Linux (SELinux) to apply access control policies and establish
+  mandatory access control (mac) on processes. See
+  <a href="/security/selinux/index.html">Security-Enhanced Linux in
+  Android</a> for details.</p>
+<h2 id="verified-boot">Verified boot</h2>
+<p>
+ Android 6.0 and later supports verified boot and device-mapper-verity. Verified
+ boot guarantees the integrity of the device software starting from a hardware
+ root of trust up to the system partition. During boot, each stage
+ cryptographically verifies the integrity and authenticity of the next stage
+ before executing it.
+</p>
+<p>
+ Android 7.0 and later supports strictly enforced verified boot, which means
+ compromised devices cannot boot.
+</p>
+<p>
+ See <a href="/security/verifiedboot/index.html">Verified boot</a> for
+ more details.
+</p>
+
+<h2 id="crypto">Cryptography</h2>
+<p> Android provides a set of cryptographic APIs for use by applications. These
+  include implementations of standard and commonly used cryptographic primitives
+  such as AES, RSA, DSA, and SHA. Additionally, APIs are provided for higher level
+  protocols such as SSL and HTTPS. </p>
+<p> Android 4.0 introduced the
+  <a href="http://developer.android.com/reference/android/security/KeyChain.html">KeyChain</a>
+  class to allow applications to use the system credential storage for private
+  keys and certificate chains. </p>
+<h2 id="rooting-devices">Rooting of Devices</h2>
+<p>By default, on Android only the kernel and a small subset of the core
+  applications run with root permissions. Android does not prevent a user or
+  application with root permissions from modifying the operating system, kernel,
+  or any other application. In general, root has full access to all
+  applications and all application data. Users that change the permissions on an
+  Android device to grant root access to applications increase the security
+  exposure to malicious applications and potential application flaws. </p>
+<p>The ability to modify an Android device they own is important to developers
+  working with the Android platform. On many Android devices users have the
+  ability to unlock the bootloader in order to allow installation of an alternate
+  operating system. These alternate operating systems may allow an owner to gain
+  root access for purposes of debugging applications and system components or to
+  access features not presented to applications by Android APIs. </p>
+<p>On some devices, a person with physical control of a device and a USB cable is
+  able to install a new operating system that provides root privileges to the
+  user. To protect any existing user data from compromise the bootloader unlock
+  mechanism requires that the bootloader erase any existing user data as part of
+  the unlock step. Root access gained via exploiting a kernel bug or security
+  hole can bypass this protection. </p>
+<p>Encrypting data with a key stored on-device does not protect the application
+  data from root users. Applications can add a layer of data protection using
+  encryption with a key stored off-device, such as on a server or a user
+  password. This approach can provide temporary protection while the key is not
+  present, but at some point the key must be provided to the application and it
+  then becomes accessible to root users. </p>
+<p>A more robust approach to protecting data from root users is through the use of
+  hardware solutions. OEMs may choose to implement hardware solutions that limit
+  access to specific types of content such as DRM for video playback, or the
+  NFC-related trusted storage for Google wallet. </p>
+<p>In the case of a lost or stolen device, full filesystem encryption on Android
+  devices uses the device password to protect the encryption key, so modifying
+  the bootloader or operating system is not sufficient to access user data
+  without the user’s device password. </p>
+<h2 id="user-security">User Security Features</h2>
+<h3 id="filesystem-encryption">Filesystem Encryption</h3>
+<p>Android 3.0 and later provides full filesystem encryption, so all user data can
+  be encrypted in the kernel.</p>
+<p>
+  Android 5.0 and later supports
+  <a href="/security/encryption/full-disk.html">full-disk encryption</a>.
+  Full-disk encryption uses a single key—protected with the user’s device
+  password—to protect the whole of a device’s userdata partition. Upon boot,
+  users must provide their credentials before any part of the disk is accessible.
+</p>
+<p>
+  Android 7.0 and later supports
+  <a href="/security/encryption/file-based.html">file-based encryption</a>.
+  File-based encryption allows different files to be encrypted with different
+  keys that can be unlocked independently.
+</p>
+
+<p>More details on implementation of filesystem encryption are available in the
+ <a href="/security/encryption/index.html">Encryption</a> section.</p>
+<h3 id="password-protection">Password Protection</h3>
+<p>Android can be configured to verify a user-supplied password prior to providing
+  access to a device. In addition to preventing unauthorized use of the device,
+  this password protects the cryptographic key for full filesystem encryption.</p>
+<p>Use of a password and/or password complexity rules can be required by a device
+  administrator.</p>
+<h2 id="device-administration">Device Administration</h2>
+<p>Android 2.2 and later provide the Android Device Administration API, which
+  provides device administration features at the system level. For example, the
+  built-in Android Email application uses the APIs to improve Exchange support.
+  Through the Email application, Exchange administrators can enforce password
+  policies — including alphanumeric passwords or numeric PINs — across
+  devices. Administrators can also remotely wipe (that is, restore factory
+  defaults on) lost or stolen handsets.</p>
+<p>In addition to use in applications included with the Android system, these APIs
+  are available to third-party providers of Device Management solutions. Details
+  on the API are provided at <a
+href="https://developer.android.com/guide/topics/admin/device-admin.html">Device
+Administration</a>.</p>
+
+  </body>
+</html>

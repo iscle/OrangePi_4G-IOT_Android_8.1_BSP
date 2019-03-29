@@ -1,0 +1,143 @@
+<html devsite>
+  <head>
+    <title>Automating the tests</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+<p>Deqp test modules can be integrated to automated test systems in multiple ways.
+The best approach depends on the existing test infrastructure and target
+environment.</p>
+
+<p>The primary output from a test run is always the test log file, i.e. the file
+with a <code>.qpa</code> postfix. Full test results can be parsed from the test log. Console output is
+debug information only and may not be available on all platforms.</p>
+
+<p>Test binaries can be invoked directly from a test automation system. The test
+binary can be launched for a specific case, for a test set, or for all
+available tests. If a fatal error occurs during execution (such as certain API
+errors or a crash), the test execution will abort. For regression testing, the
+best approach is to invoke the test binaries for individual cases or small test
+sets separately, in order to have partial results available even in the event
+of hard failure.</p>
+
+<p>The deqp comes with command line test execution tools that can be used in
+combination with the execution service to achieve a more robust integration.
+The executor detects test process termination and will resume test execution on
+the next available case. A single log file is produced from the full test
+session. This setup is ideal for lightweight test systems that don’t provide
+crash recovery facilities.</p>
+
+<h2 id=command_line_test_execution_tools>Command line test execution tools</h2>
+
+<p>The current command line tool set includes a remote test execution tool, a test
+log comparison generator for regression analysis, a test-log-to-CSV converter,
+a test-log-to-XML converter, and a testlog-to-JUnit converter.</p>
+
+<p>The source code for these tools is in the <code>executor</code> directory, and the binaries are built into the <code>&lt;builddir&gt;/executor</code> directory.</p>
+
+<h3 id=command_line_test_executor>Command line Test Executor</h3>
+
+<p>The command line Test Executor is a portable C++ tool for launching a test run
+on a device and collecting the resulting logs from it over TCP/IP. The Executor
+communicates with the execution service (execserver) on the target device.
+Together they provide functionality such as recovery from test process crashes.
+The following examples demonstrate how to use the command line Test Executor
+(use <code>--help</code> for more details):</p>
+
+<h4 id=example_1_run_gles2_functional_tests>Example 1: Run GLES2 functional tests on an Android device:</h4>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+executor --connect=127.0.0.1 --port=50016 --binaryname=
+com.drawelements.deqp/android.app.NativeActivity
+--caselistdir=caselists
+--testset=dEQP-GLES2.* --out=BatchResult.qpa
+--cmdline="--deqp-crashhandler=enable --deqp-watchdog=enable
+--deqp-gl-config-name=rgba8888d24s8"
+</pre>
+
+<h4 id=example_2_continue_a_partial_opengl>Example 2: Continue a partial OpenGL ES 2 test run locally:</h4>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+executor --start-server=execserver/execserver --port=50016
+--binaryname=deqp-gles2 --workdir=modules/opengl
+--caselistdir=caselists
+--testset=dEQP-GLES2.* --exclude=dEQP-GLES2.performance.* --in=BatchResult.qpa
+--out=BatchResult.qpa
+</pre>
+
+<h3 id=test_log_csv_export_and_compare>Test log CSV export and compare</h3>
+
+<p>The deqp has a tool for converting test logs (.<code>qpa </code>files) into CSV files. The CSV output contains a list of test cases and their
+results. The tool can also compare two or more batch results and list only the
+test cases that have different status codes in the input batch results. The
+comparison will also print the number of matching cases.</p>
+
+<p>The output in CSV format is very practical for further processing with standard
+command line utilities or with a spreadsheet editor. An additional, human-readable,
+plain-text format can be selected using the following command line argument: <code>--format=text</code></p>
+
+<h4 id=example_1_export_test_log_in_csv_format>Example 1: Export test log in CSV format</h4>
+
+<pre class="devsite-click-to-copy">
+<code class="devsite-terminal">testlog-to-csv --value=code BatchResult.qpa > Result_statuscodes.csv</code>
+<code class="devsite-terminal">testlog-to-csv --value=details BatchResult.qpa > Result_statusdetails.csv</code>
+</pre>
+
+<h4 id=example_2_list_differences>Example 2: List differences of test results between two test logs</h4>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+testlog-to-csv --mode=diff --format=text Device_v1.qpa Device_v2.qpa
+</pre>
+
+<p class="note"><strong>Note:</strong> The argument <code>--value=code</code> outputs the test result code, such as "Pass" or "Fail". The argument <code>--value=details</code> selects the further explanation of the result or numerical value produced by a performance, capability, or accuracy test.</p>
+
+<h3 id=test_log_xml_export>Test log XML export</h3>
+
+<p>Test log files can be converted to valid XML documents using the <code>testlog-to-xml</code> utility. Two output modes are supported: </p>
+
+<ul>
+  <li> Separate documents mode, where each test case and the <code>caselist.xml</code> summary document are written to a destination directory
+  <li> Single file mode, where all results in the <code>.qpa</code> file are written to single XML document.
+</ul>
+
+<p>Exported test log files can be viewed in a browser using an XML style sheet.
+Sample style sheet documents (<code>testlog.xsl</code> and <code>testlog.css</code>) are provided in the <code>doc/testlog-stylesheet</code> directory. To render the log files in a browser, copy the two style sheet
+files into the same directory where the exported XML documents are located.</p>
+
+<p>If you are using Google Chrome, the files must be accessed over HTTP as Chrome
+limits local file access for security reasons. The standard Python installation
+includes a basic HTTP server that can be launched to serve the current
+directory with the <code>python –m SimpleHTTPServer 8000</code> command. After launching the server, just point the Chrome browser to <code>http://localhost:8000</code> to view the test log.</p>
+
+<h3 id=conversion_to_a_junit_test_log>Conversion to a JUnit test log</h3>
+
+<p>Many test automation systems can generate test run result reports from JUnit
+output. The deqp test log files can be converted to the JUnit output format
+using the testlog-to-junit tool. </p>
+
+<p>The tool currently supports translating the test case verdict only. As JUnit
+supports only "pass" and "fail" results, a passing result of the deqp is mapped
+to "JUnit pass" and other results are considered failures. The original deqp
+result code is available in the JUnit output. Other data, such as log messages
+and result images, are not preserved in the conversion.</p>
+
+  </body>
+</html>

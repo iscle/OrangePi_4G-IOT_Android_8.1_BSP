@@ -1,0 +1,743 @@
+<html devsite>
+  <head>
+    <title>A/B (Seamless) System Updates</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>
+  A/B system updates, also known as seamless updates, ensure a workable booting
+  system remains on the disk during an <a href="/devices/tech/ota/index.html"
+  >over-the-air (OTA) update</a>. This reduces the likelihood of an inactive
+  device afterward, which means less device replacements and device reflashes at
+  repair/warranty centers.
+</p>
+
+<p>
+  Customers can continue to use their devices during an OTA. The only downtime
+  during an update is when the device reboots into the updated disk partition. If
+  the OTA fails, the device is still useable since it will boot into the pre-OTA
+  disk partition. The download of the OTA can be attempted again. A/B system
+  updates implemented through OTA are recommended for new devices only.
+</p>
+
+<p>
+  A/B system updates affect:
+</p>
+
+<ul>
+  <li>Interactions with the bootloader</li>
+  <li>Partition selection</li>
+  <li>The build process</li>
+  <li>OTA update package generation</li>
+</ul>
+
+<p>
+  The existing <a href="/security/verifiedboot/dm-verity.html"
+  >dm-verity</a> feature guarantees the device will boot an uncorrupted image. If
+  a device doesn't boot, because of a bad OTA or dm-verity issue, the device can
+  reboot into an old image.
+</p>
+
+<p>
+  The A/B system is robust because any errors (such as I/O errors) affect only
+  the <strong>unused</strong> partition set and can be retried. Such errors also
+  become less likely because the I/O load is deliberately low to avoid degrading
+  the user experience.
+</p>
+
+<p>
+  OTA updates can occur while the system is running, without interrupting the
+  user. This includes the app optimizations that occur after a reboot.
+  Additionally, the cache partition is no longer used to store OTA update
+  packages; there is no need for sizing the cache partition.
+</p>
+
+<h2 id="overview">Overview</h2>
+
+<p>
+  A/B system updates use a background daemon called <code>update_engine</code>
+  and two sets of partitions. The two sets of partitions are referred to as
+  <em>slots</em>, normally as slot A and slot B. The system runs from one slot,
+  the <em>current</em> slot, while the partitions in the <em>unused</em> slot are
+  not accessed by the running system (for normal operation).
+</p>
+
+<p>
+  The goal of this feature is to make updates fault resistant by keeping the
+  unused slot as a fallback. If there is an error during an update or immediately
+  after an update, the system can rollback to the old slot and continue to have a
+  working system. To achieve this goal, none of the partitions used by the
+  <em>current</em> slot should be updated as part of the OTA update (including
+  partitions for which there is only one copy).
+</p>
+
+<p>
+  Each slot has a <em>bootable</em> attribute, which states whether the slot
+  contains a correct system from which the device can boot. The current slot is
+  clearly bootable when the system is running, but the other slot may have an old
+  (still correct) version of the system, a newer version, or invalid data.
+  Regardless of what the <em>current</em> slot is, there is one slot which is the
+  <em>active</em> or preferred slot. The active slot is the one the bootloader
+  will boot from on the next boot. Finally, each slot has a <em>successful</em>
+  attribute set by the user space, which is only relevant if the slot is also
+  bootable.
+</p>
+
+<p>
+  A successful slot should be able to boot, run, and update itself. A bootable
+  slot that was not marked as successful (after several attempts were made to
+  boot from it) should be marked as unbootable by the bootloader, including
+  changing the active slot to another bootable slot (normally to the slot running
+  right before the attempt to boot into the new, active one). The specific
+  details of the interface are defined in
+  <code><a class="external-link" target="_blank"
+           href="https://android.googlesource.com/platform/hardware/libhardware/+/master/include/hardware/boot_control.h"
+        >boot_control.h</a></code>.
+</p>
+
+<h3 id="bootloader-state-examples">Bootloader state examples</h3>
+
+<p>
+  The <code>boot_control</code> HAL is used by <code>update_engine</code> (and
+  possibly other daemons) to instruct the bootloader what to boot from. These
+  are common example scenarios and their associated states:
+</p>
+
+<ul>
+  <li>
+    <strong>Normal case</strong>: The system is running from its current slot,
+    either slot A or B. No updates have been applied so far. The system's current
+    slot is bootable, successful, and the active slot.
+  </li>
+  <li>
+    <strong>Update in progress</strong>: The system is running from slot B, so
+    slot B is the bootable, successful, and active slot. Slot A was marked as
+    unbootable since the contents of slot A are being updated but not yet
+    completed. A reboot in this state should continue booting from slot B.
+  </li>
+  <li>
+    <strong>Update applied, reboot pending</strong>: The system is running from
+    slot B, slot B is bootable and successful, but slot A was marked as active
+    (and therefore is marked as bootable). Slot A is not yet marked as successful
+    and some number of attempts to boot from slot A should be made by the
+    bootloader.
+  </li>
+  <li>
+    <strong>System rebooted into new update</strong>: The system is running from
+    slot A for the first time, slot B is still bootable and successful while slot
+    A is only bootable, and still active but not successful. A user space daemon
+    should mark slot A as successful after some checks are made.
+  </li>
+</ul>
+
+<h3 id="update-engine-features">Update Engine features</h3>
+
+<p>
+  The <code>update_engine</code> daemon runs in the background and prepares the
+  system to boot into a new, updated version. The <code>update_engine</code>
+  daemon is not involved in the boot process itself and is limited in what it can
+  do during an update. The <code>update_engine</code> daemon can do the
+  following:
+</p>
+
+<ul>
+  <li>
+    Read from the current slot A/B partitions and write any data to the unused
+    slot A/B partitions as instructed by the OTA package
+  </li>
+  <li>
+    Call the <code>boot_control</code> interface in a pre-defined workflow
+  </li>
+  <li>
+    Run a <em>post-install</em> program from the <em>new</em> partition after
+    writing all the unused slot partitions, as instructed by the OTA package
+  </li>
+</ul>
+
+<p>
+  The post-install step is described in detail below. Note that the
+  <code>update_engine</code> daemon is limited by the
+  <a href="/security/selinux/">SELinux</a> policies and features in the
+  <em>current</em> slot; those policies and features can't be updated until the
+  system boots into a new version. To achieve a robustness goal, the update
+  process should not:
+</p>
+
+<ul>
+  <li>Modify the partition table</li>
+  <li>Modify the contents of partitions in the current slot</li>
+  <li>
+    Modify the contents of non-A/B partitions that can't be wiped with a
+    factory reset
+  </li>
+</ul>
+
+<h2 id="life-of-an-a-b-update">Life of an A/B update</h2>
+
+<p>
+  The update process starts when an OTA package, referred to in code as a
+  <em>payload</em>, is available for downloading. Policies in the device may
+  defer the payload download and application based on battery level, user
+  activity, whether it is connected to a charger, or other policies. But since
+  the update runs in the background, the user might not know that an update is
+  in progress and the process can be interrupted at any point due to policies or
+  unexpected reboots.
+</p>
+
+<p>
+  The steps in the update process after a payload is available are as follows:
+</p>
+
+<p>
+  <strong>Step 1:</strong> The current slot (or "source slot") is marked as
+  successful (if not already marked) with <code>markBootSuccessful()</code>.
+</p>
+
+<p>
+  <strong>Step 2:</strong> The unused slot (or "target slot") is marked as
+  unbootable by calling the function <code>setSlotAsUnbootable()</code>.
+</p>
+
+<p>
+  The current slot is always marked as successful at the beginning of the update
+  to prevent the bootloader from falling back to the unused slot, which will soon
+  have invalid data. If the system has reached the point where it can start
+  applying an update, the current slot is marked as successful even if other
+  major components are broken (such as the UI in a crash loop) since it's
+  possible to push new software to fix these major problems.
+</p>
+
+<p>
+  The update payload is an opaque blob with the instructions to update to the
+  new version. The update payload consists of basically two parts: the metadata
+  and the extra data associated with the instructions. The metadata is
+  relatively small and contains a list of operations to produce and verify the
+  new version on the target slot. For example, an operation could decompress a
+  certain blob and write it to certain blocks in a target partition, or read from
+  a source partition, apply a binary patch, and write to certain blocks in a
+  target partition. The extra data associated to the operations, not included in
+  the metadata, is the bulk of the update payload and would consist of the
+  compressed blob or binary patch in these examples.
+</p>
+
+<p>
+  <strong>Step 3:</strong> The payload metadata is downloaded.
+</p>
+
+<p>
+  <strong>Step 4:</strong> For each operation defined in the metadata, in order,
+  the associated data (if any) is downloaded to memory, the operation is applied,
+  and the associated memory is discarded.
+</p>
+
+<p>
+  These two steps take most of the update time, as they involve writing and
+  downloading large amounts of data, and are likely to be interrupted for reasons
+  of policy or reboot.
+</p>
+
+<p>
+  <strong>Step 5:</strong> The whole partitions are re-read and verified against
+  the expected hash.
+</p>
+
+<p>
+  <strong>Step 6:</strong> The post-install step (if any) is run.
+</p>
+
+<p>
+  In the case of an error during the execution of any step, the update fails and
+  is re-attempted with possibly a different payload. If all the steps so far have
+  succeeded, the update succeeds and the last step is executed.
+</p>
+
+<p>
+  <strong>Step 7:</strong> The <em>unused slot</em> is marked as active by
+  calling <code>setActiveBootSlot()</code>.
+</p>
+
+<p>
+  Marking the unused slot as active doesn't mean it will finish booting. The
+  bootloader—or system itself—can switch the active slot back if it doesn't
+  read a successful state.
+</p>
+
+<h3 id="post-install-step">Post-install step</h3>
+
+<p>
+  The post-install step consists of running a program from the "new update"
+  version while still running in the old version. If defined in the OTA package,
+  this step is mandatory and the program must return with exit code
+  <code>0</code>; otherwise, the update fails.
+</p>
+
+<p>
+  For every partition where a post-install step is defined,
+  <code>update_engine</code> mounts the new partition into a specific location
+  and executes the program specified in the OTA relative to the mounted
+  partition. For example, if the post-install program is defined as
+  <code>usr/bin/postinstall</code> in the system partition, this partition from
+  the unused slot will be mounted in a fixed location (for example, in
+  <code>/postinstall_mount</code>) and the
+  <code>/postinstall_mount/usr/bin/postinstall</code> command will be executed.
+  Note that for this step to work, the following are required:
+</p>
+
+<ul>
+  <li>
+    The old kernel needs to be able to mount the new filesystem format. The
+    filesystem type cannot change unless there's support for it in the old
+    kernel (which includes details such as the compression algorithm used if
+    using a compressed filesystem like SquashFS).
+  </li>
+  <li>
+    The old kernel needs to understand the new partition's post-install program
+    format. If using an ELF binary, it should be compatible with the old
+    kernel (e.g. a 64-bit new program running on an old 32-bit kernel if the
+    architecture switched from 32- to 64-bit builds). Also, the libraries
+    will be loaded from the old system image, not the new one, unless the loader
+    (<code>ld</code>) is instructed to use other paths or build a static binary.
+  </li>
+  <li>
+    The new post-install program will be limited by the SELinux policies defined
+    in the old system.
+  </li>
+</ul>
+
+<p>
+  An example case is to use a shell script as a post-install program (interpreted
+  by the old system's shell binary with a <code>#!</code> marker at the top) and
+  then set up library paths from the new environment for executing a more complex
+  binary post-install program.
+</p>
+
+<p>
+  Another example case is to run the post-install step from a dedicated smaller
+  partition, so the filesystem format in the main system partition can be updated
+  without incurring backward compatibility issues or stepping-stone updates,
+  allowing users to update straight to the latest version from a factory image.
+</p>
+
+<p>
+  Due to the SELinux policies, the post-install step is suitable for
+  performing tasks required by design on a given device or other best-effort
+  tasks: update the A/B-capable firmware or bootloader, prepare copies of some
+  databases for the new version, etc. This step is not suitable for one-off bug
+  fixes before reboot that require unforeseen permissions.
+</p>
+
+<p>
+  The selected post-install program runs in the <code>postinstall</code> SELinux
+  context. All the files in the new mounted partition will be tagged with
+  <code>postinstall_file</code>, regardless of what their attributes are after
+  rebooting into that new system. Changes to the SELinux attributes in the new
+  system won't impact the post-install step. If the post-install program needs
+  extra permissions, those must be added to the post-install context.
+</p>
+
+<h2 id="implementation">Implementation</h2>
+
+<p>
+  OEMs and SoC vendors who wish to implement the feature must add the following
+  support to their bootloaders:
+</p>
+
+<ul>
+  <li>
+    Pass the <a href="#kernel-command-line-arguments">correct parameters</a>
+    to the kernel
+  </li>
+  <li>
+    Implement the <code>boot_control</code> HAL
+    (<a class="external-link nowrap" target="_blank"
+        href="https://android.googlesource.com/platform/hardware/libhardware/+/master/include/hardware/boot_control.h"
+    >https://android.googlesource.com/platform/hardware/libhardware/+/master/include/hardware/boot_control.h</a>)
+  </li>
+  <li>Implement the state machine as shown in Figure 1:</li>
+</ul>
+
+<img src="/devices/tech/ota/images/ab-updates-state-machine.png">
+
+<p class="img-caption"><strong>Figure 1.</strong> Bootloader state machine</p>
+
+<p>
+  The boot control HAL can be tested using the
+  <a class="external-link" target="_blank"
+     href="https://android.googlesource.com/platform/system/extras/+/master/bootctl/"
+  ><code>bootctl</code></a> utility.
+</p>
+
+<p>Some tests have been implemented for Brillo:</p>
+
+<ul>
+  <li>
+    <a class="external-link nowrap" target="_blank"
+       href="https://android.googlesource.com/platform/system/extras/+/refs/heads/master/tests/bootloader/"
+    >https://android.googlesource.com/platform/system/extras/+/refs/heads/master/tests/bootloader/</a>
+  </li>
+  <li>
+    <a class="external-link nowrap" target="_blank"
+       href="https://chromium.googlesource.com/chromiumos/third_party/autotest/+/master/server/site_tests/brillo_BootLoader/brillo_BootLoader.py"
+    >https://chromium.googlesource.com/chromiumos/third_party/autotest/+/master/server/site_tests/brillo_BootLoader/brillo_BootLoader.py</a>
+  </li>
+</ul>
+
+<h3 id="kernel-patches">Kernel patches</h3>
+
+<ul>
+  <li>
+    <a class="external-link nowrap" target="_blank"
+       href="https://android-review.googlesource.com/#/c/158491/"
+    >https://android-review.googlesource.com/#/c/158491/</a>
+  </li>
+  <li>
+    <a class="external-link nowrap" target="_blank"
+       href="https://android-review.googlesource.com/#/q/status:merged+project:kernel/common+branch:android-3.18+topic:A_B_Changes_3.18"
+    >https://android-review.googlesource.com/#/q/status:merged+project:kernel/common+branch:android-3.18+topic:A_B_Changes_3.18</a>
+  </li>
+</ul>
+
+<h3 id="kernel-command-line-arguments">Kernel command line arguments</h3>
+
+<p>
+  The kernel command line arguments <strong>must</strong> contain the following
+  extra arguments:
+</p>
+
+<pre class="devsite-click-to-copy">
+<code class="devsite-terminal">skip_initramfs rootwait ro init=/init root="/dev/dm-0 dm=system none ro,0 1 \
+  android-verity &lt;public-key-id&gt; &lt;path-to-system-partition&gt;"</code>
+</pre>
+
+<p>
+  The <code>&lt;public-key-id&gt;</code> value is the ID of the public key used
+  to verify the verity table signature (see
+  <a href="/security/verifiedboot/dm-verity.html">dm-verity</a>).
+</p>
+
+<h4>
+  To add the .X509 certificate containing the public key to the system keyring:
+</h4>
+
+<ol>
+  <li>
+    Copy the .X509 certificate formatted in the <code>.der</code>
+    format to the root of the <code>kernel</code> directory. Use the following
+    <code>openssl</code> command to convert from <code>.pem</code> to
+    <code>.der</code> format (if the .X509 certificate is formatted in
+    <code>.pem</code> format):
+<pre class="devsite-terminal devsite-click-to-copy">
+openssl x509 -in &lt;x509-pem-certificate&gt; -outform der -out &lt;x509-der-certificate&gt;
+</pre>
+  </li>
+  <li>
+    Once copied to the kernel build root, build the <code>zImage</code> to
+    include the certificate as part of the system keyring. This can be verified
+    from the following <code>procfs</code> entry (requires
+    <code>KEYS_CONFIG_DEBUG_PROC_KEYS</code> to be enabled):
+<pre class="devsite-click-to-copy">
+angler:/# cat /proc/keys
+
+1c8a217e I------     1 perm 1f010000     0     0 asymmetri
+Android: 7e4333f9bba00adfe0ede979e28ed1920492b40f: X509.RSA 0492b40f []
+2d454e3e I------     1 perm 1f030000     0     0 keyring
+.system_keyring: 1/4
+</pre>
+  </li>
+</ol>
+
+<p>
+  Successful inclusion of the .X509 certificate indicates the presence of the
+  public key in the system keyring. The highlighted portion denotes the public
+  key ID.
+</p>
+
+<p>
+  As the next step, replace the space with ‘#’ and pass it as
+  <code>&lt;public-key-id&gt;</code> in the kernel command line. For example, in the
+  above case, the following is passed in the place of
+  <code>&lt;public-key-id&gt;</code>:
+  <code>Android:#7e4333f9bba00adfe0ede979e28ed1920492b40f</code>
+</p>
+
+<h3 id="recovery">Recovery</h3>
+
+<p>
+  The recovery RAM disk is now contained in the <code>boot.img</code> file. When
+  going into recovery, the bootloader <strong>cannot</strong> put the
+  <code>skip_initramfs</code> option on the kernel command line.
+</p>
+
+<h3 id="build-variables">Build variables</h3>
+
+<h5>Must define for the A/B target:</h5>
+
+<ul>
+  <li><code>AB_OTA_UPDATER := true</code></li>
+  <li>
+    <code>AB_OTA_PARTITIONS := \</code><br/>
+    <code>&nbsp; boot \</code><br/>
+    <code>&nbsp; system \</code><br/>
+    <code>&nbsp; vendor</code><br/>
+    and other partitions updated through <code>update_engine</code> (radio,
+    bootloader, etc.)
+  </li>
+  <li>
+    <code>BOARD_BUILD_SYSTEM_ROOT_IMAGE := true</code>
+  </li>
+  <li><code>TARGET_NO_RECOVERY := true</code></li>
+  <li>
+    <code>BOARD_USES_RECOVERY_AS_BOOT := true</code>
+  </li>
+  <li>
+    <code>PRODUCT_PACKAGES += \</code><br/>
+    <code>&nbsp; update_engine \</code><br/>
+    <code>&nbsp; update_verifier</code>
+  </li>
+</ul>
+
+<h5>Optionally define for debug builds:</h5>
+
+<ul>
+  <li>
+    <code>PRODUCT_PACKAGES_DEBUG += update_engine_client</code>
+  </li>
+</ul>
+
+<h5>Cannot define for the A/B target:</h5>
+
+<ul>
+  <li><code>BOARD_RECOVERYIMAGE_PARTITION_SIZE</code></li>
+  <li><code>BOARD_CACHEIMAGE_PARTITION_SIZE</code></li>
+  <li><code>BOARD_CACHEIMAGE_FILE_SYSTEM_TYPE</code></li>
+</ul>
+
+<h3 id="partitions">Partitions</h3>
+
+<ul>
+  <li>
+    A/B devices do not need a recovery partition or cache partition because
+    Android no longer uses these partitions. The data partition is now used for
+    the downloaded OTA package, and the recovery image code is on the boot
+    partition.
+  </li>
+  <li>
+    All partitions that are A/B-ed should be named as follows (slots are always
+    named <code>a</code>, <code>b</code>, etc.): <code>boot_a</code>,
+    <code>boot_b</code>, <code>system_a</code>, <code>system_b</code>,
+    <code>vendor_a</code>, <code>vendor_b</code>.
+  </li>
+</ul>
+
+<h3 id="fstab">Fstab</h3>
+
+<p>
+  The <code>slotselect</code> argument <strong>must</strong> be on the line for
+  the A/B-ed partitions. For example:
+</p>
+
+<pre class="devsite-click-to-copy">
+&lt;path-to-block-device&gt;/vendor  /vendor  ext4  ro
+wait,verify=&lt;path-to-block-device&gt;/metadata,slotselect
+</pre>
+
+<p>
+  Please note that there should be no partition named <code>vendor</code> but
+  instead the partition <code>vendor_a</code> or <code>vendor_b</code> will be
+  selected and mounted on the <code>/vendor</code> mount point.
+</p>
+
+<h3 id="kernel-slot-arguments">Kernel slot arguments</h3>
+
+<p>
+  The current slot suffix should be passed either through a specific DT node
+  (<code>/firmware/android/slot_suffix</code>) or through the
+  <code>androidboot.slot_suffix</code> command line argument.
+</p>
+
+<p>
+  Optionally, if the bootloader implements fastboot, the following commands and
+  variables should be supported:
+</p>
+
+<h4>Commands</h4>
+<ul>
+  <li>
+    <code>set_active &lt;slot&gt;</code> —Sets the current active slot to
+    the given slot. This must also clear the unbootable flag for that slot, and
+    reset the retry count to default values.
+  </li>
+</ul>
+
+<h4>Variables</h4>
+<ul>
+  <li>
+    <code>has-slot:&lt;partition-base-name-without-suffix&gt;</code>
+      —Returns “yes” if the given partition supports slots, “no” otherwise.
+  </li>
+  <li>
+    <code>current-slot</code> —Returns the slot suffix that will be booted from
+    next.
+  </li>
+  <li>
+    <code>slot-count</code> —Returns an integer representing the number of
+    available slots. Currently, two slots are supported so this value is
+    <code>2</code>.
+  </li>
+  <li>
+    <code>slot-successful:&lt;slot-suffix&gt;</code> —Returns "yes" if the given
+    slot has been marked as successfully booting, "no" otherwise.
+  </li>
+  <li>
+    <code>slot-unbootable:&lt;slot-suffix&gt;</code> —Returns “yes” if the given
+    slot is marked as unbootable, "no" otherwise.
+  </li>
+  <li>
+    <code>slot-retry-count:<slot suffix></code> —Number of retries remaining to
+    attempt to boot the given slot.
+  </li>
+  <li>
+    These variables should all appear under the following:
+    <code>fastboot getvar all</code>
+  </li>
+</ul>
+
+<h3 id="ota-package-generation">OTA package generation</h3>
+
+<p>
+  The <a href="/devices/tech/ota/tools.html">OTA package tools</a>
+  follow the same commands as the commands for non-A/B devices. The
+  <code>target_files.zip</code> file must be generated by defining the build
+  variables for the A/B target. The OTA package tools automatically identify and
+  generate packages in the format for the A/B updater.
+</p>
+
+<p>
+  For example, use the following to generate a full OTA:
+</p>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+./build/tools/releasetools/ota_from_target_files \
+  dist_output/tardis-target_files.zip ota_update.zip
+</pre>
+
+<p>
+  Or, generate an incremental OTA:
+</p>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+./build/tools/releasetools/ota_from_target_files \
+  -i PREVIOUS-tardis-target_files.zip \
+  dist_output/tardis-target_files.zip incremental_ota_update.zip
+</pre>
+
+<h2 id="configuration">Configuration</h2>
+
+<h3 id="config-partitions">Partitions</h3>
+
+<p>
+  The Update Engine can update any pair of A/B partitions defined in the same
+  disk.
+</p>
+
+<p>
+  A pair of partitions has a common prefix (such as <code>system</code> or
+  <code>boot</code>) and per-slot suffix (such as <code>_a</code>). The list of
+  partitions for which the payload generator defines an update is configured by
+  the <code>AB_OTA_PARTITIONS</code> make variable. For example, if a pair of
+  partitions <code>bootloader_a</code> and <code>booloader_b</code> are included
+  (<code>_a</code> and <code>_b</code> are the slot suffixes), these partitions
+  can be updated by specifying the following on the product or board
+  configuration:
+</p>
+
+<pre class="devsite-click-to-copy">
+AB_OTA_PARTITIONS := \
+  boot \
+  system \
+  bootloader
+</pre>
+
+<p>
+  All the partitions updated by the Update Engine must not be modified by the
+  rest of the system. During incremental or <em>delta</em> updates, the binary
+  data from the current slot is used to generate the data in the new slot. Any
+  modification may cause the new slot data to fail verification during the
+  update process, and therefore fail the update.
+</p>
+
+<h3 id="post-install">Post-install</h3>
+
+<p>
+  The post-install step can be configured differently for each updated partition
+  using a set of key-value pairs.
+</p>
+
+<p>
+  To run a program located at <code>/system/usr/bin/postinst</code> in a
+  new image, specify the path relative to the root of the filesystem in the
+  system partition. For example, <code>usr/bin/postinst</code> is
+  <code>system/usr/bin/postinst</code> (if not using a RAM disk). Additionally,
+  specify the filesystem type to pass to the <code>mount(2)</code> system call.
+  Add the following to the product or device <code>.mk</code> files (if
+  applicable):
+</p>
+
+<pre class="devsite-click-to-copy">
+AB_OTA_POSTINSTALL_CONFIG += \
+  RUN_POSTINSTALL_system=true \
+  POSTINSTALL_PATH_system=usr/bin/postinst \
+  FILESYSTEM_TYPE_system=ext4
+</pre>
+
+<h3 id="compilation">App compilation in background</h3>
+
+<p>Compiling apps in the background for A/B updates requires the following two
+additions to the product's device configuration (in the product's device.mk):</p>
+
+<ol>
+  <li>Include the native components in the build. This ensures the compilation
+  script and binaries are compiled and included in the system image.
+<pre class="devsite-click-to-copy">
+  # A/B OTA dexopt package
+  PRODUCT_PACKAGES += otapreopt_script
+</pre>
+  </li>
+  <li>Connect the compilation script to <code>update_engine</code> such that it
+  is run as a post-install step.
+<pre class="devsite-click-to-copy">
+  # A/B OTA dexopt update_engine hookup
+  AB_OTA_POSTINSTALL_CONFIG += \
+    RUN_POSTINSTALL_system=true \
+    POSTINSTALL_PATH_system=system/bin/otapreopt_script \
+    FILESYSTEM_TYPE_system=ext4 \
+    POSTINSTALL_OPTIONAL_system=true
+  </pre>
+  </li>
+</ol>
+
+<p>See <a href="/devices/tech/dalvik/configure.html#other_odex">First
+boot installation of DEX_PREOPT files</a> to install the preopted files in the
+unused second system partition.</p>
+
+  </body>
+</html>

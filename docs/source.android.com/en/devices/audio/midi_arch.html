@@ -1,0 +1,232 @@
+<html devsite>
+  <head>
+    <title>MIDI Architecture</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>
+This article describes the generic MIDI architecture, independent of
+any platform implementation, API, or platform-specific features.
+</p>
+
+<h2 id="keyConcepts">Key concepts</h2>
+
+<h3 id="events">Events</h3>
+
+<p>
+The MIDI protocol is designed for event-based communication.
+An <a href="https://en.wikipedia.org/wiki/Event_(computing)">event</a>
+is an indication that something happened or will happen at a specified
+time. MIDI events are represented by <em>messages</em>, atomic
+bundles of information.
+</p>
+
+<h3 id="transport">Transport</h3>
+
+<p>
+MIDI messages are encoded and delivered via a
+<a href="https://en.wikipedia.org/wiki/Transport_layer">transport layer</a>,
+abbreviated <em>transport</em>, which sends the raw MIDI data
+to the recipient who then decodes the data into messages.
+</p>
+
+<p>
+Hardware-based MIDI transports include:
+</p>
+<ul>
+<li>MIDI 1.0 current loop with
+<a href="https://en.wikipedia.org/wiki/DIN_connector">5-pin DIN</a> connector</li>
+<li>USB</li>
+<li>Bluetooth Low Energy (BLE)</li>
+</ul>
+
+<h3 id="messageRepresentation">Message representation</h3>
+
+<p>
+A MIDI transport specification describes how to convey messages.
+Although the packaging of messages is transport-specific at the
+lowest level, at a higher level applications can consider a
+time-ordered sequence of messages to be a demarcated
+<a href="https://en.wikipedia.org/wiki/Bytestream">byte stream</a>.
+This is possible because each message contains
+enough information to determine the total length of the message,
+provided the start of the message boundary is known.
+</p>
+
+<p>
+Most MIDI messages are short (one to three bytes), yet there is the
+capability for longer messages via <em>SysEx</em>.
+</p>
+
+<h3 id="timestamps">Timestamps</h3>
+
+<p>
+A <a href="https://en.wikipedia.org/wiki/Timestamp">timestamp</a>
+is an optional label attached to a message at origination or upon receipt,
+depending on the transport.  The timestamp is expressed in time units
+such as seconds or
+<a href="https://en.wikipedia.org/wiki/Jiffy_(time)">ticks</a>.
+</p>
+
+<p>
+In the absence of an explicit timestamp, the system must substitute
+the timestamp of the immediately preceding message or the current
+time.  The accuracy of these timestamps, whether explicit or implicit,
+is an important aspect of the reliability of a MIDI-based system.
+</p>
+
+<p>
+Timestamps are not part of the MIDI 1.0 protocol. They are often added
+as part of a platform-specific API.  The BLE transport has timestamps
+to indicate the timing of the multiple individual messages sent within
+one BLE packet.
+</p>
+
+<h3 id="devices">Devices</h3>
+
+<p>
+A <a href="https://en.wikipedia.org/wiki/Peripheral">peripheral</a>
+provides input/output (I/O) capability for a computer.  The terms
+<em>MIDI peripheral</em> and <em>MIDI device</em> commonly
+refer to any hardware or software module that supports the MIDI protocol.
+Within this document, <em>MIDI peripheral</em> refers to the
+physical entity and <em>MIDI device</em> describes the module that
+actually implements MIDI.
+</p>
+
+<h3 id="ports">Ports</h3>
+
+<p>
+A <a href="https://en.wikipedia.org/wiki/Computer_port_(hardware)">port</a>
+is an interface point between computers and peripherals.
+</p>
+
+<p>
+MIDI 1.0 uses a female 5-pin DIN socket as the port.
+Each port is either <em>OUT</em> (source of MIDI data), <em>IN</em> (sink for MIDI data),
+or <em>THRU</em> (meaning an <em>IN</em> which is directly routed to an <em>OUT</em>).
+</p>
+
+<p>
+Other transports such as USB and BLE extend the
+<a href="https://en.wikipedia.org/wiki/Computer_port_(software)">port concept</a>.
+</p>
+
+<p>
+A MIDI device has at least one <em>OUT</em> port, <em>IN</em> port, or both.
+</p>
+
+<p>
+The MIDI device supplies stream(s) of messages originating at each <em>OUT</em> port,
+and receives stream(s) of messages arriving at each <em>IN</em> port.
+The terms <em>IN</em> and <em>OUT</em> are of course relative to one port;
+from the perspective of the other port the reverse term applies.
+</p>
+
+<h3 id="connection">Connection</h3>
+
+<p>
+In the MIDI 1.0 transport, an <em>OUT</em> port connects to at most
+one <em>IN</em> or <em>THRU</em> port due to the nature of the current loop.
+In USB and BLE transports, the same is true at the lowest layer, though
+an implementation may re-condition the message stream so that it can
+be broadcast to multiple <em>IN</em> ports.
+</p>
+
+<h3 id="cable">Cables</h3>
+
+<p>
+A MIDI 1.0 <a href="https://en.wikipedia.org/wiki/Cable">cable</a> is the
+physical bundle of wires that connects an <em>OUT</em> port to an <em>IN</em> or <em>THRU</em> port.
+The cable carries data only.
+</p>
+
+<p class="note">
+<strong>Note:</strong>
+There are non-standard modifications to MIDI that supply power over the
+two unused pins.  This is called <em>phantom power</em>.
+</p>
+
+<p>
+A <a href="https://en.wikipedia.org/wiki/USB#Cabling">USB cable</a>
+is similar, except there is a wide variety of connector types,
+and the <em>IN</em>/<em>OUT</em>/<em>THRU</em> concept is replaced by the host/peripheral role.
+</p>
+
+<p>
+When operating in USB host mode, the host device supplies power to the
+MIDI peripheral.  Most small MIDI peripherals take one USB unit load (100
+mA) or less.  However some larger peripherals, or peripherals with audio
+output or lights, require more power than the host device can supply.
+If you experience problems, try another MIDI peripheral or a powered
+USB hub.
+</p>
+
+<h3 id="channel">Channel</h3>
+
+<p>
+Each MIDI message stream in multiplexed among 16 <em>channels</em>.
+Most messages are directed at a specific channel,
+but there are message types that aren't channel-specific.
+Conventionally the channels are numbered one to 16, though
+represented by channel values of zero to 15.
+</p>
+
+<p>
+If the application needs more than 16 channels or a higher throughput
+than one message stream can support, then multiple ports
+must be used.
+</p>
+
+<p>
+In MIDI 1.0, this is accomplished by multiple cables connecting pairs of ports.
+</p>
+
+<p>
+In the MIDI over USB transport, a single USB endpoint can support multiple
+ports, each identified by a <em>cable number</em> [sic].
+According to the USB MIDI specification,
+the <em>cable number</em> identifies the virtual port within the endpoint.
+</p>
+
+<p class="note">
+<strong>Note:</strong>
+<em>port number</em> would have been a more accurate term,
+given that it identifies a port.
+</p>
+
+<p>
+Thus a single USB physical cable can carry more than one set of 16 channels.
+</p>
+
+<h2 id="platformImplementation">Platform implementation</h2>
+
+<p>
+As noted in the introduction, these generic MIDI concepts apply to all
+implementations.  For the interpretation of the concepts on the Android
+platform, see the
+<a href="http://developer.android.com/reference/android/media/midi/package-summary.html">
+Android MIDI User Guide for <code>android.media.midi</code></a>.
+</p>
+
+  </body>
+</html>

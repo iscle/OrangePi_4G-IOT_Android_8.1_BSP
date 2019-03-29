@@ -1,0 +1,70 @@
+<html devsite>
+  <head>
+    <title>Integrating with Android CTS</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>Android CTS release packages (available from
+<a href="/compatibility/cts/downloads.html">Android Compatibility
+Downloads</a>) include deqp tests and require a subset of these tests (known as
+the <code>mustpass</code> list), to pass. For devices that do not support a
+target API or extension, tests are skipped and reported as passing.</p>
+
+<p>The <code>mustpass</code> list includes OpenGL ES 3.0, OpenGL ES
+3.1, OpenGL ES 3.2, and the Android Extension Pack tests. <code>mustpass</code>
+files can be found under the <code>android/cts</code> directory in the deqp
+source tree. You can run deqp tests through the <code>cts-tradefed</code>
+utility with the following command:</p>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+cts-tradefed run cts --plan CTS-DEQP
+</pre>
+
+<h2 id=duplicating_runs_without_cts>Duplicating runs without CTS</h2>
+
+<p>To replicate the CTS run, install the deqp APK of the CTS package and use the
+following command:</p>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+adb -d shell am start -n com.drawelements.deqp/android.app.NativeActivity -e \
+cmdLine "deqp --deqp-case=dEQP-GLES3.some_group.* --deqp-gl-config-name=rgba8888d24s8 --deqp-log-filename=/sdcard/dEQP-Log.qpa
+</pre>
+
+<p>The important part is the <code>--deqp-gl-config-name=rgba8888d24s8</code>
+argument, which requests the tests be run on an RGBA 8888 on-screen surface
+with a 24-bit depth buffer and an 8-bit stencil buffer. Remember to set
+the desired tests using the <code>--deqp-case</code> argument.</p>
+
+<h2 id=mapping_of_the_cts_results>CTS results mapping</h2>
+
+<p>In the Android CTS, a test case can end up in one of three states: passed,
+failed, or not executed (the deqp has more result codes available). CTS
+automatically maps deqp result codes to CTS results:</p>
+<ul>
+<li>A CTS pass can include <code>Pass</code>, <code>NotSupported</code>,
+<code>QualityWarning</code>, and <code>CompatibilityWarning</code>.</li>
+<li>A CTS failure can include <code>Fail</code>, <code>ResourceError</code>,
+<code>Crash</code>, <code>Timeout</code>, and <code>InternalError</code>.</li>
+</ul>
+
+  </body>
+</html>

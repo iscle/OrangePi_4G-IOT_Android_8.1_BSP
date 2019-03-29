@@ -1,0 +1,157 @@
+<html devsite>
+  <head>
+    <title>Game Loops</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>A very popular way to implement a game loop looks like this:</p>
+
+<pre class="devsite-click-to-copy">
+while (playing) {
+    advance state by one frame
+    render the new frame
+    sleep until it’s time to do the next frame
+}
+</pre>
+
+<p>There are a few problems with this, the most fundamental being the idea that the
+game can define what a "frame" is.  Different displays will refresh at different
+rates, and that rate may vary over time.  If you generate frames faster than the
+display can show them, you will have to drop one occasionally.  If you generate
+them too slowly, SurfaceFlinger will periodically fail to find a new buffer to
+acquire and will re-show the previous frame.  Both of these situations can
+cause visible glitches.</p>
+
+<p>What you need to do is match the display's frame rate, and advance game state
+according to how much time has elapsed since the previous frame.  There are two
+ways to go about this: (1) stuff the BufferQueue full and rely on the "swap
+buffers" back-pressure; (2) use Choreographer (API 16+).</p>
+
+<h2 id=stuffing>Queue stuffing</h2>
+
+<p>This is very easy to implement: just swap buffers as fast as you can.  In early
+versions of Android this could actually result in a penalty where
+<code>SurfaceView#lockCanvas()</code> would put you to sleep for 100ms.  Now
+it's paced by the BufferQueue, and the BufferQueue is emptied as quickly as
+SurfaceFlinger is able.</p>
+
+<p>One example of this approach can be seen in <a
+href="https://code.google.com/p/android-breakout/">Android Breakout</a>.  It
+uses GLSurfaceView, which runs in a loop that calls the application's
+onDrawFrame() callback and then swaps the buffer.  If the BufferQueue is full,
+the <code>eglSwapBuffers()</code> call will wait until a buffer is available.
+Buffers become available when SurfaceFlinger releases them, which it does after
+acquiring a new one for display.  Because this happens on VSYNC, your draw loop
+timing will match the refresh rate.  Mostly.</p>
+
+<p>There are a couple of problems with this approach.  First, the app is tied to
+SurfaceFlinger activity, which is going to take different amounts of time
+depending on how much work there is to do and whether it's fighting for CPU time
+with other processes.  Since your game state advances according to the time
+between buffer swaps, your animation won't update at a consistent rate.  When
+running at 60fps with the inconsistencies averaged out over time, though, you
+probably won't notice the bumps.</p>
+
+<p>Second, the first couple of buffer swaps are going to happen very quickly
+because the BufferQueue isn't full yet.  The computed time between frames will
+be near zero, so the game will generate a few frames in which nothing happens.
+In a game like Breakout, which updates the screen on every refresh, the queue is
+always full except when a game is first starting (or un-paused), so the effect
+isn't noticeable.  A game that pauses animation occasionally and then returns to
+as-fast-as-possible mode might see odd hiccups.</p>
+
+<h2 id=choreographer>Choreographer</h2>
+
+<p>Choreographer allows you to set a callback that fires on the next VSYNC.  The
+actual VSYNC time is passed in as an argument.  So even if your app doesn't wake
+up right away, you still have an accurate picture of when the display refresh
+period began.  Using this value, rather than the current time, yields a
+consistent time source for your game state update logic.</p>
+
+<p>Unfortunately, the fact that you get a callback after every VSYNC does not
+guarantee that your callback will be executed in a timely fashion or that you
+will be able to act upon it sufficiently swiftly.  Your app will need to detect
+situations where it's falling behind and drop frames manually.</p>
+
+<p>The "Record GL app" activity in Grafika provides an example of this.  On some
+devices (e.g. Nexus 4 and Nexus 5), the activity will start dropping frames if
+you just sit and watch.  The GL rendering is trivial, but occasionally the View
+elements get redrawn, and the measure/layout pass can take a very long time if
+the device has dropped into a reduced-power mode.  (According to systrace, it
+takes 28ms instead of 6ms after the clocks slow on Android 4.4.  If you drag
+your finger around the screen, it thinks you're interacting with the activity,
+so the clock speeds stay high and you'll never drop a frame.)</p>
+
+<p>The simple fix was to drop a frame in the Choreographer callback if the current
+time is more than N milliseconds after the VSYNC time.  Ideally the value of N
+is determined based on previously observed VSYNC intervals.  For example, if the
+refresh period is 16.7ms (60fps), you might drop a frame if you're running more
+than 15ms late.</p>
+
+<p>If you watch "Record GL app" run, you will see the dropped-frame counter
+increase, and even see a flash of red in the border when frames drop.  Unless
+your eyes are very good, though, you won't see the animation stutter.  At 60fps,
+the app can drop the occasional frame without anyone noticing so long as the
+animation continues to advance at a constant rate.  How much you can get away
+with depends to some extent on what you're drawing, the characteristics of the
+display, and how good the person using the app is at detecting jank.</p>
+
+<h2 id=thread>Thread management</h2>
+
+<p>Generally speaking, if you're rendering onto a SurfaceView, GLSurfaceView, or
+TextureView, you want to do that rendering in a dedicated thread.  Never do any
+"heavy lifting" or anything that takes an indeterminate amount of time on the
+UI thread.</p>
+
+<p>Breakout and "Record GL app" use dedicated renderer threads, and they also
+update animation state on that thread.  This is a reasonable approach so long as
+game state can be updated quickly.</p>
+
+<p>Other games separate the game logic and rendering completely.  If you had a
+simple game that did nothing but move a block every 100ms, you could have a
+dedicated thread that just did this:</p>
+
+<pre class="devsite-click-to-copy">
+    run() {
+        Thread.sleep(100);
+        synchronized (mLock) {
+            moveBlock();
+        }
+    }
+</pre>
+
+<p>(You may want to base the sleep time off of a fixed clock to prevent drift --
+sleep() isn't perfectly consistent, and moveBlock() takes a nonzero amount of
+time -- but you get the idea.)</p>
+
+<p>When the draw code wakes up, it just grabs the lock, gets the current position
+of the block, releases the lock, and draws.  Instead of doing fractional
+movement based on inter-frame delta times, you just have one thread that moves
+things along and another thread that draws things wherever they happen to be
+when the drawing starts.</p>
+
+<p>For a scene with any complexity you'd want to create a list of upcoming events
+sorted by wake time, and sleep until the next event is due, but it's the same
+idea.</p>
+
+  </body>
+</html>

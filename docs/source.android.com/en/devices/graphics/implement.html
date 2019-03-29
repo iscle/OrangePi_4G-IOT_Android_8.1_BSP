@@ -1,0 +1,177 @@
+<html devsite>
+  <head>
+    <title>Implementing graphics</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+
+<p>To implement the Android graphics HAL, review the following requirements,
+implementation details, and testing advice.</p>
+
+<h2 id=requirements>Requirements</h2>
+
+<p>Android graphics support requires the following components:</p>
+
+<ul>
+    <li>EGL driver</li>
+    <li>OpenGL ES 1.x driver</li>
+    <li>OpenGL ES 2.0 driver</li>
+    <li>OpenGL ES 3.x driver (optional)</li>
+    <li>Vulkan (optional)</li>
+    <li>Gralloc HAL implementation</li>
+    <li>Hardware Composer HAL implementation</li>
+</ul>
+
+<h2 id=implementation>Implementation</h2>
+
+<h3 id=opengl_and_egl_drivers>OpenGL and EGL drivers</h3>
+
+<p>You must provide drivers for EGL, OpenGL ES 1.x, and OpenGL ES 2.0 (support
+for OpenGL 3.x is optional). Key considerations include:</p>
+
+<ul>
+    <li>GL driver must be robust and conformant to OpenGL ES standards.</li>
+    <li>Do not limit the number of GL contexts. Because Android allows apps in
+    the background and tries to keep GL contexts alive, you should not limit the
+    number of contexts in your driver.</li>
+    <li> It is common to have 20-30 active GL contexts at once, so be
+    mindful of the amount of memory allocated for each context.</li>
+    <li>Support the YV12 image format and other YUV image formats that come from
+    other components in the system, such as media codecs or the camera.</li>
+    <li>Support the mandatory extensions: <code>GL_OES_texture_external</code>,
+    <code>EGL_ANDROID_image_native_buffer</code>, and
+    <code>EGL_ANDROID_recordable</code>. In addition, the
+    <code>EGL_ANDROID_framebuffer_target</code> extension is required for
+    Hardware Composer v1.1 and higher.</li>
+    </ul>
+<p>We highly recommend also supporting <code>EGL_ANDROID_blob_cache</code>,
+<code>EGL_KHR_fence_sync</code>, <code>EGL_KHR_wait_sync</code>, and <code>EGL_ANDROID_native_fence_sync</code>.</p>
+
+<p class="note"><strong>Note</strong>: The OpenGL API exposed to app developers
+differs from the OpenGL implemented on the device. Apps cannot directly access
+the GL driver layer and must go through the interface provided by the APIs.</p>
+
+<h3 id=pre-rotation>Pre-rotation</h3>
+
+<p>Many hardware overlays do not support rotation (and even if they do it costs
+processing power); the solution is to pre-transform the buffer before it reaches
+SurfaceFlinger. Android supports a query hint
+(<code>NATIVE_WINDOW_TRANSFORM_HINT</code>) in <code>ANativeWindow</code> to
+represent the most likely transform to be applied to the buffer by
+SurfaceFlinger. GL drivers can use this hint to pre-transform the buffer
+before it reaches SurfaceFlinger so when the buffer arrives, it is correctly
+transformed.</p>
+
+<p>For example, when receiving a hint to rotate 90 degrees, generate and apply a
+matrix to the buffer to prevent it from running off the end of the page. To save
+power, do this pre-rotation. For details, see the <code>ANativeWindow</code>
+interface defined in <code>system/core/include/system/window.h</code>.</p>
+
+<h3 id=gralloc_hal>Gralloc HAL</h3>
+
+<p>The graphics memory allocator allocates memory requested by image producers.
+You can find the interface definition of the HAL at
+<code>hardware/libhardware/include/hardware/gralloc.h</code>.</p>
+
+<h3 id=protected_buffers>Protected buffers</h3>
+
+<p>The gralloc usage flag <code>GRALLOC_USAGE_PROTECTED</code> allows the
+graphics buffer to be displayed only through a hardware-protected path. These
+overlay planes are the only way to display DRM content (DRM-protected buffers
+cannot be accessed by SurfaceFlinger or the OpenGL ES driver).</p>
+
+<p>DRM-protected video can be presented only on an overlay plane. Video players
+that support protected content must be implemented with SurfaceView. Software
+running on unprotected hardware cannot read or write the buffer;
+hardware-protected paths must appear on the Hardware Composer overlay (i.e.,
+protected videos will disappear from the display if Hardware Composer switches
+to OpenGL ES composition).</p>
+
+<p>For details on protected content, see
+<a href="/devices/drm.html">DRM</a>.</p>
+
+<h3 id=hardware_composer_hal>Hardware Composer HAL</h3>
+
+<p>The Hardware Composer HAL (HWC) is used by SurfaceFlinger to composite
+surfaces to the screen. It abstracts objects such as overlays and 2D blitters
+and helps offload some work that would normally be done with OpenGL. For details
+on the HWC, see <a href="/devices/graphics/implement-hwc.html">Hardware
+Composer HAL</a>.</p>
+
+<h3 id=vsync>VSYNC</h3>
+
+<p>VSYNC synchronizes certain events to the refresh cycle of the display.
+Applications always start drawing on a VSYNC boundary, and SurfaceFlinger always
+composites on a VSYNC boundary. This eliminates stutters and improves visual
+performance of graphics. For details on VSYNC, see
+<a href="/devices/graphics/implement-vsync.html">Implementing
+VSYNC</a>.</p>
+
+<h3 id=vulkan>Vulkan</h3>
+
+<p>Vulkan is a low-overhead, cross-platform API for high-performance 3D graphics.
+Like OpenGL ES, Vulkan provides tools for creating high-quality, real-time
+graphics in applications. Vulkan advantages include reductions in CPU overhead
+and support for the <a href="https://www.khronos.org/spir">SPIR-V Binary
+Intermediate</a> language. For details on Vulkan, see
+<a href="/devices/graphics/implement-vulkan.html">Implementing
+Vulkan</a>.</p>
+
+<h3 id=virtual_displays>Virtual displays</h3>
+
+<p>Android added platform support for virtual displays in Hardware Composer v1.3.
+The virtual display composition is similar to the physical display: Input
+layers are described in prepare(), SurfaceFlinger conducts GPU composition, and
+layers and GPU framebuffer are provided to Hardware Composer in set(). For
+details on virtual displays, see
+<a href="/devices/graphics/implement-vdisplays.html">Implementing
+Virtual Displays</a>.</p>
+
+<h2 id=testing>Testing</h2>
+
+<p>For benchmarking, use the following flow by phase:</p>
+
+<ul>
+  <li><em>Specification</em>. When initially specifying the device (such as when
+  using immature drivers), use predefined (fixed) clocks and workloads to
+  measure frames per second (fps) rendered. This gives a clear view of hardware
+  capabilities.</li>
+  <li><em>Development</em>. As drivers mature, use a fixed set of user actions
+  to measure the number of visible stutters (janks) in animations.</li>
+  <li><em>Production</em>. When a device is ready for comparison against
+  competitors, increase the workload until stutters increase. Determine if the
+  current clock settings can keep up with the load. This can help you identify
+  where to slow the clocks and reduce power use.</li>
+</ul>
+
+<p>For help deriving device capabilities during the specification phase, use the
+Flatland tool at <code>platform/frameworks/native/cmds/flatland/</code>.
+Flatland relies upon fixed clocks and shows the throughput achievable with
+composition-based workloads. It uses gralloc buffers to simulate multiple window
+scenarios, filling in the window with GL then measuring the compositing.</p>
+
+<p class="note"><strong>Note:</strong> Flatland uses the synchronization
+framework to measure time, so your implementation must support the
+synchronization framework.</p>
+
+  </body>
+</html>

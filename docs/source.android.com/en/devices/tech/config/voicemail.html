@@ -1,0 +1,222 @@
+<html devsite>
+  <head>
+    <title>Visual Voicemail</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>Android 6.0 (Marshmallow) brought an implementation of visual voicemail (VVM)
+support integrated into the Dialer, allowing compatible Carrier VVM services to
+hook into the Dialer with minimal configuration. Visual voicemail lets users
+easily check voicemail without making any phone calls. Users can view a list of
+messages in an inbox-like interface, listen to them in any order, and can
+delete them as desired.</p>
+
+<p>Android 7.0 added the following configuration parameters to visual voicemail:
+<ul>
+  <li>Prefetching of voicemails controlled by <code>KEY_VVM_PREFETCH_BOOLEAN</code>
+  <li>Control of whether a cellular data connection is required by
+      <code>KEY_VVM_CELLULAR_DATA_REQUIRED_BOOLEAN</code>
+  <li>Fetching of voicemail transcriptions
+  <li>Fetching of voicemail quota
+</ul>
+
+<p>This article gives an overview of what is provided, how carriers can integrate
+with it, and some details of the implementation.</p>
+
+<h2 id=visual_voicemail_vvm_client>Visual voicemail (VVM) client</h2>
+
+<p>Android 6.0 and above includes a OMTP VVM client, which (when provided with the correct
+configuration) will connect to Carrier VVM servers and populate visual
+voicemail messages within the Android Open Source Project (AOSP) Dialer. The VVM client:</p>
+
+<ul>
+  <li>Handles the SMS messages used to activate/deactivate/query status of the
+service and the SMS messages used to notify the device of events in the
+subscriber's mailbox
+  <li>Syncs the mailbox with the IMAP server
+  <li>Downloads the voicemails when the user chooses to listen to them
+  <li>Fetches voicemail transcriptions
+  <li>Fetches details of voicemail quota (total mailbox size and occupied size)
+  <li>Integrates into the Dialer for user functionality such as calling back, viewing
+unread messages, deleting messages, etc.
+</ul>
+
+<h2 id=integrate_with_the_vvm_client>Integrate with the VVM client</h2>
+
+<h3 id=implementation>Implementation</h3>
+
+<p>The Carrier must provide a visual voicemail server implementing the
+<a href="http://www.gsma.com/newsroom/wp-content/uploads/2012/07/OMTP_VVM_Specification_1_3.pdf">OMTP
+VVM specifications</a>. The current implementation of the AOSP VVM client supports the core
+features (read/delete voicemails, download/sync/listen) but the additional TUI
+features (password change, voicemail greeting, languages) are not implemented.
+At this time, we only support OMTP version 1.1 and do not use encryption for
+IMAP authentication.</p>
+
+<p>To support transcriptions, carriers must support the transcription attachment
+format (MIME type plain/text) specified in the OMTP 1.3 spec, item 2.1.3.</p>
+
+<p class="note"><strong>Note</strong>: Server-originated SMS messages to the device
+(e.g. STATUS or SYNC) must be data SMS messages.</p>
+
+<h3 id=configuration>Configuration</h3>
+
+<p>In order for a carrier to integrate with the VVM service, the carrier must
+provide configuration details to the platform that the OMTP client can use.
+These parameters are:</p>
+
+<ul>
+  <li>Destination number and port number for SMS
+  <li>The package name of the carrier-provided visual voicemail app (if one is
+provided), so that the platform implementation can be disabled if that package
+is installed
+</ul>
+
+<p>These values are provided through the
+<a href="https://developer.android.com/reference/android/telephony/CarrierConfigManager.html">Carrier Config API</a>.
+This functionality, launched in Android 6.0, allows an application to
+dynamically provide telephony-related configuration to the various platform
+components that need it. In particular the following keys must have values
+defined:</p>
+
+<ul>
+  <li><code>KEY_VVM_DESTINATION_NUMBER_STRING</code>
+  <li><code>KEY_VVM_PORT_NUMBER_INT</code>
+  <li><code>KEY_VVM_TYPE_STRING</code>
+  <li><code>KEY_CARRIER_VVM_PACKAGE_NAME_STRING</code>
+  <li><code>KEY_VVM_PREFETCH_BOOLEAN</code>
+  <li><code>KEY_VVM_CELLULAR_DATA_REQUIRED_BOOLEAN</code>
+</ul>
+
+<p>Please see the <a href="/devices/tech/config/carrier.html">Carrier Configuration</a>
+article for more detail.</p>
+
+<h2 id=implementation>Implementation</h2>
+
+<p>The OMTP VVM client is implemented within <code>packages/services/Telephony</code>,
+in particular within <code>src/com/android/phone/vvm/</code></p>
+
+<h3 id=setup>Setup</h3>
+
+<ol>
+  <li>The VVM client listens for <code>TelephonyIntents#ACTION_SIM_STATE_CHANGED</code>
+      or <code>CarrierConfigManager#ACTION_CARRIER_CONFIG_CHANGED</code>.
+  <li>When a SIM is added that has the right Carrier Config values
+      (<code>KEY_VVM_TYPE_STRING</code> set to <code>TelephonyManager.VVM_TYPE_OMTP</code>
+      or <code>TelephonyManager.VVM_TYPE_CVVM</code>), the VVM client sends an
+      ACTIVATE SMS to the value specified in <code>KEY_VVM_DESTINATION_NUMBER_STRING</code>.
+  <li>The server activates the visual voicemail service and sends the OMTP
+      credentials via STATUS sms. When the VVM client receives the STATUS sms, it
+      registers the voicemail source and displays the voicemail tab on the device.
+  <li>The OMTP credentials are saved locally and the device begins a full sync, as
+      described below.
+</ol>
+
+<h3 id=syncing>Syncing</h3>
+
+<p>There are a variety of ways that the VVM client can sync with the carrier
+server and vice versa.</p>
+
+<ul>
+  <li><strong>Full syncs</strong> occur upon initial download. The VVM client
+      fetches voicemail metadata like date and time; origin number; duration;
+      voicemail transcriptions, if available; and audio data if
+      <code>KEY_VVM_PREFETCH_BOOLEAN</code> is True. Full syncs can be
+      triggered by:
+    <ul>
+      <li>Inserting a new SIM
+      <li>Rebooting the device
+      <li>Coming back in service
+      <li>Receiving the <code>VoicemailContract.ACTION_SYNC_VOICEMAIL</code> broadcast
+    </ul>
+  <li><strong>Upload sync</strong> happens when a user interacts with a voicemail
+      to read or delete it. Upload syncs result in the server changing its data to
+      match the data on the device. For example, if the user reads a voicemail,
+      it's marked as read on the server; if a user deletes a voicemail, it's
+      deleted on the server.
+  <li><strong>Download sync</strong> occurs when the VVM client receives a "MBU"
+      (mailbox update) SYNC sms from the carrier. A SYNC message contains the
+      metadata for a new message so that it can be stored in the voicemail
+      content provider.
+</ul>
+
+<p class="note"><strong>Note</strong>: The voicemail inbox quota values are
+retrieved during every sync.</p>
+
+<h3 id=voicemail_download>Voicemail download</h3>
+
+<p>When a user presses play to listen to a voicemail, the corresponding audio file
+is downloaded. If the user chooses to listen to the voicemail, the Dialer can
+broadcast <code>VoicemailContract.ACTION_FETCH_VOICEMAIL</code>, which the
+voicemail client will receive, initiate the download of the
+content, and update the record in the platform voicemail content provider.</p>
+
+<h3 id=disabling_vvm>Disabling VVM</h3>
+
+<p>The VVM service can be disabled or deactivated by user interaction, removal of
+a valid SIM, or replacement by a carrier VVM app. <em>Disabled</em> means that the
+local device no longer displays visual voicemail. <em>Deactivated</em> means that
+the service is turned off for the subscriber. User interaction can
+deactivate the service, SIM removal temporarily disables the service because
+it's no longer present, and carrier VVM replacement disables the AOSP VVM client.</p>
+
+<h4 id=user_interaction>User interaction</h4>
+
+<p>The user may manually enable or disable visual voicemail. If a user disables
+visual voicemail, they are also deactivating their service. When they disable
+visual voicemail, a DEACTIVATE sms is sent, the voicemail source is
+unregistered locally, and voicemail tab disappears. If they re-enable visual
+voicemail, their service is reactivated as well.</p>
+
+<h4 id=sim_removal>SIM removal</h4>
+
+<p>If there are changes to the device's SIM state (<code>ACTION_SIM_STATE_CHANGED</code>)
+or Carrier Config values (<code>ACTION_CARRIER_CONFIG_CHANGED</code>), and
+a valid configuration for the given SIM no longer exists, then the
+voicemail source is unregistered locally and the voicemail tab disappears. If
+the SIM is replaced, VVM will be re-enabled.</p>
+
+<h4 id=replaced_by_carrier_vvm>Replaced by carrier VVM</h4>
+
+<p>A carrier visual voicemail app, if installed on the device, can disable the
+AOSP VVM client. This is achieved by checking if a package with a name
+matching the <code>KEY_CARRIER_VVM_PACKAGE_NAME_STRING</code> parameter is installed.</p>
+
+<p>The VVM client can still be enabled through user interaction.</p>
+
+<h2 id=testing>Testing</h2>
+
+<p>There is an existing (since Android 4.0) set of CTS tests for the
+VoicemailProvider APIs that allow an app to insert/query/delete voicemails into
+the platform. These are the same APIs that VVM uses to add/delete voicemails so
+that any Dialer app can display them in the UI.</p>
+
+<p>To test your configuration application is passing the OMTP configuration
+correctly you can test your code with:</p>
+
+<ul>
+  <li>A SIM containing a valid certificate signature
+  <li>A device running Android 6.0 with an unmodified version of the AOSP phone framework
+</ul>
+
+  </body>
+</html>

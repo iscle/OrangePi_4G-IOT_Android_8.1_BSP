@@ -1,0 +1,151 @@
+<html devsite>
+  <head>
+    <title>Data Saver mode</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>
+Mobile data use is costly and even more so where data plan costs are not
+affordable by all. Android users need the ability to reduce data use or block it
+from apps altogether. The Data Saver feature in the Android 7.0 release provides
+this functionality to the user.
+</p>
+
+<p>
+The <a href="https://developer.android.com/preview/features/data-saver.html">Data Saver</a>
+feature can be turned on or off by the user. App developers
+should use a new API to check if Data Saver mode is on. If it is on, the app
+developers can handle the situation gracefully by tuning their applications for
+low- or no-data access.
+</p>
+
+<p>
+End users benefit as they will be able to control which apps can access data in
+the background and which can access data only while in the foreground. This
+ensures desired background data exchange when Data Saver is on per user control.
+</p>
+
+<h2 id="implementation">Implementation</h2>
+
+<p>
+Since the Data Saver is a feature in the platform, device manufacturers gain its
+functionality by default with the N release.
+</p>
+
+<h3 id="settings-interface">Settings interface</h3>
+
+<p>
+A default Data Saver settings user interface is supplied in the Android Open
+Source Project (AOSP). See the screenshots below for examples.
+</p>
+
+<p>
+These screenshots show the Data Saver mode in use.
+</p>
+
+<img src="/devices/tech/connect/images/data-saver-use.png" width="397" alt="Toggling Data Saver off/on" />
+<p class="img-caption">
+  <strong>Figure 1.</strong> Toggling Data Saver off/on
+  </p>
+
+<img src="/devices/tech/connect/images/data-battery-saver.png" width="641" alt="Battery saver and Data Saver are on" />
+<p class="img-caption">
+  <strong>Figure 2.</strong> When both battery saver and Data Saver are on
+  </p>
+
+<img src="/devices/tech/connect/images/data-saver-app.png" width="376" alt="App-specific data usage screen" />
+<p class="img-caption">
+  <strong>Figure 3.</strong> App-specific data usage screen: Settings > Apps > Data usage
+  </p>
+
+<img src="/devices/tech/connect/images/data-saver-quick-settings.png" width="446" alt="Data saver in the Quick Settings" />
+<p class="img-caption">
+  <strong>Figure 4.</strong> Data saver states on the Quick Settings menu
+  </p>
+
+<h3 id="apps">Apps</h3>
+
+<p class="caution"><strong>Important</strong>: Device implementers should not whitelist apps.
+Even if they do, users may remove them. Including other apps forces users to decide on which to
+apply Data Saver.</p>
+
+<p>
+All app developers must act to implement Data Saver, including OEMs and
+carriers with preloaded apps. See
+<a href="https://developer.android.com/preview/features/data-saver.html">Data
+Saver on developer.android.com</a> for app developer instructions on detecting
+and monitoring Data Saver states. See the sections below for additional details
+helpful to partners.  </p>
+
+<p>
+To optimize for Data Saver mode, apps should:
+</p>
+
+<ul>
+  <li>Remove unnecessary images
+  <li>Use lower resolution for remaining images
+  <li>Use lower bitrate video
+  <li>Trigger existing “lite” experiences
+  <li>Compress data
+  <li>Respect metered vs. unmetered network status even when Data Saver is
+off
+</ul>
+
+<p>
+Conversely, to work well with Data Saver, apps should not:
+</p>
+
+<ul>
+  <li>Autoplay videos
+  <li>Prefetch content/attachments
+  <li>Download updates / code
+  <li>Ask to be whitelisted unless background data is truly part of core
+  functionality
+  <li>Treat whitelisting as a license to use more bandwidth
+</ul>
+
+<h2 id="validation">Validation</h2>
+
+<p>
+Implementers can ensure their version of the feature works as intended by
+running the following CTS test:
+</p>
+
+<pre class="devsite-click-to-copy">
+com.android.cts.net.HostsideRestrictBackgroundNetworkTests
+</pre>
+
+<p>
+In addition, <code>adb</code> commands can be used to conduct tests manually by
+first running this command to see all available options:</p>
+<pre class="devsite-terminal devsite-click-to-copy">
+adb shell cmd netpolicy
+</pre>
+
+<p>
+For example, this command returns the UIDs of the whitelisted apps:</p>
+<pre class="devsite-terminal devsite-click-to-copy">
+adb shell cmd netpolicy list restrict-background-whitelist
+</pre>
+
+  </body>
+</html>

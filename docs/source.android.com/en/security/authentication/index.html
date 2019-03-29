@@ -1,0 +1,253 @@
+<html devsite>
+  <head>
+    <title>Authentication</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<h2 id=overview>Overview</h2>
+
+<p>Android 6.0 introduces the concept of user-authentication-gated cryptographic
+keys. To achieve this, two key components need to work together.
+First is the cryptographic key storage and service provider, which stores
+cryptographic keys and provides standard crypto routines on top of them. Second
+is any number of user authenticators that may attest to the user's presence
+and/or successful authentication.</p>
+
+<p>The cryptographic key storage in Android is provided by the keystore service and Keymaster.
+(Also see information about
+the <a href="https://developer.android.com/training/articles/keystore.html">Android Keystore system</a>,
+at the framework level, which is backed by the keystore service.) For Android 6.0,
+the two supported authentication components are Gatekeeper (for
+PIN/pattern/password authentication) and Fingerprint (for fingerprint
+authentication). These components communicate their authentication
+state with the keystore service via an authenticated channel.</p>
+
+<ul>
+  <li><strong>The <a href="/security/keystore/index.html">hardware-backed Keystore</a>.</strong>
+  Cryptographic services, including hardware-backed cryptography for key storage,
+  which might include a Trusted Execution Environment (TEE).</li>
+  <li><strong><a href="gatekeeper.html">Gatekeeper</a>.</strong> Components for PIN, pattern, and password authentication.</li>
+  <li><strong><a href="fingerprint-hal.html">Fingerprint</a>.</strong> Components for fingerprint authentication.</li>
+</ul>
+
+<h2 id=architecture>Architecture</h2>
+
+<p>The Gatekeeper and Fingerprint components work with Keystore and other
+components to support the use of hardware-backed <a href="#authentication_token_format">authentication tokens</a> (referred to below as "AuthTokens").</p>
+
+<h3 id=enrollment>Enrollment</h3>
+
+<p>Upon first boot of the device after a factory reset, all authenticators are prepared to receive
+credential enrollments from the user.</p>
+
+<p>The user must initially enroll a PIN/pattern/password with Gatekeeper. This
+initial enrollment creates a randomly generated, 64-bit User SID (user secure
+identifier, described further below) that serves as an identifier for the user
+and as a binding token for the user's cryptographic material.
+This User SID is cryptographically bound to the user's password.
+As detailed below, successful authentications to Gatekeeper result in AuthTokens that contain the User SID
+for that password.</p>
+
+<p>When a user wants to change their credential, they must present their existing
+credential. If the existing credential is verified successfully, the User SID
+associated with the existing credential is transferred to the new credential.
+This allows the user to keep accessing their keys after changing their
+credential. If a user does not present their existing credential, the new one
+is enrolled with a fully random User SID. The user can access the device but
+keys created under the old User SID are permanently lost. This is known as an
+"untrusted enroll."</p>
+
+<p>Note that an untrusted enroll will not be allowed under normal circumstances by
+the Android framework, so most users won't ever see this functionality.
+However, forcible password resets either by a device administrator or an
+attacker may cause this to occur.</p>
+
+<h3 id=authentication>Authentication</h3>
+
+<p>Now that the user has set up a credential and received a User SID, they may
+proceed to start authentication.</p>
+
+<p>In the diagram below, authentication starts when a user provides a PIN,
+pattern, password, or fingerprint. All TEE components share a secret key which
+they use to authenticate each other's messages.</p>
+
+<img src="../images/authentication-flow.png" alt="Authentication flow" id="figure1" />
+<p class="img-caption"><strong>Figure 1.</strong> Authentication flow</p>
+
+<p>The numbers in the following steps correspond to the numbers in the diagram
+above, and include reference to both the Android OS and the TEE OS: </p>
+
+<ol>
+  <li>A user provides a PIN, pattern, password, or fingerprint. The
+<code>LockSettingsService</code> or <code>FingerprintService</code> make a request via Binder to the
+Gatekeeperd or fingerprintd daemon in the Android OS. Note that fingerprint
+authentication occurs asynchronously after the fingerprint request is sent.
+  <li>This step involves <strong>either</strong> Gatekeeperd (option 1 below)
+  <strong>or</strong> fingerprintd (option 2 below),
+  depending on whether a pin/pattern/password, or fingerprint, is provided.
+  <ul>
+    <li>The Gatekeeperd daemon sends a pin, pattern, or password hash (received in step
+1) to its counterpart (Gatekeeper) in the TEE. If authentication in the TEE is
+successful, Gatekeeper in the TEE sends an AuthToken containing the
+corresponding User SID, signed with the AuthToken HMAC key, to its
+counterpart in the Android OS.
+    <li>Alternatively, the fingerprintd daemon, which listens for fingerprint events,
+sends the data (received in step 1) to its counterpart (Fingerprint) in the
+TEE. If authentication in the TEE is successful, Fingerprint in the TEE sends
+an AuthToken, signed with the AuthToken HMAC key, to its counterpart in the Android OS.
+  </ul>
+  <li>The Gatekeeperd or fingerprintd daemon receives a signed AuthToken and passes
+the AuthToken to the keystore service via an extension to
+the keystore service's Binder interface. Additionally, Gatekeeperd notifies the keystore service when
+the device is re-locked and when the device password changes.
+  <li>The keystore service passes to Keymaster the AuthTokens received from Gatekeeperd and
+fingerprintd, verifying the AuthTokens with the key shared with the Gatekeeper
+and Fingerprint trustlets. Keymaster trusts the timestamp in the token as the
+last authentication time and bases a key release decision (to allow an app to
+use the key) on the timestamp.
+</ol>
+
+<p class="note"><strong>Note:</strong> AuthTokens are invalidated whenever a device reboots.</p>
+
+<h2 id=authentication_token_format>Authentication token format</h2>
+
+<p>The AuthToken format described in the
+<a href="https://android.googlesource.com/platform/hardware/libhardware/+/master/include/hardware/hw_auth_token.h"><code>hw_auth_token.h</code></a> file is 
+necessary for token sharing and compatibility across languages and
+components. See the following file:</p>
+<pre>
+hardware/libhardware/include/hardware/hw_auth_token.h
+</pre>
+
+<p>A simple serialization protocol with the required fields is defined in the
+table below. The fields are fixed size.</p>
+
+<p>Field descriptions are below the table.</p>
+<table>
+ <tr>
+    <th><strong>Field</strong></th>
+    <th><strong>Type</strong></th>
+    <th><strong>Required or Optional</strong></th>
+ </tr>
+ <tr>
+    <td>AuthToken Version</td>
+    <td>1 byte</td>
+    <td>Required</td>
+ </tr>
+ <tr>
+    <td>Challenge</td>
+    <td>64-bit unsigned integer</td>
+    <td>Optional</td>
+ </tr>
+ <tr>
+    <td>User SID</td>
+    <td>64-bit unsigned integer</td>
+    <td>Required</td>
+ </tr>
+ <tr>
+    <td>Authenticator ID</td>
+    <td>64-bit unsigned integer in network order</td>
+    <td>Optional</td>
+ </tr>
+ <tr>
+    <td>Authenticator type</td>
+    <td>32-bit unsigned integer in network order</td>
+    <td>Required</td>
+ </tr>
+ <tr>
+    <td>Timestamp</td>
+    <td>64-bit unsigned integer in network order</td>
+    <td>Required</td>
+ </tr>
+ <tr>
+    <td>AuthToken HMAC key (SHA-256)</td>
+    <td>256-bit blob</td>
+    <td>Required</td>
+ </tr>
+</table>
+
+<h3 id=field_descriptions>Field descriptions </h3>
+
+<p>This section describes the fields of the AuthToken table above.</p>
+
+<p><strong>AuthToken Version:</strong> Group tag for all fields below.</p>
+
+<p><strong>Challenge:</strong> A random integer to prevent replay attacks. Usually the ID of a requested
+crypto operation. Currently used by transactional fingerprint authorizations.
+If present, the AuthToken is valid only for crypto operations containing the
+same challenge.</p>
+
+<p><strong>User SID</strong>: Non-repeating user identifier tied cryptographically to all keys associated
+with device authentication. For more information, see the Gatekeeper page.</p>
+
+<p><strong>Authenticator ID (ASID)</strong>: Identifier used to bind to a specific authenticator policy. All
+authenticators have their own value of ASID that they can change according to
+their own requirements.</p>
+
+<p><strong>Authenticator Type</strong>: Either Gatekeeper or Fingerprint, as follows:</p>
+<table>
+ <tr>
+    <th><strong>Authenticator Type</strong></th>
+    <th><strong>Authenticator Name</strong></th>
+ </tr>
+ <tr>
+    <td>0x00</td>
+    <td>Gatekeeper</td>
+ </tr>
+ <tr>
+    <td>0x01</td>
+    <td>Fingerprint</td>
+ </tr>
+</table>
+
+<p><strong>Timestamp</strong>: Time (in milliseconds) since the most recent system boot.</p>
+
+<p><strong>AuthToken HMAC key</strong>: Keyed SHA-256 MAC of all fields except the HMAC field.</p>
+
+<h2 id=device_boot_flow>Device boot flow</h2>
+
+<p>On every boot of a device, the AuthToken HMAC key must be generated and shared
+with all TEE components (Gatekeeper, Fingerprint, and Keymaster). Thus, the HMAC key
+must be randomly generated every time the device reboots, for added protection against replay attacks.</p>
+
+<p>The protocol for sharing this HMAC key with all components is a
+platform-dependent implementation feature. The key must <strong>never</strong>
+be made available outside the TEE. Thus, if a TEE OS lacks an
+internal inter-process communication (IPC) mechanism,
+and the TEE needs to transfer the data through the untrusted OS, the transfer
+must be done via a secure key exchange protocol.</p>
+
+<p>The <a href="/security/trusty/index.html">Trusty</a> operating system,
+which runs next to Android, is an example of a
+TEE, but other TEEs can be used instead. Trusty uses an internal IPC system to
+communicate directly between Keymaster and Fingerprint or Gatekeeper. The HMAC
+key is kept solely in Keymaster. Fingerprint and Gatekeeper request the key
+from Keymaster for each use, and do not persist or cache the value.</p>
+
+<p>Note that no communication happens between applets in the TEE because some TEEs
+are lacking in IPC infrastructure. This also
+permits the keystore service to quickly deny requests that are bound to fail as it has
+knowledge of the authentication table in the system, saving a potentially
+costly IPC into the TEE.</p>
+
+  </body>
+</html>

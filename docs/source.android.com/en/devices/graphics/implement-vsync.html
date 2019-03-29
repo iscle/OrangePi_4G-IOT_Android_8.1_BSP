@@ -1,0 +1,399 @@
+<html devsite>
+  <head>
+    <title>Implementing VSYNC</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+
+<p>VSYNC synchronizes certain events to the refresh cycle of the display.
+Applications always start drawing on a VSYNC boundary, and SurfaceFlinger
+always composites on a VSYNC boundary. This eliminates stutters and improves
+visual performance of graphics.</p>
+
+<p>The Hardware Composer (HWC) has a function pointer indicating the function
+to implement for VSYNC:</p>
+
+<pre class="prettyprint">
+int (waitForVsync*) (int64_t *timestamp)
+</pre>
+
+<p>This function blocks until a VSYNC occurs and returns the timestamp of the
+actual VSYNC. A message must be sent every time VSYNC occurs. A client can
+receive a VSYNC timestamp once at specified intervals or continuously at
+intervals of 1. You must implement VSYNC with a maximum 1 ms lag (0.5 ms or less
+is recommended); timestamps returned must be extremely accurate.</p>
+
+<h2 id=explicit_synchronization>Explicit synchronization</h2>
+
+<p>Explicit synchronization is required and provides a mechanism for Gralloc
+buffers to be acquired and released in a synchronized way. Explicit
+synchronization allows producers and consumers of graphics buffers to signal
+when they are done with a buffer. This allows Android to asynchronously queue
+buffers to be read or written with the certainty that another consumer or
+producer does not currently need them. For details, see
+<a href="/devices/graphics/index.html#synchronization_framework">Synchronization
+framework</a>.</p>
+
+<p>The benefits of explicit synchronization include less behavior variation
+between devices, better debugging support, and improved testing metrics. For
+instance, the sync framework output readily identifies problem areas and root
+causes, and centralized SurfaceFlinger presentation timestamps show when events
+occur in the normal flow of the system.</p>
+
+<p>This communication is facilitated by the use of synchronization fences,
+which are required when requesting a buffer for consuming or producing. The
+synchronization framework consists of three main building blocks:
+<code>sync_timeline</code>, <code>sync_pt</code>, and <code>sync_fence</code>.</p>
+
+<h3 id=sync_timeline>sync_timeline</h3>
+
+<p>A <code>sync_timeline</code> is a monotonically increasing timeline that
+should be implemented for each driver instance, such as a GL context, display
+controller, or 2D blitter. This is essentially a counter of jobs submitted to
+the kernel for a particular piece of hardware. It provides guarantees about the
+order of operations and allows hardware-specific implementations.</p>
+
+<p>The sync_timeline is offered as a CPU-only reference implementation called
+<code>sw_sync</code> (software sync). If possible, use this instead of a
+<code>sync_timeline</code> to save resources and avoid complexity. If you’re not
+employing a hardware resource, <code>sw_sync</code> should be sufficient.</p>
+
+<p>If you must implement a <code>sync_timeline</code>, use the
+<code>sw_sync</code> driver as a starting point. Follow these guidelines:</p>
+
+<ul>
+<li>Provide useful names for all drivers, timelines, and fences. This simplifies
+debugging.</li>
+<li>Implement <code>timeline_value_str</code> and <code>pt_value_str</code>
+operators in your timelines to make debugging output more readable.</li>
+<li>If you want your userspace libraries (such as the GL library) to have access
+to the private data of your timelines, implement the fill driver_data operator.
+This lets you get information about the immutable sync_fence and
+<code>sync_pts</code> so you can build command lines based upon them.</li>
+</ul>
+
+<p>When implementing a <code>sync_timeline</code>, <strong>do not</strong>:</p>
+
+<ul>
+<li>Base it on any real view of time, such as when a wall clock or other piece
+of work might finish. It is better to create an abstract timeline that you can
+control.</li>
+<li>Allow userspace to explicitly create or signal a fence. This can result in
+one piece of the user pipeline creating a denial-of-service attack that halts
+all functionality. This is because the userspace cannot make promises on behalf
+of the kernel.</li>
+<li>Access <code>sync_timeline</code>, <code>sync_pt</code>, or
+<code>sync_fence</code> elements explicitly, as the API should provide all
+required functions.</li>
+</ul>
+
+<h3 id=sync_pt>sync_pt</h3>
+
+<p>A <code>sync_pt</code> is a single value or point on a sync_timeline. A point
+has three states: active, signaled, and error. Points start in the active state
+and transition to the signaled or error states. For instance, when a buffer is
+no longer needed by an image consumer, this sync_point is signaled so image
+producers know it is okay to write into the buffer again.</p>
+
+<h3 id=sync_fence>sync_fence</h3>
+
+<p>A <code>sync_fence</code> is a collection of <code>sync_pts</code> that often
+have different <code>sync_timeline</code> parents (such as for the display
+controller and GPU). These are the main primitives over which drivers and
+userspace communicate their dependencies. A fence is a promise from the kernel
+given upon accepting work that has been queued and assures completion in a
+finite amount of time.</p>
+
+<p>This allows multiple consumers or producers to signal they are using a
+buffer and to allow this information to be communicated with one function
+parameter. Fences are backed by a file descriptor and can be passed from
+kernel-space to user-space. For instance, a fence can contain two
+<code>sync_points</code> that signify when two separate image consumers are done
+reading a buffer. When the fence is signaled, the image producers know both
+consumers are done consuming.</p>
+
+<p>Fences, like <code>sync_pts</code>, start active and then change state based
+upon the state of their points. If all <code>sync_pts</code> become signaled,
+the <code>sync_fence</code> becomes signaled. If one <code>sync_pt</code> falls
+into an error state, the entire sync_fence has an error state.</p>
+
+<p>Membership in the <code>sync_fence</code> is immutable after the fence is
+created. As a <code>sync_pt</code> can be in only one fence, it is included as a
+copy. Even if two points have the same value, there will be two copies of the
+<code>sync_pt</code> in the fence. To get more than one point in a fence, a
+merge operation is conducted where points from two distinct fences are added to
+a third fence. If one of those points was signaled in the originating fence and
+the other was not, the third fence will also not be in a signaled state.</p>
+
+<p>To implement explicit synchronization, provide the following:</p>
+
+<ul>
+<li>A kernel-space driver that implements a synchronization timeline for a
+particular piece of hardware. Drivers that need to be fence-aware are generally
+anything that accesses or communicates with the Hardware Composer. Key files
+include:
+<ul>
+<li>Core implementation:
+<ul>
+ <li><code>kernel/common/include/linux/sync.h</code></li>
+ <li><code>kernel/common/drivers/base/sync.c</code></li>
+</ul></li>
+<li><code>sw_sync</code>:
+<ul>
+ <li><code>kernel/common/include/linux/sw_sync.h</code></li>
+ <li><code>kernel/common/drivers/base/sw_sync.c</code></li>
+</ul></li>
+<li>Documentation at <code>kernel/common//Documentation/sync.txt</code>.</li>
+<li>Library to communicate with the kernel-space in
+ <code>platform/system/core/libsync</code>.</li>
+</ul></li>
+<li>A Hardware Composer HAL module (v1.3 or higher) that supports the new
+synchronization functionality. You must provide the appropriate synchronization
+fences as parameters to the <code>set()</code> and <code>prepare()</code>
+functions in the HAL.</li>
+<li>Two fence-related GL extensions (<code>EGL_ANDROID_native_fence_sync</code>
+and <code>EGL_ANDROID_wait_sync</code>) and fence support in your graphics
+drivers.</li>
+</ul>
+
+<p>For example, to use the API supporting the synchronization function, you
+might develop a display driver that has a display buffer function. Before the
+synchronization framework existed, this function would receive dma-bufs, put
+those buffers on the display, and block while the buffer is visible. For
+example:</p>
+
+<pre class="prettyprint">
+/*
+ * assumes buf is ready to be displayed.  returns when buffer is no longer on
+ * screen.
+ */
+void display_buffer(struct dma_buf *buf);
+</pre>
+
+<p>With the synchronization framework, the API call is slightly more complex.
+While putting a buffer on display, you associate it with a fence that says when
+the buffer will be ready. You can queue up the work and initiate after the fence
+clears.</p>
+
+<p>In this manner, you are not blocking anything. You immediately return your
+own fence, which is a guarantee of when the buffer will be off of the display.
+As you queue up buffers, the kernel will list dependencies with the
+synchronization framework:</p>
+
+<pre class="prettyprint">
+/*
+ * will display buf when fence is signaled.  returns immediately with a fence
+ * that will signal when buf is no longer displayed.
+ */
+struct sync_fence* display_buffer(struct dma_buf *buf, struct sync_fence
+*fence);
+</pre>
+
+
+<h2 id=sync_integration>Sync integration</h2>
+<p>This section explains how to integrate the low-level sync framework with
+different parts of the Android framework and the drivers that must communicate
+with one another.</p>
+
+<h3 id=integration_conventions>Integration conventions</h3>
+
+<p>The Android HAL interfaces for graphics follow consistent conventions so
+when file descriptors are passed across a HAL interface, ownership of the file
+descriptor is always transferred. This means:</p>
+
+<ul>
+<li>If you receive a fence file descriptor from the sync framework, you must
+close it.</li>
+<li>If you return a fence file descriptor to the sync framework, the framework
+will close it.</li>
+<li>To continue using the fence file descriptor, you must duplicate the
+descriptor.</li>
+</ul>
+
+<p>Every time a fence passes through BufferQueue (such as for a window that
+passes a fence to BufferQueue saying when its new contents will be ready) the
+fence object is renamed. Since kernel fence support allows fences to have
+strings for names, the sync framework uses the window name and buffer index
+that is being queued to name the fence (i.e., <code>SurfaceView:0</code>). This
+is helpful in debugging to identify the source of a deadlock as the names appear
+in the output of <code>/d/sync</code> and bug reports.</p>
+
+<h3 id=anativewindow_integration>ANativeWindow integration</h3>
+
+<p>ANativeWindow is fence aware and <code>dequeueBuffer</code>,
+<code>queueBuffer</code>, and <code>cancelBuffer</code> have fence parameters.
+</p>
+
+<h3 id=opengl_es_integration>OpenGL ES integration</h3>
+
+<p>OpenGL ES sync integration relies upon two EGL extensions:</p>
+
+<ul>
+<li><code>EGL_ANDROID_native_fence_sync</code>. Provides a way to either
+wrap or create native Android fence file descriptors in EGLSyncKHR objects.</li>
+<li><code>EGL_ANDROID_wait_sync</code>. Allows GPU-side stalls rather than in
+CPU, making the GPU wait for an EGLSyncKHR. This is essentially the same as the
+<code>EGL_KHR_wait_sync</code> extension (refer to that specification for
+details).</li>
+</ul>
+
+<p>These extensions can be used independently and are controlled by a compile
+flag in libgui. To use them, first implement the
+<code>EGL_ANDROID_native_fence_sync</code> extension along with the associated
+kernel support. Next, add a ANativeWindow support for fences to your driver then
+turn on support in libgui to make use of the
+<code>EGL_ANDROID_native_fence_sync</code> extension.</p>
+
+<p>In a second pass, enable the <code>EGL_ANDROID_wait_sync</code>
+extension in your driver and turn it on separately. The
+<code>EGL_ANDROID_native_fence_sync</code> extension consists of a distinct
+native fence EGLSync object type so extensions that apply to existing EGLSync
+object types don’t necessarily apply to <code>EGL_ANDROID_native_fence</code>
+objects to avoid unwanted interactions.</p>
+
+<p>The EGL_ANDROID_native_fence_sync extension employs a corresponding native
+fence file descriptor attribute that can be set only at creation time and
+cannot be directly queried onward from an existing sync object. This attribute
+can be set to one of two modes:</p>
+
+<ul>
+<li><em>A valid fence file descriptor</em>. Wraps an existing native Android
+fence file descriptor in an EGLSyncKHR object.</li>
+<li><em>-1</em>. Creates a native Android fence file descriptor from an
+EGLSyncKHR object.</li>
+</ul>
+
+<p>The DupNativeFenceFD function call is used to extract the EGLSyncKHR object
+from the native Android fence file descriptor. This has the same result as
+querying the attribute that was set but adheres to the convention that the
+recipient closes the fence (hence the duplicate operation). Finally, destroying
+the EGLSync object should close the internal fence attribute.</p>
+
+<h3 id=hardware_composer_integration>Hardware Composer integration</h3>
+
+<p>The Hardware Composer handles three types of sync fences:</p>
+
+<ul>
+<li><em>Acquire fence</em>. One per layer, set before calling
+<code>HWC::set</code>. It signals when Hardware Composer may read the buffer.</li>
+<li><em>Release fence</em>. One per layer, filled in by the driver in
+<code>HWC::set</code>. It signals when Hardware Composer is done reading the
+buffer so the framework can start using that buffer again for that particular
+layer.</li>
+<li><em>Retire fence</em>. One per the entire frame, filled in by the driver
+each time <code>HWC::set</code> is called. This covers all layers for the set
+operation and signals to the framework when all effects of this set operation
+have completed. The retire fence signals when the next set operation takes place
+on the screen.</li>
+</ul>
+
+<p>The retire fence can be used to determine how long each frame appears on the
+screen. This is useful in identifying the location and source of delays, such
+as a stuttering animation.</p>
+
+<h2 id=vsync_offset>VSYNC offset</h2>
+
+<p>Application and SurfaceFlinger render loops should be synchronized to the
+hardware VSYNC. On a VSYNC event, the display begins showing frame N while
+SurfaceFlinger begins compositing windows for frame N+1. The app handles
+pending input and generates frame N+2.</p>
+
+<p>Synchronizing with VSYNC delivers consistent latency. It reduces errors in
+apps and SurfaceFlinger and the drifting of displays in and out of phase with
+each other. This, however, does assume application and SurfaceFlinger per-frame
+times don’t vary widely. Nevertheless, the latency is at least two frames.</p>
+
+<p>To remedy this, you can employ VSYNC offsets to reduce the input-to-display
+latency by making application and composition signal relative to hardware
+VSYNC. This is possible because application plus composition usually takes less
+than 33 ms.</p>
+
+<p>The result of VSYNC offset is three signals with same period, offset
+phase:</p>
+
+<ul>
+<li><code>HW_VSYNC_0</code>. Display begins showing next frame.</li>
+<li><code>VSYNC</code>. App reads input and generates next frame.</li>
+<li><code>SF VSYNC</code>. SurfaceFlinger begins compositing for next frame.</li>
+</ul>
+
+<p>With VSYNC offset, SurfaceFlinger receives the buffer and composites the
+frame, while the application processes the input and renders the frame, all
+within a single frame of time.</p>
+
+<p class="note"><strong>Note:</strong> VSYNC offsets reduce the time available
+for app and composition and therefore provide a greater chance for error.</p>
+
+<h3 id=dispsync>DispSync</h3>
+
+<p>DispSync maintains a model of the periodic hardware-based VSYNC events of a
+display and uses that model to execute periodic callbacks at specific phase
+offsets from the hardware VSYNC events.</p>
+
+<p>DispSync is essentially a software phase lock loop (PLL) that generates the
+VSYNC and SF VSYNC signals used by Choreographer and SurfaceFlinger, even if
+not offset from hardware VSYNC.</p>
+
+<img src="images/dispsync.png" alt="DispSync flow">
+
+<p class="img-caption"><strong>Figure 1.</strong> DispSync flow</p>
+
+<p>DispSync has the following qualities:</p>
+
+<ul>
+<li><em>Reference</em>. HW_VSYNC_0.</li>
+<li><em>Output</em>. VSYNC and SF VSYNC.</li>
+<li><em>Feedback</em>. Retire fence signal timestamps from Hardware Composer.
+</li>
+</ul>
+
+<h3 id=vsync_retire_offset>VSYNC/Retire offset</h3>
+
+<p>The signal timestamp of retire fences must match HW VSYNC even on devices
+that don’t use the offset phase. Otherwise, errors appear to have greater
+severity than reality. Smart panels often have a delta: Retire fence is the end
+of direct memory access (DMA) to display memory, but the actual display switch
+and HW VSYNC is some time later.</p>
+
+<p><code>PRESENT_TIME_OFFSET_FROM_VSYNC_NS</code> is set in the device’s
+BoardConfig.mk make file. It is based upon the display controller and panel
+characteristics. Time from retire fence timestamp to HW VSYNC signal is
+measured in nanoseconds.</p>
+
+<h3 id=vsync_and_sf_vsync_offsets>VSYNC and SF_VSYNC offsets</h3>
+
+<p>The <code>VSYNC_EVENT_PHASE_OFFSET_NS</code> and
+<code>SF_VSYNC_EVENT_PHASE_OFFSET_NS</code> are set conservatively based on
+high-load use cases, such as partial GPU composition during window transition
+or Chrome scrolling through a webpage containing animations. These offsets
+allow for long application render time and long GPU composition time.</p>
+
+<p>More than a millisecond or two of latency is noticeable. We recommend
+integrating thorough automated error testing to minimize latency without
+significantly increasing error counts.</p>
+
+<p class="note"><strong>Note:</strong> Theses offsets are also configured in the
+device’s BoardConfig.mk file. Both settings are offset in nanoseconds after
+HW_VSYNC_0, default to zero (if not set), and can be negative.</p>
+
+  </body>
+</html>

@@ -1,0 +1,536 @@
+<html devsite>
+  <head>
+    <title>Camera HAL Testing Checklist</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>This document lists all tests available for evaluating the Android camera
+hardware abstraction layer (HAL). It is intended for OEMs and application
+processor (AP) vendors so they may ensure proper implementation of the camera
+HAL with minimum defects. Although this is a voluntary addition to the Android
+Compatibility Test Suite (CTS), it greatly increases camera test coverage and
+will certainly identify potential bugs.</p>
+
+<p>By passing these tests, original equipment manufacturers (OEM) validate whether
+they have properly integrated the latest Android camera hardware abstraction
+layer (HAL) 3.2 interfaces. When conforming with all items in the checklist, a
+device implementation may be considered <em>full</em> with respect to the new Android
+Camera HAL interfaces. This will in turn enable a device to properly support
+the new <code>android.hardware.camera2</code> package that camera apps build upon.</p>
+
+<h2 id=camera_hal_3_2_specification>[  ] 1. Camera HAL 3.2 specification</h2>
+
+<p>The Android Camera HAL 3.2 specification is the authoritative source of
+information on what devices must satisfy; the document here provides a summary
+of all tests that can be used as a checklist. Camera HAL implementers (e.g. AP
+vendors) should go through the HAL 3.2 specification line-by-line and ensure
+their devices conform to it.</p>
+
+<p>The current HAL 3.2 specification is defined in these files within the L
+generic Android Platform Development Kit (PDK):</p>
+
+<ul>
+  <li><em>Camera HAL 3.x interface and spec</em>: <code><a
+href="https://android.googlesource.com/platform/hardware/libhardware/+/master/include/hardware/camera3.h">hardware/libhardware/include/hardware/camera3.h</a></code>,
+<code><a
+href="https://android.googlesource.com/platform/hardware/libhardware/+/master/include/hardware/camera_common.h">hardware/libhardware/include/hardware/camera_common.h</a></code>
+  <li><em>Camera HAL 3.x metadata spec</em>: <code><a
+href="https://android.googlesource.com/platform/system/media/+/master/camera/docs/docs.html">system/media/camera/docs/docs.html</a></code>
+  <li><em>HAL pixel format interface and spec</em>: <code><a
+href="https://android.googlesource.com/platform/system/core/+/master/include/system/graphics.h">system/core/include/system/graphics.h</a></code>
+</ul>
+
+<h2 id=camera_test_types>[  ] 2. Camera test types</h2>
+
+<p>Here are the primary types of tests available for the latest Android camera
+along with references to associated instructions below:</p>
+
+<ul>
+  <li><em><a href="#native_tests">Native</a>:</em> Tests that directly test the camera HAL interface
+  <li><em><a href="#cts_tests">Compatibility Test Suite (CTS)</a></em>: Standard, automated Android
+tests to ensure device compatibility - see the <a
+href="/compatibility/cts/index.html">CTS introduction</a> and the <a
+href="/devices/tech/test_infra/tradefed/index.html">Trade Federation
+Overview</a>
+  <li><em><a href="#its_tests">Image Test Suite (ITS)</a>:</em> Manually run tests to ensure image
+correctness - see the top-level and
+test-specific <code>README</code> files and tutorial.py for setup instructions
+  <li><em><a href="#manual_tests_with_aosp_camera_app">Manual tests with the
+Android Open Source Project (AOSP) Camera App</a>:</em> User-like testing of
+common camera functions
+  <li><em><a href="#manual_testingcam_tests">Manual TestingCam tests</a>:</em>
+Run from the source in <code>pdk/apps/TestingCamera/</code>
+  <li><em><a href="#manual_testingcam2_tests">Manual TestingCam2.1
+tests</a>:</em> Run from the source in <code>pdk/apps/TestingCamera2/</code>
+</ul>
+
+<p>All of these test types are described in detail below. These tests are
+presented in the chronological order in which OEMs are expected to execute
+them.</p>
+
+<p>For instance, if a device fails the native tests, it will assuredly fail the
+subsequent Compatibility Test Suite (CTS) tests. And if a device fails CTS,
+there is little use in proceeding to the Image Test Suite (ITS). We recommend
+addressing failures in each test type before proceeding to the next set of
+tests.</p>
+
+<h2 id=native_tests>[  ] 3. Native tests</h2>
+
+<p>These tests directly test the camera HAL interface.</p>
+
+<p>The starting path for Camera native tests is:
+<code>platform/hardware/libhardware</code></p>
+
+<p>To set up these tests:</p>
+
+<pre class="devsite-click-to-copy">
+<code class="devsite-terminal">cd hardware/libhardware/tests/camera*/</code>
+<code class="devsite-terminal">mm</code>
+<code class="devsite-terminal">adb remount; adb sync</code>
+</pre>
+
+<h3 id=hal_3_x_tests>[  ] 3.1. HAL 3.x tests</h3>
+
+<p>Find these camera tests under:
+<code>hardware/libhardware/tests/camera3/*</code></p>
+
+<p>To run all tests:</p>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+adb shell /data/nativetest/camera3_test/camera3_test
+</pre>
+
+<p>You receive an <strong>OK</strong> for each passed test. Errors are logged
+at the end of output along with a summary of tests passed.</p>
+
+<h3 id=hal_2_3_tests>[  ] 3.2. HAL 2/3 tests</h3>
+
+<p>Find these camera tests under:
+<code>hardware/libhardware/tests/camera2/*</code></p>
+
+<p>To run all tests:</p>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+adb shell /data/nativetest/camera3_test/camera3_test
+</pre>
+
+<p>To run a single test, pass the <code>--gtest_filter</code> argument and the
+test name, like so:</p>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+adb shell /data/nativetest/camera2_test/camera2_test --gtest_filter=Camera2Test.OpenClose
+</pre>
+
+<p>To run a subset of tests, use a wildcard with the
+<code>--gtest_filter</code> argument, like so:</p>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+adb shell /data/nativetest/camera2_test/camera2_test --gtest_filter=Camera2Test.*
+</pre>
+
+<h3 id=3_tests_that_interact_with_the_camera_service>[  ] 3.3. Tests that
+interact with the camera service</h3>
+
+<p>Find these camera tests under: <code>frameworks/av/camera/tests/*</code></p>
+
+<h3 id=camera_metadata_tests>[  ] 3.4. Camera metadata tests</h3>
+
+<p>Find these camera tests under: <code>system/media/camera/tests/*</code></p>
+
+<h2 id=cts_tests>[  ] 4. Compatibility Test Suite (CTS) tests</h2>
+
+<p>Camera Android Compatibility Test Suite (CTS) tests focus upon device
+compatibility. They do not require a specific test environment (the field of
+view or FOV CTS Verifier test being the lone exception).</p>
+
+<p>The starting path for Camera CTS tests is: <code>platform/cts</code></p>
+
+<p>See the <a href="/compatibility/cts/index.html">CTS
+introduction</a> and its subpages for general instructions on running CTS.</p>
+
+<h3 id=cts_tests_for_the_android_hardware_camera_api>[  ] 4.1. CTS tests for
+the <code>android.hardware.Camera</code> API</h3>
+
+<p>Find these camera tests under <code>cts/tests/tests/</code>:</p>
+
+<ul>
+  <li><code>hardware/src/android/hardware/cts/CameraTest.java</code>
+  <li><code>hardware/src/android/hardware/cts/CameraGLTest.java</code>
+  <li><code>hardware/src/android/hardware/cts/Camera_SizeTest.java</code>
+  <li><code>permission/src/android/permission/cts/CameraPermissionTest.java</code>
+</ul>
+
+<h3 id=cts_tests_for_the_android_hardware_camera2_api>[  ] 4.2. CTS tests for
+the <code>android.hardware.camera2</code> API</h3>
+
+<p>Find these camera tests under <code>cts/tests/tests/</code>:</p>
+
+<ul>
+  <li><code>hardware/src/android/hardware/camera2/cts/*</code>
+  <li><code>permission/src/android/permission/cts/Camera2PermissionTest.java</code>
+</ul>
+
+<h3 id=cts_verifier_camera_tests>[  ] 4.3. CTS Verifier camera tests</h3>
+
+<p>Find these camera tests under:
+<code>cts/apps/CtsVerifier/src/com/android/cts/verifier/camera/*</code></p>
+
+<h2 id=its_tests>[  ] 5. Image Test Suite (ITS) tests</h2>
+
+<p>The CameraITS tests focus upon image correctness. These Python scripts are
+manually run on a workstation with the Android device connected over USB. The
+workstation can run any operating system as long as it has the requisite Python
+2.7 environment.</p>
+
+<p class="note">Since ITS is a CTS Verifier subtest, start CTS Verifier and the
+ITS subtest before running the python scripts so they have processes with which
+to communicate.</p>
+
+<p>The CameraITS infrastructure and tests are located under: <code>cts/apps/CameraITS</code></p>
+
+<p>See the latest <code>README</code> file in this top-level folder for
+instructions on how to set up and run the tests. For setup: <code>make
+cts</code></p>
+
+<pre class="devsite-click-to-copy">
+<code class="devsite-terminal">extract root/out/host/linux-x86/cts-verfier/android-cts-verifier.zip</code>
+<code class="devsite-terminal">cd android-cts-verifier</code>
+<code class="devsite-terminal">adb install -r CtsVerifier.apk</code>
+<code class="devsite-terminal">cd CameraITS</code>
+</pre>
+
+<p>See <code>tutorial.py</code> in the <code>tests</code> subdirectory for a
+walkthrough of the script's use.  Each test resides in a corresponding
+<code>tests/scene<#></code> subdirectory. See the <code>README</code> file in
+each subdirectory for specific test instructions.</p>
+
+<p>You will need a simple physical environment with a specific, reusable target
+such as a white wall, grey card, and desk lamp. The Android device is mounted
+on a tripod and its camera functions are exercised by the scripts. Most tests
+are pass or fail but some offer metrics, as well.</p>
+
+<p>These tests are works-in-progress and are not yet comprehensive enough for
+full automated pass/fail validation of the camera HAL. However, these scripts
+do test scenarios that are not tested in CTS and are an important component of
+the overall HAL 3.2 test plan.</p>
+
+<h3 id=its_tests_on_scene_0_plain>[  ] 5.1. ITS tests on scene 0 (plain)</h3>
+
+<p>This test requires no specific setup. Pass all of the tests in the
+<code>tests/scene0</code> folder, for all cameras (back + front + any
+others).</p>
+
+<h3 id=its_tests_on_scene_1_grey_card>[  ] 5.2. ITS tests on scene 1 (grey card)</h3>
+
+<p>Pass all of the tests in the <code>tests/scene1</code> folder, for all
+cameras (back + front + any others). The <code>tests/scene1/README</code> file
+describes the scene setup.</p>
+
+<h3 id=its_tests_on_scene_2_camera_lab>[  ] 5.3. ITS tests on scene 2 (camera lab)</h3>
+
+<p>Pass all of the tests in the <code>tests/scene2</code> folder, for all
+cameras (back + front + any others). The <code>tests/scene2/README</code> file
+describes the scene setup.</p>
+
+<h2 id=manual_tests_with_aosp_camera_app>[  ] 6. Manual tests with the AOSP App</h2>
+
+<h3 id=camera_mode_aosp_camera_app>[  ] 6.1. Camera mode</h3>
+
+<p>For all cameras on the device (front, back, and any others), verify:</p>
+
+<ol>
+  <li>Images can be captured and reviewed on the device, and the images look good
+with no obvious problems.
+  <li>Tap-to-focus, continuous autofocus, macro focus, infinity focus, AWB, and AEC
+are all reliable.
+  <li>Tap-to-focus, continuous autofocus, AWB, and AEC are reliable when using
+digital zoom (during capture).
+  <li>Flash settings (on/off/auto) are reliable and synchronize well with the 3As.
+</ol>
+
+<h3 id=video_mode_aosp_camera_app>[  ] 6.2. Video mode</h3>
+
+<p>For all cameras on the device (front, back, and any others), verify:</p>
+
+<ol>
+  <li>Videos can be captured and reviewed on the device, and the videos look good
+with no obvious problems.
+  <li>Capturing a snapshot while in the middle of recording a video works.
+  <li>Tap-to-focus, continuous autofocus, macro focus, infinity focus, AWB, and AEC
+are all reliable.
+  <li>Tap-to-focus, continuous autofocus, AWB, and AEC are reliable when using
+digital zoom (during capture).
+  <li>Torch settings (on/off) are reliable and synchronize well with the 3As.
+</ol>
+
+<h3 id=camera_settings_resolution>[  ] 6.3. Camera settings: resolution</h3>
+
+<p>For all cameras on the device (front, back, and any others), and for all
+resolutions available in the menu, verify that correct resolution settings are
+returned and applied for:</p>
+
+<ul>
+  <li>Camera mode
+  <li>Video mode
+  <li>LensBlur
+  <li>PhotoSphere
+  <li>Panorama
+</ul>
+
+<h3 id=camera_settings_exposure_compensation>[  ] 6.4. Camera settings:
+exposure compensation</h3>
+
+<p>Verify that exposure compensation is applied (at +2 and -2).</p>
+
+<h3 id=photosphere>[  ] 6.5. PhotoSphere</h3>
+
+<p>Capture full 360-degree PhotoSphere images shot with each of the front and
+rear cameras. Verify all of the individual frames are focused at infinity and the
+exposure and white balance match between shots.</p>
+
+<h3 id=panorama>[  ] 6.6. Panorama</h3>
+
+<p>Capture vertical, horizontal, and wide-angle panoramas (with both front and
+rear cameras), and verify all of the individual frames are focused at infinity
+and the exposure and white balance matches between shots.</p>
+
+<h3 id=lensblur>[  ] 6.7. LensBlur</h3>
+
+<p>Capture a LensBlur image with both front and rear cameras, and verify
+refocusing to different depths (while reviewing the captured shots) works.</p>
+
+<p>Also verify tap-to-focus, continuous autofocus, AWB, and AEC are reliable in
+this mode.</p>
+
+<h2 id=media_framework_tests>[  ] 7. Media Framework tests</h2>
+
+<p>Pass all of the camera-related media tests in MediaFrameworkTest. Please note,
+these tests require the mediaframeworktest.apk be installed on the Android
+device. You will need to <code>make mediaframeworktest</code> and then use adb
+to install the resulting .apk. Example commands are included below.</p>
+
+<p>The starting path for Camera-related media framework tests is:
+<code>platform/frameworks/base</code></p>
+
+<p>Find the source code for the tests here:
+<code>frameworks/base/media/tests/MediaFrameworkTest</code></p>
+
+<p>To set up these tests:</p>
+
+<pre class="devsite-click-to-copy">
+<code class="devsite-terminal">make mediaframeworktest</code>
+<code class="devsite-terminal">adb install out/target/product/<em>&lt;name></em>/data/app/mediaframeworktest.apk</code>
+</pre>
+
+<p>Where the <em><code><name></code></em> variable represents the directory
+containing the vendor's product.</p>
+
+<p>Find all of the tests in the following directory or its subdirectories:</p>
+
+<pre class="devsite-click-to-copy">
+frameworks/base/media/tests/MediaFrameworkTest/src/com/android/mediaframeworktest
+</pre>
+
+<p>Each subdirectory represents a class of tests:</p>
+
+<ul>
+  <li><code>functional/</code>
+  <li><code>integration/</code>
+  <li><code>performance/</code>
+  <li><code>power/</code>
+  <li><code>stress/</code>
+  <li><code>unit/</code>
+</ul>
+
+<h3 id=running_media_framework_tests>[  ] 7.1. Running Media Framework tests</h3>
+
+<p>To see all of the available tests::</p>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+adb shell pm list instrumentation
+</pre>
+
+<p>This will yield results resembling:</p>
+
+<pre class="devsite-click-to-copy">
+instrumentation:com.android.mediaframeworktest/.MediaFrameworkIntegrationTestRunner
+(target=com.android.mediaframeworktest)
+instrumentation:com.android.mediaframeworktest/.MediaRecorderStressTestRunner
+(target=com.android.mediaframeworktest)
+instrumentation:com.android.mediaframeworktest/.MediaFrameworkPerfTestRunner
+(target=com.android.mediaframeworktest)
+instrumentation:com.android.mediaframeworktest/.MediaFrameworkPowerTestRunner
+(target=com.android.mediaframeworktest)
+</pre>
+
+<p>Identify and extract the component (between <code>instrumentation:</code>
+and <code>(target=com.android.mediaframeworktest) </code>from each test line.
+The component is composed of the target package name
+(<code>com.android.mediaframeworktest</code>) and the test runner name
+(<code>MediaFramework<type>TestRunner</code>).</p>
+
+<p>For instance:</p>
+
+<pre class="devsite-click-to-copy">
+com.android.mediaframeworktest/.MediaFrameworkIntegrationTestRunner
+com.android.mediaframeworktest/.MediaRecorderStressTestRunner
+com.android.mediaframeworktest/.MediaFrameworkPerfTestRunner
+com.android.mediaframeworktest/.MediaFrameworkPowerTestRunner
+</pre>
+
+<p>You may then pass each component to <code>adb shell am instrument</code> like so:</p>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+adb shell am instrument -w &lt;component.name&gt;
+</pre>
+
+<p>Where the &lt;component.name&gt; equals the extracted value above. For example:</p>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+adb shell am instrument -w com.android.mediaframeworktest/.MediaFrameworkIntegrationTestRunner
+</pre>
+
+<p>Please note, while the class path is the Java package + class name, the
+instrumentation package isn't necessarily the same as the Java package. Make
+sure you use the AndroidManifest.xml package when concatenating the component
+name, not the Java package in which the test runner class resides.</p>
+
+<p>To run a single class of tests, pass the -e class <test-class> argument, like
+so:</p>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+adb shell am instrument -e class com.android.mediaframeworktest.integration.CameraBinderTest -w com.android.mediaframeworktest/.MediaFrameworkIntegrationTestRunner
+</pre>
+
+<p>To run only a single method in a test class, append a pound (#) sign and the
+method name (in this case, <code>testConnectPro</code>) to the class name, like so:</p>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+adb shell am instrument -e class 'com.android.mediaframeworktest.integration.CameraBinderTest#testConnectPro' -w com.android.mediaframeworktest/.MediaFrameworkIntegrationTestRunner
+</pre>
+
+<h3 id=media_settings_functional_tests>[  ] 7.2. Media settings functional tests</h3>
+
+<p>Here is an example run of a functional test. This test verifies the basic
+functionality of different combinations of camera settings. (ie, Flash,
+exposure, WB, scene, picture size and geoTag)</p>
+
+<p>Run the test command:</p>
+<pre class="devsite-terminal devsite-click-to-copy">
+adb shell am instrument -w -r  -e delay_msec 15 -e log true -e class com.android.mediaframeworktest.functional.camera.CameraPairwiseTest com.android.mediaframeworktest/com.android.mediaframeworktest.CameraStressTestRunner
+</pre>
+
+<h3 id=media_integration_tests>[  ] 7.3. Media integration tests</h3>
+
+<p>Here is an example run of an integration test, in this case
+mediaframeworktest/integration/CameraBinderTest.java and
+mediaframeworktest/CameraStressTestRunner.java:</p>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+adb  shell am instrument -e class \ 'com.android.mediaframeworktest.<strong>integration</strong>.<strong>CameraBinderTest'</strong> -w \ 'com.android.mediaframeworktest/.<strong>CameraStressTestRunner'</strong>
+</pre>
+
+<p>If successful, this results in output resembling:</p>
+
+<pre class="devsite-click-to-copy">
+-----
+
+com.android.mediaframeworktest.integration.CameraBinderTest:...........
+Test results for CameraStressTestRunner=...........
+Time: 3.328
+
+OK (11 tests)
+
+-----
+</pre>
+
+<h3 id=media_performance_tests>[  ] 7.4. Media performance tests</h3>
+
+<p>This preview memory test will open and release the camera preview for 200
+times. In each 20 iterations, the snapshot of ps mediaserver will be recorded
+and it will compare the memory usage different after 200 iterations. Test will
+fail If the difference is greater than 150kM.</p>
+
+<p>Run the test command:</p>
+<pre class="devsite-terminal devsite-click-to-copy">
+adb shell am instrument -w -r  -e class com.android.mediaframeworktest.performance.MediaPlayerPerformance#testCameraPreviewMemoryUsage com.android.mediaframeworktest/.MediaFrameworkPerfTestRunner
+</pre>
+
+<p>More detailed output can be found in:
+<code>/sdcard/mediaMemOutput.txt</code></p>
+
+<h3 id=media_unit_tests>[  ] 7.5. Media unit tests</h3>
+
+<p>The commands to run unit tests are all similar. For example, for
+CameraMetadataTest.java, the command would be:</p>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+adb shell am instrument -e class 'com.android.mediaframeworktest.unit.CameraMetadataTest' -w 'com.android.mediaframeworktest/.CameraStressTestRunner'
+</pre>
+
+<h3 id=media_stress_tests>[  ] 7.6. Media stress tests</h3>
+
+<p>This test is to stress out the camera image capture and video recording.</p>
+
+<p>Run the test command:</p>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+adb shell am instrument -w com.google.android.camera.tests/com.android.camera.stress.CameraStressTestRunner
+</pre>
+
+<p>All tests should pass.</p>
+
+<h2 id=manual_testingcam_tests>[  ] 8. Manual TestingCam tests</h2>
+
+<p>The TestingCam app should be run manually with the following checks performed.
+The source for TestingCam is here: <code>pdk/apps/TestingCamera/</code></p>
+
+<h3 id=infinity_focus_with_camera_tilt>[  ] 8.1. Infinity focus with camera tilt</h3>
+
+<p>Start TestingCam, turn on preview, and ensure that autofocus mode is set to
+infinity. Using the <strong>Take picture</strong> button, capture shots of
+distant subjects (at least 10m away) with the camera pointed horizontally,
+upwards (close to vertical), and downwards (close to vertical); an example of
+the upwards shot could be high leaves/branches of a tree from beneath and an
+example of the downwards shot could be the street as seen from the roof of a
+building. In all cases, the distant subject should be sharp and in focus. Save
+and view the shots in the gallery view so that you can zoom in and inspect the
+sharpness more easily.</p>
+
+<p>Note that for a camera with a VCM actuator to pass this test, it will require
+either a closed-loop AF control system, or it will need some sort of SW
+correction based on using accelerometer data to determine camera orientation.
+Reliable factory calibration of the lens infinity position will also be needed.</p>
+
+<h2 id=manual_testingcam2_tests>[  ] 9. Manual TestingCam2 tests</h2>
+
+<p>The TestingCam2 app should be run manually, with the following checks
+performed. The source for TestingCam2 is here: <code>pdk/apps/TestingCamera2/</code></p>
+
+<h3 id=9_1_jpeg_capture>[  ] 9.1. JPEG capture</h3>
+
+<p>Start TestingCam2, and press the <strong>JPEG</strong> button. The image
+that appears to the right of the viewfinder image should appear the same as the
+viewfinder, including having the same orientation.</p>
+
+  </body>
+</html>

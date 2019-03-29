@@ -1,0 +1,186 @@
+<html devsite><head>
+    <title>实现 dm-verity</title>
+    <meta name="project_path" value="/_project.yaml"/>
+    <meta name="book_path" value="/_book.yaml"/>
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+<h2 id="operation">操作</h2>
+
+<p>dm-verity 保护机制位于内核中。因此，如果获取 Root 权限的软件在内核启动之前入侵系统，它将会一直拥有该权限。为了降低这种风险，大多数制造商都会使用烧录到设备的密钥来验证内核。该密钥在设备出厂后将无法被更改。</p>
+
+<p>制造商会使用该密钥来验证第一级引导加载程序中的签名，而该引导加载程序会依次验证后续级别引导加载程序、应用引导加载程序和内核中的签名。希望利用<a href="verified-boot.html">验证启动</a>功能的每个制造商都应该有验证内核完整性的方法。内核经过验证后，可以在块设备装载时对其进行检查和验证。</p>
+
+<p>验证块设备的一种方法是直接对其内容进行哈希处理，然后将其与存储的值进行比较。不过，尝试验证整个块设备可能会需要较长的时间，并且会消耗设备的大量电量。设备将需要很长时间来启动，从而在可供使用之前便消耗了大量电量。</p>
+
+<p>而 dm-verity 只有在各个块被访问时才会对其进行单独验证。将块读入内存时，会以并行方式对其进行哈希处理。然后，会从第一级开始逐级验证整个哈希树的哈希。由于读取块是一项耗时又耗电的操作，因此这种块级验证带来的延时相对而言就有些微不足道了。</p>
+
+<p>如果验证失败，设备会生成 I/O 错误，指明无法读取相应块。设备看起来与文件系统损坏时一样，也与预期相同。</p>
+
+<p>应用可以选择在没有结果数据的情况下继续运行，例如，当这些结果并不是应用执行主要功能所必需的数据时。不过，如果应用在没有这些数据的情况下无法继续运行，则会失败。</p>
+
+<h2 id="implementation">实现</h2>
+
+<h3 id="summary">摘要</h3>
+
+<ol>
+<li>生成 EXT4 系统映像。</li>
+<li>为该映像<a href="#hash-tree">生成哈希树</a>。</li>
+<li>为该哈希树<a href="#mapping-table">构建 dm-verity 表</a>。</li>
+<li><a href="#signing">为该 dm-verity 表签名</a>以生成表签名。</li>
+<li>将表签名和 dm-verity 表<a href="#metadata">绑定</a>到 Verity 元数据。</li>
+<li>将系统映像、Verity 元数据和哈希树组合起来。</li>
+</ol>
+
+<p>如需关于哈希树和 dm-verity 表的详细说明，请参阅 <a href="http://www.chromium.org/chromium-os/chromiumos-design-docs/verified-boot">Chromium 项目 - 验证启动</a>。</p>
+
+<h3 id="hash-tree">生成哈希树</h3>
+
+<p>如<a href="#introduction">简介</a>中所述，哈希树是 dm-verity 不可或缺的一部分。<a href="https://gitlab.com/cryptsetup/cryptsetup/wikis/DMVerity">cryptsetup</a> 工具将为您生成哈希树。或者，也可以使用下面定义的兼容方式：</p>
+
+<pre>
+&lt;your block device name&gt; &lt;your block device name&gt; &lt;block size&gt; &lt;block size&gt; &lt;image size in blocks&gt; &lt;image size in blocks + 8&gt; &lt;root hash&gt; &lt;salt&gt;
+</pre>
+
+<p>为了形成哈希，该工具会将系统映像在第 0 层拆分成 4k 大小的块，并为每个块分配一个 SHA256 哈希。然后，通过仅将这些 SHA256 哈希组合成 4k 大小的块来形成第 1 层，从而产生一个小得多的映像。接下来再使用第 1 层的 SHA256 哈希以相同的方式形成第 2 层。</p>
+
+<p>直到前一层的 SHA256 哈希可以放到一个块中，该过程就完成了。获得该块的 SHA256 哈希后，就相当于获得了树的根哈希。</p>
+
+<p>哈希树的大小（以及相应的磁盘空间使用量）会因已验证分区的大小而异。在实际中，哈希树一般都比较小，通常不到 30 MB。</p>
+
+<p>如果某个层中的某个块无法由前一层的哈希正好填满，您应在其中填充 0 来获得所需的 4k 大小。这样一来，您就知道哈希树没有被移除，而是填入了空白数据。</p>
+
+<p>为了生成哈希树，需要将第 2 层哈希组合到第 1 层哈希的上方，将第 3 层哈希组合到第 2 层哈希的上方，依次类推。然后将所有这些数据写入到磁盘中。请注意，这种方式不会引用根哈希的第 0 层。</p>
+
+<p>总而言之，构建哈希树的一般算法如下：</p>
+
+<ol>
+<li>选择一个随机盐（十六进制编码）。</li>
+<li>将系统映像拆分成 4k 大小的块。</li>
+<li>获取每个块的加盐 SHA256 哈希。</li>
+<li>组合这些哈希以形成层。</li>
+<li>在层中填充 0，直至达到 4k 块的边界。</li>
+<li>将层组合到哈希树中。</li>
+<li>重复第 2-6 步（使用前一层作为下一层的来源），直到最后只有一个哈希。</li>
+</ol>
+
+<p>该过程的结果是一个哈希，也就是根哈希。在构建 dm-verity 映射表时会用到该哈希和您选择的盐。</p>
+
+<h3 id="mapping-table">构建 dm-verity 映射表</h3>
+
+<p>构建 dm-verity 映射表，该映射表会标明内核的块设备（或目标）以及哈希树的位置（是同一个值）。在生成 <code>fstab</code> 和设备启动时会用到此映射。该映射表还会标明块的大小和 hash_start，或者哈希大小的块的偏移量（第 0 层的长度）。</p>
+
+<p>如需关于 Verity 目标映射表字段的详细说明，请参阅 <a href="https://code.google.com/p/cryptsetup/wiki/DMVerity">cryptsetup</a>。</p>
+
+<h3 id="signing">为 dm-verity 表签名</h3>
+
+<p>为 dm-verity 表签名以生成表签名。在验证分区时，会首先验证表签名。该验证是对照位于启动映像上某个固定位置的密钥来完成的。密钥通常包含在制造商的编译系统中，以便自动添加到设备上的固定位置。</p>
+
+<p>要使用这种签名和密钥的组合来验证分区，请执行以下操作：</p>
+
+<ol>
+<li>将一个格式与 libmincrypt 兼容的 RSA-2048 密钥添加到 /boot 分区的 /verity_key 中。确定用于验证哈希树的密钥所在的位置。</li>
+<li>在相关条目的 fstab 中，将“verify”添加到 fs_mgr 标记。</li>
+</ol>
+
+<h3 id="metadata">将表签名绑定到元数据</h3>
+
+<p>将表签名和 dm-verity 表绑定到 Verity 元数据。为整个元数据块添加版本号，以便它可以进行扩展，例如添加第二种签名或更改某些顺序。</p>
+
+<p>一个魔数（作为一个健全性检查项目）会与每组表元数据相关联，以协助标识表。由于长度包含在 EXT4 系统映像标头中，因此这为您提供了一种在不知道数据本身内容的情况下搜索元数据的方式。</p>
+
+<p>这可确保您未选择验证未验证的分区。如果是这样，缺少此魔数将会导致验证流程中断。该数字类似于：<br />0xb001b001</p>
+
+<p>十六进制的字节值为：</p>
+
+<ul>
+<li>第一字节 = b0</li>
+<li>第二字节 = 01</li>
+<li>第三字节 = b0</li>
+<li>第四字节 = 01</li>
+</ul>
+
+<p>下图展示了 Verity 元数据的细分：</p>
+
+<pre>&lt;magic number&gt;|&lt;version&gt;|&lt;signature&gt;|&lt;table length&gt;|&lt;table&gt;|&lt;padding&gt;
+\-------------------------------------------------------------------/
+\----------------------------------------------------------/   |
+                            |                                  |
+                            |                                 32K
+                       block content
+</pre>
+
+<p>下表介绍了这些元数据字段。</p>
+
+<p class="table-caption" id="table1">
+  <strong>表 1.</strong> Verity 元数据字段</p>
+
+<table>
+<tbody><tr>
+<th>字段</th>
+<th>用途</th>
+<th>大小</th>
+<th>值</th>
+</tr>
+<tr>
+<td>魔数</td>
+<td>供 fs_mgr 用作一个健全性检查项目</td>
+<td>4 个字节</td>
+<td>0xb001b001</td>
+</tr>
+<tr>
+<td>版本</td>
+<td>用于为元数据块添加版本号</td>
+<td>4 个字节</td>
+<td>目前为 0</td>
+</tr>
+<tr>
+<td>签名</td>
+<td>PKCS1.5 填充形式的表签名</td>
+<td>256 个字节</td>
+<td></td>
+</tr>
+<tr>
+<td>表长度</td>
+<td>dm-verity 表的长度（以字节数计）</td>
+<td>4 个字节</td>
+<td></td>
+</tr>
+<tr>
+<td>表</td>
+<td>上文介绍的 dm-verity 表</td>
+<td>字节数与表长度相同</td>
+<td></td>
+</tr>
+<tr>
+<td>填充</td>
+<td>此结构会通过填充 0 达到 32k 长度</td>
+<td></td>
+<td>0</td>
+</tr>
+</tbody></table>
+
+<h3 id="optimize">优化 dm-verity</h3>
+
+<p>为了充分发挥 dm-verity 的最佳性能，您应该：</p>
+  <ul>
+    <li>在内核中开启 NEON SHA-2（如果是 ARMv7）或 SHA-2 扩展程序（如果是 ARMv8）。
+    </li><li>使用不同的预读设置和 prefetch_cluster 设置进行实验，找出适合您设备的最佳配置。
+  </li></ul>
+
+</body></html>

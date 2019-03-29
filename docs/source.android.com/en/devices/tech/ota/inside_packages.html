@@ -1,0 +1,289 @@
+<html devsite>
+  <head>
+    <title>Inside OTA Packages</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>The system builds the updater binary from <code>bootable/recovery/updater
+</code> and uses it in an OTA package.</p>The package itself is a .zip file
+(<code>ota_update.zip</code>, <code>incremental_ota_update.zip</code>) that
+contains the executable binary <code>META-INF/com/google/android/update-binary
+</code>.
+
+<p>Updater contains several builtin functions and an interpreter for an
+extensible scripting language (<b>edify</b>) that supports commands for typical
+update-related tasks. Updater looks in the package .zip file for a script in the
+file <code>META-INF/com/google/android/updater-script</code>.</p>
+
+<p class="note"><strong>Note:</strong> Using the edify script and/or builtin
+functions is not a common activity, but can be helpful if you need to debug the
+update file.</p>
+
+<h2 id="edify-syntax">Edify syntax</h2>
+<p>An edify script is a single expression in which all values are strings.
+Empty strings are <i>false</i> in a Boolean context and all other strings are
+<i>true</i>. Edify supports the following operators (with the usual meanings):
+</p>
+
+<pre>
+(<i>expr</i> )
+ <i>expr</i> <b>+</b> <i>expr</i>  # string concatenation, not integer addition
+ <i>expr</i> <b>==</b> <i>expr</i>
+ <i>expr</i> <b>!=</b> <i>expr</i>
+ <i>expr</i> <b>&amp;&amp;</b> <i>expr</i>
+ <i>expr</i> <b>||</b> <i>expr</i>
+ ! <i>expr</i>
+ if <i>expr</i> <b>then</b> <i>expr</i> <b>endif</b>
+ if <i>expr</i> <b>then</b> <i>expr</i> <b>else</b> <i>expr</i> <b>endif</b>
+ <i>function_name</i><b>(</b><i>expr</i><b>,</b> <i>expr</i><b>,</b><i>...</i><b>)</b>
+ <i>expr</i><b>;</b> <i>expr</i>
+</pre>
+
+<p>Any string of the characters <i>a-z, A-Z, 0-9, _, :, /, .</i> that isn't a
+reserved word is considered a string literal. (Reserved words are <b>if else
+</b> then <b>endif.</b>) String literals may also appear in double-quotes;
+this is how to create values with whitespace and other characters not in the
+above set. \n, \t, \", and \\ serve as escapes within quoted strings, as does
+\x<i>##</i>.</p>
+<p>The &amp;&amp; and || operators are short-circuiting; the right side is not
+evaluated if the logical result is determined by the left side. The
+following are equivalent:</p>
+<pre>
+<i>e1</i> <b>&amp;&amp;</b> <i>e2</i>
+<b>if</b> <i>e1</i> <b>then</b> <i>e2</i> <b>endif</b></pre>
+<p>The ; operator is a sequence point; it means to evaluate first the left
+side and then the right side. Its value is the value of the right-side
+expression. A semicolon can also appear after an expression, so the effect
+simulates C-style statements:</p>
+
+<pre>
+<b>prepare();
+do_other_thing("argument");
+finish_up();</b>
+</pre>
+
+<h2 id="builtin-functions">Built-in functions</h2>
+<p>Most update functionality is contained in the functions available for
+execution by scripts. (Strictly speaking these are <i>macros</i> rather than
+<i>functions</i> in the Lisp sense, since they need not evaluate all of their
+arguments.) Unless otherwise noted, functions return <b>true</b> on success
+and <b>false</b> on error. If you want errors to abort execution of the
+script, use the <code>abort()</code> and/or <code>assert()</code> functions.
+The set of functions available in updater can also be extended to provide
+<a href="/devices/tech/ota/device_code.html">device-specific
+functionality</a>.
+
+<dl>
+<dt><code>abort([<i>msg</i>])</code></dt>
+<dd>Aborts execution of the script immediately, with the optional <i>msg</i>.
+If the user has turned on text display, <i>msg</i> appears in the recovery log
+and on-screen.</dd>
+<dt><code>assert(<i>expr</i>[, <i>expr</i>, ...])</code></dt>
+<dd>Evaluates each <i>expr</i> in turn. If any is false, immediately aborts
+execution with the message "assert failed" and the source text of the failed
+expression.</dd>
+<dt><code>apply_patch(<i>src_file</i>, <i>tgt_file</i>, <i>tgt_sha1</i>, <i>
+tgt_size</i>, <i>patch1_sha1</i>, <i>patch1_blob</i>, [...])</code></dt>
+<dd>Applies a binary patch to the <i>src_file</i> to produce the <i>tgt_file
+</i>. If the desired target is the same as the source, pass "-" for <i>tgt_file
+</i>. <i>tgt_sha1</i> and <i>tgt_size</i> are the expected final SHA1 hash and
+size of the target file. The remaining arguments must come in pairs: a SHA1
+hash (a 40-character hex string) and a blob. The blob is the patch to be
+applied when the source file's current contents have the given SHA1.
+<p>The patching is done in a safe manner that guarantees the target file
+either has the desired SHA1 hash and size, or it is untouched—it will not be
+left in an unrecoverable intermediate state. If the process is interrupted
+during patching, the target file may be in an intermediate state; a copy exists
+in the cache partition so restarting the update can successfully update the
+file.</p>
+<p>Special syntax is supported to treat the contents of Memory Technology
+Device (MTD) partitions as files, allowing patching of raw partitions such as
+boot. To read an MTD partition, you must know how much data you want to read
+since the partition does not have an end-of-file notion. You can use the
+string "MTD:<i>partition</i>:<i>size_1</i>:<i>sha1_1</i>:<i>size_2</i>:<i>
+sha1_2</i>" as a filename to read the given partition. You must specify at
+least one <i>(size, sha-1)</i> pair; you can specify more than one if there
+are multiple possibilities for what you expect to read.</p></dd>
+<dt><code>apply_patch_check(<i>filename</i>, <i>sha1</i>[, <i>sha1</i>, ...])
+</code></dt>
+<dd>Returns true if the contents of <i>filename</i> or the temporary copy in
+the cache partition (if present) have a SHA1 checksum equal to one of the
+given <i>sha1</i> values. <i>sha1</i> values are specified as 40 hex digits.
+This function differs from <code>sha1_check(read_file(<i>filename</i>),
+<i>sha1</i> [, ...])</code> in that it knows to check the cache partition copy,
+so <code>apply_patch_check()</code> will succeed even if the file was corrupted
+by an interrupted <code>apply_patch() update</code>.</dd>
+<dt><code>apply_patch_space(<i>bytes</i>)</code></dt>
+<dd>Returns true if at least <i>bytes</i> of scratch space is available for
+applying binary patches.</dd>
+<dt><code>concat(<i>expr</i>[, <i>expr</i>, ...])</code></dt>
+<dd>Evaluates each expression and concatenates them. The + operator is
+syntactic sugar for this function in the special case of two arguments (but
+the function form can take any number of expressions). The expressions must be
+strings; it can't concatenate blobs.</dd>
+<dt><code>delete([<i>filename</i>, ...])</code></dt>
+<dd>Deletes all the <i>filename</i>s listed. Returns the number of files
+successfully deleted.</dd>
+<dt><code>delete_recursive([<i>dirname</i>, ...])</code></dt>
+<dd>Recursively deletes <i>dirname</i>s and all their contents. Returns the
+number of directories successfully deleted.</dd>
+<dt><code>file_getprop(<i>filename</i>, <i>key</i>)</code></dt>
+<dd>Reads the given <i>filename</i>, interprets it as a properties file (e.g.
+<code>/system/build.prop</code>), and returns the value of the given <i>key</i>
+, or the empty string if <i>key</i> is not present.</dd>
+<dt><code>format(<i>fs_type</i>, <i>partition_type</i>, <i>location</i>, <i>
+fs_size</i>, <i>mount_point</i>)</code></dt>
+<dd>Reformats a given partition. Supported partition types:
+<ul>
+<li>fs_type="yaffs2" and partition_type="MTD". Location must be the name of
+the MTD partition; an empty yaffs2 filesystem is constructed there. Remaining
+arguments are unused.</li>
+<li>fs_type="ext4" and partition_type="EMMC". Location must be the device file
+for the partition. An empty ext4 filesystem is constructed there. If
+<i>fs_size</i> is zero, the filesystem takes up the entire partition. If
+<i>fs_size</i> is a positive number, the filesystem takes the first
+<i>fs_size</i> bytes of the partition. If <i>fs_size</i> is a
+negative number, the filesystem takes all except the last <i>|fs_size|</i>
+bytes of the partition.</li>
+<li>fs_type="f2fs" and partition_type="EMMC". Location must be the device file
+for the partition. <i>fs_size</i> must be a non-negative number. If
+<i>fs_size</i> is zero, the filesystem takes up the entire partition. If
+<i>fs_size</i> is a positive number, the filesystem takes the first
+<i>fs_size</i> bytes of the partition.</li>
+<li>mount_point should be the future mount point for the filesystem.</li></ul>
+</dd>
+<dt><code>getprop(<i>key</i>)</code></dt>
+<dd>Returns the value of system property <i>key</i> (or the empty string, if
+it's not defined). The system property values defined by the recovery
+partition are not necessarily the same as those of the main system. This
+function returns the value in recovery.</dd>
+<dt><code>greater_than_int(<i>a</i>, <i>b</i>)</code></dt>
+<dd>Returns true if and only if (iff) <i>a</i> (interpreted as an integer) is
+greater than <i>b</i> (interpreted as an integer).</dd>
+<dt><code>ifelse(<i>cond</i>, <i>e1</i>[, <i>e2</i>])</code></dt>
+<dd>Evaluates <i>cond</i>, and if it is true evaluates and returns the value
+of <i>e1</i>, otherwise it evaluates and returns <i>e2</i> (if present). The
+"if ... else ... then ... endif" construct is just syntactic sugar for this
+function.</dd>
+<dt><code>is_mounted(<i>mount_point</i>)</code></dt>
+<dd>Returns true iff there is a filesystem mounted at <i>mount_point</i>.</dd>
+<dt><code>is_substring(<i>needle</i>, <i>haystack</i>)</b></code></dt>
+<dd>Returns true iff <i>needle</i> is a substring of <i>haystack</i>.</dd>
+<dt><code>less_than_int(<i>a</i>, <i>b</i>)</code></dt>
+<dd>Returns true iff <i>a</i> (interpreted as an integer) is less than <i>b</i>
+(interpreted as an integer).</dd>
+<dt><code>mount(<i>fs_type</i>, <i>partition_type</i>, <i>name</i>,
+<i>mount_point</i>)</code></dt>
+<dd>Mounts a filesystem of <i>fs_type</i> at <i>mount_point</i>.
+<i>partition_type</i> must be one of:
+<ul>
+<li><b>MTD</b>. Name is the name of an MTD partition (e.g., system, userdata;
+see <code>/proc/mtd</code> on the device for a complete list).</li>
+<li><b>EMMC.</b></li>
+</ul>
+<p>Recovery does not mount any filesystems by default (except the SD card if
+the user is doing a manual install of a package from the SD card); your script
+must mount any partitions it needs to modify.</p></dd>
+<dt><code>package_extract_dir(<i>package_dir</i>, <i>dest_dir</i>)</code></dt>
+<dd>Extracts all files from the package underneath <i>package_dir</i> and
+writes them to the corresponding tree beneath <i>dest_dir</i>. Any existing
+files are overwritten.</dd>
+<dt><code>package_extract_file(<i>package_file</i>[, <i>dest_file</i>])</code>
+</dt>
+<dd>Extracts a single <i>package_file</i> from the update package and writes
+it to <i>dest_file</i>, overwriting existing files if necessary. Without the
+<i>dest_file</i> argument, returns the contents of the package file as a
+binary blob.</dd>
+<dt><code>read_file(<i>filename</i>)</code></dt>
+<dd>Reads <i>filename</i> and returns its contents as a binary blob.</dd>
+<dt><code>rename(<i>src_filename</i>, <i>tgt_filename</i>)</code></dt>
+<dd>Renames <i>src_filename</i> to <i>tgt_filename</i>. It automatically creates
+the necessary directories for the <i>tgt_filename</i>. Example: <code>
+rename("system/app/Hangouts/Hangouts.apk",
+"system/priv-app/Hangouts/Hangouts.apk")</code>.</dd>
+<dt><code>run_program(<i>path</i>[, <i>arg</i>, ...])</code></dt>
+<dd>Executes the binary at <i>path</i>, passing <i>arg</i>s. Returns the
+program's exit status.</dd>
+<dt><code>set_metadata(<i>filename</i>, <i>key1</i>, <i>value1</i>[, <i>key2
+</i>, <i>value2</i>, ...])</code></dt>
+<dd>Sets the keys of the given <i>filename</i> to <i>values</i>. For example:
+<code>set_metadata("/system/bin/netcfg", "uid", 0, "gid", 3003, "mode", 02750,
+"selabel", "u:object_r:system_file:s0", "capabilities", 0x0)</code>.</dd>
+<dt><code>set_metadata_recursive(<i>dirname</i>, <i>key1</i>, <i>value1</i>[,
+<i>key2</i>, <i>value2</i>, ...])</code></dt>
+<dd>Recursively sets the keys of the given <i>dirname</i> and all its children
+to <i>values</i>. For example: <code>set_metadata_recursive("/system", "uid",
+0, "gid", 0, "fmode", 0644, "dmode", 0755, "selabel",
+"u:object_r:system_file:s0", "capabilities", 0x0)</code>.</dd>
+<dt><code>set_progress(<i>frac</i>)</code></dt>
+<dd>Sets the position of the progress meter within the chunk defined by the
+most recent <code>show_progress()</code> call. <i>frac</i> must be in the
+range [0.0, 1.0]. The progress meter never moves backwards; attempts to make
+it do so are ignored.</dd>
+<dt><code>sha1_check(<i>blob</i>[, <i>sha1</i>])</code></dt>
+<dd>The <i>blob</i> argument is a blob of the type returned by <code>
+read_file()</code> or the one-argument form of <code>package_extract_file()
+</code>. With no <i>sha1</i> arguments, this function returns the SHA1 hash of
+the blob (as a 40-digit hex string). With one or more <i>sha1</i> arguments,
+this function returns the SHA1 hash if it equals one of the arguments, or the
+empty string if it does not equal any of them.</dd>
+<dt><code>show_progress(<i>frac</i>, <i>secs</i>)</code></dt>
+<dd>Advances the progress meter over the next <i>frac</i> of its length over
+the <i>secs</i> seconds (must be an integer). <i>secs</i> may be 0, in which
+case the meter is not advanced automatically but by use of the <code>
+set_progress()</code> function defined above.</dd>
+<dt><code>sleep(<i>secs</i>)</code></dt>
+<dd>Sleeps for <i>secs</i> seconds (must be an integer).</dd>
+<dt><code>stdout(<i>expr</i>[, <i>expr</i>, ...])</code></dt>
+<dd>Evaluates each expression and dumps its value to stdout. Useful for
+debugging.</dd>
+<dt><code>symlink(<i>target</i>[, <i>source</i>, ...])</code></dt>
+<dd>Creates all <i>source</i>s as symlinks to <i>target</i>.</dd>
+<dt><code>tune2fs(<i>device</i>[, <i>arg</i>, …])</code></dt>
+<dd>Adjusts tunable parameters <i>args</i> on <i>device</i>.</dd>
+<dt><code>ui_print([<i>text</i>, ...])</code></dt>
+<dd>Concatenates all <i>text</i> arguments and prints the result to the UI
+(where it will be visible if the user has turned on the text display).</dd>
+<dt><code>unmount(<i>mount_point</i>)</code></dt>
+<dd>Unmounts the filesystem mounted at <i>mount_point</i>.</dd>
+<dt><code>wipe_block_device(<i>block_dev</i>, <i>len</i>)</code></dt>
+<dd>Wipes the <i>len</i> bytes of the given block device <i>block_dev</i>.</dd>
+<dt><code>wipe_cache()</code></dt>
+<dd>Causes the cache partition to be wiped at the end of a successful
+installation.</dd>
+<dt><code>write_raw_image(<i>filename_or_blob</i>, <i>partition</i>)</code>
+</dt>
+<dd>Writes the image in <i>filename_or_blob</i> to the MTD <i>partition</i>.
+<i>filename_or_blob</i> can be a string naming a local file or a blob-valued
+argument containing the data to write. To copy a file from the OTA package to
+a partition, use:
+<code>write_raw_image(package_extract_file("zip_filename"), "partition_name");
+</code>
+</dd>
+</dl>
+
+<p class="note"><strong>Note:</strong> Prior to Android 4.1, only filenames
+were accepted, so to accomplish this the data first had to be unzipped into a
+temporary local file.</p>
+
+  </body>
+</html>

@@ -1,0 +1,178 @@
+<html devsite>
+  <head>
+    <title>SELinux concepts</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>Review this page to become familar with the concepts at play within SELinux.</p>
+
+<h2 id=mandatory_access_control>Mandatory access control</h2>
+
+<p>Security Enhanced Linux (SELinux), is a mandatory access control (MAC) system
+for the Linux operating system.  As a MAC system, it differs from Linux’s
+familiar discretionary access control (DAC) system.  In a DAC system, a concept
+of ownership exists, whereby an owner of a particular resource controls access
+permissions associated with it.  This is generally coarse-grained and subject
+to unintended privilege escalation.  A MAC system, however, consults a central
+authority for a decision on all access attempts.</p>
+
+<p>SELinux has been implemented as part of the Linux Security Module (LSM)
+framework, which recognizes various kernel objects, and sensitive actions
+performed on them.  At the point at which each of these actions would be
+performed, an LSM hook function is called to determine whether or not the
+action should be allowed based on the information for it stored in an opaque
+security object. SELinux provides an implementation for these hooks and
+management of these security objects, which combine with its own policy, to
+determine the access decisions.</p>
+
+<p>In conjunction with other Android security measures, Android's access control
+policy greatly limits the potential damage of compromised machines and
+accounts. Using tools like Android's discretionary and mandatory access
+controls gives you a structure to ensure your software runs only at the minimum
+privilege level. This mitigates the effects of attacks and reduces the
+likelihood of errant processes overwriting or even transmitting data.</p>
+
+<p>Starting in Android 4.3, SELinux provides a mandatory access control (MAC)
+umbrella over traditional discretionary access control (DAC) environments. For
+instance, software must typically run as the root user account to write to raw
+block devices. In a traditional DAC-based Linux environment, if the root user
+becomes compromised that user can write to every raw block device. However,
+SELinux can be used to label these devices so the process assigned the root
+privilege can write to only those specified in the associated policy. In this
+way, the process cannot overwrite data and system settings outside of the
+specific raw block device.</p>
+
+<p>See <a href="implement.html#use_cases">Use Cases</a> for more examples of threats and ways to address them with SELinux.</p>
+
+<h2 id=enforcement_levels>Enforcement levels</h2>
+
+<p>Become familiar with the following terms to understand how SELinux can be
+implemented to varying strengths.</p>
+
+<ul>
+  <li><em>Permissive</em> - SELinux security policy is not enforced, only logged.
+  <li><em>Enforcing</em> - Security policy is enforced and logged. Failures appear as EPERM errors.
+</ul>
+
+<p>This choice is binary and determines whether your policy takes action or merely
+allows you to gather potential failures. Permissive is especially useful during
+implementation.</p>
+
+<ul>
+  <li><em>Unconfined</em> - A very light policy that prohibits certain tasks and provides a temporary
+stop-gap during development. Should not be used for anything outside of the
+Android Open Source Project (AOSP).
+  <li><em>Confined</em> - A custom-written policy designed for the service. That policy should define
+precisely what is allowed.
+</ul>
+
+<p>Unconfined policies are available to help implement SELinux in Android quickly.
+They are suitable for most root-level applications. But they should be
+converted to confined policies wherever possible over time to restrict each
+application to precisely the resources it needs.</p>
+
+<p>Ideally, your policy is both in enforcing mode and confined. Unconfined
+policies in enforcement mode can mask potential violations that would have been
+logged in permissive mode with a confined policy. Therefore, we strongly
+recommend that device implementers implement true confined policies.</p>
+
+<h2 id=labels_rules_and_domains>Labels, rules and domains</h2>
+
+<p>SELinux depends upon <em>labels</em> to match actions and policies. Labels determine what is allowed. Sockets,
+files, and processes all have labels in SELinux. SELinux decisions are based
+fundamentally on labels assigned to these objects and the policy defining how
+they may interact.  In SELinux, a label takes the form:
+user:role:type:mls_level, where the type is the primary component of the access
+decisions, which may be modified by the other sections components which make up
+the label.  The objects are mapped to classes and the different types of access
+for each class are represented by permissions. </p>
+
+<p>The policy rules come in the form: allow <em>domains</em> <em>types</em>:<em>classes</em> <em>permissions</em>;, where:</p>
+
+<ul>
+  <li><em>Domain</em> - A label for the process or set of processes.  Also called a domain type as it is just a type for a process.
+  <li><em>Type</em> - A label for the object (e.g. file, socket) or set of objects.
+  <li><em>Class</em> - The kind of object (e.g. file, socket) being accessed.
+  <li><em>Permission</em> - The operation (e.g. read, write) being performed.
+</ul>
+
+<p>And so an example use of this would follow the structure:</p>
+<pre class="devsite-click-to-copy">
+allow appdomain app_data_file:file rw_file_perms;
+</pre>
+
+<p>This says that all application domains are allowed to read and write files labeled
+app_data_file. Note that this rule relies upon macros defined in the
+global_macros file, and other helpful macros can also be found in the te_macros
+file, both of which can be found in the <a href="https://android.googlesource.com/platform/system/sepolicy/">system/sepolicy</a> directory in the AOSP source tree. Macros are provided for common groupings of classes, permissions and
+rules, and should be used whenever possible to help reduce the likelihood of
+failures due to denials on related permissions.</p>
+
+<p>In addition to individually listing domains or types in a rule, one can also refer to a set of domains or types via an <em>attribute</em>.  An attribute is simply a name for a set of domains or types.  Each domain or type can be associated with any number of attributes.  When a rule is written that specifies an attribute name, that name is automatically expanded to the list of domains or types associated with the attribute.  For example, the <em>domain</em> attribute is associated with all process domains, and the <em>file_type</em> attribute is associated with all file types.</p>
+
+<p>Use the syntax above to create avc rules that comprise the essence of an
+SELinux policy.  A rule takes the form:
+<pre class="devsite-click-to-copy">
+<var>RULE_VARIANT SOURCE_TYPES TARGET_TYPES</var> : <var>CLASSES PERMISSIONS</var>
+</pre>
+
+<p>The rule indicates what should happen when a subject labeled with any of the <em>source_types</em> attempts an action corresponding to any of the <em>permissions</em> on an object with any of the class <em>classes</em> which has any of the <em>target_types</em> label.  The most common example of one of these rules is an allow rule, e.g.:</p>
+
+<pre class="devsite-click-to-copy">
+allow domain null_device:chr_file { open };
+</pre>
+
+
+<p>
+This rule allows a process with any <em>domain</em> associated with the ‘domain’ attribute to take the action described by the <em>permission</em> ‘open’ on an object of <em>class</em> ‘chr_file’ (character device file) that has the <em>target_type</em> label of ‘null_device.’  In practice, this rule may be extended to include other permissions: </p>
+
+<pre class="devsite-click-to-copy">
+allow domain null_device:chr_file { getattr open read ioctl lock append write};
+</pre>
+
+<p>When combined with the knowledge that ‘domain’ is an attribute assigned to
+all process domains and
+that null_device is the label for the character device /dev/null, this rule basically
+permits reading and writing to <code>/dev/null</code>.</p>
+
+<p>A <em>domain</em> generally corresponds to a process and will have a label associated with it.</p>
+
+<p>For example, a typical Android app is running in its own process and has the
+label of untrusted_app that grants it certain restricted permissions.</p>
+
+<p>Platform apps built into the system run under a separate label and are granted
+a distinct set of permissions. System UID apps that are part of the core Android
+system run under the system_app label for yet another set of privileges.</p>
+
+<p>Access to the following generic labels should never be directly allowed to domains; instead, a more specific type should be created for the object or objects:</p>
+
+<ul>
+  <li> socket_device
+  <li> device
+  <li> block_device
+  <li> default_service
+  <li> system_data_file
+  <li> tmpfs
+</ul>
+
+  </body>
+</html>

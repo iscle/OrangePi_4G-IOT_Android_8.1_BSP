@@ -1,0 +1,113 @@
+<html devsite><head>
+    <title>选择设备</title>
+    <meta name="project_path" value="/_project.yaml"/>
+    <meta name="book_path" value="/_book.yaml"/>
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+<p>您可以使用 Android 开放源代码项目 (AOSP) 版本和针对特定硬件的相关二进制文件来开发适用于 Nexus 设备的版本。要查看可用的 Android 版本和针对的 Nexus 设备，请参阅<a href="/source/build-numbers.html#source-code-tags-and-builds">源代码、标记和版本</a>。</p>
+
+<p class="note"><b>注意</b>：由于硬件差异，切勿在原本搭载 Android 4.1.2 或更高版本销售的 Nexus 7 上使用 Android 4.1.1。</p>
+
+<p>您也可以开发适用于 <a href="https://android.googlesource.com/device/linaro/hikey/">HiKey</a> Android 参考开发板（如下所述）的版本。参考开发板旨在协助非 Nexus 组件供应商开发驱动程序并将其移植到各 Android 版本。使用参考开发板可以简化升级工作，缩短将新 Android 设备推向市场所需的时间，降低设备成本（因为使用参考开发板时，原始设计制造商 (ODM)/原始设备制造商 (OEM) 可以从更多兼容组件中进行选择），并加快组件供应商的创新速度。</p>
+
+<h2 id="hikey-boards">HiKey 开发板</h2>
+
+<p>Google 支持使用 <a href="https://www.96boards.org/products/ce/hikey/">HiKey</a>（经认证的 <a href="http://www.96boards.org/">96Board</a>）作为 Android 参考开发板。AOSP 可为 HiKey 提供内核源代码和开发板支持，让开发者能够轻松开发和调试新的及现有的外围设备驱动程序，进行内核开发，并以更少的原始设备制造商 (OEM) 费用执行其他任务。</p>
+
+<p>HiKey 开发板由 <a href="http://www.lenovator.com">Lenovator</a> 提供，有 <a href="http://www.lenovator.com/product/86.html">1GB RAM</a> 和 <a href="http://www.lenovator.com/product/90.html">2GB RAM</a> 配置可供选择：</p>
+
+<img src="images/hikey-board.png" alt="HiKey 开发板图片"/>
+<p class="img-caption"><strong>图 1.</strong> Lenovator 提供的 HiKey 开发板</p>
+
+<p>其他资源：</p>
+<ul>
+<li>
+<a href="https://www.96boards.org/wp-content/uploads/2015/02/96Boards-Hikey-Rev-A1.pdf">HiKey 示意图</a></li>
+<li>
+<a href="https://www.96boards.org/wp-content/uploads/2015/02/HiKey_User_Guide_Rev0.2.pdf">HiKey 用户指南</a></li>
+<li>
+<a href="https://github.com/96boards/documentation/wiki/HiKey-Home">HiKey Wiki</a></li>
+</ul>
+
+<h2 id="running-android-hikey">在 HiKey 上运行 Android</h2>
+
+<p>您可以使用以下命令下载、编译 Android 并在 HiKey 开发板上运行 Android。</p>
+
+<h3 id="compiling-userspace">编译用户空间</h3>
+<ol>
+<li>下载 Android 源代码树：<br />
+<pre><code>$ repo init -u <a href="https://android.googlesource.com/platform/manifest">https://android.googlesource.com/platform/manifest</a> -b master<br />
+$ repo sync -j24</code></pre></li>
+<li>下载 HDMI 二进制文件，并将其解压到 Android 源代码树中：<br />
+<pre><code>$ wget <a href="https://dl.google.com/dl/android/aosp/linaro-hikey-20160226-67c37b1a.tgz">https://dl.google.com/dl/android/aosp/linaro-hikey-20160226-67c37b1a.tgz</a><br />
+$ tar xzf linaro-hikey-20160226-67c37b1a.tgz<br />
+$ ./extract-linaro-hikey.sh</code></pre></li>
+<li>安装 mcopy 实用工具：<br />
+<pre><code>$ apt-get install mtools</code></pre></li>
+<li>编译：<br />
+<pre><code>$ . ./build/envsetup.sh<br />
+$ lunch hikey-userdebug<br />
+$ make -j32</code></pre></li>
+</ol>
+
+<p class="note"><b>注意</b>：如果是 4GB eMMC，请不要使用 <code>$ make -j32</code>，而是要使用 <code>$ make -j32 TARGET_USERDATAIMAGE_4GB=true</code>。</p>
+
+<h3 id="installing-fastboot-ptable">安装初始 fastboot 和 ptable</h3>
+<ol>
+<li>连接 J15 1-2 和 3-4 引脚，从而选择特殊的引导加载程序模式（有关详情，请参阅 <a href="https://www.96boards.org/wp-content/uploads/2015/02/HiKey_User_Guide_Rev0.2.pdf">HiKey 用户指南</a>）。</li>
+<li>将 USB 连接到 PC，以获取 ttyUSB 设备（例如：<code>/dev/ttyUSB1</code>）。</li>
+<li>为开发板接通电源：<br />
+<pre><code>$ cd device/linaro/hikey/installer/hikey<br />
+$ ./flash-all.sh /dev/ttyUSB1 [4g]</code></pre></li>
+<li>取下跳线 3-4，并为开发板接通电源。</li>
+</ol>
+
+<h3 id="flashing-images">将映像刷到设备上</h3>
+<ol>
+<li>连接 J15 1-2 和 5-6 引脚，从而进入 fastboot 模式。</li>
+<li>运行以下命令：<br />
+<pre><code>$ fastboot flash boot out/target/product/hikey/boot.img<br />
+$ fastboot flash -w system out/target/product/hikey/system.img</code></pre></li>
+<li>取下跳线 5-6，并为开发板接通电源。</li>
+</ol>
+
+<h3 id="building-kernel">编译内核</h3>
+<ol>
+<li>运行以下命令：<br />
+<pre><code>$ git clone <a href="https://android.googlesource.com/kernel/hikey-linaro">https://android.googlesource.com/kernel/hikey-linaro</a><br />
+$ cd hikey-linaro<br />
+$ git checkout -b android-hikey-linaro-4.9 origin/android-hikey-linaro-4.9<br />
+$ make ARCH=arm64 hikey_defconfig<br />
+$ make ARCH=arm64 CROSS_COMPILE=aarch64-linux-android- -j24</code></pre></li>
+<li>将输出复制到 HiKey 内核目录 (<code>/kernel/hikey-linaro</code>)：<ol style="list-style-type:lower-alpha">
+<li>将 hi6220-hikey.dtb (<code>arch/arm64/boot/dts/hisilicon/hi6220-hikey.dtb</code>) 复制到 HiKey 内核目录，并将其重命名为 hi6220-hikey.dtb-4.9。</li>
+<li>将映像文件 <code>(arch/arm64/boot/Image-dtb</code>) 复制到 HiKey 内核目录，并将其重命名为 Image-dtb-4.9。</li></ol>
+</li><li>制作启动映像：<pre>
+$ make bootimage -j24
+</pre>
+</li>
+</ol>
+
+<h3 id="setting-resolution">设置显示器分辨率</h3>
+<p>修改 <code>device/linaro/hikey/hikey/BoardConfig.mk</code> 参数 <code>BOARD_KERNEL_CMDLINE</code>，并配置 <code>video</code> 设置。以下是 24 英寸显示器的示例设置：<code>video=HDMI-A-1:1280x800@60</code>。</p>
+
+<h3 id="configuring-output">配置内核串行输出 (uart3)</h3>
+<p>将 J2 低速扩展连接器设为 1 - Gnd、11 - Rx、13 - Tx。有关详情，请参阅 <a href="https://www.96boards.org/wp-content/uploads/2015/02/HiKey_User_Guide_Rev0.2.pdf">HiKey 用户指南</a>。</p>
+
+</body></html>

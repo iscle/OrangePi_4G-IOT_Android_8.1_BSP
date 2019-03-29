@@ -1,0 +1,317 @@
+<html devsite>
+  <head>
+    <title>CTS Development</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<h2 id="initializing-your-repo-client">Initializing your Repo client</h2>
+<p>Follow the <a href="/source/downloading.html">instructions</a>
+to get and build the Android source code but specify a particular CTS branch
+name, for example<code>-b android-5.0_r2</code>, when issuing the <code>repo
+init</code> command. This assures your CTS changes will be included in the
+next CTS release and beyond.</p>
+
+<h2 id="building-and-running-cts">Building and running CTS</h2>
+
+<p>Execute the following commands to build CTS and start the interactive
+CTS console:</p>
+<p class="note"><strong>Note:</strong> You may supply one of these other values
+for <code>TARGET_PRODUCT</code> to build for different architectures:
+<code>aosp_x86_64</code> or <code>aosp_mips</code></p>
+<pre class="devsite-click-to-copy">
+<code class="devsite-terminal">cd <em>/path/to/android/root</em></code>
+<code class="devsite-terminal">make cts -j32 TARGET_PRODUCT=aosp_arm64</code>
+<code class="devsite-terminal">cts-tradefed</code>
+</code></pre>
+
+<p>At the cts-tf console, enter e.g.:</p>
+<pre class="devsite-click-to-copy">
+tf&gt; run cts --plan CTS
+</pre>
+
+<h2 id="writing-cts-tests">Writing CTS tests</h2>
+
+<p>CTS tests use JUnit and the Android testing APIs. Review the
+<a href="https://developer.android.com/tools/testing/testing_android.html">Testing and Instrumentation</a>
+tutorial while perusing the existing tests under the
+<code>cts/tests</code> directory. You will see that CTS tests mostly follow the same
+conventions used in other Android tests.</p>
+
+<p>Since CTS runs across many production devices, the tests must follow
+these rules:</p>
+<ul>
+<li>Must take into account varying screen sizes, orientations, and keyboard layouts.</li>
+<li>Only use public API methods. In other words, avoid all classes, methods, and fields that are annotated with the "hide" annotation.</li>
+<li>Avoid relying upon particular view layouts or depend on the dimensions of assets that may not be on some device.</li>
+<li>Don't rely upon root privileges.</li>
+</ul>
+
+<h3 id="test-naming-and-location">Test naming and location</h3>
+
+<p> Most CTS test cases target a specific class in the Android API. These tests
+have Java package names with a <code>cts</code> suffix and class names with the
+<code>Test</code> suffix. Each test case consists of multiple tests, where each
+test usually exercises a particular method of the class being tested.
+These tests are arranged in a directory structure where tests are grouped into
+different categories such as "widgets" and "views." </p>
+
+<p>
+For example, the CTS test for the Java package
+<code>android.widget.TextView</code> is
+<code>android.widget.cts.TextViewTest</code> with its Java package name as
+<code>android.widget.cts</code> and its class name as
+<code>TextViewTest</code>.  </p>
+
+<ul>
+<li><strong>Java package name</strong><br/>The Java package name for the CTS tests
+is the package name of the class that the test is testing, followed by ".cts".
+For our example, the package name would be <code>android.widget.cts</code>.
+
+<li><strong>Class name</strong><br/>The class name for CTS tests is <strong>
+</strong>name of the class that the test is testing with "Test" appended. (For
+example,  if a test is targeting <code>TextView</code>, the class name should be
+<code>TextViewTest</code>.)
+
+<li><strong>Module name (CTS v2 only)</strong><br/>CTS v2 organizes tests by module.
+ The module name is usually the second string of the Java package name (in our
+example, <code>widget</code>), although it does not have to be.</li>
+</ul>
+
+<p>
+The directory structure and sample code depend on whether you are using CTS v1
+or CTS v2.
+</p>
+<h4 id="cts-v1">CTS v1</h4>
+<p>
+For Android 6.0 and earlier, use CTS v1.  For CTS v1, the sample code is at
+<code>cts/tests/tests/example</code>.
+</p>
+<p>
+The directory structure in CTS v1 tests looks like this:
+</p>
+<pre class="devsite-click-to-copy">
+cts/
+  tests/
+    tests/
+      <em>package-name</em>/
+        Android.mk
+        AndroidManifest.xml
+        src/
+          android/
+            <em>package-name</em>/
+              SampleDeviceActivity.java
+              cts/
+                SampleDeviceTest.java
+</pre>
+<h4 id="cts-v2">CTS v2</h4>
+<p>
+For Android 7.0 and later, use CTS v2.  For details, see <a
+href="https://android.googlesource.com/platform/cts/+/master/tests/sample/">the
+sample test in AOSP</a>.
+</p>
+<p>
+The CTS v2 directory structure looks like this:
+</p>
+
+<pre class="devsite-click-to-copy">
+cts/
+  tests/
+    <em>module-name</em>/
+      Android.mk
+      AndroidManifest.xml
+      src/
+        android/
+          <em>package-name</em>/
+            SampleDeviceActivity.java
+            cts/
+              SampleDeviceTest.java
+</pre>
+
+<h3 id="new-sample-packages">New sample packages</h3>
+
+<p>When adding new tests, there may not be an existing directory to place your
+test.  In those cases, you'll need to create the directory and copy the
+appropriate sample files.</p>
+
+<h4 id="cts-v1">CTS v1</h4>
+
+<p> If you are using CTS v1, refer to the example under
+<code>cts/tests/tests/example</code> and create a new directory. Also,
+make sure to add your new package's module name from its <code>Android.mk</code>
+to <code>CTS_COVERAGE_TEST_CASE_LIST</code>  in
+<code>cts/CtsTestCaseList.mk</code>. This Makefile is used by
+<code>build/core/tasks/cts.mk</code> to combine all the tests together to create
+the final CTS package.  </p>
+
+<h4 id="cts-v2">CTS v2</h4>
+<p>
+Use the sample test
+<code><a href="https://android.googlesource.com/platform/cts/+/master/tests/sample/">/cts/tests/sample/</a></code>
+to quick start your new test module with following steps:
+</p>
+
+<ol>
+  <li>Run this command to create the test directory and copy sample files to it:
+    <pre class="devsite-terminal devsite-click-to-copy">mkdir cts/tests/<i>module-name</i> && cp -r cts/tests/sample/* cts/tests/<i>module-name</i></pre>
+  <li>Navigate to <code>cts/tests/<em>module-name</em></code> and substitute all instances of
+"[Ss]ample" following the recommended naming convention from above.
+  <li>Update <code>SampleDeviceActivity</code> to exercise the feature you're testing.
+  <li>Update <code>SampleDeviceTest</code> to ensure the activity succeeds or logs its
+errors.</li>
+</ol>
+
+<h4>Additional directories</h4>
+
+<p> Other Android directories such as <code>assets</code>, <code>jni</code>,
+<code>libs</code> and <code>res</code> can also be added. To add JNI code,
+create a directory in the root of the project next to <code>src</code> with the native
+code and an <code>Android.mk</code> in it.</p>
+
+<p>
+The makefile typically contains the following settings:
+</p>
+<pre class="devsite-click-to-copy">
+LOCAL_PATH := $(call my-dir)
+include $(CLEAR_VARS)
+LOCAL_MODULE := libCtsSample_jni
+
+# don't include this package in any target
+LOCAL_MODULE_TAGS := optional
+LOCAL_SRC_FILES := <i>list of source code files</i>
+LOCAL_C_INCLUDES := $(JNI_H_INCLUDE)
+
+# Tag this module as a cts test artifact
+LOCAL_COMPATIBILITY_SUITE := cts
+LOCAL_SHARED_LIBRARIES := libnativehelper
+LOCAL_SDK_VERSION := current
+include $(BUILD_SHARED_LIBRARY)
+</pre>
+
+<h4>Android.mk file</h4>
+
+<p> Finally, the <code>Android.mk</code> file in the root of the project will
+need to be modified to build the native code and depend on it, as shown
+below:</p>
+
+<pre class="devsite-click-to-copy">
+# All tests should include android.test.runner.
+LOCAL_JAVA_LIBRARIES := android.test.runner
+
+# Includes the jni code as a shared library
+LOCAL_JNI_SHARED_LIBRARIES := libCtsSample_jni
+
+# Include for InstrumentationCtsTestRunner
+LOCAL_STATIC_JAVA_LIBRARIES := ctstestrunner...
+LOCAL_SDK_VERSION := currentinclude $(BUILD_CTS_PACKAGE)
+
+#Tells make to look in subdirectories for more make files to include
+include $(call all-makefiles-under,$(LOCAL_PATH))
+</pre>
+
+<h2 id="Fix-remove-tests">Fix or remove tests</h2>
+<p>Besides adding new tests there are other ways to contribute to CTS: Fix or
+remove tests annotated with "BrokenTest" or "KnownFailure."</p>
+
+<h2 id="submitting-your-changes">Submitting your changes</h2>
+<p>Follow the <a href="/source/submit-patches.html">Submitting Patches workflow</a>
+to contribute changes to CTS. A reviewer
+will be assigned to your change, and your change should be reviewed shortly!</p>
+
+<h2 id="release-schedule">Release schedule and branch information</h2>
+
+<p>CTS releases follow this schedule.</p>
+
+<p class="note"><strong>Note</strong>: This schedule is tentative and may be
+updated from time to time as CTS for the given Android version matures.</p>
+
+<table>
+<tr>
+  <th>Version</th>
+  <th>Branch</th>
+  <th>Frequency</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>7.0</td>
+    <td>nougat-cts-dev</td>
+      <td>Monthly</td>
+      </tr>
+<tr>
+  <td>6.0</td>
+  <td>marshmallow-cts-dev</td>
+  <td>Monthly</td>
+</tr>
+<tr>
+  <td>5.1</td>
+  <td>lollipop-mr1-cts-dev</td>
+  <td>Monthly</td>
+</tr>
+<tr>
+  <td>5.0</td>
+  <td>lollipop-cts-dev</td>
+  <td>No releases planned</td>
+</tr>
+<tr>
+  <td>4.4</td>
+  <td>kitkat-cts-dev</td>
+  <td>No releases planned</td>
+</tr>
+<tr>
+  <td>4.3</td>
+  <td>jb-mr2-cts-dev</td>
+  <td>No releases planned</td>
+</tr>
+<tr>
+  <td>4.2</td>
+  <td>jb-mr1.1-cts-dev</td>
+  <td>No releases planned</td>
+</tr>
+</table>
+
+<h3 id="important-dates">Important Dates during month of the release</h3>
+
+<ul>
+  <li><strong>End of 1st Week</strong>: Code Freeze.  At this point,
+submissions on the current branch will no longer be accepted and will not be
+included in the next version of CTS.  Once we have chosen a candidate for
+release, the branch will again be open and accepting new submissions.
+
+  <li><strong>Second or third week</strong>: CTS is published in the Android
+Open Source Project (AOSP).
+</ul>
+
+<h3 id="auto-merge">Auto-merge flow</h3>
+
+<p>CTS development branches have been set up so that changes submitted to each
+branch will automatically merge as below:<br>
+jb-dev-> jb-mr1.1-cts-dev -> jb-mr2-cts-dev  -> kitkat-cts-dev ->
+lollipop-cts-dev -> lollipop-mr1-cts-dev -> marshmallow-cts-dev ->
+nougat-cts-dev -> &lt;private-development-branch for Android N MR1&gt;</p>
+
+<p>If a changelist (CL) fails to merge correctly, the author of the CL will get
+an email with instructions on how to resolve the conflict. In most of the
+cases, the author of the CL can use the instructions to skip the auto-merge of
+the conflicting CL.</p>
+
+  </body>
+</html>

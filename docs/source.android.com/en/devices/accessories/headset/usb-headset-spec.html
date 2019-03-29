@@ -1,0 +1,190 @@
+<html devsite>
+  <head>
+    <title>USB Headset: Accessory Specification</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>
+This documentation specifies USB headset buttons behavior to function uniformly
+across the Android ecosystem. Device manufacturers should also consult the
+<a href="/devices/audio/usb.html">USB
+Digital Audio</a> page for more information about USB implementation on Android
+and the <a href="http://source.android.com/compatibility/android-cdd.html">Android
+Compatibility Definition Document (CDD)</a> for requirements related to Android
+devices.
+</p>
+<p>There are also specifications for
+<a href="plug-headset-spec.html">3.5 mm headsets</a> for accessory manufacturers and
+<a href="jack-headset-spec.html">3.5 mm jacks</a> for device manufacturers.
+</p>
+<p>
+This documentation specifies the minimum requirements: accessory manufacturers
+are encouraged to add features while keeping these requirements in mind.
+</p>
+<h2 id="control-function-mapping">Control-function mapping</h2>
+<table>
+  <tr>
+   <th>Control Function</th>
+   <th>Accessory Support</th>
+   <th>Description</th>
+  </tr>
+  <tr>
+   <td>A</td>
+   <td>Required</td>
+   <td>Play/pause (short press), launch voice command (long press), next (double
+       press)</td>
+  </tr>
+  <tr>
+   <td>B</td>
+   <td>Optional</td>
+   <td>Vol+</td>
+  </tr>
+  <tr>
+   <td>C</td>
+   <td>Optional</td>
+   <td>Vol-</td>
+  </tr>
+  <tr>
+   <td>D</td>
+   <td>Optional</td>
+   <td>Launch voice command</td>
+  </tr>
+</table>
+<p>
+<strong>Assign functions to buttons as follows:</strong>
+</p>
+<ul>
+  <li>All one-button headsets must implement Function A.</li>
+  <li>Headsets with multiple buttons must implement functions according to the
+      following pattern:
+    <ul>
+      <li>2 functions: A and D</li>
+      <li>3 functions: A, B, C</li>
+      <li>4 functions: A, B, C, D</li>
+    </ul>
+  </li>
+</ul>
+<p class="note">
+<strong>Note</strong>: No key latching allowed. Each key press by the end user
+must generate the corresponding "down" and "up" key event, matching the end user
+action. In other words, the keys for functions A through D are never "latched"
+or implemented to be used as a toggle (where the "up" event only follows "down"
+on a second key press).
+</p>
+<h2 id="software-mapping">Software mapping</h2>
+<p>
+Compatible USB headsets are required to support the following software mappings
+for the headset buttons. Device support is required for the following software
+mappings.
+</p>
+
+<table>
+  <tr>
+   <th>Function</th>
+   <th>Mappings</th>
+   <th>Context</th>
+   <th>Behavior</th>
+  </tr>
+  <tr>
+   <td rowspan="6">A</td>
+   <td rowspan="6"><strong>HID usage page</strong>: 0x0C<br>
+       <strong>HID usage</strong>: 0x0CD<br>
+       <strong>Kernel key</strong>: <code>KEY_PLAYPAUSE</code><br>
+       <strong>Android key</strong>: <code>KEYCODE_MEDIA_PLAY_PAUSE</code></td>
+   <td rowspan="2">Media playback</td>
+   <td><strong>Input</strong>: Short press<br>
+       <strong>Output</strong>: Play or pause</td>
+  </tr>
+  <tr>
+   <td><strong>Input</strong>: Long press<br>
+       <strong>Output</strong>: Launch voice command<br>
+       <strong>Sends</strong>:
+       <code>android.intent.action.VOICE_SEARCH_HANDS_FREE</code></td>
+  </tr>
+  <tr>
+   <td rowspan="2">Incoming call</td>
+   <td><strong>Input</strong>: Short press<br>
+       <strong>Output</strong>: Accept call</td>
+  </tr>
+  <tr>
+   <td><strong>Input</strong>: Long press<br>
+       <strong>Output</strong>: Reject call</td>
+  </tr>
+  <tr>
+   <td rowspan="2">Ongoing call</td>
+   <td><strong>Input</strong>: Short press<br>
+       <strong>Output</strong>: End call</td>
+  </tr>
+  <tr>
+   <td><strong>Input</strong>: Long press<br>
+       <strong>Output</strong>: Mute or unmute microphone</td>
+  </tr>
+  <tr>
+   <td>B</td>
+   <td><strong>HID usage page</strong>: 0x0C<br>
+       <strong>HID usage</strong>: 0x0E9<br>
+       <strong>Kernel key</strong>: <code>KEY_VOLUMEUP</code><br>
+       <strong>Android key</strong>: <code>VOLUME_UP</code></td>
+   <td>Media playback, Ongoing call</td>
+   <td><strong>Input</strong>: Short or long press<br>
+       <strong>Output</strong>: Increases the system or headset volume</td>
+  </tr>
+  <tr>
+   <td>C</td>
+   <td><strong>HID usage page</strong>: 0x0C<br>
+       <strong>HID usage</strong>: 0x0EA<br>
+       <strong>Kernel key</strong>: <code>KEY_VOLUMEDOWN</code><br>
+       <strong>Android key</strong>: <code>VOLUME_DOWN</code></td>
+   <td>Media playback, Ongoing call</td>
+   <td><strong>Input</strong>: Short or long press<br>
+       <strong>Output</strong>: Decreases the system or headset volume</td>
+  </tr>
+  <tr>
+   <td>D</td>
+   <td><strong>HID usage page</strong>: 0x0C<br>
+       <strong>HID usage</strong>: 0x0CF<br>
+       <strong>Kernel key</strong>: <code>KEY_VOICECOMMAND</code><br>
+       <strong>Android key</strong>: <code>KEYCODE_VOICE_ASSIST</code></td>
+   <td>All. Can be triggered in any instance.</td>
+   <td><strong>Input</strong>: Short or long press<br>
+       <strong>Output</strong>: Launch voice command</td>
+  </tr>
+</table>
+
+<p class="note">Key mappings should be declared within a HID application
+collection. For accessories without a microphone, use Headphone (Usage
+Page: Consumer (0x0C), Usage: Headphone (0x05)). For accesories with a
+microphone, use Headset (Usage Page: Telephony (0x0B), Usage: Headset (0x05)).</p>
+
+<h2 id="mechanical">Mechanical</h2>
+<p>
+Accessory manufacturers must follow the requirements for USB connectors
+as specified by <a href="http://www.usb.org/">USB.org</a>.
+</p>
+<p>
+Device manufacturers must follow the requirements in the
+<a href="/compatibility/android-cdd.html#7_7_usb">USB section</a> of
+the Android CDD.
+</p>
+
+  </body>
+</html>

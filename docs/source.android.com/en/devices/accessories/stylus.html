@@ -1,0 +1,122 @@
+<html devsite>
+  <head>
+    <title>Stylus</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>Android 6.0 and higher supports a standard data format for Bluetooth stylus
+connections over Bluetooth (BT), Bluetooth Low Energy (BTLE), or USB. The
+platform correlates timing between touch input and stylus data then provides
+stylus data to render MotionEvents to the active application. The following
+sections provide guidelines for OEM device implementers, stylus accessory creators, and
+stylus application developers.</p>
+
+<h2 id="guide-partners">Guidelines for OEM device implementers</h2>
+<p>To enable Bluetooth stylus support, OEM device implementers must support Bluetooth
+(and should support BTLE for wider compatibility). The platform handles data
+collection, timing correlation, and rendering to the application for supported
+stylus events.</p>
+
+<p>At this time, the Android CTS <strong>does not</strong> include tests to
+ensure existing APIs for touch events support default behavior. As a
+workaround, we recommend creating a stylus accessory or emulator that can
+simulate stylus events.</p>
+
+<h2 id="guide-creators">Guidelines for stylus accessory creators</h2>
+<p>To implement support on a stylus device, device implementers must use the Stylus
+Human Interface Device (HID) Descriptor shown below to describe how stylus data
+(pressure sensitivity, eraser, side buttons, device ID, etc.) is represented.
+The stylus device sends the HID information to the Android mobile device,
+enabling the platform to correlate HID data with touch data from the touchscreen
+to produce stylus events via MotionEvent. Data can be sent over Bluetooth (BT),
+Bluetooth Low Energy (BTLE), or USB.</p>
+
+<h3 id="hid-descriptor">HID descriptor</h3>
+
+<pre class="devsite-click-to-copy">
+UsagePage(Digitizer)
+Usage(Pen)
+Collection(Application)
+    Usage(Stylus)
+    Collection(Logical)
+        Usage(Tip Pressure)
+        Logical Minimum(0)
+        Logical Maximum(1023)
+        Report Count(1)
+        Report Size(10)
+        Input(Data, Variable, Absolute, No Null)
+
+        Usage(Barrel Switch)
+        Usage(Secondary Barrel Switch)
+        Usage(Tip Switch)
+        Usage(Invert)
+        Logical Maximum(1)
+        Report Count(4)
+        Report Size(1)
+        Input(Data, Variable, Absolute, No Null)
+
+        Usage(Transducer Serial Number)
+        Report Count(1)
+        Report Size(128)
+        Feature(Constant, Variable)
+    EndCollection
+EndCollection
+
+unsigned char HID_DESC[] = {
+    0x05, 0x0D, // UsagePage(Digitizer)
+    0x09, 0x02, // Usage(Pen)
+    0xA1, 0x01, // Collection(Application)
+    0x09, 0x20, // Usage(Stylus)
+    0xA1, 0x02, // Collection(Logical)
+    0x09, 0x30, // Usage(Tip Pressure)
+    0x15, 0x00, // Logical Minimum(0)
+    0x26, 0xFF, 0x03, // Logical Maximum(1023)
+    0x95, 0x01, // Report Count(1)
+    0x75, 0x0A, // Report Size(10)
+    0x81, 0x02, // Input(Data, Variable, Absolute, No Null)
+
+    0x09, 0x44, // Usage(Barrel Switch)
+    0x09, 0x5A, // Usage(Secondary Barrel Switch)
+    0x09, 0x42, // Usage(Tip Switch)
+    0x09, 0x3C, // Usage(Invert)
+    0x25, 0x01, // Logical Maximum(1)
+    0x95, 0x04, // Report Count(4)
+    0x75, 0x01, // Report Size(1)
+    0x81, 0x02, // Input(Data, Variable, Absolute, No Null)
+
+    0x09, 0x5B, // Usage(Transducer Serial Number)
+    0x95, 0x01, // Report Count(1)
+    0x75, 0x80, // Report Size(128)
+    0xB1, 0x03, // Feature(Constant, Variable)
+    0xC0, // End Collection
+    0xC0, // End Collection
+}
+</pre>
+
+<h2 id="guidelines-devs">Guidelines for stylus application developers</h2>
+<p>The Android 6.0 platform automatically handles pairing and event correlation,
+so both existing and new applications running on Android 6.0 support Bluetooth
+stylus by default. For details on Bluetooth stylus APIs, refer to
+<a href="http://developer.android.com/about/versions/marshmallow/android-6.0.html#bluetooth-stylus">developer.android.com</a>.
+
+  </body>
+</html>

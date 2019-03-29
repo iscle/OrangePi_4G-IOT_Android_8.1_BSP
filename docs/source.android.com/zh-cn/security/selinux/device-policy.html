@@ -1,0 +1,193 @@
+<html devsite><head>
+    <title>编写 SELinux 政策</title>
+    <meta name="project_path" value="/_project.yaml"/>
+    <meta name="book_path" value="/_book.yaml"/>
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+<p>Android 开放源代码项目 (AOSP) 针对所有 Android 设备中常用的应用和服务提供了一个可靠实用的基本政策。AOSP 的贡献者会定期完善该政策。该核心政策应占设备上最终政策的 90-95%，而剩下的 5-10% 则为设备专用自定义政策。本文重点介绍了这些设备专用自定义政策、如何编写设备专用政策，以及在编写此类政策时要避免的一些陷阱。</p>
+
+<h2 id="device_bringup">设备启动</h2>
+
+<p>在编写设备专用政策时，请按顺序执行以下步骤。</p>
+
+<h3 id="run_in_permissive_mode">在宽容模式下运行</h3>
+
+<p>当设备处于<a href="index.html#background">宽容模式</a>时，拒绝事件会被记录下来，但不会被强制执行。宽容模式非常重要，原因有以下两个：</p>
+
+<ol>
+  <li>宽容模式可确保政策启用不会延误其他早期设备启动任务。
+  </li><li>被强制执行的拒绝事件可能会掩盖其他拒绝事件。例如，文件访问通常会涉及目录搜索、文件打开和文件读取操作。在强制模式下，只会发生目录搜索拒绝事件。宽容模式可确保所有拒绝事件都会显示出来。
+</li></ol>
+
+<p>要使设备进入宽容模式，最简单的方法是通过<a href="validate.html#switching_to_permissive">内核命令行</a>来实现。相应命令可以添加到设备的 BoardConfig.mk 文件中：<code>platform/device/&lt;vendor&gt;/&lt;target&gt;/BoardConfig.mk</code>。修改命令行之后，执行 <code>make clean</code>，接着执行 <code>make bootimage</code>，然后刷写新的启动映像。</p>
+
+<p>在此之后，通过以下命令确认宽容模式：</p>
+
+<p><code>adb getenforce</code></p>
+
+<p>将处于全局宽容模式的时间设为两周比较合理。在解决大多数拒绝事件之后，返回到强制模式，并在出现错误时加以解决。对于仍然不断出现拒绝事件的域或仍处于密集开发阶段的服务，可以暂时使其进入宽容模式，但要尽快使其返回到强制模式。</p>
+
+<h3 id="enforce_early">提早采用强制模式</h3>
+
+<p>在强制模式下，拒绝事件会被记录下来，并且会被强制执行。最佳做法是尽早使您的设备进入强制模式。如果花时间等待创建和强制执行设备专用政策，通常会导致有问题的产品和糟糕的用户体验。在实际使用过程中，要提前足够长的时间开始参与 <a href="https://en.wikipedia.org/wiki/Eating_your_own_dog_food">dogfooding</a>，确保对功能进行全面测试。提早开始有助于确保安全问题能够在相关人员做出设计决策时被考虑在内。相反，仅根据观察到的拒绝事件来授予权限是一种不安全的做法。可以利用这段时间对设备进行安全审核，并针对不应被允许的行为提出错误。</p>
+
+<h3 id="remove_or_delete_existing_policy">移除或删除现有政策</h3>
+
+<p>之所以要在新设备上从头开始创建设备专用政策，有很多合理的理由，其中包括：</p>
+
+<ul>
+  <li>安全审核</li><li> <a href="#overuse_of_negation">过度宽容的政策</a>
+  </li><li> <a href="#policy_size_explosion">政策规模缩小</a>
+  </li><li>Dead 政策</li></ul>
+
+<h3 id="address_denials_of_core_services">解决核心服务生成的拒绝事件</h3>
+
+<p>核心服务生成的拒绝事件通常是通过为文件添加标签来解决的。例如：</p>
+
+<pre class="no-pretty-print">
+avc: denied { open } for pid=1003 comm=”mediaserver” path="/dev/kgsl-3d0”
+dev="tmpfs" scontext=u:r:mediaserver:s0 tcontext=u:object_r:device:s0
+tclass=chr_file permissive=1
+avc: denied { read write } for pid=1003 name="kgsl-3d0" dev="tmpfs"
+scontext=u:r:mediaserver:s0
+tcontext=u:object_r:device:s0 tclass=chr_file permissive=1
+</pre>
+
+<p>是完全通过为 <code>/dev/kgsl-3d0</code> 添加适当的标签来解决的。在此示例中，<code>tcontext</code> 是 <code>device</code>。这表示默认环境，在该环境中，<code>/dev</code> 内的所有文件都会获得“<a href="https://android.googlesource.com/platform/external/sepolicy/+/marshmallow-dev/file_contexts#31">device</a>”标签，除非被分配了更具体的标签。直接在此处接受来自 <a href="validate.html#using_audit2allow">audit2allow</a> 的输出会导致不正确且过度宽容的规则。</p>
+
+<p>要解决这种问题，可以为文件添加更具体的标签，在此示例中为 <a href="https://android.googlesource.com/device/lge/hammerhead/+/marshmallow-dev/sepolicy/file_contexts#1">gpu_device</a>。由于 <a href="https://android.googlesource.com/platform/external/sepolicy/+/marshmallow-dev/mediaserver.te#24">mediaserver 在核心政策中已有访问 gpu_device 所需的必要权限</a>，因此不再需要更多权限。</p>
+
+<p>其他需要以核心政策中预定义的类型作为标签的设备专用文件：</p>
+
+<ol>
+  <li> <a href="https://android.googlesource.com/device/lge/hammerhead/+/marshmallow-dev/sepolicy/file_contexts#31">块设备</a>
+  </li><li> <a href="https://android.googlesource.com/device/lge/hammerhead/+/marshmallow-dev/sepolicy/file_contexts#80">音频设备</a>
+  </li><li> <a href="https://android.googlesource.com/device/lge/hammerhead/+/marshmallow-dev/sepolicy/file_contexts#21">视频设备</a>
+  </li><li> <a href="https://android.googlesource.com/device/lge/hammerhead/+/marshmallow-dev/sepolicy/file_contexts#89">传感器</a>
+  </li><li> <a href="https://android.googlesource.com/device/lge/hammerhead/+/marshmallow-dev/sepolicy/file_contexts#8">nfc</a>
+  </li><li>gps_device</li><li> <a href="https://android.googlesource.com/device/lge/hammerhead/+/marshmallow-dev/sepolicy/file_contexts#139">/sys 中的文件</a>
+  </li><li>/proc 中的文件</li></ol>
+
+<p>一般情况下，向默认标签授予权限的做法是错误的。其中许多权限都是 <a href="customize.html#neverallow">neverallow</a> 规则所不允许的，但即使该规则并未明确禁止这些权限，也最好是提供具体标签。</p>
+
+<h3 id="label_new_services_and_address_denials">为新服务添加标签并解决拒绝事件</h3>
+
+<p>通过 init 启动的服务需要在各自的 SELinux 域中运行。以下示例会将服务“foo”放入它自己的 SELinux 域中并为其授予权限。</p>
+
+<p>该服务是在设备的 <code>init.&lt;target&gt;.rc</code> 文件中启动的，如下所示：</p>
+
+<pre class="no-pretty-print">
+service foo /system/bin/foo
+    class core
+</pre>
+
+<ol>
+  <li>创建一个新域“foo”<br />
+
+      <p>创建包含以下内容的文件 <code>device/&lt;oem&gt;/&lt;target&gt;/sepolicy/foo.te</code>：</p>
+
+<pre class="no-pretty-print">
+# foo service
+type foo, domain;
+type foo_exec, exec_type, file_type;
+
+init_daemon_domain(foo)
+</pre>
+
+      <p>这是 foo SELinux 域的初始模板，您可以根据该可执行文件执行的具体操作为该模板添加规则。</p>
+  </li>
+
+  <li>为 <code>/system/bin/foo</code> 添加标签<br />
+
+      <p>将以下内容添加到 <code>device/&lt;oem&gt;/&lt;target&gt;/sepolicy/
+         file_contexts</code>：</p>
+
+<pre class="no-pretty-print">
+/system/bin/foo   u:object_r:foo_exec:s0
+</pre>
+
+      <p>这可确保为该可执行文件添加适当的标签，以便 SELinux 在适当的域中运行相应服务。</p>
+  </li>
+
+  <li>编译并刷写启动映像和系统映像。</li>
+
+  <li>优化相应域的 SELinux 规则。<br />
+
+      <p>根据拒绝事件确定所需的权限。<a href="validate.html#using_audit2allow">audit2allow</a> 工具提供了一些实用的指南，但该工具仅适用于提供编写政策时所需的信息。切勿只是复制输出内容。</p>
+  </li>
+</ol>
+
+<h3 id="enforcing_mode">切换回强制模式</h3>
+
+<p>可以在宽容模式下进行问题排查，但要尽早切换回强制模式，并尽量保持该模式。</p>
+
+<h2 id="common_mistakes">常见错误</h2>
+
+<p>下面介绍了在编写设备专用政策时发生的常见错误的一些解决方法。</p>
+
+<h3 id="overuse_of_negation">过度使用否定</h3>
+
+<p>以下示例规则类似于锁着前门，但开着窗户：</p>
+
+<p><code>allow { domain -untrusted_app } scary_debug_device:chr_file rw_file_perms</code>。</p>
+
+<p>该规则的意图很明确：除了第三方应用之外，其他所有应用都可以访问调试设备。</p>
+
+<p>该规则存在几个方面的缺陷。排除 <code>untrusted_app</code> 能起到的效果微不足道，因为所有应用都可以选择在 <code>isolated_app</code> 域中运行服务。同样，如果第三方应用的新域被添加到了 AOSP，它们也可以访问 <code>scary_debug_device</code>。该规则过于宽容。对于大多数域来说，能够访问该调试工具并不能使它们获益。该规则应编写为仅允许需要访问该调试工具的域。</p>
+
+<h3 id="debugging_features_in_production">正式版中的调试功能</h3>
+
+<p>调试功能及其政策不应存在于正式版中。</p>
+
+<p>最简单的替代方案是，仅当 eng/userdebug 版本中停用了 SELinux 时，才允许使用调试功能，例如 <code>adb root</code> 和 <code>adb setenforce 0</code>。</p>
+
+<p>另一种安全的替代方案是在 <a href="https://android.googlesource.com/device/lge/hammerhead/+/marshmallow-dev/sepolicy/platform_app.te#3">userdebug_or_eng</a> 声明中包含调试权限。</p>
+
+<h3 id="policy_size_explosion">政策规模扩张</h3>
+
+<p><a href="http://arxiv.org/abs/1510.05497">在 Wild 中描述 SEAndroid 政策</a>中介绍了一个令人关注的设备政策自定义发展趋势。设备专用政策应占设备上运行的总体政策的 5-10%。如果自定义政策所占的比例超过 20%，则几乎肯定会包含超特权域和 Dead 政策。</p>
+
+<p>过大的政策：</p>
+
+<ul>
+  <li>由于此类政策位于 ramdisk 中，并且还会加载到内核内存中，因此会占据两倍的内存。
+  </li><li>需要较大的启动映像，浪费磁盘空间。
+  </li><li>影响运行时政策查询次数。
+</li></ul>
+
+<p>以下示例显示了制造商专用政策分别占设备上政策 50% 和 40% 的两种设备。重写政策大幅提高了安全性，而且功能方面没有任何损失，如下所示。（AOSP 设备 Shamu 和 Flounder 也包含在了该示例中，以便进行比较。）</p>
+
+<p><img alt="图 1：安全审核后的设备专用政策规模对比。" src="images/selinux_device_policy_reduction.png"/></p>
+<p class="img-caption"><strong>图 1</strong>. 安全审核后的设备专用政策规模对比。</p>
+
+<p>在两种设备中，政策的规模和权限数量都大大减小了。政策规模的减小几乎完全是因为移除了不必要的权限，其中许多权限可能是由 audit2allow 生成且被随意添加到政策中的规则。对于这两种设备来说，Dead 域也是一个问题。</p>
+
+<h3 id="granting_the_dac_override_capability">授予 dac_override 权限</h3>
+
+<p><code> dac_override</code> 拒绝事件意味着违规进程正在尝试使用错误的 unix user/group/world 权限访问某个文件。正确的解决方案几乎从不授予 <code>dac_override</code> 权限，而是<a href="https://android-review.googlesource.com/#/c/174530/5/update_engine.te@11">更改相应文件或进程的 unix 权限</a>。有些域（例如 init、vold 和 installd）确实需要能够替换 unix 文件权限才能访问其他进程的文件。要查看更深入的讲解，请访问 <a href="http://danwalsh.livejournal.com/69478.html">Dan Walsh 的博客</a>。</p>
+
+<h2 id="additional_resources">其他资源</h2>
+
+<p>如果要提问或提出代码审核请求，<a href="http://seandroid.bitbucket.org/ForMoreInformation.html">SEAndroid 论坛</a>是一个的绝佳场所。</p>
+
+<p>AOSP 提供了关于 <a href="index.html">Android 上的 SELinux</a> 的简要介绍。</p>
+
+<p>如需更深入的说明，请点击<a href="http://seandroid.bitbucket.org/">此处</a>。</p>
+
+</body></html>

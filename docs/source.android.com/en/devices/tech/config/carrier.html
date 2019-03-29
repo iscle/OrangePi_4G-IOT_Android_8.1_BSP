@@ -1,0 +1,237 @@
+<html devsite>
+  <head>
+    <title>Carrier Configuration</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>The Android 6.0 Marshmallow release introduces a capability for privileged
+applications to provide carrier-specific configuration to the platform. This
+functionality, based on the <a href="uicc.html">UICC carrier privilege
+functionality</a> introduced in Android 5.1 (Lollipop MR1), will allow carrier
+configuration to be moved away from the static configuration overlays and give
+carriers and OEMs the ability to dynamically provide carrier configuration to
+the platform through a defined interface.</p>
+
+<p>A properly signed carrier app can either be preloaded in the system image,
+installed automatically, or manually installed through an app store. The app
+will be queried by the platform to provide configuration for settings
+including:</p>
+
+<ul>
+  <li>Roaming/Non-roaming networks
+  <li>Visual Voicemail
+  <li>SMS/MMS network settings
+  <li>VoLTE/IMS configurations
+</ul>
+
+<p class="note"><strong>Note</strong>: This app must be signed with the
+certificate that has a matching signature to one on the SIM. See the <a
+href="#how_privilege_is_granted_to_a_carrier_app">How is privilege granted to a
+Carrier App</a> section for details.</p>
+
+<p>The determination of what values to return is entirely up to the Carrier App
+and can be dynamic based on detailed information passed to the app via the
+platform. </p>
+
+<p>The key benefits of this approach are:</p>
+
+<ul>
+  <li><strong>Dynamic configuration</strong> - Support for concepts like
+non-MCCMNC derived configuration, for example
+mobile virtual network operators (MVNOs) or customer opt in to extra services
+  <li><strong>Support for devices sold through any channel</strong> - e.g. an
+open market phone can be automatically configured with the right
+settings by downloading an app from an app store.
+  <li><strong>Security</strong> - Privilege to provide this configuration is
+given only to applications signed by the carrier
+  <li><strong>Defined API</strong> - Previously this configuration was stored
+mostly in internal XML overlays within the framework and not through a public
+API. The carrier config API in Android 6.0 is public and well defined.
+</ul>
+
+<h2 id=how_it_works>How it works</h2>
+
+<h3 id=loading_the_config>Loading the config</h3>
+
+<p>The carrier configuration supplied by this feature is a set of key-value pairs
+that change various telephony-related behaviors in the platform.</p>
+
+<p>The set of values for a particular device is determined by querying the
+following components in order:</p>
+
+<ol>
+  <li>The Carrier App (although this is technically optional, it is the recommended
+location for additional configuration beyond what exists in the Android Open
+Source Project - AOSP)
+  <li>The Platform Config App bundled with the system image
+  <li>Default values, hardcoded into the framework (equivalent to the behavior prior
+to M)
+</ol>
+
+<p class="caution"><strong>Important</strong>: If a value for a particular key
+is returned at any stage, the first value found takes precedence over the
+further stages.</p>
+
+<h4 id=the_platform_config_app>The Platform Config App</h4>
+
+<p>A generic Platform Config App is bundled with the system image that can supply
+values for any variables the regular Carrier App does not. The platform config
+app can be found (in M) in: <code>packages/apps/CarrierConfig</code></p>
+
+<p>This app’s purpose is to provide some per-network configuration when a Carrier
+App is not installed, and carriers/OEMs should make only minimal changes to it
+in their own images. Instead carriers should provide the separate Carrier App
+for carrier customization, allowing updates to be distributed via avenues such
+as app stores.</p>
+
+<h4 id=how_privilege_is_granted_to_a_carrier_app>How privilege is granted to a Carrier App</h4>
+
+<p>The Carrier App in question must be signed with the same certificate found on
+the SIM card, as documented in <a href="uicc.html">UICC Carrier Privileges</a>.</p>
+
+<h4 id=what_information_is_passed_to_the_carrier_app>What information is passed to the Carrier App</h4>
+
+<p>The Carrier App is supplied with the following values, enabling it to make a
+dynamic decision as to what values to return:</p>
+
+<ul>
+  <li>MCC
+  <li>MNC
+  <li>SPN
+  <li>IMSI
+  <li>GID1
+  <li>GID2
+</ul>
+
+<h4 id=when_loading_the_carrier_config_occurs>When loading the carrier config occurs</h4>
+
+<p>The building of the list of key value pairs occurs:</p>
+
+<ul>
+  <li>When the SIM is loaded (boot, or SIM hot swap)
+  <li>When the Carrier app manually triggers a reload
+  <li>When the Carrier app gets updated
+</ul>
+
+<p>See the <a
+href="http://developer.android.com/reference/android/service/carrier/CarrierService.html#onLoadConfig(android.service.carrier.CarrierIdentifier)">android.service.carrier.CarrierService#onLoadConfig()</a>
+reference for more details.</p>
+
+<p class="note"><strong>Note</strong>: The platform caches carrier
+configuration bundles and loads from the cache for SIM state changes. This is
+to speed up boot and SIM hot swap. It is assumed that without a package update
+or an explicit <code>notifyConfigChangedForSubId</code>, the config bundle has
+not been modified.</p>
+
+<h3 id=using_the_config>Using the config</h3>
+
+<p>Once the configuration has been built, the values contained within it are used
+to set various values of system configuration, including:</p>
+
+<ul>
+  <li>Internal framework telephony settings
+  <li>SDK-returned configuration values, e.g. in SmsManager
+  <li>App settings like VVM connection values in the Dialer
+</ul>
+
+<h3 id=configuration_keys>Configuration keys</h3>
+
+<p>The list of keys is defined as part of the public SDK in <code><a
+href="http://developer.android.com/reference/android/telephony/CarrierConfigManager.html">android.telephony.CarrierConfigManager</a></code>
+and cannot change within the same API level. See the table below for a summary of keys.</p>
+
+<h2 id=how_to_build_your_application>How to build your application</h2>
+
+<h3 id=create_your_application>Create your application</h3>
+
+<p>Your application must target the Android 6.0 API level (23).</p>
+
+<h3 id=declare_a_class_that_overrides_android_service_carrier_carrierservice>Declare a class that overrides android.service.carrier.CarrierService</h3>
+
+<ol>
+  <li>Override <code>onLoadConfig</code> to return the values you wish to
+supply based on the <code>service.carrier.CarrierIdentifier</code> object
+passed.
+  <li>Add logic to call <code>notifyConfigChangedForSubId</code> in scenarios
+where carrier configuration may change over time (e.g. when the
+user adds extra services to their account)
+</ol>
+
+<p>An example is below:</p>
+
+<pre class="prettyprint">
+public class SampleCarrierConfigService extends CarrierService {
+
+    private static final String TAG = "SampleCarrierConfigService";
+
+    public SampleCarrierConfigService() {
+        Log.d(TAG, "Service created");
+    }
+
+    &#64;Override
+    public PersistableBundle onLoadConfig(CarrierIdentifier id) {
+        Log.d(TAG, "Config being fetched");
+        PersistableBundle config = new PersistableBundle();
+        config.putBoolean(
+            CarrierConfigManager.KEY_CARRIER_VOLTE_AVAILABLE_BOOL, true);
+        config.putBoolean(
+            CarrierConfigManager.KEY_CARRIER_VOLTE_TTY_SUPPORTED_BOOL, false);
+        config.putInt(CarrierConfigManager.KEY_VOLTE_REPLACEMENT_RAT_INT, 6);
+        // Check CarrierIdentifier and add more config if needed…
+        return config;
+    }
+}
+</pre>
+
+
+<p>Please see the <a
+href="https://developer.android.com/reference/android/service/carrier/CarrierService.html">android.service.carrier.CarrierService</a> reference on developer.android.com for more details.</p>
+
+<h3 id=name_the_class_in_your_manifest>Name the class in your manifest</h3>
+
+<p>An example is below:</p>
+
+<pre class="prettyprint">
+&lt;service android:name=".SampleCarrierConfigService"
+android:label="&#64;string/service_name"
+android:permission="android.permission.BIND_CARRIER_SERVICES"&gt;
+      &lt;intent-filter&gt;
+      &lt;action android:name="android.service.carrier.ConfigService"/&gt;&lt;/intent-filter&gt;
+&lt;/service&gt;
+</pre>
+
+<h3 id=sign_app_with_same_certificate_on_sim>Sign app with same certificate on SIM</h3>
+
+<p>See <a href="uicc.html">UICC Carrier Privileges</a> for the requirements.</p>
+
+<h2 id=testing_your_application>Testing your application</h2>
+
+<p>Once you have built your configuration application, you can test your code
+with:</p>
+
+<ul>
+  <li>A SIM containing a valid certificate signature
+  <li>A device running Android 6.0 and later, for example a Nexus device
+</ul>
+
+  </body>
+</html>

@@ -1,0 +1,275 @@
+<html devsite>
+  <head>
+    <title>Setting up CTS</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<h2 id=physical_environment>Physical environment</h2>
+<h3 id=wifi>Wi-Fi and IPv6</h3>
+<p>CTS tests require a Wi-Fi network that supports IPv6, can treat the Device
+Under Test (DUT) as an isolated client, and has an internet
+connection. An isolated client refers to a
+configuration where the DUT does not have visibility to the
+broadcast/multinetwork messages on that subnetwork, either by a Wi-Fi AP
+configuration or by running the DUT on an isolated sub-network without
+other devices being connected.</p>
+
+<p>If you don't have access to a native IPv6 network, an IPv6 carrier network,
+or a VPN to pass some tests depending on IPv6, you may instead use a Wi-Fi
+access point and an IPv6 tunnel. See Wikipedia <a
+href="http://en.wikipedia.org/wiki/List_of_IPv6_tunnel_brokers">list of IPv6
+tunnel brokers</a>.</p>
+
+<h3 id=ble_beacons>Bluetooth LE beacons</h3>
+<p>If the DUT supports the Bluetooth LE feature, then at least three
+Bluetooth LE beacons should be placed within five meters of the DUT for Bluetooth
+LE scan testing. Those beacons can be any kind, do not need to be
+configured or emit anything specific, and can include iBeacon,
+Eddystone, or even devices simulating BLE beacons.</p>
+
+<h2 id=desktop_setup>Desktop machine setup</h2>
+<p>CTS currently supports 64-bit Linux and Mac OS host machines.</p>
+
+<h3 id=adb>ADB and AAPT</h3>
+<p>Before running the CTS, make sure you have recent versions of both <a
+href="http://developer.android.com/tools/help/adb.html">Android Debug
+Bridge (adb)</a> and <a
+href="http://developer.android.com/guide/topics/manifest/uses-feature-element.html#testing">Android
+Asset Packaging Tool (AAPT)</a> installed and those tools' location added
+to the system path of your machine.</p>
+
+<p>To install ADB, download the <a
+href="http://developer.android.com/sdk/index.html#Other">Android SDK Tools</a>
+package for your operating system, open it, and follow the instructions in the
+included README file. For troubleshooting information, see <a
+href="http://developer.android.com/sdk/installing/index.html?pkg=tools">Installing
+the Stand-alone SDK Tools</a>.</p>
+
+<p>Ensure <code>adb</code> and <code>aapt</code> are in your system path. The
+following command assumes you've opened the package archive in your home
+directory:</p>
+<hr>
+<pre class="devsite-terminal devsite-click-to-copy">
+export PATH=$PATH:$HOME/android-sdk-linux/build-tools/&lt;version&gt;
+</pre>
+
+<p class="note"><strong>Note:</strong> Please ensure your starting path and
+directory name are correct.</p>
+
+<h3 id=JDK>Java Development Kit (JDK)</h3>
+<p>Install the proper version of the Java Development Kit (JDK). For Android 7.0&mdash;
+</p>
+<ul>
+  <li>On Ubuntu, use <a href="http://openjdk.java.net/install/">OpenJDK 8</a>.
+  <li>On Mac OS, use <a
+  href="http://www.oracle.com/technetwork/java/javase/downloads/java-archive-javase8-2177648.html#jdk-8u45-oth-JPR">jdk
+  8u45 or newer</a>.</li>
+</ul>
+<p>
+For details, see the <a href="https://source.android.com/source/requirements.html#jdk">JDK
+requirements</a>.
+</p>
+
+<h3 id=CTS_files>CTS files</h3>
+
+<p><a href="downloads.html">Download</a> and open the CTS
+packages matching your devices' Android version and all the Application Binary
+Interfaces (ABIs) your devices support.</p>
+
+<p>Download and open the latest version of the <a
+href="downloads.html#cts-media-files">CTS Media
+Files</a>.</p>
+
+<h3 id=system_detect>Device detection</h3>
+<p>Follow the step to <a
+href="http://developer.android.com/tools/device.html#setting-up">set up your
+system to detect your device</a>, such as creating a <code>udev</code> rules
+file for Ubuntu Linux.</p>
+
+<h2 id=device_setup>Android device setup</h2>
+
+<h3 id=user_builds>User builds</h3>
+
+<p>A compatible device is defined as a device with a user/release-key signed
+build, so your device should be running a system image based on the known to be
+compatible user build (Android 4.0 and later) from <a
+href="/source/build-numbers.html">Codenames, Tags, and Build
+Numbers</a>.<br>
+
+<p class="caution"><strong>Caution:</strong> When used to confirm Android
+compatibility of your final system image, CTS must be executed on devices with
+a user build.</p>
+
+<h3 id=first-api-level>First API level build property</h3>
+
+<p>Certain CTS requirements depend on the build a device was originally shipped
+with. For example, devices that originally ship with earlier builds may be excluded from
+system requirements that apply to devices that ship with later builds.</p>
+
+<p>To make this information available to CTS, device manufacturers may define
+the build-time property: <code>ro.product.first_api_level</code>. The value of this
+property is the first API level the device was commercially launched with.</p>
+
+<p>OEMs can add <code>PRODUCT_PROPERTY_OVERRIDES</code> into their device.mk file to set
+this property, as shown in the following example: </p>
+
+<pre class="devsite-click-to-copy">
+#ro.product.first_api_level indicates the first api level, device has been commercially launched on.
+PRODUCT_PROPERTY_OVERRIDES +=\
+ro.product.first_api_level=21
+</pre>
+
+<aside class="note">
+<b>Note:</b> The property ro.product.first_api_level should be unset (0) for the first build of a
+product, and set to the correct API level value for all subsequent builds. This
+way the property can correctly identify a new product, and we have lost no
+information about the first API level of the product (0 value implies
+ro.product.first_api_level = Build.VERSION.SDK_INT).
+</aside>
+
+<h3 id=cts-shim-apps>CTS Shim apps</h3>
+
+<p> Android 7.0 includes the following pre-built apps (built from <a
+href="https://android.googlesource.com/platform/frameworks/base/+/master/packages/CtsShim/build/">this
+source</a>) which do not contain any code except for the manifest: </p>
+
+<ul>
+  <li><code><a href="https://android.googlesource.com/platform/frameworks/base/+/android-7.0.0_r1/packages/CtsShim/CtsShim.apk">
+  frameworks/base/packages/CtsShim/CtsShim.apk</a></code><br>
+  This apk file is copied to <code>/system/app/CtsShimPrebuilt.apk</code>
+  on the system image.
+  <li><code><a href="https://android.googlesource.com/platform/frameworks/base/+/android-7.0.0_r1/packages/CtsShim/CtsShimPriv.apk">
+  frameworks/base/packages/CtsShim/CtsShimPriv.apk</a></code><br>
+  This apk file is copied to <code>/system/priv-app/CtsShimPrivPrebuilt.apk</code>
+  on the system image.</li>
+</ul>
+
+<p> CTS uses these apps to test privileges and permissions. To pass the tests, you must
+preload the apps into the appropriate directories on the system image without
+re-signing them.</p>
+
+<h3 id=storage_requirements>Storage requirements</h3>
+<p>The CTS media stress tests require video clips to be on external storage
+(<code>/sdcard</code>). Most of the clips are from <a
+href="https://peach.blender.org/">Big Buck Bunny</a> which is copyrighted by
+the Blender Foundation under the <a
+href="http://creativecommons.org/licenses/by/3.0/">Creative Commons Attribution 3.0 license.</a></p>
+<p>The required space depends on the maximum video playback resolution supported
+  by the device (See section 5 in the compatibility definition document for the
+  platform version of the required resolutions.) Note that the video playback
+  capabilities of the device under test will be checked via the <code>android.media.CamcorderProfile</code> APIs for earlier versions of Android and the <code>android.media.MediaCodecInfo.CodecCapabilities</code> APIs from Android 5.0.</p>
+<p>Here are the storage requirements by maximum video playback resolution:</p>
+<ul>
+  <li>480x360: 98MB
+  <li>720x480: 193MB
+  <li>1280x720: 606MB
+  <li>1920x1080: 1863MB
+</ul>
+
+<h3 id=screen_storage>Screen and storage</h3>
+<ol>
+<li>Any device that does not have an embedded screen needs to be connected to a screen.</li>
+<li>If the device has a memory card slot, plug in an empty SD card. <em>Use an
+SD card that supports Ultra High Speed (UHS) Bus with SDHC or SDXC capacity or
+one with at least speed class 10 or higher to ensure it can pass the CTS.</em>
+<p class="warning"><strong>Warning:</strong> CTS may modify/erase data on the SD card plugged into the device.</p>
+</li>
+<li>If the device has SIM card slots, plug in an activated SIM card to each slot. If the device supports SMS, each SIM card should have its own number field populated.</li>
+</li>
+</ol>
+
+<h3 id=developer_uicc>Developer UICC</h3>
+
+<p>In order to run CTS carrier API tests, the device needs to has a SIM card
+with carrier privilege rules on it. See <a
+href="/devices/tech/config/uicc.html#prepare_uicc">Preparing
+the UICC</a>.</p>
+
+<h2 id=config_device>Android device configuration</h2>
+<ol>
+  <li>Factory data reset the device: <strong>Settings > Backup &amp; reset > Factory data reset</strong>
+    <p class="warning"><strong>Warning:</strong> This will erase all user data from the device.</em></p>
+  <li>Set your device's language to English (<strong>United States</strong>) from: <strong>Settings > Language
+    & input > Language</strong>
+  <li>Turn on the location setting if there is a GPS or Wi-Fi / Cellular network
+    feature on the device: <strong>Settings &gt; Location &gt; On</strong>
+  <li>Connect to a Wi-Fi network that supports IPv6, can treat the Device
+Under Test (DUT) as an <em>isolated client</em> (see the <a
+href="#physical_environment">Physical Environment</a> section above), and has an
+internet connection: <strong>Settings > Wi-Fi</strong>
+  <li>Make sure no lock pattern or password is set on the device: <strong>Settings &gt; Security &gt; Screen
+    lock &gt; None</strong>
+  <li>Enable <strong>USB debugging</strong> on your device: <strong>Settings &gt; Developer options &gt; USB debugging</strong>.
+       <p class="note"><strong>Note:</strong> On Android 4.2 and later, <strong>Developer
+        options</strong> is hidden by default. To make them available, go
+        to <strong>Settings &gt; About phone</strong> and tap <strong>Build number</strong>
+        seven times. Return to the previous screen to find <strong>Developer
+        options</strong>. See <a
+        href="http://developer.android.com/studio/run/device.html#developer-device-options">Enabling
+        On-device Developer Options</a> for additional details.</p>
+       <li>Make sure the time is set to 12-hour format: <strong>Settings > Date & time > Use 24-hour format > Off</strong>
+  <li>Select: <strong>Settings &gt; Developer options &gt; Stay Awake &gt; On</strong>
+  <li>Select: <strong>Settings > Developer options > Allow mock locations &gt; On</strong>
+    <p class="note"><strong>Note:</strong> This mock locations setting is applicable only in Android 5.x and 4.4.x.</p>
+  <li>Select: <strong>Settings > Developer options > Verify apps over USB > Off</strong>
+    <p class="note"><strong>Note:</strong> This verify apps step became required in Android 4.2.</p>
+  <li>Launch the browser and dismiss any startup/setup screen.
+  <li>Connect the desktop machine that will be used to test the device with a USB cable
+    <p class="note"><strong>Note:</strong> When you connect a device running Android 4.2.2 or later
+    to your computer, the system shows a dialog asking whether to accept an RSA key that allows
+    debugging through this computer. Select <em>Allow USB debugging</em>.</p>
+  <li> Install and configure helper apps on the device.
+<p class="note"><strong>Note:</strong> For CTS versions 2.1 R2 through 4.2 R4</em>, set up your device (or emulator)
+to run the accessibility tests with:<br>
+<code>adb install -r android-cts/repository/testcases/CtsDelegatingAccessibilityService.apk</code><br>
+On the device, enable: <strong>Settings > Accessibility > Accessibility >
+Delegating Accessibility Service</strong></p>
+<p class="note"><strong>Note:</strong> For CTS versions prior to 7.0, on devices that declare
+<code>android.software.device_admin</code>, set up your device to run
+the device administration test using:<br>
+<code>adb install -r android-cts/repository/testcases/CtsDeviceAdmin.apk</code><br>
+<p>
+In Settings > Security > Select device administrators, enable the two
+<code>android.deviceadmin.cts.CtsDeviceAdminReceiver*</code> device
+administrators. Ensure the
+<code>android.deviceadmin.cts.CtsDeviceAdminDeactivatedReceiver</code> and any
+other preloaded device administrators remain disabled.
+</p>
+<li>Copy the CTS media files to the device as follows:
+<p class="note"><strong>Note:</strong> For CTS 2.3 R12 and later, if the
+device supports video codecs, the CTS media files must be copied to the
+device.</p>
+<ul>
+  <li>Navigate (cd) to the path the media files are downloaded and unzipped to.
+  <li>Change the file permissions: <code>chmod u+x copy_media.sh</code>
+  <li>Run <code>copy_media.sh</code>:
+    <ul>
+      <li>To copy clips up to a resolution of 720x480, run: <code>./copy_media.sh 720x480</code>
+      <li>If you are not sure about the maximum resolution, try <code>./copy_media.sh all</code> so that all files are copied.
+      <li>If there are multiple devices under adb, add the -s (serial) option to the end.
+        For example, to copy up to 720x480 to the device with serial 1234567, run: <code>./copy_media.sh 720x480 -s 1234567</code>
+    </ul>
+</ul>
+</ol>
+
+  </body>
+</html>

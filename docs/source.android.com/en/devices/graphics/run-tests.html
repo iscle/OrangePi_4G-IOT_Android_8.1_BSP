@@ -1,0 +1,321 @@
+<html devsite>
+  <head>
+    <title>Running the tests</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+<p>This page provides instructions for running deqp tests in Linux and Windows
+environments, using command line arguments, and working with the Android
+application package.</p>
+
+<h2 id=linux_and_windows_environments>Linux and Windows environments</h2>
+
+<p>Start by copying the following files and directories to the target.</p>
+
+<table>
+ <tr>
+   <th>Module</th>
+   <th>Directory</th>
+   <th>Target</th>
+ </tr>
+
+ <tr>
+    <td>Execution Server</td>
+    <td><code>build/execserver/execserver</code></td>
+    <td><code>&lt;dst&gt;/execserver</code></td>
+ </tr>
+
+ <tr>
+    <td>EGL Module</td>
+    <td><code>build/modules/egl/deqp-egl</code></td>
+    <td><code>&lt;dst&gt;/deqp-egl</code></td>
+ </tr>
+
+ <tr>
+    <td rowspan=2 style="vertical-align:middle">GLES2 Module</td>
+    <td><code>build/modules/gles2/deqp-gles2</code></td>
+    <td><code>&lt;dst&gt;/deqp-gles2</code></td>
+ </tr>
+
+
+ <tr>
+    <td><code>data/gles2</code></td>
+    <td><code>&lt;dst&gt;/gles2</code></td>
+ </tr>
+
+
+
+ <tr>
+    <td rowspan=2 style="vertical-align:middle">GLES3 Module</td>
+    <td><code>build/modules/gles3/deqp-gles3</code></td>
+    <td><code>&lt;dst&gt;/deqp-gles3</code></td>
+ </tr>
+
+ <tr>
+    <td><code>data/gles3</code></td>
+    <td><code>&lt;dst&gt;/gles3</code></td>
+ </tr>
+
+ <tr>
+    <td rowspan=2 style="vertical-align:middle">GLES3.1 Module</td>
+    <td><code>build/modules/gles31/deqp-gles31</code></td>
+    <td><code>&lt;dst&gt;/deqp-gles31</code></td>
+ </tr>
+
+ <tr>
+    <td><code>data/gles31</code></td>
+    <td><code>&lt;dst&gt;/gles31</code></td>
+ </tr>
+
+
+  <tr>
+    <td rowspan=2 style="vertical-align:middle">GLES3.2 Module</td>
+    <td><code>build/modules/gles32/deqp-gles32</code></td>
+    <td><code>&lt;dst&gt;/deqp-gles32</code></td>
+ </tr>
+
+  <tr>
+    <td><code>data/gles32</code></td>
+    <td><code>&lt;dst&gt;/gles32</code></td>
+ </tr>
+
+</table>
+
+<p>You can deploy the execution service and test binaries anywhere in the target
+file system; however, test binaries expect to find data directories in the
+current working directory. When ready, start the Test Execution Service on the
+target device. For details on starting the service, see
+<a href="/devices/graphics/port-tests.html#test_execution_service">Test
+execution service</a>.</p>
+
+<h2 id=command_line_arguments>Command line arguments</h2>
+
+<p>The following table lists command line arguments that affect execution of all
+test programs.</p>
+
+<table width="100%">
+<col style="width:50%">
+<col style="width:50%">
+ <tr>
+   <th>Argument</th>
+   <th>Description</th>
+ </tr>
+
+ <tr>
+<td><code>--deqp-case=&lt;casename&gt;</code></td>
+<td>Run cases that match a given pattern. Wildcard (*) is supported.</td>
+ </tr>
+
+ <tr>
+<td><code>--deqp-log-filename=&lt;filename&gt;</code></td>
+<td>Write test results to the file whose name you provide. The test execution
+service will set the filename when starting a test.</td>
+ </tr>
+
+ <tr>
+ <td><code>--deqp-stdin-caselist<br/>
+--deqp-caselist=&lt;caselist&gt;<br/>
+--deqp-caselist-file=&lt;filename&gt;</code></td>
+<td>Read case list from stdin or from a given argument. The test execution
+service will set the argument according to the execution request received. See
+the next section for a description of the case list format.</td>
+ </tr>
+ <tr>
+<td><code>--deqp-test-iteration-count=&lt;count&gt;</code></td>
+<td>Override iteration count for tests that support a variable number of
+iterations.</td>
+ </tr>
+ <tr>
+    <td><code>--deqp-base-seed=&lt;seed&gt;</code></td>
+    <td>Base seed for the test cases that use randomization.</td>
+ </tr>
+</table>
+
+<h3 id=gles2_and_gles3-specific_arguments>GLES2 and GLES3-specific arguments</h3>
+
+The following table lists the GLES2- and GLES3-specific arguments.
+
+<table>
+<table width="100%">
+<col style="width:50%">
+<col style="width:50%">
+ <tr>
+   <th>Argument</th>
+   <th>Description</th>
+ </tr>
+ <tr>
+    <td><code>--deqp-gl-context-type=&lt;type&gt;</code></td>
+    <td>OpenGL context type. Available context types depend on the platform. On
+    platforms supporting EGL, the value <code>egl</code> can be used to select
+    the EGL context.</td>
+ </tr>
+ <tr>
+    <td><code>--deqp-gl-config-id=&lt;id&gt;</code></td>
+    <td>Run tests for the provided GL configuration ID. Interpretation is
+    platform-dependent. On the EGL platform, this is the EGL configuration ID.</td>
+ </tr>
+ <tr>
+    <td><code>--deqp-gl-config-name=&lt;name&gt;</code></td>
+    <td><p>Run tests for a named GL configuration. Interpretation is
+    platform-dependent. For EGL, the format is
+    <code>rgb(a)&lt;bits&gt;d&lt;bits&gt;s&lt;bits&gt;</code>. For example, a
+    value of <code>rgb888s8</code> will select the first configuration where the
+    color buffer is RGB888 and the stencil buffer has 8 bits.</td>
+ </tr>
+ <tr>
+    <td><code>--deqp-gl-context-flags=&lt;flags&gt;</code></td>
+    <td>Creates a context. Specify <code>robust</code> or <code>debug</code>.</td>
+ </tr>
+ <tr>
+    <td><code>--deqp-surface-width=&lt;width&gt;<br/>
+    --deqp-surface-height=&lt;height&gt;</code></td>
+    <td>Try to create a surface with a given size. Support for this is optional.</td>
+ </tr>
+ <tr>
+    <td><code>--deqp-surface-type=&lt;type&gt;</code></td>
+    <td>Use a given surface type as the main test rendering target. Possible
+    types are <code>window</code>, <code>pixmap</code>, <code>pbuffer</code>,
+    and <code>fbo</code>.</td>
+ </tr>
+ <tr>
+    <td><code>--deqp-screen-rotation=&lt;rotation&gt;</code></td>
+    <td>Screen orientation in increments of 90 degrees for platforms that
+    support it.</td>
+ </tr>
+</table>
+
+<h3 id=test_case_list_format>Test case list format</h3>
+
+<p>The test case list can be given in two formats. The first option is to list
+the full name of each test on a separate line in a standard ASCII file. As the
+test sets grow, the repetitive prefixes can be cumbersome. To avoid repeating
+the prefixes, use a trie (also known as a prefix tree) syntax shown below.</p>
+
+<pre class="devsite-click-to-copy">
+{nodeName{firstChild{…},…lastChild{…}}}
+</pre>
+
+<p>For example:</p>
+
+<pre class="devsite-click-to-copy">
+{dEQP-EGL{config-list,create_context{rgb565_depth_stencil}}}
+</pre>
+
+<p>Translates into the following two test cases:</p>
+
+<pre class="devsite-click-to-copy">
+dEQP-EGL.config_list
+dEQP-EGL.create_context.rgb565_depth_stencil
+</pre>
+
+<h2 id=android>Android</h2>
+
+<p>The Android application package contains all required components, including
+the test execution service, test binaries, and data files. The test activity is
+a <code>NativeActivity</code> that uses EGL (requires Android 3.2 or higher).</p>
+
+<p>The application package can be installed with the following command (name
+shown is the name of the APK in the Android CTS package; which name depends on
+the build):</p>
+<pre class="devsite-terminal devsite-click-to-copy">
+adb –d install –r com.drawelements.deqp.apk
+</pre>
+
+<p>To launch the test execution service and to setup port forwarding, use the
+following:</p>
+<pre class="devsite-click-to-copy">
+<code class="devsite-terminal">adb –d forward tcp:50016 tcp:50016</code>
+<code class="devsite-terminal">adb –d shell am start –n com.drawelements.deqp/.execserver.ServiceStarter</code>
+</pre>
+
+<p>Debug prints can be enabled by executing the following before starting the
+tests:</p>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+adb –d shell setprop log.tag.dEQP DEBUG
+</pre>
+
+<h3 id=executing_tests_on_android_without_android_cts>Executing tests on
+Android without Android CTS</h3>
+
+<p>To manually start the test execution activity, construct an Android intent
+that targets <code>android.app.NativeActivity</code>. The activities can be
+found in the <code>com.drawelements.deqp</code> package. The command line must
+be supplied as an extra string with key <code>"cmdLine"</code> in the Intent.</p>
+
+<p>A test log is written to <code>/sdcard/dEQP-log.qpa</code>. If the test run
+does not start normally, additional debug information is available in the device
+log.</p>
+
+<p>You can launch an activity from the command line using the <code>am</code>
+utility. For example, to run <code>dEQP-GLES2.info</code> tests on a platform
+supporting <code>NativeActivity,</code> use the following commands.</p>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+adb -d shell am start -n com.drawelements.deqp/android.app.NativeActivity -e \
+cmdLine "deqp --deqp-case=dEQP-GLES2.info.* --deqp-log-filename=/sdcard/dEQP-Log.qpa
+</pre>
+
+<h3 id=debugging_on_android>Debugging on Android</h3>
+
+<p>To run the tests under the GDB debugger on Android, first compile and install
+the debug build by running the following two scripts:</p>
+
+<pre class="devsite-click-to-copy">
+<code class="devsite-terminal">python android/scripts/build.py --native-build-type=Debug</code>
+<code class="devsite-terminal">python android/scripts/install.py</code>
+</pre>
+
+<p>After the debug build is installed on the device, to launch the tests under
+GDB running on the host, run the following command:</p>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+python android/scripts/debug.py \
+--deqp-commandline="--deqp-log-filename=/sdcard/TestLog.qpa --deqp-case=dEQP-GLES2.functional.*"
+</pre>
+
+<p>The deqp command line depends on the test cases to be executed and other
+required parameters. The script adds a default breakpoint at the beginning of
+the deqp execution (<code>tcu::App::App</code>).</p>
+
+<p>The <code>debug.py</code> script accepts multiple command line arguments for
+actions such as setting breakpoints for debugging, gdbserver connection
+parameters, and paths to additional binaries to debug (use <code>debug.py
+--help</code> for all arguments and explanations). The script also copies some
+default libraries from the target device to get symbol listings.</p>
+
+<p>To step through driver code (such as when the GDB needs to know the locations
+of the binaries with full debug information), add more libraries via
+<code>debug.py</code> command line parameters. This script writes out a
+configuration file for the GDB starting from line 132 of the script file. You
+can provide additional paths to binaries, etc., but supplying correct command
+line parameters should be enough.</p>
+
+<p class="note"><strong>Note:</strong> On Windows, the GDB binary requires
+<code>libpython2.7.dll</code>. Before launching <code>debug.py</code>, add
+<code>&lt;path-to-ndk&gt;/prebuilt/windows/bin</code> to the PATH variable.</p>
+
+<p class="note"><strong>Note:</strong> Native code debugging does not work on
+stock Android 4.3; for workarounds, refer to <a href="https://issuetracker.google.com/issues/36976703">this public bug</a>.
+Android 4.4 and higher do not contain this bug.</p>
+
+  </body>
+</html>

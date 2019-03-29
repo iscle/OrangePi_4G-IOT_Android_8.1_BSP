@@ -1,0 +1,962 @@
+<html devsite><head>
+    <title>Trusty API 参考</title>
+    <meta name="project_path" value="/_project.yaml"/>
+    <meta name="book_path" value="/_book.yaml"/>
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+<p><a href="index.html">Trusty</a> API 描述了 Trusty 进程间通信 (IPC) 系统，包括与非安全域的通信。本页中提供了相关术语的定义以及关于 API 调用的参考内容。</p>
+
+<h2 id="ports_and_channels">端口和通道</h2>
+
+<p>Trusty 应用使用端口以具名路径的形式显示客户端连接到的服务端点。这可以提供一个非常简单且采用字符串形式的服务 ID 供客户端使用。端口采用反向 DNS 式命名惯例，例如 <code>com.google.servicename</code>。</p>
+
+<p>当客户端连接到端口时，会收到一个用于与相应服务交互的通道。相应服务必须接受外来连接；并且在接受后，也会收到一个通道。实质上，端口会被用来查找服务，以便通过一对已连接的通道（即端口上的连接实例）进行通信。当客户端连接到端口时，客户端和服务器之间会建立一个对称的双向连接。借助这种全双工路径，客户端和服务器可以交换任意消息，直到任一方决定断开连接为止。</p>
+
+<p>只有安全端可信应用或 Trusty 内核模块可以创建端口。在非安全端（普通域）运行的应用只能连接到安全端发布的服务。</p>
+
+<p>可信应用可以同时是客户端和服务器，具体取决于相关要求。发布服务的可信应用（作为服务器）可能需要连接到其他服务（作为客户端）。</p>
+
+<h2 id="handle_api">Handle API</h2>
+
+<p>句柄是表示资源（例如端口和通道）的未签名整数，与 UNIX 中的文件描述符类似。句柄创建好后，会被放入到应用专用句柄表格中，并可供以后参考引用。</p>
+
+<p>调用程序可以使用 <code>set_cookie()</code> 方法将私密数据与句柄相关联。</p>
+
+<h3 id="methods_handle_api">Handle API 中的方法</h3>
+
+<p>句柄仅在应用环境中有效。除非已明确指定，否则应用不得将句柄的值传递给其他应用。只能通过与 <code>INVALID_IPC_HANDLE #define,</code>（应用可以使用它来表明句柄无效或未设置）进行比较的方式来解译句柄的值。</p>
+
+<h4 id="set_cookie">set_cookie()</h4>
+
+<p>用于将调用程序提供的私密数据与指定句柄相关联。</p>
+
+<pre class="prettyprint">
+long set_cookie(uint32_t handle, void *cookie)
+</pre>
+
+<p>[输入] <code>handle</code>：其中一个 API 调用返回的任意句柄</p>
+
+<p>[输入] <code>cookie</code>：一个指针，指向 Trusty 应用中的任意用户空间数据</p>
+
+<p>[返回值]：如果操作成功了，则为 <code>NO_ERROR</code>；否则为 <code>&lt; 0</code> 错误代码</p>
+
+<p>处理在句柄创建一段时间后发生的事件时，此调用非常有用。事件处理机制会将相应句柄及其 Cookie 返回给事件处理程序。</p>
+
+<p>通过使用 <code>wait()</code> 或 <code>wait_any()</code> 调用，可以等待句柄上发生事件。</p>
+
+<h4 id="wait">wait()</h4>
+
+<p>用于在指定时间段内等待指定句柄上发生事件。</p>
+
+<pre class="prettyprint">
+long wait(uint32_t handle_id, uevent_t *event, unsigned long timeout_msecs)
+</pre>
+
+<p>[输入] <code>handle_id</code>：其中一个 API 调用返回的任意句柄</p>
+
+<p>[输出] <code>event</code>：一个指针，指向表示相应句柄上所发生事件的结构</p>
+
+<p>[输入] <code>timeout_msecs</code>：超时值（以毫秒计）；-1 表示无限制超时</p>
+
+<p>[返回值]：如果在指定的超时间隔内发生了有效事件，则为 <code>NO_ERROR</code>；如果指定的超时时间已过，但未发生任何事件，则为 <code>ERR_TIMED_OUT</code>；如果是其他错误，则为 <code>&lt; 0</code></p>
+
+<h4 id="wait_any">wait_any()</h4>
+
+<p>用于在指定时间段内等待应用句柄表格中的任意句柄上发生任意事件。</p>
+
+<pre class="prettyprint">
+long wait_any(uevent_t *event, unsigned long timeout_msecs);
+</pre>
+
+<p>[输出] <code>event</code>：一个指针，指向表示相应句柄上所发生事件的结构</p>
+
+<p>[输入] <code>timeout_msecs</code>：超时值（以毫秒计）。-1 表示无限制超时</p>
+
+<p>[返回值]：如果在指定的超时间隔内发生了有效事件，则为 <code>NO_ERROR</code>；如果指定的超时时间已过，但未发生任何事件，则为 <code>ERR_TIMED_OUT</code>；如果是其他错误，则为 <code>&lt; 0</code></p>
+
+<p>如果操作成功了 (<code>retval == NO_ERROR</code>)，<code>wait()</code> 和 <code>wait_any()</code> 调用会在指定的 <code>uevent_t</code> 结构内填入与发生的事件相关的信息。</p>
+
+<pre class="prettyprint">
+typedef struct uevent {
+    uint32_t handle; /* handle this event is related to */
+    uint32_t event;  /* combination of IPC_HANDLE_POLL_XXX flags */
+    void    *cookie; /* cookie associated with this handle */
+} uevent_t;
+</pre>
+
+<p><code>event</code> 字段中包含以下值的组合：</p>
+
+<pre class="prettyprint">
+enum {
+  IPC_HANDLE_POLL_NONE    = 0x0,
+  IPC_HANDLE_POLL_READY   = 0x1,
+  IPC_HANDLE_POLL_ERROR   = 0x2,
+  IPC_HANDLE_POLL_HUP     = 0x4,
+  IPC_HANDLE_POLL_MSG     = 0x8,
+  IPC_HANDLE_POLL_SEND_UNBLOCKED = 0x10,
+  … more values[TBD]
+};
+</pre>
+
+<p><code>IPC_HANDLE_POLL_NONE</code> - 没有任何事件实际上在等待处理，调用程序应重新开始等待</p>
+
+<p><code>IPC_HANDLE_POLL_ERROR</code> - 发生未指定的内部错误</p>
+
+<p><code>IPC_HANDLE_POLL_READY</code> - 取决于句柄类型，具体如下：</p>
+
+<ul>
+  <li>对于端口，该值表示有待处理的连接</li><li>对于通道，该值表示已建立异步连接（请参阅 <code>connect()</code>）</li></ul>
+
+<p>以下事件仅与通道有关：</p>
+
+<ul>
+  <li><code>IPC_HANDLE_POLL_HUP</code> - 表示某个通道已被对端关闭</li><li><code>IPC_HANDLE_POLL_MSG</code> - 表示相应通道有待处理的消息</li><li><code>IPC_HANDLE_POLL_SEND_UNBLOCKED</code> - 表示之前所发消息被屏蔽的调用程序可以尝试再次发送消息（有关详情，请参阅 <code>send_msg()</code> 的说明）</li></ul>
+
+<p>由于可能同时设置了多个位，因此应使事件处理程序做好准备，以处理指定事件的组合。例如，对于通道来说，可能会在有待处理的消息时，连接被对端关闭。</p>
+
+<p>大多数事件都是粘滞事件。只要基本条件存在，它们就会一直存在（例如，所有待处理的消息都会被接收，所有待处理的连接请求都会被处理）。<code>IPC_HANDLE_POLL_SEND_UNBLOCKED</code> 事件属于例外情况：消息一旦被读取，该事件便会被立即清除，并且应用只有一次对其进行处理的机会。</p>
+
+<p>通过调用 <code>close()</code> 方法，可以销毁句柄。</p>
+
+<h4 id="close">close()</h4>
+
+<p>用于销毁与指定句柄关联的资源，并将指定句柄从句柄表格中移除。</p>
+
+<pre class="prettyprint">
+long close(uint32_t handle_id);
+</pre>
+
+<p>[输入] <code>handle_id</code>：要销毁的句柄</p>
+
+<p>[返回值]：如果操作成功了，则为 0；否则为表示错误的负数</p>
+
+<h2 id="server_api">Server API</h2>
+
+<p>服务器首先会创建一个或多个表示其服务端点的<strong>具名端口</strong>。每个端口都由一个句柄来表示。</p>
+
+<h3 id="methods_server_api">Server API 中的方法</h3>
+
+<h4 id="port_create">port_create()</h4>
+
+<p>用于创建具名服务端口。</p>
+
+<pre class="prettyprint">
+long port_create (const char *path, uint num_recv_bufs, size_t recv_buf_size,
+uint32_t flags)
+</pre>
+
+<p>[输入] <code>path</code>：端口的字符串名称（如上所述）。该名称在整个系统中必须是独一无二的；如果尝试创建重复的名称，则会失败。</p>
+
+<p>[输入] <code>num_recv_bufs</code>：相应端口上的通道可以预先分配的缓冲区（用于方便与客户端交换数据）的数量上限。对于双向传输的数据，缓冲区数量是单独计算的，因此如果在此处指定 1，则表示预先分配了 1 个发送缓冲区和 1 个接收缓冲区。一般情况下，所需的缓冲区数量取决于客户端和服务器之间更高级别的协议。如果是高度同步协议（发送消息，收到回复后再发送另一条消息），此数量最低可设为 1。不过，如果客户端希望在收到回复之前发送多条消息（例如，一条消息为前序，另一条为实际命令），则此数量可以设得高一些。缓冲区组是按通道分配的，因此两个单独的连接（通道）会分别有各自的缓冲区组。</p>
+
+<p>[输入] <code>recv_buf_size</code>：以上缓冲区组中各个缓冲区的大小上限。该值取决于具体协议，能够有效限制您可以与对端交换的消息的大小上限</p>
+
+<p>[输入] <code>flags</code>：标记组合，用于指定其他端口行为</p>
+
+<p>该值应该是以下值的组合：</p>
+
+<p><code>IPC_PORT_ALLOW_TA_CONNECT</code> - 允许来自其他安全应用的连接</p>
+
+<p><code>IPC_PORT_ALLOW_NS_CONNECT</code> - 允许来自非安全域的连接</p>
+
+<p>[返回值]：如果是非负数，则为所创建端口的句柄；如果是负数，则为具体错误</p>
+
+<p>然后，服务器会使用 <code>wait()</code> 或 <code>wait_any()</code> 调用轮询端口句柄列表，以查看是否有外来连接。收到连接请求（由 <code>uevent_t</code> 结构的 <code>event</code> 字段中设置的 <code>IPC_HANDLE_POLL_READY</code> 位来指明）时，服务器应调用 <code>accept()</code> 来完成连接建立过程，并创建一个通道（由另一个句柄表示），然后该通道即可被轮询，以查看是否有外来消息。</p>
+
+<h4 id="accept">accept()</h4>
+
+<p>用于接受外来连接，并获取通道句柄。</p>
+
+<pre class="prettyprint">
+long accept(uint32_t handle_id, uuid_t *peer_uuid);
+</pre>
+
+<p>[输入] <code>handle_id</code>：一个句柄，用于表示客户端已连接到哪个端口</p>
+
+<p>[输出] <code>peer_uuid</code>：一个指针，指向连接中客户端应用的 UUID 将填入到的 <code>uuud_t</code> 结构。如果连接源自非安全域，该指针将被设为全零</p>
+
+<p>[返回值]：如果是非负数，则为一个句柄，用于表示服务器可以通过哪个通道与客户端交换消息；否则为错误代码</p>
+
+<h2 id="client_api">Client API</h2>
+
+<p>本部分介绍了 Client API 中的方法。</p>
+
+<h3 id="methods_client_api">Client API 中的方法</h3>
+
+<h4 id="connect">connect()</h4>
+
+<p>用于发起与通过名称指定的端口的连接。</p>
+
+<pre class="prettyprint">
+long connect(const char *path, uint flags);
+</pre>
+
+<p>[输入] <code>path</code>：由 Trusty 应用发布的端口的名称</p>
+
+<p>[输入] <code>flags</code>：指定额外的可选行为</p>
+
+<p>[返回值]：一个句柄，用于表示可以通过哪个通道与服务器交换消息；如果是负数，则为错误</p>
+
+<p>如果未指定 <code>flags</code>（<code>flags</code> 参数设为 0），调用 <code>connect()</code> 会发起与指定端口的同步连接（如果指定端口不存在，会立即返回一个错误），并且会创建一个分块，直到服务器以其他方式接受某个连接为止。</p>
+
+<p>通过指定两个值的组合，可以改变这种行为，如下所述：</p>
+
+<pre class="prettyprint">
+enum {
+IPC_CONNECT_WAIT_FOR_PORT = 0x1,
+IPC_CONNECT_ASYNC = 0x2,
+};
+</pre>
+
+<p><code>IPC_CONNECT_WAIT_FOR_PORT</code> - 如果指定的端口在连接操作执行时没有立即存在，则强制 <code>connect()</code> 调用开始等待，而不是立即使连接失败。</p>
+
+<p><code>IPC_CONNECT_ASYNC</code> - 如果设置了此项，则会发起异步连接。在开始正常操作之前，应用必须先针对连接完成事件（由 <code>uevent_t</code> 结构的 event 字段中设置的 <code>IPC_HANDLE_POLL_READY</code> 位来指明）轮询是否有返回的句柄（通过调用 <code>wait()</code> 或 <code>wait_any()</code>）。</p>
+
+<h2 id="messaging_api">Messaging API</h2>
+
+<p>借助 Messaging API 调用，可以通过之前建立的连接（通道）发送和读取消息。服务器和客户端的 Messaging API 调用是相同的。</p>
+
+<p>客户端通过发出 <code>connect()</code> 调用接收通道句柄，而服务器则通过 <code>accept()</code> 调用获取通道句柄，如上所述。</p>
+
+<h4 id="structure_of_a_trusty_message">Trusty 消息的结构</h4>
+
+<p>如下所示，通过 Trusty API 交换的消息有一个极小的结构，供服务器和客户端就实际内容的语义达成一致：</p>
+
+<pre class="prettyprint">
+/*
+ *  IPC message
+ */
+typedef struct iovec {
+        void   *base;
+        size_t  len;
+} iovec_t;
+
+typedef struct ipc_msg {
+        uint     num_iov; /* number of iovs in this message */
+        iovec_t  *iov;    /* pointer to iov array */
+
+        uint     num_handles; /* reserved, currently not supported */
+        handle_t *handles;    /* reserved, currently not supported */
+} ipc_msg_t;
+</pre>
+
+<p>一条消息可以由一个或多个不连续的缓冲区（由 <code>iovec_t</code> 结构数组表示）组成。Trusty 使用 <code>iov</code> 数组以“分散-收集”的方式对这些分块执行读取和写入操作。可通过 <code>iov</code> 数组描述的缓冲区中的内容完全是任意的。</p>
+
+<h3 id="methods_messaging_api">Messaging API 中的方法</h3>
+
+<h4 id="send_msg">send_msg()</h4>
+
+<p>用于通过指定的通道发送消息。</p>
+
+<pre class="prettyprint">
+long send_msg(uint32_t handle, ipc_msg_t *msg);
+</pre>
+
+<p>[输入] <code>handle</code>：一个句柄，用于表示通过哪个通道发送消息</p>
+
+<p>[输入] <code>msg</code>：一个指针，指向描述消息的 <code>ipc_msg_t structure</code></p>
+
+<p>[返回值]：如果操作成功了，则为发送的字节总数；否则为表示错误的负数</p>
+
+<p>如果客户端（或服务器）尝试通过相应通道发送消息，但目标对端消息队列中没有空间，相应通道可能会进入所发消息被屏蔽的状态（对于简单的同步请求/回复协议，这种事情应该绝对不会发生，但在更复杂的情况下，则可能会发生）。如果返回 <code>ERR_NOT_ENOUGH_BUFFER</code> 错误代码，则表示相应通道进入了这种状态。在这种情况下，调用程序必须等待，直到对端通过以下方式释放其接收队列中的部分空间为止：检索处理情况并停用一些消息（由 <code>wait()</code> 或 <code>wait_any()</code> 调用返回的 <code>uevent_t</code> 结构的 <code>event</code> 字段中设置的 <code>IPC_HANDLE_POLL_SEND_UNBLOCKED</code> 位来指明）。</p>
+
+<h4 id="get_msg">get_msg()</h4>
+
+<p>用于获取指定通道的外来消息队列中下一条消息的</p>
+
+<p>相关元信息。</p>
+
+<pre class="prettyprint">
+long get_msg(uint32_t handle, ipc_msg_info_t *msg_info);
+</pre>
+
+<p>[输入] <code>handle</code>：一个句柄，用于表示必须在哪个通道上检索新消息</p>
+
+<p>[输出] <code>msg_info</code>：消息的信息结构，如下所述：</p>
+
+<pre class="prettyprint">
+typedef struct ipc_msg_info {
+        size_t    len;  /* total message length */
+        uint32_t  id;   /* message id */
+} ipc_msg_info_t;
+</pre>
+
+<p>在待处理的消息集中，每条消息都分配有一个独一无二的 ID，并且每条消息的总长度均已填好。如果已进行相应配置且协议允许，特定通道可以同时有多条待处理（已打开）的消息。</p>
+
+<p>[返回值]：如果操作成功了，则为 <code>NO_ERROR</code>；否则为表示错误的负数</p>
+
+<h4 id="read_msg">read_msg()</h4>
+
+<p>用于从指定偏移量处开始读取具有指定 ID 的消息的内容。</p>
+
+<pre class="prettyprint">
+long read_msg(uint32_t handle, uint32_t msg_id, uint32_t offset, ipc_msg_t
+*msg);
+</pre>
+
+<p>[输入] <code>handle</code>：一个句柄，用于表示从哪个通道读取相应消息</p>
+
+<p>[输入] <code>msg_id</code>：要读取的消息的 ID</p>
+
+<p>[输入] <code>offset</code>：偏移量，用于表示从哪里开始读取相应消息</p>
+
+<p>[输入] <code>msg</code>：一个指针，指向描述一组缓冲区的 <code>ipc_msg_t</code> 结构，外来消息数据将存入到这组缓冲区中</p>
+
+<p>[返回值]：如果操作成功了，则为 <code>dst</code> 缓冲区中存储的字节总数；否则为表示错误的负数</p>
+
+<p>可以根据需要多次调用 <code>read_msg</code> 方法，以便从不同的偏移量处（不一定依序）开始读取消息。</p>
+
+<h4 id="put_msg">put_msg()</h4>
+
+<p>用于停用具有指定 ID 的消息。</p>
+
+<pre class="prettyprint">
+long put_msg(uint32_t handle, uint32_t msg_id);
+</pre>
+
+<p>[输入] <code>handle</code>：一个句柄，用于表示相应消息已到达哪个通道</p>
+
+<p>[输入] <code>msg_id</code>：要停用的消息的 ID</p>
+
+<p>[返回值]：如果操作成功了，则为 <code>NO_ERROR</code>；否则为表示错误的负数</p>
+
+<p>消息被停用后，其中的内容将无法再访问，并且它占用的缓冲区也会被释放。</p>
+
+<h2 id="file_descriptor_api">File Descriptor API</h2>
+
+<p>File Descriptor API 包括 <code>read()</code>、<code>write()</code> 和 <code>ioctl()</code> 调用。所有这些调用都可以针对一组预定义（静态）的文件描述符（通常用一些较小的数字表示）执行相应操作。在当前的实现中，文件描述符空间与 IPC 句柄空间是分开的。Trusty 中的 File Descriptor API 与基于文件描述符的传统 API 类似。</p>
+
+<p>默认情况下，有 3 种预定义（标准的且广为人知的）的文件描述符：</p>
+
+<ul>
+  <li>0 - 标准输入文件。标准输入文件 <code>fd</code> 的默认实现是一个空操作（因为可信应用不应该有交互控制台），因此，如果要针对 <code>fd</code> 0 读取、写入或调用 <code>ioctl()</code>，则应返回 <code>ERR_NOT_SUPPORTED</code> 错误。
+  </li><li>1 - 标准输出文件。写入到标准输出文件的数据可路由（取决于 LK 调试级别）至非安全端上的 UART 和/或内存日志，具体取决于平台和配置。非关键调试日志和消息应写入到标准输出文件。<code>read()</code> 和 <code>ioctl()</code> 方法是空操作，应返回 <code>ERR_NOT_SUPPORTED</code> 错误。
+  </li><li>2 - 标准错误文件。写入到标准错误文件的数据应路由至非安全端上的 UART 或内存日志，具体取决于平台和配置。建议仅将关键消息写入到标准错误文件，这是因为该信息流很可能不受节流限制。<code>read()</code> 和 <code>ioctl()</code> 方法是空操作，应返回 <code>ERR_NOT_SUPPORTED</code> 错误。
+</li></ul>
+
+<p>虽然可以对这组文件描述符进行扩展，以实现更多 <code>fds</code>（从而实现平台专用扩展程序），但扩展文件描述符时需要非常谨慎。扩展文件描述符容易造成冲突，通常不建议这样做。</p>
+
+<h3 id="methods_file_descriptor_api">File Descriptor API 中的方法</h3>
+
+<h4 id="read">read()</h4>
+
+<p>用于尝试从指定的文件描述符读取最多 <code>count</code> 个字节的数据。</p>
+
+<pre class="prettyprint">
+long read(uint32_t fd, void *buf, uint32_t count);
+</pre>
+
+<p>[输入] <code>fd</code>：一个文件描述符，用于表示从哪里读取数据</p>
+
+<p>[输出] <code>buf</code>：一个指针，指向要将数据存入到的缓冲区</p>
+
+<p>[输入] <code>count</code>：要读取的字节数上限</p>
+
+<p>[返回值]：返回的已读取字节数；否则为表示错误的负数</p>
+
+<h4 id="write">write()</h4>
+
+<p>用于向指定的文件描述符写入最多 <code>count</code> 个字节的数据。</p>
+
+<pre class="prettyprint">
+long write(uint32_t fd, void *buf, uint32_t count);
+</pre>
+
+<p>[输入] <code>fd</code>：一个文件描述符，用于表示要将数据写入到哪里</p>
+
+<p>[输出] <code>buf</code>：一个指针，指向要写入的数据</p>
+
+<p>[输入] <code>count</code>：要写入的字节数上限</p>
+
+<p>[返回值]：返回的已写入字节数；否则为表示错误的负数</p>
+
+<h4 id="ioctl">ioctl()</h4>
+
+<p>用于针对指定的文件描述符调用指定的 <code>ioctl</code> 命令。</p>
+
+<pre class="prettyprint">
+long ioctl(uint32_t fd, uint32_t cmd, void *args);
+</pre>
+
+<p>[输入] <code>fd</code>：一个文件描述符，用于表示针对哪个对象调用 <code>ioctl()</code></p>
+
+<p>[输入] <code>cmd</code>：<code>ioctl</code> 命令</p>
+
+<p>[in/out] <code>args</code>：一个指向 <code>ioctl()</code> 参数的指针</p>
+
+<h2 id="miscellaneous_api">Miscellaneous API</h2>
+
+<h3 id="methods_misc_api">Miscellaneous API 中的方法</h3>
+
+<h4 id="gettime">gettime()</h4>
+
+<p>用于返回当前系统时间（以纳秒计）。</p>
+
+<pre class="prettyprint">
+long gettime(uint32_t clock_id, uint32_t flags, uint64_t *time);
+</pre>
+
+<p>[输入] <code>clock_id</code>：取决于平台；默认情况下，传递的值为 0</p>
+
+<p>[输入] <code>flags</code>：保留项，应为 0</p>
+
+<p>[输入] <code>time</code>：一个指针，指向要将当前时间存入到的位置对应的 <code>int64_t</code> 值</p>
+
+<p>[返回值]：如果操作成功了，则为 <code>NO_ERROR</code>；否则为表示错误的负数</p>
+
+<h4 id="nanosleep">nanosleep()</h4>
+
+<p>用于使调用应用的操作暂停执行指定的一段时间，并在这段时间过去之后恢复执行操作。</p>
+
+<pre class="prettyprint">
+long nanosleep(uint32_t clock_id, uint32_t flags, uint64_t sleep_time)
+</pre>
+
+<p>[输入] <code>clock_id</code>：保留项，应为 0</p>
+
+<p>[输入] <code>flags</code>：保留项，应为 0</p>
+
+<p>[输入] <code>sleep_time</code>：休眠时间（以纳秒计）</p>
+
+<p>[返回值]：如果操作成功了，则为 <code>NO_ERROR</code>；否则为表示错误的负数</p>
+
+<h2 id="example_of_a_trusted_application_server">可信应用服务器示例</h2>
+
+<p>以下示例应用展示了上述 API 的用法。该示例会创建一项“回传”服务，该服务可处理多个外来连接，并会将从位于安全端或非安全端的客户端收到的所有消息回传给调用程序。</p>
+
+<pre class="prettyprint">
+#include &lt;assert.h&gt;
+#include &lt;err.h&gt;
+#include &lt;stddef.h&gt;
+#include &lt;stdio.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;string.h&gt;
+#include &lt;trusty_std.h&gt;
+
+#include &lt;app/echo/uuids.h&gt;
+
+#define LOG_TAG "echo_srv"
+
+#define TLOGE(fmt, ...) \
+    fprintf(stderr, "%s: %d: " fmt, LOG_TAG, __LINE__,  ## __VA_ARGS__)
+
+#define MAX_ECHO_MSG_SIZE  64
+
+static const char *srv_name = "com.android.echo.srv.echo";
+
+static uint8_t msg_buf[MAX_ECHO_MSG_SIZE];
+
+/*
+ *  Message handler
+ */
+static int handle_msg(handle_t chan)
+{
+  int rc;
+  iovec_t iov;
+  ipc_msg_t msg;
+  ipc_msg_info_t msg_inf;
+
+  iov.base = msg_buf;
+  iov.len  = sizeof(msg_buf);
+
+  msg.num_iov = 1;
+  msg.iov = &amp;iov;
+  msg.num_handles = 0;
+  msg.handles  = NULL;
+
+  /* get message info */
+  rc = get_msg(chan, &amp;msg_inf);
+  if (rc == ERR_NO_MSG)
+    return NO_ERROR; /* no new messages */
+
+  if (rc != NO_ERROR) {
+    TLOGE("failed (%d) to get_msg for chan (%d)\n",
+          rc, chan);
+    return rc;
+  }
+
+  /* read msg content */
+  rc = read_msg(chan, msg_inf.id, 0, &amp;msg);
+  if (rc &lt; 0) {
+    TLOGE("failed (%d) to read_msg for chan (%d)\n",
+          rc, chan);
+    return rc;
+  }
+
+  /* update number of bytes received */
+  iov.len = (size_t) rc;
+
+  /* send message back to the caller */
+  rc = send_msg(chan, &amp;msg);
+  if (rc &lt; 0) {
+    TLOGE("failed (%d) to send_msg for chan (%d)\n",
+          rc, chan);
+    return rc;
+  }
+
+  /* retire message */
+  rc = put_msg(chan, msg_inf.id);
+  if ( rc != NO_ERROR) {
+    TLOGE("failed (%d) to put_msg for chan (%d)\n",
+          rc, chan);
+    return rc;
+  }
+
+  return NO_ERROR;
+}
+
+/*
+ *  Channel event handler
+ */
+static void handle_channel_event(const uevent_t *ev)
+{
+  int rc;
+
+  if (ev-&gt;event &amp; IPC_HANDLE_POLL_MSG) {
+    rc = handle_msg(ev-&gt;handle);
+    if (rc != NO_ERROR) {
+      /* report an error and close channel */
+      TLOGE("failed (%d) to handle event on channel %d\n",
+             rc, ev-&gt;handle);
+      close(ev-&gt;handle);
+    }
+    return;
+  }
+  if (ev-&gt;event &amp; IPC_HANDLE_POLL_HUP) {
+    /* closed by peer. */
+    close(ev-&gt;handle);
+    return;
+  }
+}
+
+/*
+ *  Port event handler
+ */
+static void handle_port_event(const uevent_t *ev)
+{
+  uuid_t peer_uuid;
+
+  if ((ev-&gt;event &amp; IPC_HANDLE_POLL_ERROR) ||
+      (ev-&gt;event &amp; IPC_HANDLE_POLL_HUP) ||
+      (ev-&gt;event &amp; IPC_HANDLE_POLL_MSG) ||
+      (ev-&gt;event &amp; IPC_HANDLE_POLL_SEND_UNBLOCKED)) {
+    /* should never happen with port handles */
+    TLOGE("error event (0x%x) for port (%d)\n",
+           ev-&gt;event, ev-&gt;handle);
+    abort();
+  }
+  if (ev-&gt;event &amp; IPC_HANDLE_POLL_READY) {
+    /* incoming connection: accept it */
+    int rc = accept(ev-&gt;handle, &amp;peer_uuid);
+    if (rc &lt; 0) {
+      TLOGE("failed (%d) to accept on port %d\n",
+             rc, ev-&gt;handle);
+      return;
+    }
+  }
+}
+
+/*
+ *  Main application entry point
+ */
+int main(void)
+{
+  int rc;
+  handle_t port;
+
+  /* Initialize service */
+  rc = port_create(srv_name, 1, MAX_ECHO_MSG_SIZE,
+       IPC_PORT_ALLOW_NS_CONNECT |
+       IPC_PORT_ALLOW_TA_CONNECT );
+  if (rc &lt; 0) {
+    TLOGE("Failed (%d) to create port %s\n",
+          rc, srv_name);
+    abort();
+  }
+  port = (handle_t)rc;
+
+  /* enter main event loop */
+  while (true) {
+    uevent_t ev;
+
+    ev.handle = INVALID_IPC_HANDLE;
+    ev.event  = 0;
+    ev.cookie = NULL;
+
+    /* wait forever */
+    rc = wait_any(&amp;ev, -1);
+    if (rc == NO_ERROR) {
+      /* got an event */
+      if (ev.handle == port) {
+        handle_port_event(&amp;ev);
+      } else {
+        handle_channel_event(&amp;ev);
+      }
+    } else {
+      TLOGE("wait_any returned (%d)\n", rc);
+      abort();
+    }
+  }
+  return 0;
+}
+</pre>
+
+<h2 id="example_of_a_trusted_application_client">可信应用客户端示例</h2>
+
+<p>以下代码段展示了如何使用 Trusty Messaging API 来实现“回传”服务（请参见上述代码）的客户端。<code>sync_connect()</code> 方法显示了如何在异步 <code>connect()</code> 调用之上实现设有超时的同步连接。</p>
+
+<pre class="prettyprint">
+/*
+ *  Local wrapper on top of an async connect that provides a
+ *  synchronous connect with timeout.
+ */
+int sync_connect(const char *path, uint timeout)
+{
+  int rc;
+  uevent_t evt;
+  handle_t chan;
+
+  rc = connect(path, IPC_CONNECT_ASYNC | IPC_CONNECT_WAIT_FOR_PORT);
+  if (rc &gt;= 0) {
+    chan = (handle_t) rc;
+    rc = wait(chan, &amp;evt, timeout);
+    if (rc == 0) {
+      rc = ERR_BAD_STATE;
+      if (evt.handle == chan) {
+        if (evt.event &amp; IPC_HANDLE_POLL_READY)
+          return chan;
+        if (evt.event &amp; IPC_HANDLE_POLL_HUP)
+          rc = ERR_CHANNEL_CLOSED;
+      }
+    }
+    close(chan);
+  }
+  return rc;
+}
+</pre>
+
+<p><code>run_end_to_end_msg_test()</code> 方法可向“回传”服务异步发送 10000 条消息并处理回复。</p>
+
+<pre class="prettyprint">
+static int run_echo_test(void)
+{
+  int rc;
+  handle_t chan;
+  uevent_t uevt;
+  uint8_t tx_buf[64];
+  uint8_t rx_buf[64];
+  ipc_msg_info_t inf;
+  ipc_msg_t   tx_msg;
+  iovec_t     tx_iov;
+  ipc_msg_t   rx_msg;
+  iovec_t     rx_iov;
+
+  /* prepare tx message buffer */
+  tx_iov.base = tx_buf;
+  tx_iov.len  = sizeof(tx_buf);
+  tx_msg.num_iov = 1;
+  tx_msg.iov     = &amp;tx_iov;
+  tx_msg.num_handles = 0;
+  tx_msg.handles = NULL;
+
+  memset (tx_buf, 0x55, sizeof(tx_buf));
+
+  /* prepare rx message buffer */
+  rx_iov.base = rx_buf;
+  rx_iov.len  = sizeof(rx_buf);
+  rx_msg.num_iov = 1;
+  rx_msg.iov     = &amp;rx_iov;
+  rx_msg.num_handles = 0;
+  rx_msg.handles = NULL;
+
+  /* open connection to echo service */
+  rc = sync_connect(srv_name, 1000);
+  if(rc &lt; 0)
+    return rc;
+
+  /* got channel */
+  chan = (handle_t)rc;
+
+  /* send/receive 10000 messages asynchronously. */
+  uint tx_cnt = 10000;
+  uint rx_cnt = 10000;
+
+  while (tx_cnt || rx_cnt) {
+    /* send messages until all buffers are full */
+while (tx_cnt) {
+    rc = send_msg(chan, &amp;tx_msg);
+      if (rc == ERR_NOT_ENOUGH_BUFFER)
+      break;  /* no more space */
+    if (rc != 64) {
+      if (rc &gt; 0) {
+        /* incomplete send */
+        rc = ERR_NOT_VALID;
+}
+      goto abort_test;
+}
+    tx_cnt--;
+  }
+
+  /* wait for reply msg or room */
+  rc = wait(chan, &amp;uevt, 1000);
+  if (rc != NO_ERROR)
+    goto abort_test;
+
+  /* drain all messages */
+  while (rx_cnt) {
+    /* get a reply */
+      rc = get_msg(chan, &amp;inf);
+    if (rc == ERR_NO_MSG)
+        break;  /* no more messages  */
+  if (rc != NO_ERROR)
+goto abort_test;
+
+  /* read reply data */
+    rc = read_msg(chan, inf.id, 0, &amp;rx_msg);
+  if (rc != 64) {
+    /* unexpected reply length */
+    rc = ERR_NOT_VALID;
+    goto abort_test;
+}
+
+  /* discard reply */
+  rc = put_msg(chan, inf.id);
+  if (rc != NO_ERROR)
+    goto abort_test;
+  rx_cnt--;
+  }
+}
+
+abort_test:
+  close(chan);
+  return rc;
+}
+</pre>
+
+<h2 id="non-secure_world_apis_and_applications">非安全域 API 及应用</h2>
+
+<p>在非安全端运行的内核和用户空间程序可访问从安全端发布且标有 <code>IPC_PORT_ALLOW_NS_CONNECT</code> 属性的一组 Trusty 服务。</p>
+
+<p>非安全端上的执行环境（内核和用户空间）与安全端上的执行环境截然不同。因此，这两种环境使用的不是一个库，而是使用了两组不同的 API。在内核中，Client API 由 Trusty-IPC 内核驱动程序提供，并会注册一个字符设备节点，用户空间进程可使用该节点与在安全端上运行的服务通信。</p>
+
+<h3 id="user_space_trusty_ipc_client_api">用户空间 Trusty IPC Client API</h3>
+
+<p>用户空间 Trusty IPC Client API 库是设备节点 <code>fd</code> 之上的一个薄层。</p>
+
+<p>通过调用 <code>tipc_connect()</code>（用于初始化与指定 Trusty 服务的连接），用户空间程序可启动通信会话。在内部，<code>tipc_connect()</code> 调用会打开一个指定的设备节点以获取文件描述符，并且会发起 <code>TIPC_IOC_CONNECT ioctl()</code> 调用，其中的 <code>argp</code> 参数指向一个字符串，该字符串中包含要连接的服务名称。</p>
+
+<pre class="prettyprint">
+#define TIPC_IOC_MAGIC  'r'
+#define TIPC_IOC_CONNECT  _IOW(TIPC_IOC_MAGIC, 0x80, char *)
+</pre>
+
+<p>获取的文件描述符只能用于与创建该文件描述符时所针对的服务进行通信。当不再需要相应连接时，应通过调用 <code>tipc_close()</code> 关闭该文件描述符。</p>
+
+<p>通过 <code>tipc_connect()</code> 调用获取的文件描述符相当于典型的字符设备节点；该文件描述符符合以下条件：</p>
+
+<ul>
+  <li>可以根据需要切换到非屏蔽模式</li><li>可以在其中写入数据，以使用标准 <code>write()</code> 调用向另一端发送消息</li><li>可以像对常规文件描述符一样对其进行轮询（使用 <code>poll()</code> 调用或 <code>select()</code> 调用），以查看是否有外来消息</li><li>可以读取其中的数据，以检索外来消息</li></ul>
+
+<p>调用程序通过针对指定 <code>fd</code> 执行写入调用操作向 Trusty 服务发送消息。Trusty-IPC 驱动程序会将传递到上述 <code>write()</code> 调用的所有数据转换成一条消息。该消息会被传送至安全端，然后 Trusty 内核中的 IPC 子系统会对消息数据进行处理，处理后的数据将路由至适当的目的地，并作为特定通道句柄上的 <code>IPC_HANDLE_POLL_MSG</code> 事件传送至应用事件循环。根据特定的服务专用协议，Trusty 服务可能会发送一条或多条回复消息，这些消息会被传送回非安全端，并被放入到适当的通道文件描述符消息队列中，以供用户空间应用 <code>read()</code> 调用检索。</p>
+
+<h4 id="tipc_connect">tipc_connect()</h4>
+
+<p>用于打开指定的 <code>tipc</code> 设备节点并发起与指定 Trusty 服务的连接。</p>
+
+<pre class="prettyprint">
+int tipc_connect(const char *dev_name, const char *srv_name);
+</pre>
+
+<p>[输入] <code>dev_name</code>：要打开的 Trusty IPC 设备节点的路径</p>
+
+<p>[输入] <code>srv_name</code>：要连接的已发布 Trusty 服务的名称</p>
+
+<p>[返回值]：如果操作成功了，则为有效的文件描述符；否则为 -1。</p>
+
+<h4 id="tipc_close">tipc_close()</h4>
+
+<p>用于终止与通过文件描述符指定的 Trusty 服务的连接。</p>
+
+<pre class="prettyprint">
+int tipc_close(int fd);
+</pre>
+
+<p>[输入] <code>fd</code>：之前通过 <code>tipc_connect()</code> 调用打开的文件描述符</p>
+
+<h2 id="kernel_trusty_ipc_client_api">内核 Trusty IPC Client API</h2>
+
+<p>内核 Trusty IPC Client API 适用于内核驱动程序。用户空间 Trusty IPC API 在该 API 之上实现。</p>
+
+<p>一般情况下，该 API 的典型用法包括以下步骤：调用程序使用 <code>tipc_create_channel()</code> 函数创建一个 <code>struct tipc_chan</code> 对象，然后使用 <code>tipc_chan_connect()</code> 调用发起与在安全端上运行的 Trusty IPC 服务的连接。通过调用 <code>tipc_chan_shutdown()</code> 可终止与远程端的连接，随后调用 <code>tipc_chan_destroy()</code> 可清除资源。</p>
+
+<p>通过 <code>handle_event()</code> 回调收到已成功建立连接的通知后，调用程序会执行以下操作：</p>
+
+<ul>
+  <li>使用 <code>tipc_chan_get_txbuf_timeout()</code> 调用获取消息缓冲区</li><li>撰写消息</li><li>使用 <code>tipc_chan_queue_msg()</code> 方法将消息加入队列，以将其传送至相应通道连接的 Trusty 服务（位于安全端）</li></ul>
+
+<p>消息成功加入队列后，调用程序应取消保存消息缓冲区，因为在处理消息后，消息缓冲区最终会由远程端恢复为可用缓冲区池（供其他消息以后重复使用）。如果未能将此类缓冲区加入队列，或不再需要此类缓冲区，用户只需调用 <code>tipc_chan_put_txbuf()</code> 即可。</p>
+
+<p>通过处理 <code>handle_msg()</code> 通知回调（在 Trusty-IPC <code>rx</code> 工作队列环境中调用，用于提供一个指向 <code>rx</code> 缓冲区的指针，该缓冲区中包含要处理的外来消息），API 用户可从远程端接收消息。</p>
+
+<p><code>handle_msg()</code> 回调实现应返回一个指向有效 <code>struct tipc_msg_buf</code> 的指针。如果相应消息缓冲区在本地处理并且以后不再需要，那么它可以与外来消息缓冲区相同。或者，如果外来消息缓冲区已加入队列以接受进一步处理，那么相应缓冲区可以是通过 <code>tipc_chan_get_rxbuf()</code> 调用获取的新缓冲区。必须对单独的 <code>rx</code> 缓冲区进行跟踪，并在不再需要此类缓冲区时使用 <code>tipc_chan_put_rxbuf()</code> 调用最终将其释放。</p>
+
+<h3 id="methods_ktic_api">内核 Trusty IPC Client API 中的方法</h3>
+
+<h4 id="tipc_create_channel">tipc_create_channel()</h4>
+
+<p>用于针对特定 Trusty-IPC 设备创建并配置 Trusty IPC 通道实例。</p>
+
+<pre class="prettyprint">
+struct tipc_chan *tipc_create_channel(struct device *dev,
+                          const struct tipc_chan_ops *ops,
+                              void *cb_arg);
+</pre>
+
+<p>[输入] <code>dev</code>：一个指针，指向创建相应设备通道时所针对的 Trusty-IPC</p>
+
+<p>[输入] <code>ops</code>：一个指针，指向已填入调用程序专用回调的 <code>struct tipc_chan_ops</code></p>
+
+<p>[输入] <code>cb_arg</code>：一个指针，指向将传递到 <code>tipc_chan_ops</code> 回调的数据</p>
+
+<p>[返回值]：如果操作成功了，则为指向新创建的 <code>struct tipc_chan</code> 实例的指针；否则为 <code>ERR_PTR(err)</code></p>
+
+<p>一般情况下，当相应活动发生时，调用程序必须提供两个异步发起的回调。</p>
+
+<p>发起 <code>void (*handle_event)(void *cb_arg, int event)</code> 事件，以便让调用程序知道通道状态发生的变化。</p>
+
+<p>[输入] <code>cb_arg</code>：一个指针，指向传递到 <code>tipc_create_channel()</code> 调用的数据</p>
+
+<p>[输入] <code>event</code>：可以是以下任一值的事件：</p>
+
+<ul>
+  <li><code>TIPC_CHANNEL_CONNECTED</code> - 表示成功连接到远程端</li><li><code>TIPC_CHANNEL_DISCONNECTED</code> - 表示远程端拒绝了新的连接请求或请求与之前连接的通道断开连接</li><li><code>TIPC_CHANNEL_SHUTDOWN</code> - 表示远程端正在关闭，将永久终止所有连接</li></ul>
+
+<p>发起 <code>struct tipc_msg_buf *(*handle_msg)(void *cb_arg, struct tipc_msg_buf *mb)</code> 回调，以便提供关于通过指定通道收到了一条新消息的通知。</p>
+
+<ul>
+  <li>[输入] <code>cb_arg</code>：一个指针，指向传递到 <code>tipc_create_channel()</code> 调用的数据</li><li>[输入] <code>mb</code>：一个指针，指向描述外来消息的 <code>struct tipc_msg_buf</code></li><li>[返回值]：回调实现应返回一个指向 <code>struct tipc_msg_buf</code> 的指针。如果相应消息在本地处理并且以后不再需要，那么该指针可以与 <code>mb</code> 参数收到的指针相同（或者，它可以是通过 <code>tipc_chan_get_rxbuf()</code> 调用获取的新缓冲区）</li></ul>
+
+<h4 id="tipc_chan_connect">tipc_chan_connect()</h4>
+
+<p>用于发起与指定 Trusty IPC 服务的连接。</p>
+
+<pre class="prettyprint">
+int tipc_chan_connect(struct tipc_chan *chan, const char *port);
+</pre>
+
+<p>[输入] <code>chan</code>：一个指针，指向通过 <code>tipc_create_chan()</code> 调用返回的通道</p>
+
+<p>[输入] <code>port</code>：一个指针，指向包含要连接的服务名称的字符串</p>
+
+<p>[返回值]：如果操作成功了，则为 0；否则为表示错误的负数</p>
+
+<p>调用程序会在连接建立后收到通知（收到 <code>handle_event</code> 回调）。</p>
+
+<h4 id="tipc_chan_shutdown">tipc_chan_shutdown()</h4>
+
+<p>用于终止与之前通过 <code>tipc_chan_connect()</code> 调用发起的与 Trusty IPC 服务的连接。</p>
+
+<pre class="prettyprint">
+int tipc_chan_shutdown(struct tipc_chan *chan);
+</pre>
+
+<p>[输入] <code>chan</code>：一个指针，指向通过 <code>tipc_create_chan()</code> 调用返回的通道</p>
+
+<h4 id="tipc_chan_destroy">tipc_chan_destroy()</h4>
+
+<p>用于销毁指定的 Trusty IPC 通道。</p>
+
+<pre class="prettyprint">
+void tipc_chan_destroy(struct tipc_chan *chan);
+</pre>
+
+<p>[输入] <code>chan</code>：一个指针，指向通过 <code>tipc_create_chan()</code> 调用返回的通道</p>
+
+<h4 id="tipc_chan_get_txbuf_timeout">tipc_chan_get_txbuf_timeout()</h4>
+
+<p>用于获取通过指定通道发送数据时可以使用的消息缓冲区。如果相应缓冲区无法立即进入可用状态，调用程序可能会在指定的超时（以毫秒计）期间被屏蔽。</p>
+
+<pre class="prettyprint">
+struct tipc_msg_buf *
+tipc_chan_get_txbuf_timeout(struct tipc_chan *chan, long timeout);
+</pre>
+
+<p>[输入] <code>chan</code>：一个指针，指向要将消息加入到的队列所属的通道</p>
+
+<p>[输入] <code>chan</code>：<code>tx</code> 缓冲区可用之前等待的超时上限</p>
+
+<p>[返回值]：如果操作成功了，则为有效的消息缓冲区；如果出现错误，则为 <code>ERR_PTR(err)</code></p>
+
+<h4 id="tipc_chan_queue_msg">tipc_chan_queue_msg()</h4>
+
+<p>用于将要通过指定的 Trusty IPC 通道发送的消息加入到队列。</p>
+
+<pre class="prettyprint">
+int tipc_chan_queue_msg(struct tipc_chan *chan, struct tipc_msg_buf *mb);
+</pre>
+
+<p>[输入] <code>chan</code>：一个指针，指向要将消息加入到的队列所属的通道</p>
+
+<p>[输入] <code>mb:</code> 一个通过 <code>tipc_chan_get_txbuf_timeout()</code> 调用获取的指针，指向要加入到队列的消息</p>
+
+<p>[返回值]：如果操作成功了，则为 0；否则为表示错误的负数</p>
+
+<h4 id="tipc_chan_put_txbuf">tipc_chan_put_txbuf()</h4>
+
+<p>用于释放之前通过 <code>tipc_chan_get_txbuf_timeout()</code> 调用获取的指定 <code>Tx</code> 消息缓冲区。</p>
+
+<pre class="prettyprint">
+void tipc_chan_put_txbuf(struct tipc_chan *chan,
+                         struct tipc_msg_buf *mb);
+</pre>
+
+<p>[输入] <code>chan</code>：一个指针，指向相应消息缓冲区所属的通道</p>
+
+<p>[输入] <code>mb</code>：一个指针，指向要释放的消息缓冲区</p>
+
+<p>[返回值]：无</p>
+
+<h4 id="tipc_chan_get_rxbuf">tipc_chan_get_rxbuf()</h4>
+
+<p>用于获取通过指定通道接收消息时可以使用的消息缓冲区。</p>
+
+<pre class="prettyprint">
+struct tipc_msg_buf *tipc_chan_get_rxbuf(struct tipc_chan *chan);
+</pre>
+
+<p>[输入] <code>chan</code>：一个指针，指向相应消息缓冲区所属的通道</p>
+
+<p>[返回值]：如果操作成功了，则为有效的消息缓冲区；如果出现错误，则返回 <code>ERR_PTR(err)</code></p>
+
+<h4 id="tipc_chan_put_rxbuf">tipc_chan_put_rxbuf()</h4>
+
+<p>用于释放之前通过 <code>tipc_chan_get_rxbuf()</code> 调用获取的指定消息缓冲区。</p>
+
+<pre class="prettyprint">
+void tipc_chan_put_rxbuf(struct tipc_chan *chan,
+                         struct tipc_msg_buf *mb);
+</pre>
+
+<p>[输入] <code>chan</code>：一个指针，指向相应消息缓冲区所属的通道</p>
+
+<p>[输入] <code>mb</code>：一个指针，指向要释放的消息缓冲区</p>
+
+<p>[返回值]：无</p>
+
+</body></html>

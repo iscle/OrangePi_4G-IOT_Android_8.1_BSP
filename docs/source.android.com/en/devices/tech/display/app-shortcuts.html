@@ -1,0 +1,172 @@
+<html devsite>
+  <head>
+    <title>App Shortcuts</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+
+<p>
+The Android 7.1.1 release allows developers to define action-specific
+shortcuts in their apps that can be displayed in a launcher. These <a
+href="https://developer.android.com/guide/topics/ui/shortcuts.html">app
+shortcuts</a> let users quickly start common or recommended tasks within an
+app.
+</p>
+
+<h2 id="overview">Overview</h2>
+
+<p>
+Each shortcut references an intent that launches a specific action in the app
+when users select the shortcut. Examples of actions you can express as app
+shortcuts include:
+</p>
+
+<ul>
+  <li>Navigating users to a particular location in a mapping app
+  <li>Sending messages to a friend in a communication app
+  <li>Playing the next episode of a TV show in a media app
+  <li>Loading the last save point in a gaming app</li></ul>
+
+<h2 id="examples-and-source">Examples and source</h2>
+
+<p>
+You can find the primary implementation of this feature in the following files:
+</p>
+
+<pre class="devsite-click-to-copy">
+frameworks/base/services/core/java/com/android/server/policy/ShortcutManager.java
+frameworks/base/services/core/java/com/android/server/pm/ShortcutPackage.java
+frameworks/base/services/core/java/com/android/server/pm/ShortcutUser.java
+frameworks/base/services/core/java/com/android/server/pm/ShortcutPackageInfo.java
+frameworks/base/services/core/java/com/android/server/pm/ShortcutLauncher.java
+frameworks/base/services/core/java/com/android/server/pm/ShortcutParser.java
+frameworks/base/services/core/java/com/android/server/pm/ShortcutService.java
+frameworks/base/services/core/java/com/android/server/pm/LauncherAppsService.java
+frameworks/base/services/core/java/com/android/server/pm/ShortcutPackageItem.java
+frameworks/base/core/java/com/android/server/backup/ShortcutBackupHelper.java
+frameworks/base/core/java/android/content/pm/ShortcutManager.java
+frameworks/base/core/java/android/content/pm/ShortcutServiceInternal.java
+frameworks/base/core/java/android/content/pm/ShortcutInfo.java
+frameworks/base/core/java/android/content/pm/LauncherApps.java
+</pre>
+
+<p>
+With the following files providing supporting features (called hidden APIs in
+<code>ShortcutManager.java</code>):
+</p>
+
+<pre class="devsite-click-to-copy">
+packages/apps/Settings/src/com/android/settings/DevelopmentSettings.java
+frameworks/base/packages/SystemUI/src/com/android/systemui/statusbar/policy/RemoteInputView.java
+</pre>
+
+<p>
+And, for an example, the Android Open Source Project Launcher version 3 supports
+shortcuts:
+</p>
+
+<pre class="devsite-click-to-copy">
+packages/apps/Launcher3/
+</pre>
+
+<p>
+Finally, see the following files for public Javadoc.
+</p>
+
+<pre class="devsite-click-to-copy">
+frameworks/base/core/java/android/content/pm/ShortcutManager.java
+frameworks/base/core/java/android/content/pm/ShortcutInfo.java
+frameworks/base/core/java/android/content/pm/LauncherApps.java
+</pre>
+
+<h2 id="implementation">Implementation</h2>
+
+<p>
+The AOSP Launcher3 supports shortcuts already.  In cases where a partner has its
+own launcher, that launcher should support shortcuts too.
+</p>
+
+<ul>
+  <li>When the user performs a certain gesture (e.g. long press) on an app icon,
+the launcher should show the dynamic and manifest shortcuts associated with each
+launcher activity icon.<br>
+The shortcut sort order is defined in the ShorctutManager Javadoc within
+the "Shortcut Display Order" section.  For example, show the manifest shortcuts
+first, then the dynamic shortcuts.  The shortcuts are sorted by rank in
+ascending order within each group.
+  <li>The user should be able to drag each dynamic/manifest shortcut and "pin" it
+to the home screen.
+  <li>Pinned shortcuts should be backed up and restored. (See ShortcutManager's
+javadoc for details)
+  <li>Doing an "Inline reply" on Notification should internally call
+ShortcutManager.onApplicationActive.
+</ul>
+
+<p>
+In addition, some Google Mobile Services (GMS) apps have shortcuts. The OEM
+launcher should show shortcuts for them and ideally support "<a
+href="https://support.google.com/nexus/answer/6118421">pinning</a>" (or creating
+a shortcut icon) too.
+</p>
+
+<p>
+See the Launcher3 source for details on how to interact with the framework for
+the above operations.
+</p>
+
+<h2 id="validation">Validation</h2>
+
+<p>
+Use the following Android Compatibility Test Suite (CTS) tests to ensure your
+version of the feature (ShortcutManager and LauncherApps) works as intended:
+</p>
+
+<pre class="devsite-click-to-copy">
+cts/tests/tests/shortcutmanager/
+cts/hostsidetests/shortcuts/
+</pre>
+
+<p>
+And find the unit tests for the AOSP implementation here:
+</p>
+
+<pre class="devsite-click-to-copy">
+frameworks/base/services/tests/servicestests/
+</pre>
+
+<p>
+Which includes:
+</p>
+
+<pre class="devsite-click-to-copy">
+src/com/android/server/pm/ShortcutManagerTest*.java
+</pre>
+<p>
+You may also employ the CTS Verifier test for shortcut manager:
+</p>
+
+<pre class="devsite-click-to-copy">
+cts/apps/CtsVerifier/src/com/android/cts/verifier/notifications/ShortcutThrottlingResetActivity.java
+</pre>
+
+  </body>
+</html>

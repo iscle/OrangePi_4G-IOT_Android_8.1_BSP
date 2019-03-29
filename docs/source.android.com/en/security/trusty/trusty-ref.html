@@ -1,0 +1,1231 @@
+<html devsite>
+  <head>
+    <title>Trusty API Reference</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>The <a href="index.html">Trusty</a> API generally describes the
+Trusty inter-process communication (IPC)
+system, including communications with the non-secure world. This page defines the
+relevant terms and provides a reference for the API
+calls.</p>
+
+<h2 id=ports_and_channels>Ports and channels</h2>
+
+<p>Ports are used by Trusty applications to expose service end-points in the form
+of a named path to which clients connect. This gives a simple, string-based
+service ID for clients to use. The naming convention is reverse-DNS-style
+naming, e.g. <code>com.google.servicename</code>.</p>
+
+<p>When a client connects to a port, the client receives a channel for interacting
+with a service. The service must accept an incoming connection, and when it
+does, it too receives a channel. In essence, ports are used to look up services
+and then communication occurs over a pair of connected channels (i.e.,
+connection instances on a port). When a client connects to a port, a symmetric,
+bi-directional connection is established. Using this full-duplex path, clients
+and servers can exchange arbitrary messages until either side decides to tear
+down the connection.</p>
+
+<p>Only secure-side trusted applications or Trusty kernel modules can create
+ports. Applications running on the non-secure side (in the normal world) can
+only connect to services published by the secure side.</p>
+
+<p>Depending on requirements, a trusted application can be both a client and a
+server at the same time. A trusted application that publishes a service (as a
+server) might need to connect to other services (as a client).</p>
+
+<h2 id=handle_api>Handle API</h2>
+
+<p>Handles are unsigned integers representing resources such as ports and
+channels, similar to file descriptors in UNIX. After handles are created, they
+are placed into an application-specific handle table and can be referenced
+later.</p>
+
+<p>A caller can associate private data with a handle by using
+the <code>set_cookie()</code> method.</p>
+
+<h3 id=methods_handle_api>Methods in the Handle API</h3>
+
+<p>Handles are only valid in the context of an application. An application should
+not pass the value of a handle to other applications unless explicitly
+specified. A handle value only should be interpreted by comparing it with
+the <code>INVALID_IPC_HANDLE #define,</code> which an application can use as an
+indication that a handle is invalid or unset.</p>
+
+<h4 id=set_cookie>set_cookie()</h4>
+
+<p>Associates the caller-provided private data with a specified handle.</p>
+
+<pre class="prettyprint">
+long set_cookie(uint32_t handle, void *cookie)
+</pre>
+
+<p>[in] <code>handle</code>: Any handle returned by one of the API calls</p>
+
+<p>[in] <code>cookie</code>: Pointer to arbitrary user-space data in the Trusty application</p>
+
+<p>[retval]: <code>NO_ERROR</code> on success, <code>&lt; 0</code> error code otherwise</p>
+
+<p>This call is useful for handling events when they occur at a later time after
+the handle has been created. The event-handling mechanism supplies the handle
+and its cookie back to the event handler.</p>
+
+<p>Handles can be waited upon for events by using the <code>wait()</code>
+or <code>wait_any()</code> calls.</p>
+
+<h4 id=wait>wait()</h4>
+
+<p>Waits for an event to occur on a given handle for specified period of time.</p>
+
+<pre class="prettyprint">
+long wait(uint32_t handle_id, uevent_t *event, unsigned long timeout_msecs)
+</pre>
+
+<p>[in] <code>handle_id</code>: Any handle returned by one of the API calls</p>
+
+<p>[out] <code>event</code>: A pointer to the structure representing
+an event that occurred on this handle</p>
+
+<p>[in] <code>timeout_msecs</code>: A timeout value in milliseconds; a
+value of -1 is an infinite timeout</p>
+
+<p>[retval]: <code>NO_ERROR</code> if a valid event occurred within a
+specified timeout interval; <code>ERR_TIMED_OUT</code> if a specified timeout elapsed but no
+event has occurred; <code>&lt; 0</code> for other errors</p>
+
+<h4 id=wait_any>wait_any()</h4>
+
+<p>Waits for any event to occur on any handle in the application handle table for
+the specified period of time.</p>
+
+<pre class="prettyprint">
+long wait_any(uevent_t *event, unsigned long timeout_msecs);
+</pre>
+
+<p>[out] <code>event</code>: A pointer to the structure representing an
+event that occurred on this handle</p>
+
+<p>[in] <code>timeout_msecs</code>: A timeout value in milliseconds.
+A value of -1 is an infinite timeout</p>
+
+<p>[retval]: <code>NO_ERROR</code> if a valid event occurred within a
+specified timeout interval; <code>ERR_TIMED_OUT</code> if a specified timeout elapsed but no
+event has occurred; <code>&lt; 0</code> for other errors</p>
+
+<p>Upon success (<code>retval == NO_ERROR</code>), the <code>wait()</code>
+and <code>wait_any()</code> calls
+fill a specified <code>uevent_t</code> structure with information about
+the event that occurred.</p>
+
+<pre class="prettyprint">
+typedef struct uevent {
+    uint32_t handle; /* handle this event is related to */
+    uint32_t event;  /* combination of IPC_HANDLE_POLL_XXX flags */
+    void    *cookie; /* cookie associated with this handle */
+} uevent_t;
+</pre>
+
+<p>The <code>event</code> field contains a combination of the following values:</p>
+
+<pre class="prettyprint">
+enum {
+  IPC_HANDLE_POLL_NONE    = 0x0,
+  IPC_HANDLE_POLL_READY   = 0x1,
+  IPC_HANDLE_POLL_ERROR   = 0x2,
+  IPC_HANDLE_POLL_HUP     = 0x4,
+  IPC_HANDLE_POLL_MSG     = 0x8,
+  IPC_HANDLE_POLL_SEND_UNBLOCKED = 0x10,
+  … more values[TBD]
+};
+</pre>
+
+<p><code>IPC_HANDLE_POLL_NONE</code> - no events are actually pending,
+caller should restart the wait</p>
+
+<p><code>IPC_HANDLE_POLL_ERROR</code> - an unspecified internal error has occurred</p>
+
+<p><code>IPC_HANDLE_POLL_READY</code> - depends on the handle type, as follows:</p>
+
+<ul>
+  <li>For ports, this value indicates that there is a pending connection
+  <li>For channels, this value indicates that an asynchronous connection
+  (see <code>connect()</code>) was established
+</ul>
+
+<p>The following events are only relevant for channels:</p>
+
+<ul>
+  <li><code>IPC_HANDLE_POLL_HUP</code> - indicates that a channel has been closed by a peer
+  <li><code>IPC_HANDLE_POLL_MSG</code> - indicates that there is a pending message for this channel
+  <li><code>IPC_HANDLE_POLL_SEND_UNBLOCKED</code> - indicates that a previously
+  send-blocked caller may attempt to send a
+  message again (see the description of <code>send_msg()</code> for details)
+</ul>
+
+<p>An event handler should be prepared to handle a combination of specified
+events, as multiple bits might be set at the same time. For example, for a
+channel, it is possible to have pending messages, and a connection closed by a
+peer at the same time.</p>
+
+<p>Most events are sticky. They persist as long as the underlying condition
+persists (for example all pending messages are received and pending connection
+requests are handled). The exception is the case of
+the <code>IPC_HANDLE_POLL_SEND_UNBLOCKED</code> event, which
+is cleared upon a read and the application has only one chance to
+handle it.</p>
+
+<p>Handles can be destroyed by calling the <code>close()</code> method.</p>
+
+<h4 id=close>close()</h4>
+
+<p>Destroys the resource associated with the specified handle and removes it from
+the handle table.</p>
+
+<pre class="prettyprint">
+long close(uint32_t handle_id);
+</pre>
+
+<p>[in] <code>handle_id</code>: Handle to destroy</p>
+
+<p>[retval]: 0 if success; a negative error otherwise</p>
+
+<h2 id=server_api>Server API</h2>
+
+<p>A server begins by creating one or more <strong>named ports</strong> representing
+its service end-points. Each port is represented by a handle.</p>
+
+<h3 id=methods_server_api>Methods in the Server API</h3>
+
+<h4 id=port_create>port_create()</h4>
+
+<p>Creates a named service port.</p>
+
+<pre class="prettyprint">
+long port_create (const char *path, uint num_recv_bufs, size_t recv_buf_size,
+uint32_t flags)
+</pre>
+
+<p>[in] <code>path</code>: The string name of the port (as described above). This
+name should be unique across the system; attempts to create a duplicate will fail.</p>
+
+<p>[in] <code>num_recv_bufs</code>: The maximum number of buffers that a channel on
+this port can pre-allocate to facilitate the exchange of data with the client. Buffers are counted
+separately for data going in both directions, so specifying 1 here would mean 1
+send and 1 receive buffer are preallocated. In general, the number of buffers
+required depends on the higher-level protocol agreement between the client and
+server. The number can be as little as 1 in case of a very synchronous protocol
+(send message, receive reply before sending another). But the number can be
+more if the client expects to send more than one message before a reply can
+appear (e.g, one message as a prologue and another as the actual command). The
+allocated buffer sets are per channel, so two separate connections (channels)
+would have separate buffer sets.</p>
+
+<p>[in] <code>recv_buf_size</code>: Maximum size of each individual buffer in the
+above buffer set. This value is
+protocol-dependent and effectively limits maximum message size you can exchange
+with peer</p>
+
+<p>[in] <code>flags</code>: A combination of flags that specifies additional port behavior</p>
+
+<p>This value should be a combination of the following values:</p>
+
+<p><code>IPC_PORT_ALLOW_TA_CONNECT</code> - allows a connection from other secure apps</p>
+
+<p><code>IPC_PORT_ALLOW_NS_CONNECT</code> - allows a connection from the non-secure world</p>
+
+<p>[retval]: Handle to the port created if non-negative or a specific error if
+negative</p>
+
+<p>The server then polls the list of port handles for incoming connections
+using <code>wait()</code> or <code>wait_any()</code> calls. Upon receiving a connection
+request indicated by the <code>IPC_HANDLE_POLL_READY</code> bit set in
+the <code>event</code> field of the <code>uevent_t</code> structure, the
+server should call <code>accept()</code> to finish establishing a connection and create a
+channel (represented by
+another handle) that can then be polled for incoming messages.</p>
+
+<h4 id=accept>accept()</h4>
+
+<p>Accepts an incoming connection and gets a handle to a channel.</p>
+
+<pre class="prettyprint">
+long accept(uint32_t handle_id, uuid_t *peer_uuid);
+</pre>
+
+<p>[in] <code>handle_id</code>: Handle representing the port to which a client has connected</p>
+
+<p>[out] <code>peer_uuid</code>: Pointer to a <code>uuud_t</code> structure to be
+filled with the UUID of the connecting client application. It
+will be set to all zeros if the connection originated from the non-secure world</p>
+
+<p>[retval]: Handle to a channel (if non-negative) on which the server can
+exchange messages with the client (or an error code otherwise)</p>
+
+<h2 id=client_api>Client API</h2>
+
+<p>This section contains the methods in the Client API.</p>
+
+<h3 id=methods_client_api>Methods in the Client API</h3>
+
+<h4 id=connect>connect()</h4>
+
+<p>Initiates a connection to a port specified by name.</p>
+
+<pre class="prettyprint">
+long connect(const char *path, uint flags);
+</pre>
+
+<p>[in] <code>path</code>: Name of a port published by a Trusty application</p>
+
+<p>[in] <code>flags</code>: Specifies additional, optional behavior</p>
+
+<p>[retval]: Handle to a channel over which messages can be exchanged with the
+server; error if negative</p>
+
+<p>If no <code>flags</code> are specified (the <code>flags</code> parameter
+is set to 0), calling <code>connect()</code> initiates a synchronous connection
+to a specified port that immediately
+returns an error if the port does not exist, and creates a block until the
+server otherwise accepts a connection.</p>
+
+<p>This behavior can be altered by specifying a combination of two values,
+described below:</p>
+
+<pre class="prettyprint">
+enum {
+IPC_CONNECT_WAIT_FOR_PORT = 0x1,
+IPC_CONNECT_ASYNC = 0x2,
+};
+</pre>
+
+<p><code>IPC_CONNECT_WAIT_FOR_PORT</code> - forces a <code>connect()</code>
+call to wait if the specified port does not immediately exist at execution,
+instead of failing immediately.</p>
+
+<p><code>IPC_CONNECT_ASYNC</code> - if set, initiates an asynchronous connection. An
+application has to poll for
+the returned handle (by calling <code>wait()</code> or <code>wait_any()</code>) for
+a connection completion event indicated by the <code>IPC_HANDLE_POLL_READY</code>
+bit set in the event field of the <code>uevent_t</code> structure before starting
+normal operation.</p>
+
+<h2 id=messaging_api>Messaging API</h2>
+
+<p>The Messaging API calls enable the sending and reading of messages over a
+previously established connection (channel). The Messaging API calls are the
+same for servers and clients.</p>
+
+<p>A client receives a handle to a channel by issuing a <code>connect()</code>
+call, and a server gets a channel handle from an <code>accept()</code> call,
+described above.</p>
+
+<h4 id=structure_of_a_trusty_message>Structure of a Trusty message</h4>
+
+<p>As shown in the following, messages exchanged by the Trusty API have a minimal
+structure, leaving it to the server and client to agree on the semantics of the
+actual contents:</p>
+
+<pre class="prettyprint">
+/*
+ *  IPC message
+ */
+typedef struct iovec {
+        void   *base;
+        size_t  len;
+} iovec_t;
+
+typedef struct ipc_msg {
+        uint     num_iov; /* number of iovs in this message */
+        iovec_t  *iov;    /* pointer to iov array */
+
+        uint     num_handles; /* reserved, currently not supported */
+        handle_t *handles;    /* reserved, currently not supported */
+} ipc_msg_t;
+</pre>
+
+<p>A message can be composed of one or more non-contiguous buffers represented by
+an array of <code>iovec_t</code> structures. Trusty performs scatter-gather
+reads and writes to these blocks
+using the <code>iov</code> array. The content of buffers that can be described
+by the <code>iov</code> array is completely arbitrary.</p>
+
+<h3 id=methods_messaging_api>Methods in the Messaging API</h3>
+
+<h4 id=send_msg>send_msg()</h4>
+
+<p>Sends a message over a specified channel.</p>
+
+<pre class="prettyprint">
+long send_msg(uint32_t handle, ipc_msg_t *msg);
+</pre>
+
+<p>[in] <code>handle</code>: Handle to the channel over which to send the message</p>
+
+<p>[in] <code>msg</code>: Pointer to the <code>ipc_msg_t structure</code> describing the message</p>
+
+<p>[retval]: Total number of bytes sent on success; a negative error otherwise</p>
+
+<p>If the client (or server) is trying to send a message over the channel and
+there is no space in the destination peer message queue, the channel might
+enter a send-blocked state (this should never happen for a simple synchronous
+request/reply protocol but might happen in more complicated cases) that is
+indicated by returning an <code>ERR_NOT_ENOUGH_BUFFER</code> error code.
+In such a case the caller must wait until the peer frees some
+space in its receive queue by retrieving the handling and retiring messages,
+indicated by the <code>IPC_HANDLE_POLL_SEND_UNBLOCKED</code> bit set in
+the <code>event</code> field of the <code>uevent_t</code> structure
+returned by the <code>wait()</code> or <code>wait_any()</code> call.</p>
+
+<h4 id=get_msg>get_msg()</h4>
+
+<p>Gets meta-information about the next message in an incoming message queue</p>
+
+<p>of a specified channel.</p>
+
+<pre class="prettyprint">
+long get_msg(uint32_t handle, ipc_msg_info_t *msg_info);
+</pre>
+
+<p>[in] <code>handle</code>: Handle of the channel on which a new message must be retrieved</p>
+
+<p>[out] <code>msg_info</code>: Message information structure described as follows:</p>
+
+<pre class="prettyprint">
+typedef struct ipc_msg_info {
+        size_t    len;  /* total message length */
+        uint32_t  id;   /* message id */
+} ipc_msg_info_t;
+</pre>
+
+<p>Each message is assigned a unique ID across the set of outstanding messages,
+and the total length of each message is filled in. If configured and allowed by the
+protocol, there can be multiple outstanding (opened) messages at once for a
+particular channel.</p>
+
+<p>[retval]: <code>NO_ERROR</code> on success; a negative error otherwise</p>
+
+<h4 id=read_msg>read_msg()</h4>
+
+<p>Reads the content of the message with the specified ID starting from the
+specified offset.</p>
+
+<pre class="prettyprint">
+long read_msg(uint32_t handle, uint32_t msg_id, uint32_t offset, ipc_msg_t
+*msg);
+</pre>
+
+<p>[in] <code>handle</code>: Handle of the channel from which to read the message</p>
+
+<p>[in] <code>msg_id</code>: ID of the message to read</p>
+
+<p>[in] <code>offset</code>: Offset into the message from which to start reading</p>
+
+<p>[in] <code>msg</code>: Pointer to the <code>ipc_msg_t</code> structure describing
+a set of buffers into which to store incoming message
+data</p>
+
+<p>[retval]: Total number of bytes stored in the <code>dst</code> buffers on
+success; a negative error otherwise</p>
+
+<p>The <code>read_msg</code> method can be called multiple times starting at
+a different (not necessarily
+sequential) offset as needed.</p>
+
+<h4 id=put_msg>put_msg()</h4>
+
+<p>Retires a message with a specified ID.</p>
+
+<pre class="prettyprint">
+long put_msg(uint32_t handle, uint32_t msg_id);
+</pre>
+
+<p>[in] <code>handle</code>: Handle of the channel on which the message has arrived</p>
+
+<p>[in] <code>msg_id</code>: ID of message being retired</p>
+
+<p>[retval]: <code>NO_ERROR</code> on success; a negative error otherwise</p>
+
+<p>Message content cannot be accessed after a message has been retired and the
+buffer it occupied has been freed.</p>
+
+<h2 id=file_descriptor_api>File Descriptor API</h2>
+
+<p>The File Descriptor API includes <code>read()</code>, <code>write()</code>,
+and <code>ioctl()</code> calls. All of these calls can operate on a predefined (static) set of file
+descriptors traditionally represented by small numbers. In the current
+implementation, the file descriptor space is separate from the IPC handle
+space. The File Descriptor API in Trusty is
+similar to a traditional file descriptor-based API.</p>
+
+<p>By default, there are 3 predefined (standard and well-known) file descriptors:</p>
+
+<ul>
+  <li>0 - standard input. The default implementation of standard input <code>fd</code>
+  is a no-op (as trusted applications are not expected to have an interactive
+console) so reading, writing or invoking <code>ioctl()</code> on <code>fd</code> 0
+should return an <code>ERR_NOT_SUPPORTED</code> error.
+  <li>1 - standard output. Data written to standard output can be routed (depending
+on the LK debug level) to UART and/or a memory log available on the non-secure
+side, depending on the platform and configuration. Non-critical debug logs and
+messages should go in standard output. The <code>read()</code> and <code>ioctl()</code>
+methods are no-ops and should return an <code>ERR_NOT_SUPPORTED</code> error.
+  <li>2 - standard error. Data written to standard error should be routed to the UART
+or memory log available on the non-secure side, depending on the platform and
+configuration. It is recommended to write only critical messages to standard
+error, as this stream is very likely to be unthrottled. The <code>read()</code> and
+<code>ioctl()</code> methods are no-ops and should return an <code>ERR_NOT_SUPPORTED</code> error.
+</ul>
+
+<p>Even though this set of file descriptors can be extended to implement more
+<code>fds</code> (to implement platform-specific extensions), extending file descriptors needs
+to be exercised with caution. Extending file descriptors is prone to create
+conflicts and is not generally recommended.</p>
+
+<h3 id=methods_file_descriptor_api>Methods in the File Descriptor API</h3>
+
+<h4 id=read>read()</h4>
+
+<p>Attempts to read up to <code>count</code> bytes of data from a specified file descriptor.</p>
+
+<pre class="prettyprint">
+long read(uint32_t fd, void *buf, uint32_t count);
+</pre>
+
+<p>[in] <code>fd</code>: File descriptor from which to read</p>
+
+<p>[out] <code>buf</code>: Pointer to a buffer into which to store data</p>
+
+<p>[in] <code>count</code>: Maximum number of bytes to read</p>
+
+<p>[retval]: Returned number of bytes read; a negative error otherwise</p>
+
+<h4 id=write>write()</h4>
+
+<p>Writes up to <code>count</code> bytes of data to specified file descriptor.</p>
+
+<pre class="prettyprint">
+long write(uint32_t fd, void *buf, uint32_t count);
+</pre>
+
+<p>[in] <code>fd</code>: File descriptor to which to write</p>
+
+<p>[out] <code>buf</code>: Pointer to data to write</p>
+
+<p>[in] <code>count</code>: Maximum number of bytes to write</p>
+
+<p>[retval]: Returned number of bytes written; a negative error otherwise</p>
+
+<h4 id=ioctl>ioctl()</h4>
+
+<p>Invokes a specified <code>ioctl</code> command for a given file descriptor.</p>
+
+<pre class="prettyprint">
+long ioctl(uint32_t fd, uint32_t cmd, void *args);
+</pre>
+
+<p>[in] <code>fd</code>: File descriptor on which to invoke <code>ioctl()</code></p>
+
+<p>[in] <code>cmd</code>: The <code>ioctl</code> command</p>
+
+<p>[in/out] <code>args</code>: Pointer to <code>ioctl()</code> arguments</p>
+
+<h2 id=miscellaneous_api>Miscellaneous API</h2>
+
+<h3 id=methods_misc_api>Methods in the Miscellaneous API</h3>
+
+<h4 id=gettime>gettime()</h4>
+
+<p>Returns the current system time (in nanoseconds).</p>
+
+<pre class="prettyprint">
+long gettime(uint32_t clock_id, uint32_t flags, uint64_t *time);
+</pre>
+
+<p>[in] <code>clock_id</code>: Platform-dependent; pass zero for default</p>
+
+<p>[in] <code>flags</code>: Reserved, should be zero</p>
+
+<p>[in] <code>time</code>: Pointer to an <code>int64_t</code> value to which to store the current time</p>
+
+<p>[retval]: <code>NO_ERROR</code> on success; a negative error otherwise</p>
+
+<h4 id=nanosleep>nanosleep()</h4>
+
+<p>Suspends execution of the calling application for a specified period of time
+and resumes it after that period.</p>
+
+<pre class="prettyprint">
+long nanosleep(uint32_t clock_id, uint32_t flags, uint64_t sleep_time)
+</pre>
+
+<p>[in] <code>clock_id</code>: Reserved, should be zero</p>
+
+<p>[in] <code>flags</code>: Reserved, should be zero</p>
+
+<p>[in] <code>sleep_time</code>: Sleep time in nanoseconds</p>
+
+<p>[retval]: <code>NO_ERROR</code> on success; a negative error otherwise</p>
+
+<h2 id=example_of_a_trusted_application_server>Example of a trusted application server</h2>
+
+<p>The following sample application shows the usage of the above APIs. The sample
+creates an "echo" service that handles multiple incoming connections and
+reflects back to the caller all messages it receives from clients originated
+from the secure or non-secure side.</p>
+
+<pre class="prettyprint">
+#include &lt;assert.h>
+#include &lt;err.h>
+#include &lt;stddef.h>
+#include &lt;stdio.h>
+#include &lt;stdlib.h>
+#include &lt;string.h>
+#include &lt;trusty_std.h>
+
+#include &lt;app/echo/uuids.h>
+
+#define LOG_TAG "echo_srv"
+
+#define TLOGE(fmt, ...) \
+    fprintf(stderr, "%s: %d: " fmt, LOG_TAG, __LINE__,  ## __VA_ARGS__)
+
+#define MAX_ECHO_MSG_SIZE  64
+
+static const char *srv_name = "com.android.echo.srv.echo";
+
+static uint8_t msg_buf[MAX_ECHO_MSG_SIZE];
+
+/*
+ *  Message handler
+ */
+static int handle_msg(handle_t chan)
+{
+  int rc;
+  iovec_t iov;
+  ipc_msg_t msg;
+  ipc_msg_info_t msg_inf;
+
+  iov.base = msg_buf;
+  iov.len  = sizeof(msg_buf);
+
+  msg.num_iov = 1;
+  msg.iov = &iov;
+  msg.num_handles = 0;
+  msg.handles  = NULL;
+
+  /* get message info */
+  rc = get_msg(chan, &msg_inf);
+  if (rc == ERR_NO_MSG)
+    return NO_ERROR; /* no new messages */
+
+  if (rc != NO_ERROR) {
+    TLOGE("failed (%d) to get_msg for chan (%d)\n",
+          rc, chan);
+    return rc;
+  }
+
+  /* read msg content */
+  rc = read_msg(chan, msg_inf.id, 0, &msg);
+  if (rc &lt; 0) {
+    TLOGE("failed (%d) to read_msg for chan (%d)\n",
+          rc, chan);
+    return rc;
+  }
+
+  /* update number of bytes received */
+  iov.len = (size_t) rc;
+
+  /* send message back to the caller */
+  rc = send_msg(chan, &msg);
+  if (rc &lt; 0) {
+    TLOGE("failed (%d) to send_msg for chan (%d)\n",
+          rc, chan);
+    return rc;
+  }
+
+  /* retire message */
+  rc = put_msg(chan, msg_inf.id);
+  if ( rc != NO_ERROR) {
+    TLOGE("failed (%d) to put_msg for chan (%d)\n",
+          rc, chan);
+    return rc;
+  }
+
+  return NO_ERROR;
+}
+
+/*
+ *  Channel event handler
+ */
+static void handle_channel_event(const uevent_t *ev)
+{
+  int rc;
+
+  if (ev->event & IPC_HANDLE_POLL_MSG) {
+    rc = handle_msg(ev->handle);
+    if (rc != NO_ERROR) {
+      /* report an error and close channel */
+      TLOGE("failed (%d) to handle event on channel %d\n",
+             rc, ev->handle);
+      close(ev->handle);
+    }
+    return;
+  }
+  if (ev->event & IPC_HANDLE_POLL_HUP) {
+    /* closed by peer. */
+    close(ev->handle);
+    return;
+  }
+}
+
+/*
+ *  Port event handler
+ */
+static void handle_port_event(const uevent_t *ev)
+{
+  uuid_t peer_uuid;
+
+  if ((ev->event & IPC_HANDLE_POLL_ERROR) ||
+      (ev->event & IPC_HANDLE_POLL_HUP) ||
+      (ev->event & IPC_HANDLE_POLL_MSG) ||
+      (ev->event & IPC_HANDLE_POLL_SEND_UNBLOCKED)) {
+    /* should never happen with port handles */
+    TLOGE("error event (0x%x) for port (%d)\n",
+           ev->event, ev->handle);
+    abort();
+  }
+  if (ev->event & IPC_HANDLE_POLL_READY) {
+    /* incoming connection: accept it */
+    int rc = accept(ev->handle, &peer_uuid);
+    if (rc &lt; 0) {
+      TLOGE("failed (%d) to accept on port %d\n",
+             rc, ev->handle);
+      return;
+    }
+  }
+}
+
+/*
+ *  Main application entry point
+ */
+int main(void)
+{
+  int rc;
+  handle_t port;
+
+  /* Initialize service */
+  rc = port_create(srv_name, 1, MAX_ECHO_MSG_SIZE,
+       IPC_PORT_ALLOW_NS_CONNECT |
+       IPC_PORT_ALLOW_TA_CONNECT );
+  if (rc &lt; 0) {
+    TLOGE("Failed (%d) to create port %s\n",
+          rc, srv_name);
+    abort();
+  }
+  port = (handle_t)rc;
+  
+  /* enter main event loop */
+  while (true) {
+    uevent_t ev;
+
+    ev.handle = INVALID_IPC_HANDLE;
+    ev.event  = 0;
+    ev.cookie = NULL;
+
+    /* wait forever */
+    rc = wait_any(&ev, -1);
+    if (rc == NO_ERROR) {
+      /* got an event */
+      if (ev.handle == port) {
+        handle_port_event(&ev);
+      } else {
+        handle_channel_event(&ev);
+      }
+    } else {
+      TLOGE("wait_any returned (%d)\n", rc);
+      abort();
+    }
+  }
+  return 0;
+}
+</pre>
+
+<h2 id=example_of_a_trusted_application_client>Example of a trusted application client</h2>
+
+<p>The following code snippets show the use of the Trusty messaging APIs to
+implement a client of an "echo" service (shown in the code above). The <code>sync_connect()</code>
+method shows an implementation of a synchronous connect with a timeout on top
+of an asynchronous <code>connect()</code> call.</p>
+
+<pre class="prettyprint">
+/*
+ *  Local wrapper on top of an async connect that provides a
+ *  synchronous connect with timeout.
+ */
+int sync_connect(const char *path, uint timeout)
+{
+  int rc;
+  uevent_t evt;
+  handle_t chan;
+
+  rc = connect(path, IPC_CONNECT_ASYNC | IPC_CONNECT_WAIT_FOR_PORT);
+  if (rc >= 0) {
+    chan = (handle_t) rc;
+    rc = wait(chan, &evt, timeout);
+    if (rc == 0) {
+      rc = ERR_BAD_STATE;
+      if (evt.handle == chan) {
+        if (evt.event & IPC_HANDLE_POLL_READY)
+          return chan;
+        if (evt.event & IPC_HANDLE_POLL_HUP)
+          rc = ERR_CHANNEL_CLOSED;
+      }
+    }
+    close(chan);
+  }
+  return rc;
+}
+</pre>
+
+<p>The <code>run_end_to_end_msg_test()</code> method sends 10,000 messages asynchronously
+to the "echo" service and handles
+replies.</p>
+
+<pre class="prettyprint">
+static int run_echo_test(void)
+{
+  int rc;
+  handle_t chan;
+  uevent_t uevt;
+  uint8_t tx_buf[64];
+  uint8_t rx_buf[64];
+  ipc_msg_info_t inf;
+  ipc_msg_t   tx_msg;
+  iovec_t     tx_iov;
+  ipc_msg_t   rx_msg;
+  iovec_t     rx_iov;
+
+  /* prepare tx message buffer */
+  tx_iov.base = tx_buf;
+  tx_iov.len  = sizeof(tx_buf);
+  tx_msg.num_iov = 1;
+  tx_msg.iov     = &tx_iov;
+  tx_msg.num_handles = 0;
+  tx_msg.handles = NULL;
+
+  memset (tx_buf, 0x55, sizeof(tx_buf));
+
+  /* prepare rx message buffer */
+  rx_iov.base = rx_buf;
+  rx_iov.len  = sizeof(rx_buf);
+  rx_msg.num_iov = 1;
+  rx_msg.iov     = &rx_iov;
+  rx_msg.num_handles = 0;
+  rx_msg.handles = NULL;
+
+  /* open connection to echo service */
+  rc = sync_connect(srv_name, 1000);
+  if(rc &lt; 0)
+    return rc;
+
+  /* got channel */
+  chan = (handle_t)rc;
+
+  /* send/receive 10000 messages asynchronously. */
+  uint tx_cnt = 10000;
+  uint rx_cnt = 10000;
+
+  while (tx_cnt || rx_cnt) {
+    /* send messages until all buffers are full */
+while (tx_cnt) {
+    rc = send_msg(chan, &tx_msg);
+      if (rc == ERR_NOT_ENOUGH_BUFFER)
+      break;  /* no more space */
+    if (rc != 64) {
+      if (rc > 0) {
+        /* incomplete send */
+        rc = ERR_NOT_VALID;
+}
+      goto abort_test;
+}
+    tx_cnt--;
+  }
+
+  /* wait for reply msg or room */
+  rc = wait(chan, &uevt, 1000);
+  if (rc != NO_ERROR)
+    goto abort_test;
+
+  /* drain all messages */
+  while (rx_cnt) {
+    /* get a reply */
+      rc = get_msg(chan, &inf);
+    if (rc == ERR_NO_MSG)
+        break;  /* no more messages  */
+  if (rc != NO_ERROR)
+goto abort_test;
+
+  /* read reply data */
+    rc = read_msg(chan, inf.id, 0, &rx_msg);
+  if (rc != 64) {
+    /* unexpected reply length */
+    rc = ERR_NOT_VALID;
+    goto abort_test;
+}
+
+  /* discard reply */
+  rc = put_msg(chan, inf.id);
+  if (rc != NO_ERROR)
+    goto abort_test;
+  rx_cnt--;
+  }
+}
+
+abort_test:
+  close(chan);
+  return rc;
+}
+</pre>
+
+<h2 id=non-secure_world_apis_and_applications>Non-secure world APIs and applications</h2>
+
+<p>A set of Trusty services, published from the secure side and marked with
+the <code>IPC_PORT_ALLOW_NS_CONNECT</code> attribute, are accessible to kernel
+and user space programs running on the
+non-secure side.</p>
+
+<p>The execution environment on the non-secure side (kernel and user space) is
+drastically different from the execution environment on the secure-side.
+Therefore, rather than a single library for both environments, there are two
+different sets of APIs. In the kernel, the Client API is provided by the
+trusty-ipc kernel driver and registers a character device node that can be used
+by user space processes to communicate with services running on the secure
+side.</p>
+
+<h3 id=user_space_trusty_ipc_client_api>User space Trusty IPC Client API</h3>
+
+<p>The user space Trusty IPC Client API library is a thin layer on top of the
+device node <code>fd</code>.</p>
+
+<p>A user space program starts a communication session
+by calling <code>tipc_connect()</code>,
+initializing a connection to a specified Trusty service. Internally,
+the <code>tipc_connect()</code> call opens a specified device node to
+obtain a file descriptor and invokes a <code>TIPC_IOC_CONNECT ioctl()</code>
+call with the <code>argp</code> parameter pointing to a string containing a
+service name to which to connect.</p>
+
+<pre class="prettyprint">
+#define TIPC_IOC_MAGIC  'r'
+#define TIPC_IOC_CONNECT  _IOW(TIPC_IOC_MAGIC, 0x80, char *)
+</pre>
+
+<p>The resulting file descriptor can only be used to communicate with the service
+for which it was created. The file descriptor should be closed by
+calling <code>tipc_close()</code> when the connection is not required anymore.</p>
+
+<p>The file descriptor obtained by the <code>tipc_connect()</code> call
+behaves as a typical character device node; the file descriptor:</p>
+
+<ul>
+  <li>Can be switched to non-blocking mode if needed
+  <li>Can be written to using a standard <code>write()</code>
+  call to send messages to the other side
+  <li>Can be polled (using <code>poll()</code> calls or <code>select()</code> calls)
+  for availability of incoming messages as a regular file descriptor
+  <li>Can be read to retrieve incoming messages
+</ul>
+
+<p>A caller sends a message to the Trusty service by executing a write call for
+the specified <code>fd</code>. All data passed to the above <code>write()</code> call
+is transformed into a message by the trusty-ipc driver. The message is
+delivered to the secure side where the data is handled by the IPC subsystem in
+the Trusty kernel and routed to the proper destination and delivered to an app
+event loop as an <code>IPC_HANDLE_POLL_MSG</code> event on a particular channel
+handle. Depending on the particular,
+service-specific protocol, the Trusty service may send one or more reply
+messages that are delivered back to the non-secure side and placed in the
+appropriate channel file descriptor message queue to be retrieved by the user
+space application <code>read()</code> call.</p>
+
+<h4 id=tipc_connect>tipc_connect()</h4>
+
+<p>Opens a specified <code>tipc</code> device node and initiates a
+connection to a specified Trusty service.</p>
+
+<pre class="prettyprint">
+int tipc_connect(const char *dev_name, const char *srv_name);
+</pre>
+
+<p>[in] <code>dev_name</code>: Path to the Trusty IPC device node to open</p>
+
+<p>[in] <code>srv_name</code>: Name of a published Trusty service to which to connect</p>
+
+<p>[retval]: Valid file descriptor on success, -1 otherwise.</p>
+
+<h4 id=tipc_close>tipc_close()</h4>
+
+<p>Closes the connection to the Trusty service specified by a file descriptor.</p>
+
+<pre class="prettyprint">
+int tipc_close(int fd);
+</pre>
+
+<p>[in] <code>fd</code>: File descriptor previously opened by
+a <code>tipc_connect()</code> call</p>
+
+<h2 id=kernel_trusty_ipc_client_api>Kernel Trusty IPC Client API</h2>
+
+<p>The kernel Trusty IPC Client API is available for kernel drivers. The user
+space Trusty IPC API is implemented on top of this API.</p>
+
+<p>In general, typical usage of this API consists of a caller creating
+a <code>struct tipc_chan</code> object by using the <code>tipc_create_channel()</code>
+function and then using the <code>tipc_chan_connect()</code> call to initiate a
+connection to the Trusty IPC service running on the secure
+side. The connection to the remote side can be terminated by
+calling <code>tipc_chan_shutdown()</code> followed by
+<code>tipc_chan_destroy()</code> to clean up resources.</p>
+
+<p>Upon receiving a notification (through the <code>handle_event()</code> callback)
+that a connection has been successfully established, a caller does
+the following:</p>
+
+<ul>
+  <li>Obtains a message buffer using the <code>tipc_chan_get_txbuf_timeout()</code> call
+  <li>Composes a message, and
+  <li>Queues the message using the <code>tipc_chan_queue_msg()</code>
+  method for delivery to a Trusty service (on the secure side), to which the
+channel is connected
+</ul>
+
+<p>After queueing is successful, the caller should forget the message buffer
+because the message buffer eventually returns to the free buffer pool after
+processing by the remote side (for reuse later, for other messages). The user
+only needs to call <code>tipc_chan_put_txbuf()</code> if it fails to
+queue such buffer or it is not required anymore.</p>
+
+<p>An API user receives messages from the remote side by handling a
+<code>handle_msg()</code> notification callback (which is called in
+the context of the trusty-ipc <code>rx</code> workqueue) that
+provides a pointer to an <code>rx</code> buffer containing an
+incoming message to be handled.</p>
+
+<p>It is expected that the <code>handle_msg()</code> callback
+implementation will return a pointer to a valid <code>struct tipc_msg_buf</code>.
+It can be the same as the incoming message buffer if it is handled locally
+and not required anymore. Alternatively, it can be a new buffer obtained by
+a <code>tipc_chan_get_rxbuf()</code> call if the incoming buffer is queued
+for further processing. A detached <code>rx</code> buffer must be tracked
+and eventually released using a  <code>tipc_chan_put_rxbuf()</code> call when
+it is no longer needed.</p>
+
+<h3 id=methods_ktic_api>Methods in the Kernel Trusty IPC Client API</h3>
+
+<h4 id=tipc_create_channel>tipc_create_channel()</h4>
+
+<p>Creates and configures an instance of a Trusty IPC channel for a particular
+trusty-ipc device.</p>
+
+<pre class="prettyprint">
+struct tipc_chan *tipc_create_channel(struct device *dev,
+                          const struct tipc_chan_ops *ops,
+                              void *cb_arg);
+</pre>
+
+<p>[in] <code>dev</code>: Pointer to the trusty-ipc for which the device
+channel is created</p>
+
+<p>[in] <code>ops</code>: Pointer to a <code>struct tipc_chan_ops</code>,
+with caller-specific
+callbacks filled in</p>
+
+<p>[in] <code>cb_arg</code>: Pointer to data that will be passed
+to <code>tipc_chan_ops</code> callbacks</p>
+
+<p>[retval]: Pointer to a newly-created instance of
+<code>struct tipc_chan</code> on success,
+<code>ERR_PTR(err)</code> otherwise</p>
+
+<p>In general, a caller must provide two callbacks that are asynchronously invoked
+when the corresponding activity is occurring.</p>
+
+<p>The <code>void (*handle_event)(void *cb_arg, int event)</code>event is invoked
+to notify a caller about a channel state change.</p>
+
+<p>[in] <code>cb_arg</code>: Pointer to data passed to a
+<code>tipc_create_channel()</code> call</p>
+
+<p>[in] <code>event</code>: An event that can be one of the following values:</p>
+
+<ul>
+  <li><code>TIPC_CHANNEL_CONNECTED</code> - indicates a successful connection
+  to the remote side
+  <li><code>TIPC_CHANNEL_DISCONNECTED</code> - indicates the remote side denied the
+  new connection request or requested
+disconnection for the previously connected channel
+  <li><code>TIPC_CHANNEL_SHUTDOWN</code> - indicates the remote side is shutting down,
+  permanently terminating all connections
+</ul>
+
+<p>The <code>struct tipc_msg_buf *(*handle_msg)(void *cb_arg, struct tipc_msg_buf *mb)</code>
+callback is invoked to provide notification that a new message has been
+received over a specified channel:</p>
+
+<ul>
+  <li>[in] <code>cb_arg</code>: Pointer to data passed to the
+  <code>tipc_create_channel()</code> call
+  <li>[in] <code>mb</code>: Pointer to a <code>struct tipc_msg_buf</code>
+  describing an incoming message
+  <li>[retval]: The callback implementation is expected to return a pointer to a
+  <code>struct tipc_msg_buf</code> that can be the same pointer received
+  as an
+  <code>mb</code> parameter if the message is handled locally and is not
+  required anymore (or it
+can be a new buffer obtained by the <code>tipc_chan_get_rxbuf()</code> call)
+</ul>
+
+<h4 id=tipc_chan_connect>tipc_chan_connect()</h4>
+
+<p>Initiates a connection to the specified Trusty IPC service.</p>
+
+<pre class="prettyprint">
+int tipc_chan_connect(struct tipc_chan *chan, const char *port);
+</pre>
+
+<p>[in] <code>chan</code>: Pointer to a channel returned by the
+<code>tipc_create_chan()</code> call</p>
+
+<p>[in] <code>port</code>: Pointer to a string containing the
+service name to which to connect</p>
+
+<p>[retval]: 0 on success, a negative error otherwise</p>
+
+<p>The caller is notified when a connection is established by receiving a
+<code>handle_event</code> callback.</p>
+
+<h4 id=tipc_chan_shutdown>tipc_chan_shutdown()</h4>
+
+<p>Terminates a connection to the Trusty IPC service previously initiated
+by a <code>tipc_chan_connect()</code> call.</p>
+
+<pre class="prettyprint">
+int tipc_chan_shutdown(struct tipc_chan *chan);
+</pre>
+
+<p>[in] <code>chan</code>: Pointer to a channel returned by
+a <code>tipc_create_chan()</code> call</p>
+
+<h4 id=tipc_chan_destroy>tipc_chan_destroy()</h4>
+
+<p>Destroys a specified Trusty IPC channel.</p>
+
+<pre class="prettyprint">
+void tipc_chan_destroy(struct tipc_chan *chan);
+</pre>
+
+<p>[in] <code>chan</code>: Pointer to a channel returned by the
+<code>tipc_create_chan()</code> call</p>
+
+<h4 id=tipc_chan_get_txbuf_timeout>tipc_chan_get_txbuf_timeout()</h4>
+
+<p>Obtains a message buffer that can be used to send data over a specified
+channel. If the buffer is not immediately available the caller may be blocked
+for the specified timeout (in milliseconds).</p>
+
+<pre class="prettyprint">
+struct tipc_msg_buf *
+tipc_chan_get_txbuf_timeout(struct tipc_chan *chan, long timeout);
+</pre>
+
+<p>[in] <code>chan</code>: Pointer to the channel to which to queue a message</p>
+
+<p>[in] <code>chan</code>: Maximum timeout to wait until the
+<code>tx</code> buffer becomes available </p>
+
+<p>[retval]: A valid message buffer on success,
+<code>ERR_PTR(err)</code> on error</p>
+
+<h4 id=tipc_chan_queue_msg>tipc_chan_queue_msg()</h4>
+
+<p>Queues a message to be sent over the specified
+Trusty IPC channels.</p>
+
+<pre class="prettyprint">
+int tipc_chan_queue_msg(struct tipc_chan *chan, struct tipc_msg_buf *mb);
+</pre>
+
+<p>[in] <code>chan</code>: Pointer to the channel to which to queue the message</p>
+
+<p>[in] <code>mb:</code> Pointer to the message to queue
+(obtained by a <code>tipc_chan_get_txbuf_timeout()</code> call)</p>
+
+<p>[retval]: 0 on success, a negative error otherwise</p>
+
+<h4 id=tipc_chan_put_txbuf>tipc_chan_put_txbuf()</h4>
+
+<p>Releases the specified <code>Tx</code> message buffer
+previously obtained by a <code>tipc_chan_get_txbuf_timeout()</code> call.</p>
+
+<pre class="prettyprint">
+void tipc_chan_put_txbuf(struct tipc_chan *chan,
+                         struct tipc_msg_buf *mb);
+</pre>
+
+<p>[in] <code>chan</code>: Pointer to the channel to which
+this message buffer belongs</p>
+
+<p>[in] <code>mb</code>: Pointer to the message buffer to release</p>
+
+<p>[retval]: None</p>
+
+<h4 id=tipc_chan_get_rxbuf>tipc_chan_get_rxbuf()</h4>
+
+<p>Obtains a new message buffer that can be used to receive messages over the
+specified channel.</p>
+
+<pre class="prettyprint">
+struct tipc_msg_buf *tipc_chan_get_rxbuf(struct tipc_chan *chan);
+</pre>
+
+<p>[in] <code>chan</code>: Pointer to a channel to which this message buffer belongs</p>
+
+<p>[retval]: A valid message buffer on success, <code>ERR_PTR(err)</code> on error</p>
+
+<h4 id=tipc_chan_put_rxbuf>tipc_chan_put_rxbuf()</h4>
+
+<p>Releases a specified message buffer previously obtained by a
+<code>tipc_chan_get_rxbuf()</code> call.</p>
+
+<pre class="prettyprint">
+void tipc_chan_put_rxbuf(struct tipc_chan *chan,
+                         struct tipc_msg_buf *mb);
+</pre>
+
+<p>[in] <code>chan</code>: Pointer to a channel to which this message buffer belongs</p>
+
+<p>[in] <code>mb</code>: Pointer to a message buffer to release</p>
+
+<p>[retval]: None</p>
+
+  </body>
+</html>

@@ -1,0 +1,372 @@
+<html devsite>
+  <head>
+    <title>Measuring Power Values</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+
+<p>Device manufacturers must provide a component power profile in
+<code>/frameworks/base/core/res/res/xml/power_profile.xml</code>.</p>
+
+<p>To determine values for power profiles, use hardware that measures the power
+being used by the device and perform the various operations for which
+information is needed. Measure the power use during those operations and compute
+the values (deriving differences from other baseline power uses as appropriate).
+</p>
+
+<p>As the goal of a power profile is to estimate battery drain appropriately,
+power profile values are given in current (amps). The Android framework
+multiplies the current by the time for which the subsystem was active and
+computes the mAh value, which is then used to estimate the amount of battery
+drained by the application/subsystem.</p>
+
+<p>Devices with Bluetooth, modem, and Wi-Fi controllers running Android 7.0 and
+higher can provide additional power values obtained from chipset data.</p>
+
+
+<h2 id="multiple-cpus">Devices with heterogeneous CPUs</h2>
+
+<p>The power profile for devices with CPU cores of heterogeneous architecture
+must include the following additional fields:
+<ul>
+<li>Number of total CPUs for each cluster (expressed in cpu.clusters.cores).</li>
+<li>CPU speeds supported by each cluster.</li>
+<li>Active CPU power consumption for each cluster.</li>
+</ul>
+
+<p>To differentiate between active CPU power consumption and supported CPU
+speeds for clusters, append the cluster number to the name of the array. Cluster
+numbers are assigned in the order of CPU cores in the kernel device tree. For
+example, in a heterogeneous architecture that has two (2) clusters with four (4)
+cores:</p>
+<ul>
+<li>cluster0 consists of cpu0-3</li>
+<li>cluster1 consists of cpu4-7</li>
+</ul>
+<p>The Android framework uses these CPU core numbers when it reads statistics
+from the <code>sysfs</code> files in:
+<code>/sys/devices/system/cpu/cpu&lt;number&gt;/cpufreq/stats</code>.
+
+<p>Example of cluster CPUs and speeds:</p>
+
+<pre class="devsite-click-to-copy">
+&lt;array name="cpu.active.cluster0"&gt;
+&lt;value&gt;200&lt;/value&gt;
+&lt;value&gt;300&lt;/value&gt;
+&lt;value&gt;400&lt;/value&gt;
+&lt;/array&gt;
+&lt;array name="cpu.speeds.cluster0"&gt;
+&lt;value&gt;600000&lt;/value&gt;
+&lt;value&gt;800000&lt;/value&gt;
+&lt;value&gt;1200000&lt;/value&gt;
+&lt;/array&gt;
+
+&lt;array name="cpu.active.cluster1"&gt;
+&lt;value&gt;400&lt;/value&gt;
+&lt;value&gt;500&lt;/value&gt;
+&lt;value&gt;600&lt;/value&gt;
+&lt;/array&gt;
+&lt;array name="cpu.speeds.cluster1"&gt;
+&lt;value&gt;800000&lt;/value&gt;
+&lt;value&gt;1200000&lt;/value&gt;
+&lt;value&gt;1400000&lt;/value&gt;
+&lt;/array&gt;
+</pre>
+
+<h2 id="values">Power values</h2>
+<p>The following table describes available power value settings. To view the
+sample file in AOSP, see
+<a href="https://android.googlesource.com/platform/frameworks/base/+/master/core/res/res/xml/power_profile.xml">power_profile.xml</a>.</p>
+
+<table>
+<tr>
+  <th>Name</th>
+  <th>Description</th>
+  <th>Example Value</th>
+  <th>Notes</th>
+</tr>
+<tr>
+  <td>none</td>
+  <td>Nothing</td>
+  <td>0</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>screen.on</td>
+  <td>Additional power used when screen is turned on at minimum brightness.</td>
+  <td>200mA</td>
+  <td>Includes touch controller and display backlight. At 0 brightness, not the
+  Android minimum which tends to be 10 or 20%.</td>
+</tr>
+
+<tr>
+  <td>screen.full</td>
+  <td>Additional power used when screen is at maximum brightness, compared to
+  screen at minimum brightness.</td>
+  <td>100mA-300mA</td>
+  <td>A fraction of this value (based on screen brightness) is added to the
+  screen.on value to compute the power usage of the screen.</td>
+</tr>
+
+<tr>
+  <td>wifi.on</td>
+  <td>Additional power used when Wi-Fi is turned on but not receiving,
+  transmitting, or scanning.</td>
+  <td>2mA</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>wifi.active</td>
+  <td>Additional power used when transmitting or receiving over Wi-Fi.</td>
+  <td>31mA</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>wifi.scan</td>
+  <td>Additional power used when Wi-Fi is scanning for access points.</td>
+  <td>100mA</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>dsp.audio</td>
+  <td>Additional power used when audio decoding/encoding via DSP.</td>
+  <td>14.1mA</td>
+  <td>Reserved for future use.</td>
+</tr>
+
+
+<tr>
+  <td>dsp.video</td>
+  <td>Additional power used when video decoding via DSP.</td>
+  <td>54mA</td>
+  <td>Reserved for future use.</td>
+</tr>
+
+<tr>
+  <td>camera.avg</td>
+  <td>Average power use by the camera subsystem for a typical camera
+  application.</td>
+  <td>600mA</td>
+  <td>Intended as a rough estimate for an application running a preview
+  and capturing approximately 10 full-resolution pictures per minute.</td>
+</tr>
+
+<tr>
+  <td>camera.flashlight</td>
+  <td>Average power used by the camera flash module when on.</td>
+  <td>200mA</td>
+  <td></td>
+</tr>
+
+
+<tr>
+  <td>gps.on</td>
+  <td>Additional power used when GPS is acquiring a signal.</td>
+  <td>50mA</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>radio.active</td>
+  <td>Additional power used when cellular radio is transmitting/receiving.</td>
+  <td>100mA-300mA</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>radio.scanning</td>
+  <td>Additional power used when cellular radio is paging the tower.</td>
+  <td>1.2mA</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>radio.on</td>
+  <td>Additional power used when the cellular radio is on. Multi-value entry,
+  one per signal strength (no signal, weak, moderate, strong).</td>
+  <td>1.2mA</td>
+  <td>Some radios boost power when they search for a cell tower and do not
+  detect a signal. Values can be the same or decrease with increasing signal
+  strength. If you provide only one value, the same value is used for all
+  strengths. If you provide two values, the first is used for no-signal, the
+  second value is used for all other strengths, and so on.</td>
+</tr>
+
+<tr>
+  <td>bluetooth.controller.idle</td>
+  <td>Average current draw (mA) of the Bluetooth controller when idle.</td>
+  <td> - </td>
+  <td rowspan=4>These values are not estimated, but taken from the data sheet of
+  the controller. If there are multiple receive or transmit states, the average
+  of those states is taken. In addition, the system now collects data for
+  <a href="#le-bt-scans">Low Energy (LE) and Bluetooth scans</a>.<br><br>Android
+  N and later no longer use the Bluetooth power values for bluetooth.active
+  (used when playing audio via Bluetooth A2DP) and bluetooth.on (used when
+  Bluetooth is on but idle).</td>
+</tr>
+
+<tr>
+  <td>bluetooth.controller.rx</td>
+  <td>Average current draw (mA) of the Bluetooth controller when receiving.</td>
+  <td> - </td>
+</tr>
+
+<tr>
+  <td>bluetooth.controller.tx</td>
+  <td>Average current draw (mA) of the Bluetooth controller when transmitting.</td>
+  <td> - </td>
+</tr>
+
+<tr>
+  <td>bluetooth.controller.voltage</td>
+  <td>Average operating voltage (mV) of the Bluetooth controller.</td>
+  <td> - </td>
+</tr>
+
+<tr>
+  <td>modem.controller.idle</td>
+  <td>Average current draw (mA) of the modem controller when idle.</td>
+  <td> - </td>
+  <td rowspan=4>These values are not estimated, but taken from the data sheet of
+  the controller. If there are multiple receive or transmit states, the average
+  of those states is taken.</td>
+</tr>
+
+<tr>
+  <td>modem.controller.rx</td>
+  <td>Average current draw (mA) of the modem controller when receiving.</td>
+  <td> - </td>
+</tr>
+
+<tr>
+  <td>modem.controller.tx</td>
+  <td>Average current draw (mA) of the modem controller when transmitting.</td>
+  <td> - </td>
+</tr>
+
+<tr>
+  <td>modem.controller.voltage</td>
+  <td>Average operating voltage (mV) of the modem controller.</td>
+  <td> - </td>
+</tr>
+
+<tr>
+  <td>wifi.controller.idle</td>
+  <td>Average current draw (mA) of the Wi-Fi controller when idle.</td>
+  <td> - </td>
+  <td rowspan=4>These values are not estimated, but taken from the data sheet of
+  the controller. If there are multiple receive or transmit states, the average
+  of those states is taken.</td>
+</tr>
+
+<tr>
+  <td>wifi.controller.rx</td>
+  <td>Average current draw (mA) of the Wi-Fi controller when receiving.</td>
+  <td> - </td>
+</tr>
+
+<tr>
+  <td>wifi.controller.tx</td>
+  <td>Average current draw (mA) of the Wi-Fi controller when transmitting.</td>
+  <td> - </td>
+</tr>
+
+<tr>
+  <td>wifi.controller.voltage</td>
+  <td>Average operating voltage (mV) of the Wi-Fi controller.</td>
+  <td> - </td>
+</tr>
+
+<tr>
+  <td>cpu.speeds</td>
+  <td>Multi-value entry that lists each possible CPU speed in KHz.</td>
+  <td>125000KHz, 250000KHz, 500000KHz, 1000000KHz, 1500000KHz</td>
+  <td>The number and order of entries must correspond to the mA entries in
+  cpu.active.</td>
+</tr>
+
+<tr>
+  <td>cpu.idle</td>
+  <td>Total power drawn by the system when CPUs (and the SoC) are in system
+  suspend state.</td>
+  <td>3mA</td>
+  <td></td>
+</tr>
+
+<tr>
+  <td>cpu.awake</td>
+  <td>Additional power used when CPUs are in scheduling idle state
+  (kernel idle loop); system is not in system suspend state.</td>
+  <td>50mA</td>
+  <td>Your platform might have more than one idle state in use with differing
+  levels of power consumption; choose a representative idle state for longer
+  periods of scheduler idle (several milliseconds). Examine the power graph on
+  your measurement equipment and choose samples where the CPU is at its lowest
+  consumption, discarding higher samples where the CPU exited idle.</td>
+</tr>
+
+<tr>
+  <td>cpu.active</td>
+  <td>Additional power used by CPUs when running at different speeds.</td>
+  <td>100mA, 120mA, 140mA, 160mA, 200mA</td>
+  <td>Value represents the power used by the CPU rails when running at different
+  speeds. Set the max speed in the kernel to each of the allowed speeds and peg
+  the CPU at that speed. The number and order of entries correspond to the
+  number and order of entries in cpu.speeds.</td>
+</tr>
+
+<tr>
+  <td>cpu.clusters.cores</td>
+  <td>Number of cores each CPU cluster contains.</td>
+  <td>4, 2</td>
+  <td>Required only for devices with <a href="#multiple-cpus">heterogeneous CPU
+  architectures</a>. Number of entries and order should match the number of
+  cluster entries for the cpu.active and cpu.speeds. The first entry represents
+  the number of CPU cores in cluster0, the second entry represents the number of
+  CPU cores in cluster1, and so on.</td>
+</tr>
+
+<tr>
+  <td>battery.capacity</td>
+  <td>Total battery capacity in mAh.</td>
+  <td>3000mAh</td>
+  <td></td>
+</tr>
+
+</table>
+
+<h2 id="le-bt-scans">Low Energy (LE) and Bluetooth scans</h2>
+<p>For devices running Android 7.0, the system collects data for Low Energy (LE)
+scans and Bluetooth network traffic (such as RFCOMM and L2CAP) and associates
+these activities with the initiating application. Bluetooth scans are associated
+with the application that initiated the scan, but batch scans are not (and
+are instead associated with the Bluetooth application). For an application
+scanning for N milliseconds, the cost of the scan is N milliseconds of rx time
+and N milliseconds of tx time; all leftover controller time is assigned to
+network traffic or the Bluetooth application.</p>
+
+  </body>
+</html>

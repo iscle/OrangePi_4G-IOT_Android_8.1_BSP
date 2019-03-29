@@ -1,0 +1,164 @@
+<html devsite><head>
+    <title>编译准备工作</title>
+    <meta name="project_path" value="/_project.yaml"/>
+    <meta name="book_path" value="/_book.yaml"/>
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+<p>以下关于编译 Android 源代码树的说明适用于所有分支，包括 <code>master</code>。编译命令的基本顺序如下：</p>
+
+<p class="note"><strong>注意</strong>：如果您要编译 Android 6.0 或更高版本，请参阅<a href="jack.html">使用 Jack 编译</a>，了解这种新的默认工具链。</p>
+
+<h2 id="obtaining-proprietary-binaries">下载专有二进制文件</h2>
+
+<p>您不能仅通过纯源代码来使用 AOSP，要运行 AOSP，还需要与硬件相关的其他专有库，例如用于硬件图形加速的专有库。如需其他资源的下载链接和<a href="requirements.html#binaries">设备二进制文件要求</a>，请参阅以下各部分。</p>
+
+<h3 id="downloading-proprietary-binaries">下载专有二进制文件</h3>
+
+<p>对于运行带标记的 AOSP 版本分支的受支持设备，您可以从 <a href="https://developers.google.com/android/nexus/drivers">Google 的 Nexus 驱动程序页面</a>下载相关的官方二进制文件。有了这些二进制文件，您将有权使用采用非开放源代码的其他硬件功能。要编译 AOSP 的 master 分支，请使用 <a href="https://developers.google.com/android/nexus/blobs-preview">Nexus 设备的二进制文件预览</a>。在针对某种设备编译 master 分支时，请使用适用于<a href="/source/build-numbers.html">最新编号版本</a>的二进制文件或具有最新日期的二进制文件。</p>
+
+<h3 id="extracting-proprietary-binaries">解压专有二进制文件</h3>
+
+<p>每组二进制文件都是压缩包中的一个自解压脚本。解压每个压缩包，从源代码树的根目录运行附带的自解压脚本，然后确认您同意附带的许可协议的条款。二进制文件及其对应的 Makefile 将会安装在源代码树的 <code>vendor/</code> 层次结构中。</p>
+
+<h3 id="cleaning-up">清理</h3>
+
+<p>为了确保新安装的二进制文件在解压后会被适当考虑在内，请使用以下命令删除所有以前编译操作的已有输出：</p>
+<pre><code>$ make clobber
+</code></pre>
+
+<h2 id="initialize">设置环境</h2>
+<p>使用 <code>envsetup.sh</code> 脚本初始化环境。请注意，将 <code>source</code> 替换成 <code>.</code>（一个点）可以省去一些字符，这种简写形式在文档中更为常用。</p>
+<pre><code>$ source build/envsetup.sh
+</code></pre>
+<p>或</p>
+<pre><code>$ . build/envsetup.sh
+</code></pre>
+
+<h2 id="choose-a-target">选择目标</h2>
+<p>使用 <code>lunch</code> 选择要编译的目标。确切的配置可作为参数进行传递。例如以下命令：</p>
+<pre><code>$ lunch aosp_arm-eng
+</code></pre>
+<p>该命令表示针对模拟器进行完整编译，并且所有调试功能均处于启用状态。</p>
+<p>如果您没有提供任何参数就运行命令，<code>lunch</code> 将提示您从菜单中选择一个目标。</p>
+<p>所有编译目标都采用 <code>BUILD-BUILDTYPE</code> 形式，其中 <code>BUILD</code> 是表示特定功能组合的代号。</p>
+
+<p>BUILDTYPE 是以下类型之一：</p>
+<table>
+<thead>
+<tr>
+<th>编译类型</th>
+<th>使用情况</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>user</td>
+<td>权限受限；适用于生产环境</td>
+</tr>
+<tr>
+<td>userdebug</td>
+<td>与“user”类似，但具有 root 权限和可调试性；是进行调试时的首选编译类型</td>
+</tr>
+<tr>
+<td>eng</td>
+<td>具有额外调试工具的开发配置</td>
+</tr>
+</tbody>
+</table>
+<p>要详细了解如何针对实际硬件进行编译以及如何在实际硬件上运行版本，请参阅<a href="running.html">运行版本</a>。</p>
+
+<h2 id="build-the-code">编译代码</h2>
+
+<p>请注意，本部分只是一个摘要，用于确保设置已完成。如需关于编译 Android 的详细说明，请参阅<a href="running.html">运行编译系统</a>。</p>
+
+<p>您可以使用 <code>make</code> 编译任何代码。GNU Make 可以借助 <code>-jN</code> 参数处理并行任务，通常使用的任务数 N 介于编译时所用计算机上硬件线程数的 1-2 倍之间。例如，在一台双核 E5520 计算机（2 个 CPU，每个 CPU 4 个内核，每个内核 2 个线程）上，要实现最快的编译速度，可以使用介于 <code>make -j16</code> 到 <code>make -j32</code> 之间的命令。</p>
+
+<pre>
+$ make -j4
+</pre>
+
+<h2 id="run-it">开始运行！</h2>
+
+<p>您可以在模拟器上运行自己的版本，也可以将其刷到设备上。请注意，因为您之前已使用 <code>lunch</code> 选择编译目标，因此很可能无法在编译目标之外的目标上运行您的版本。</p>
+
+<p class="note"><strong>注意</strong>：请记得<a href="#obtaining-proprietary-binaries">下载专有二进制文件</a>，否则您的版本将无法在目标硬件上成功启动。如果您在此时下载二进制 Blob，则需要将其解压、<code>make clobber</code> 并重新编译。</p>
+
+<h3 id="flash-a-device">使用 fastboot 刷机</h3>
+
+<p>要对设备进行刷机，您需要使用 <code>fastboot</code>（编译成功后，它应该会包含在您的路径中）。如需相关说明，请参阅<a href="running.html#flashing-a-device">对设备进行刷机</a>。</p>
+
+<h3 id="emulate-an-android-device">模拟 Android 设备</h3>
+
+<p>编译流程会自动将模拟器添加到您的路径中。要运行模拟器，请输入以下命令：</p>
+
+<pre>
+$ emulator
+</pre>
+
+<h2 id="troubleshooting-common-build-errors">排查常见编译错误</h2>
+
+<h3 id="wrong-java-version">Java 版本不正确</h3>
+
+<p>如果您尝试编译的 Android 版本与您的 Java 版本不一致，<code>make</code> 将会终止并显示诸如以下消息：</p>
+<pre>
+************************************************************
+You are attempting to build with the incorrect version
+of java.
+
+Your version is: WRONG_VERSION.
+The correct version is: RIGHT_VERSION.
+
+Please follow the machine setup instructions at
+    https://source.android.com/source/initializing.html
+************************************************************
+</pre>
+
+<p>这可能是由以下原因引起的：</p>
+
+<ul>
+<li>未能安装 <a href="requirements.html#jdk">JDK 要求</a>中指定的正确 JDK。</li>
+<li>之前安装的另一个 JDK 出现在您的路径中。将正确的 JDK 附加到路径开头，或者移除有问题的 JDK。</li>
+</ul>
+
+<h3 id="python-version-3">Python 版本 3</h3>
+
+<p>Repo 是基于 Python 2.x 中的特定功能构建的，但遗憾的是与 Python 3 不兼容。要使用 Repo，请安装 Python 2.x：</p>
+
+<pre>
+$ apt-get install python
+</pre>
+
+<h3 id="case-insensitive-filesystem">不区分大小写的文件系统</h3>
+
+<p>您在 Mac OS 中的 HFS 文件系统上进行编译时，可能会遇到诸如以下错误：</p>
+<pre>
+************************************************************
+You are building on a case-insensitive filesystem.
+Please move your source tree to a case-sensitive filesystem.
+************************************************************
+</pre>
+<p>请按照<a href="initializing.html">初始化编译环境</a>中的相关说明创建区分大小写的磁盘映像。</p>
+
+<h3 id="no-usb-permission">没有 USB 权限</h3>
+
+<p>在大多数 Linux 系统中，无特权的用户默认情况下无法使用 USB 端口。如果您看到权限遭拒错误，请按照<a href="initializing.html">初始化编译环境</a>中的相关说明配置 USB 使用权限。</p>
+
+<p>如果 adb 已在运行，并且在这些规则设置完成后无法连接到设备，您可以使用 <code>adb kill-server</code> 将其终止。这将使 adb 采用新的配置重启。</p>
+
+</body></html>

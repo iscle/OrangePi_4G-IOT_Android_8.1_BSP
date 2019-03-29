@@ -1,0 +1,183 @@
+<html devsite>
+  <head>
+    <title>Employing Managed Profiles</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>A <em>managed profile</em> or <em>work profile</em> is an Android <a
+href="multi-user.html">user</a> with additional special properties around
+management and visual aesthetic.</p>
+
+<p>The primary goal of a managed profile is to create a segregated and secure
+space for managed data (such as corporate data) to reside. The administrator of
+the profile has full control over scope, ingress, and egress of data as well as
+its lifetime. These policies offer great powers and therefore fall upon the
+managed profile instead of the device administrator.</p>
+
+<ul>
+  <li><strong>Creation</strong>. Managed profiles can be created by any
+  application in the primary user. The user is notified of managed profile
+  behaviors and policy enforcement before creation.</li>
+  <li><strong>Management</strong>. Management is performed by applications that
+  programmatically invoke APIs in the
+  <a href="http://developer.android.com/reference/android/app/admin/DevicePolicyManager.html">DevicePolicyManager</a>
+  class to restrict use. Such applications are referred to as <em>profile
+  owners</em> and are defined at initial profile setup. Policies unique to
+  managed profile involve app restrictions, updatability, and intent behaviors.
+  </li>
+  <li><strong>Visual treatment</strong>. Applications, notifications, and
+  widgets from the managed profile are always badged and typically made
+  available inline with user interface (UI) elements from the primary user.</li>
+</ul>
+
+<h2 id=data_segregation>Data segregation</h2>
+<p>Managed profiles use the following data segregation rules.</p>
+
+<h3 id=applications>Applications</h3>
+
+<p>Applications are scoped with their own segregated data when the same app
+exists in the primary user and managed profile. Generally, applications act
+independently of one another and cannot communicate directly with one another
+across the profile-user boundary.</p>
+
+<h3 id=accounts>Accounts</h3>
+
+<p>Accounts in the managed profile are distinctly unique from the primary user.
+There is no way to access credentials across the profile-user boundary. Only
+apps in their respective context are able to access their respective accounts.</p>
+
+<h3 id=intents>Intents</h3>
+
+<p>The administrator controls whether intents are resolved in/out of managed
+profile or not. Applications from the managed profile are default scoped to
+stay within the managed profile exception of the Device Policy API.</p>
+
+<h3 id=settings>Settings</h3>
+
+<p>Enforcement of settings is generally scoped to the managed profile, with
+exceptions for lockscreen and encryption settings that are still scoped
+to the device and shared between the primary user and managed profile.
+Otherwise, a profile owner does not have any device administrator privileges
+outside the managed profile.</p>
+
+<p>Managed profiles are implemented as a new kind of secondary user, such that:</p>
+
+<pre class="devsite-click-to-copy">
+uid = 100000 * userid + appid
+</pre>
+
+<p>They have separate app data like regular users:</p>
+
+<pre class="devsite-click-to-copy">
+/data/user/&lt;userid&gt;
+</pre>
+
+<p>The UserId is calculated for all system requests using
+<code>Binder.getCallingUid()</code>, and all system state and responses are
+separated by userId. You may consider instead using
+<code>Binder.getCallingUserHandle</code> rather than <code>getCallingUid</code>
+to avoid confusion between uid and userId.</p>
+
+<p>The AccountManagerService maintains a separate list of accounts for each
+user. The main differences between a managed profile and a regular secondary
+user are as follows:</p>
+
+<ul>
+  <li>The managed profile is associated with its parent user and started
+  alongside the primary user at boot time.</li>
+  <li>Notifications for managed profiles are enabled by ActivityManagerService
+  allowing the managed profile to share the activity stack with the primary
+  user.</li>
+  <li>Other shared system services include IME, A11Y services, Wi-Fi, and NFC.
+  </li>
+  <li>New Launcher APIs allow launchers to display badged apps and whitelisted
+  widgets from the managed profile alongside apps in the primary profile without
+  switching users.</li>
+</ul>
+
+<h2 id=device_administration>Device administration</h2>
+
+<p>Android device administration includes the following types of device
+administrators for enterprises:</p>
+
+<ul>
+  <li><em>Profile owner</em>. Designed for bring your own device (BYOD)
+  environments</li>
+  <li><em>Device Owner</em>. Designed for corp-liable environments</li>
+</ul>
+
+<p>The majority of the new device administrator APIs added for Android 5.0 are
+available only to profile or device owners. Traditional device administrators
+remain but are applicable to the simpler consumer-only case (e.g., find my
+device).</p>
+
+<h3 id=profile_owners>Profile owners</h3>
+
+<p>A Device Policy Client (DPC) app typically functions as the profile owner.
+The DPC app is typically provided by an enterprise mobility management (EMM)
+partner, such as Google Apps Device Policy.</p>
+
+<p>The profile owner app creates a managed profile on the device by sending the
+<code>ACTION_PROVISION_MANAGED_PROFILE</code> intent. This profile is
+distinguished by the appearance of badged instances of
+apps, as well as personal instances. That badge, or Android device
+administration icon, identifies which apps are work apps.</p>
+
+<p>The EMM has control only over the managed profile (not personal space) with
+some exceptions, such as enforcing the lock screen.</p>
+
+<h3 id=device_owners>Device owners</h3>
+
+<p>The device owner can be set only in an unprovisioned device:</p>
+
+<ul>
+  <li>Can be provisioned only at initial device setup</li>
+  <li>Enforced disclosure always displayed in quick-settings</li>
+</ul>
+
+<p>Device owners can conduct some tasks profile owners cannot, such as:</p>
+
+<ul>
+  <li>Wipe device data</li>
+  <li>Disable Wi-Fi/Bluetooth</li>
+  <li>Control <code>setGlobalSetting</code></li>
+  <li><code>setLockTaskPackages</code> (the ability to whitelist packages that
+  can pin themselves to the foreground)</li>
+  <li>Set <code>DISALLOW_MOUNT_PHYSICAL_MEDIA</code> (<code>FALSE</code> by
+  default). When <code>TRUE</code>, physical media, both portable and adoptable,
+  cannot be mounted.</li>
+</ul>
+
+<h3 id=dpm_api>DevicePolicyManager APIs</h3>
+
+<p>Android 5.0 and higher offers a greatly improved DevicePolicyManager with
+dozens of new APIs to support both corporate-owned and bring your own device
+(BYOD) administration use cases. Examples include app restrictions, silent
+installation of certificates, and cross-profile sharing intent access control.
+Use the sample Device Policy Client (DPC) app
+<a href="https://developer.android.com/samples/BasicManagedProfile/index.html">BasicManagedProfile.apk</a>
+as a starting point. For details, refer to
+<a href="https://developer.android.com/training/enterprise/work-policy-ctrl.html">Building
+a Work Policy Controller</a>.</p>
+
+  </body>
+</html>

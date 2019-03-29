@@ -1,0 +1,157 @@
+<html devsite>
+  <head>
+    <title>Porting the test framework</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>Porting the deqp involves three steps: adapting base portability libraries,
+implementing test-framework platform-integration interfaces, and porting the
+execution service.</p>
+
+<p>The table below lists locations for likely porting changes. Anything beyond
+them is likely to be exotic.</p>
+
+<table>
+ <tr>
+   <th>Location</th>
+   <th>Description</th>
+ </tr>
+
+ <tr>
+    <td><code>
+framework/delibs/debase<br/>
+framework/delibs/dethread<br/>
+framework/delibs/deutil</code></td>
+<td><p>Any necessary implementations of OS-specific code.</p>
+</td>
+ </tr>
+ <tr>
+    <td><code>
+framework/qphelper/qpCrashHandler.c</code></td>
+<td><p>Optional: Implementation for your OS.</p>
+</td>
+ </tr>
+ <tr>
+    <td><code>
+framework/qphelper/qpWatchDog.c</code></td>
+<td><p>Implementation for your OS. Current one is based on <code>dethread</code> and standard C library.</p>
+</td>
+ </tr>
+ <tr>
+    <td><code>
+framework/platform</code></td>
+<td><p>New platform port and application stub can be implemented as described in <a href="#test_framework_platform_port">Test framework platform port</a>.</p>
+</td>
+ </tr>
+</table>
+
+<h2 id=base_portability_libraries>Base portability libraries</h2>
+
+<p>The base portability libraries already support Windows, most Linux variants, Mac OS, 
+iOS, and Android. If the test target runs on one of those operating systems,
+most likely there is no need to touch the base portability libraries at all.</p>
+
+<h2 id=test_framework_platform_port>Test framework platform port</h2>
+
+<p>The deqp test framework platform port requires two components: An application
+entry point and a platform interface implementation. </p>
+
+<p>The application entry point is responsible for creating the platform object,
+creating a command line (<code>tcu::CommandLine</code>) object, opening a test log (<code>tcu::TestLog</code>), and iterating the test application (<code>tcu::App</code>). If the target OS supports a standard <code>main()</code> entry point, <code>tcuMain.cpp</code> can be used as the entry point implementation.</p>
+
+<p>The deqp platform API is described in detail in the following files.</p>
+
+<table>
+ <tr>
+   <th>File</th>
+   <th>Description</th>
+ </tr>
+ <tr>
+    <td><code>
+framework/common/tcuPlatform.hpp</code></td>
+<td><p>Base class for all platform ports</p>
+</td>
+ </tr>
+ <tr>
+    <td><code>
+framework/opengl/gluPlatform.hpp</code></td>
+<td><p>OpenGL platform interface</p>
+</td>
+ </tr>
+ <tr>
+    <td><code>
+framework/egl/egluPlatform.hpp</code></td>
+<td><p>EGL platform interface</p>
+</td>
+ </tr>
+ <tr>
+    <td><code>
+framework/platform/tcuMain.cpp</code></td>
+<td><p>Standard application entry point</p>
+</td>
+ </tr>
+</table>
+
+<p>The base class for all platform ports is <code>tcu::Platform</code>. The platform port can optionally support GL- and EGL-specific interfaces. See
+the following table for an overview of what needs to be implemented to
+run the tests.</p>
+
+<table>
+ <tr>
+   <th>Module</th>
+   <th>Interface</th>
+ </tr>
+ <tr>
+    <td><p>OpenGL (ES) test modules</p>
+</td>
+    <td><p>GL platform interface</p>
+</td>
+ </tr>
+ <tr>
+    <td><p>EGL test module</p>
+</td>
+    <td><p>EGL platform interface</p>
+</td>
+ </tr>
+</table>
+
+<p>Detailed instructions for implementing platform ports are in the
+porting layer headers.</p>
+
+<h2 id=test_execution_service>Test execution service</h2>
+
+<p>To use the deqp test execution infrastructure or command line executor, the
+test execution service must be available on the target. A portable C++
+implementation of the service is provided in the <code>execserver</code> directory. The stand-alone binary is built as a part of the deqp test module
+build for PC targets. You can modify <code>execserver/CMakeLists.txt</code> to enable a build on other targets.</p>
+
+<p>The C++ version of the test execution service accepts two command line
+parameters:</p>
+
+<ul>
+  <li> <code>--port=&lt;port&gt;</code> will set the TCP port that the server listens on. The default is 50016.
+  <li> <code>--single</code> will terminate the server process when the client disconnects. By default, the
+server process will stay up to serve further test execution requests.
+</ul>
+
+  </body>
+</html>

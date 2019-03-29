@@ -1,0 +1,469 @@
+<html devsite>
+  <head>
+    <title>Nexus Security Bulletin—January 2016</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p><em>Published January 04, 2016 | Updated April 28, 2016</em></p>
+
+<p>We have released a security update to Nexus devices through an over-the-air
+(OTA) update as part of our Android Security Bulletin Monthly Release process.
+The Nexus firmware images have also been released to the <a href="https://developers.google.com/android/nexus/images">Google Developer site</a>. Builds LMY49F or later and Android 6.0 with Security Patch Level of January
+1, 2016 or later address these issues. Refer to the <a href="#common_questions_and_answers">Common Questions and Answers</a> section for more details.</p>
+
+<p>Partners were notified about and provided updates for the issues described in
+this bulletin on December 7, 2015 or earlier. Where applicable, source code
+patches for these issues have been released to the Android Open Source Project (AOSP) repository.</p>
+
+<p>The most severe of these issues is a Critical security vulnerability that could
+enable remote code execution on an affected device through multiple methods
+such as email, web browsing, and MMS when processing media files. The
+<a href="/security/overview/updates-resources.html#severity">severity
+assessment</a> is based on the effect that exploiting the vulnerability would
+possibly have on an affected device, assuming the platform and service
+mitigations are disabled for development purposes or if successfully bypassed.</p>
+
+<p>We have had no reports of active customer exploitation of these newly reported
+issues. Refer to the <a href="#mitigations">Mitigations</a> section for details on the
+<a href="/security/enhancements/index.html">Android security platform protections</a>
+and service protections such as SafetyNet, which improve the security of the
+Android platform. We encourage all customers to accept these updates to their
+devices.</p>
+
+
+<h2 id=mitigations>Mitigations</h2>
+
+
+<p>This is a summary of the mitigations provided by the
+<a href="/security/enhancements/index.html">Android security platform</a>
+and service protections such as SafetyNet. These capabilities reduce the
+likelihood that security vulnerabilities could be successfully exploited on
+Android.</p>
+
+<ul>
+  <li> Exploitation for many issues on Android is made more difficult by enhancements
+in newer versions of the Android platform. We encourage all users to update to
+the latest version of Android where possible.
+  <li> The Android Security team is actively monitoring for abuse with Verify Apps and
+SafetyNet which will warn about potentially harmful applications about to be
+installed. Device rooting tools are prohibited within Google Play. To protect
+users who install applications from outside of Google Play, Verify Apps is
+enabled by default and will warn users about known rooting applications. Verify
+Apps attempts to identify and block installation of known malicious
+applications that exploit a privilege escalation vulnerability. If such an
+application has already been installed, Verify Apps will notify the user and
+attempt to remove any such applications.
+  <li> As appropriate, Google Hangouts and Messenger applications do not automatically
+pass media to processes such as mediaserver.
+</ul>
+
+<h2 id=acknowledgements>Acknowledgements</h2>
+
+
+<p>We would like to thank these researchers for their contributions:</p>
+
+<ul>
+  <li> Abhishek Arya, Oliver Chang, and Martin Barbella of Google Chrome Security
+       Team: CVE-2015-6636
+  <li> Sen Nie (<a href="https://twitter.com/@nforest_">@nforest_</a>) and jfang of KEEN lab, Tencent
+       (<a href="https://twitter.com/k33nteam">@K33nTeam</a>): CVE-2015-6637
+  <li> Yabin Cui from Android Bionic Team: CVE-2015-6640
+  <li> Tom Craig of Google X: CVE-2015-6641
+  <li> Jann Horn (<a href="https://thejh.net">https://thejh.net</a>): CVE-2015-6642
+  <li> Jouni Malinen PGP id EFC895FA: CVE-2015-5310
+  <li> Quan Nguyen of Google Information Security Engineer Team: CVE-2015-6644
+  <li> Gal Beniamini (<a href="https://twitter.com/@laginimaineb">@laginimaineb</a>,
+       <a href="http://bits-please.blogspot.com">http://bits-please.blogspot.com</a>): CVE-2015-6639
+</ul>
+
+<h2 id=security_vulnerability_details>Security Vulnerability Details</h2>
+
+<p>In the sections below, we provide details for each of the security
+vulnerabilities that apply to the 2016-01-01 patch level.
+There is a description of the issue, a severity rationale, and a table
+with the CVE, associated bug, severity, updated versions, and date reported.
+When available, we will link the AOSP change that addressed the issue to the
+bug ID. When multiple changes relate to a single bug, additional AOSP
+references are linked to numbers following the bug ID. </p>
+
+<h3 id=remote_code_execution_vulnerability_in_mediaserver>Remote Code Execution Vulnerability in Mediaserver</h3>
+
+
+<p>During media file and data processing of a specially crafted file,
+vulnerabilities in mediaserver could allow an attacker to cause memory
+corruption and remote code execution as the mediaserver process.</p>
+
+<p>The affected functionality is provided as a core part of the operating system
+and there are multiple applications that allow it to be reached with remote
+content, most notably MMS and browser playback of media.</p>
+
+<p>This issue is rated as a Critical severity due to the possibility of remote
+code execution within the context of the mediaserver service. The mediaserver
+service has access to audio and video streams as well as access to privileges
+that third-party apps cannot normally access.</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>Bug(s) with AOSP links</th>
+    <th>Severity</th>
+    <th>Updated versions</th>
+    <th>Date reported</th>
+ </tr>
+ <tr>
+    <td rowspan="2">CVE-2015-6636</td>
+    <td><a href="https://android.googlesource.com/platform%2Fexternal%2Flibhevc/+/b9f7c2c45c6fe770b7daffb9a4e61522d1f12d51#">ANDROID-25070493</a></td>
+    <td>Critical</td>
+    <td>5.0, 5.1.1, 6.0, 6.0.1</td>
+    <td>Google Internal</td>
+ </tr>
+ <tr>
+    <td><a href="https://android.googlesource.com/platform%2Fexternal%2Flibhevc/+/e8bfec1fa41eafa1fd8e05d0fdc53ea0f2379518">ANDROID-24686670</a></td>
+    <td>Critical</td>
+    <td>5.0, 5.1.1, 6.0, 6.0.1</td>
+    <td>Google Internal</td>
+ </tr>
+</table>
+
+
+<h3 id=elevation_of_privilege_vulnerability_in_misc-sd_driver>Elevation of Privilege Vulnerability in misc-sd driver</h3>
+
+
+<p>An elevation of privilege vulnerability in the misc-sd driver from MediaTek
+could enable a local malicious application to execute arbitrary code within the
+kernel. This issue is rated as a Critical severity due to the possibility of a
+local permanent device compromise, in which case the device would possibly need
+to be repaired by re-flashing the operating system.</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>Bug(s)</th>
+    <th>Severity</th>
+    <th>Updated versions</th>
+    <th>Date reported</th>
+ </tr>
+ <tr>
+    <td>CVE-2015-6637</td>
+    <td>ANDROID-25307013*</td>
+    <td>Critical</td>
+    <td>4.4.4, 5.0, 5.1.1, 6.0, 6.0.1</td>
+    <td>Oct 26, 2015</td>
+ </tr>
+</table>
+
+<p> * The patch for this issue is not in AOSP. The update is contained in the
+latest binary drivers for Nexus devices available from the <a href="https://developers.google.com/android/nexus/drivers">Google Developer site</a>.</p>
+
+<h3 id=elevation_of_privilege_vulnerability_in_the_imagination_technologies_driver>Elevation of Privilege Vulnerability in the Imagination Technologies driver</h3>
+
+
+<p>An elevation of privilege vulnerability in a kernel driver from Imagination
+Technologies could enable a local malicious application to execute arbitrary
+code within the kernel. This issue is rated as a Critical severity due to the
+possibility of a local permanent device compromise, in which case device would
+possibly need to be repaired by re-flashing the operating system.</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>Bug(s)</th>
+    <th>Severity</th>
+    <th>Updated versions</th>
+    <th>Date reported</th>
+ </tr>
+ <tr>
+    <td>CVE-2015-6638</td>
+    <td>ANDROID-24673908*</td>
+    <td>Critical</td>
+    <td>5.0, 5.1.1, 6.0, 6.0.1</td>
+    <td>Google Internal</td>
+ </tr>
+</table>
+
+<p> * The patch for this issue is not in AOSP. The update is contained in the
+latest binary drivers for Nexus devices available from the <a href="https://developers.google.com/android/nexus/drivers">Google Developer site</a>.</p>
+
+<h3 id=elevation_of_privilege_vulnerabilities_in_trustzone>Elevation of Privilege Vulnerabilities in Trustzone</h3>
+
+
+<p>Elevation of privilege vulnerabilities in the Widevine QSEE TrustZone
+application could enable a compromise, privileged application with access to
+QSEECOM to execute arbitrary code in the Trustzone context. This issue is rated
+as a Critical severity due to the possibility of a local permanent device
+compromise, in which case the device would possibly need to be repaired by
+re-flashing the operating system.</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>Bug(s)</th>
+    <th>Severity</th>
+    <th>Updated versions</th>
+    <th>Date reported</th>
+ </tr>
+ <tr>
+    <td>CVE-2015-6639</td>
+    <td>ANDROID-24446875*</td>
+    <td>Critical</td>
+    <td>5.0, 5.1.1, 6.0, 6.0.1</td>
+    <td>Sep 23, 2015</td>
+ </tr>
+ <tr>
+    <td>CVE-2015-6647</td>
+    <td>ANDROID-24441554*</td>
+    <td>Critical</td>
+    <td>5.0, 5.1.1, 6.0, 6.0.1</td>
+    <td>Sep 27, 2015</td>
+ </tr>
+</table>
+
+<p> * The patch for this issue is not in AOSP. The update is contained in the
+latest binary drivers for Nexus devices available from the <a href="https://developers.google.com/android/nexus/drivers">Google Developer site</a>.</p>
+
+<h3 id=elevation_of_privilege_vulnerability_in_kernel>Elevation of Privilege Vulnerability in Kernel</h3>
+
+
+<p>An elevation of privilege vulnerability in the kernel could enable a local
+malicious application to execute arbitrary code in the kernel. This issue is
+rated as a Critical severity due to the possibility of a local permanent device
+compromise, in which case the device would possibly need to be repaired by
+re-flashing the operating system.</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>Bug(s) with AOSP Link</th>
+    <th>Severity</th>
+    <th>Updated versions</th>
+    <th>Date reported</th>
+ </tr>
+ <tr>
+    <td>CVE-2015-6640</td>
+    <td><a href="https://android.googlesource.com/kernel%2Fcommon/+/69bfe2d957d903521d32324190c2754cb073be15">ANDROID-20017123</a></td>
+    <td>Critical</td>
+    <td>4.4.4, 5.0, 5.1.1, 6.0</td>
+    <td>Google Internal</td>
+ </tr>
+</table>
+
+
+<h3 id=elevation_of_privilege_vulnerability_in_bluetooth>Elevation of Privilege Vulnerability in Bluetooth</h3>
+
+
+<p>An elevation of privilege vulnerability in the Bluetooth component could enable
+a remote device paired over Bluetooth to gain access to user’s private
+information (Contacts). This issue is rated as High severity because it could
+be used to gain “<a href="http://developer.android.com/guide/topics/manifest/permission-element.html#plevel">dangerous</a>” capabilities remotely, these permissions are accessible only to third-party
+applications installed locally.</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>Bug(s) with AOSP links</th>
+    <th>Severity</th>
+    <th>Updated versions</th>
+    <th>Date reported</th>
+ </tr>
+ <tr>
+    <td>CVE-2015-6641</td>
+    <td><a href="https://android.googlesource.com/platform%2Fpackages%2Fapps%2FSettings/+/98f11fd1a4752beed56b5fe7a4097ec0ae0c74b3">ANDROID-23607427</a> [<a href="https://android.googlesource.com/platform%2Fframeworks%2Fbase/+/ccbe7383e63d7d23bac6bccc8e4094fe474645ec">2</a>]</td>
+    <td>High</td>
+    <td>6.0, 6.0.1</td>
+    <td>Google Internal</td>
+ </tr>
+</table>
+
+
+<h3 id=information_disclosure_vulnerability_in_kernel>Information Disclosure Vulnerability in Kernel</h3>
+
+
+<p>An information disclosure vulnerability in the kernel could permit a bypass of
+security measures in place to increase the difficulty of attackers exploiting
+the platform. These issues are rated as High severity because they could also
+be used to gain elevated capabilities, such as <a href="http://developer.android.com/guide/topics/manifest/permission-element.html#plevel">Signature</a> or <a href="http://developer.android.com/guide/topics/manifest/permission-element.html#plevel">SignatureOrSystem</a> permissions privileges, which are not accessible to third-party applications.</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>Bug(s)</th>
+    <th>Severity</th>
+    <th>Updated versions</th>
+    <th>Date reported</th>
+ </tr>
+ <tr>
+    <td>CVE-2015-6642</td>
+    <td>ANDROID-24157888*</td>
+    <td>High</td>
+    <td>4.4.4, 5.0, 5.1.1, 6.0</td>
+    <td>Sep 12, 2015</td>
+ </tr>
+</table>
+<p> * The patch for this issue is not in AOSP. The update is contained in the
+latest binary drivers for Nexus devices available from the <a href="https://developers.google.com/android/nexus/drivers">Google Developer site</a>.</p>
+
+<h3 id=elevation_of_privilege_vulnerability_in_setup_wizard>Elevation of Privilege Vulnerability in Setup Wizard</h3>
+
+
+<p>An elevation of privilege vulnerability in the Setup Wizard could enable an
+attacker with physical access to the device to gain access to device settings
+and perform a manual device reset. This issue is rated as Moderate severity
+because it could be used to improperly work around the factory reset
+protection.</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>Bug(s) with AOSP links</th>
+    <th>Severity</th>
+    <th>Updated versions</th>
+    <th>Date reported</th>
+ </tr>
+ <tr>
+    <td>CVE-2015-6643</td>
+    <td><a href="https://android.googlesource.com/platform/packages/apps/Settings/+/665ac7bc29396fd5af2ecfdfda2b9de7a507daa0">ANDROID-25290269</a> [<a href="https://android.googlesource.com/platform/packages/apps/Settings/+/a7ff2e955d2509ed28deeef984347e093794f92b">2</a>]</td>
+    <td>Moderate</td>
+    <td>5.1.1, 6.0, 6.0.1</td>
+    <td>Google Internal</td>
+ </tr>
+</table>
+
+
+<h3 id=elevation_of_privilege_vulnerability_in_wi-fi>Elevation of Privilege Vulnerability in Wi-Fi</h3>
+
+
+<p>An elevation of privilege vulnerability in the Wi-Fi component could enable a
+locally proximate attacker to gain access to Wi-Fi service related information.
+A device is only vulnerable to this issue while in local proximity. This issue
+is rated as Moderate severity because it could be used to gain “<a href="http://developer.android.com/guide/topics/manifest/permission-element.html#plevel">normal</a>” capabilities remotely, these permissions are accessible only to third-party
+applications installed locally.</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>Bug(s) with AOSP links</th>
+    <th>Severity</th>
+    <th>Updated versions</th>
+    <th>Date reported</th>
+ </tr>
+ <tr>
+    <td>CVE-2015-5310</td>
+    <td><a href="https://android.googlesource.com/platform%2Fexternal%2Fwpa_supplicant_8/+/1e9857b5f1dd84ac5a0ada0150b1b9c87d44d99d">ANDROID-25266660</a></td>
+    <td>Moderate</td>
+    <td>4.4.4, 5.0, 5.1.1, 6.0, 6.0.1</td>
+    <td>Oct 25, 2015</td>
+ </tr>
+</table>
+
+
+<h3 id=information_disclosure_vulnerability_in_bouncy_castle>Information Disclosure Vulnerability in Bouncy Castle</h3>
+
+
+<p>An information disclosure vulnerability in Bouncy Castle could enable a local
+malicious application to gain access to user’s private information. This issue
+is rated as Moderate severity because it could be used to improperly gain “<a href="http://developer.android.com/guide/topics/manifest/permission-element.html#plevel">dangerous</a>” permissions.</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>Bug(s) with AOSP links</th>
+    <th>Severity</th>
+    <th>Updated versions</th>
+    <th>Date reported</th>
+ </tr>
+ <tr>
+    <td>CVE-2015-6644</td>
+    <td><a href="https://android.googlesource.com/platform/external/bouncycastle/+/3e128c5fea3a0ca2d372aa09c4fd4bb0eadfbd3f">ANDROID-24106146</a></td>
+    <td>Moderate</td>
+    <td>4.4.4, 5.0, 5.1.1, 6.0, 6.0.1</td>
+    <td>Google Internal</td>
+ </tr>
+</table>
+
+
+<h3 id=denial_of_service_vulnerability_in_syncmanager>Denial of Service Vulnerability in SyncManager</h3>
+
+
+<p>A denial of service vulnerability in the SyncManager could enable a local
+malicious application to cause a reboot loop. This issue is rated as Moderate
+severity because it could be used to cause a local temporary denial of service
+that would possibly need to be fixed though a factory reset.</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>Bug(s) with AOSP links</th>
+    <th>Severity</th>
+    <th>Updated versions</th>
+    <th>Date reported</th>
+ </tr>
+ <tr>
+    <td>CVE-2015-6645</td>
+    <td><a href="https://android.googlesource.com/platform%2Fframeworks%2Fbase/+/c0f39c1ece72a05c796f7ba30b7a2b5b580d5025">ANDROID-23591205</a></td>
+    <td>Moderate</td>
+    <td>4.4.4, 5.0, 5.1.1, 6.0</td>
+    <td>Google Internal</td>
+ </tr>
+</table>
+
+
+<h3 id=attack_surface_reduction_for_nexus_kernels>Attack Surface Reduction for Nexus Kernels</h3>
+
+
+<p>SysV IPC is not supported in any Android Kernel. We have removed this from the
+OS as it exposes additional attack surface that doesn’t add functionality to
+the system that could be exploited by malicious applications. Also, System V
+IPCs are not compliant with Android's application lifecycle because the
+allocated resources are not freeable by the memory manager leading to global
+kernel resource leakage. This change addresses issue such as CVE-2015-7613.</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>Bug(s)</th>
+    <th>Severity</th>
+    <th>Updated versions</th>
+    <th>Date reported</th>
+ </tr>
+ <tr>
+    <td>CVE-2015-6646</td>
+    <td>ANDROID-22300191*</td>
+    <td>Moderate</td>
+    <td>6.0</td>
+    <td>Google Internal</td>
+ </tr>
+</table>
+
+<p> * The patch for this issue is not in AOSP. The update is contained in the
+latest binary drivers for Nexus devices available from the <a href="https://developers.google.com/android/nexus/drivers">Google Developer site</a>.</p>
+
+<h3 id=common_questions_and_answers>Common Questions and Answers</h3>
+
+
+<p>This section reviews answers to common questions that may occur after reading
+this bulletin.</p>
+
+<p><strong>1. How do I determine if my device is updated to address these issues? </strong></p>
+
+<p>Builds LMY49F or later and Android 6.0 with Security Patch Level of January 1,
+2016 or later address these issues. Refer to the <a href="https://support.google.com/nexus/answer/4457705">Nexus documentation</a> for instructions on how to check the security patch level. Device
+manufacturers that include these updates should set the patch string level to:
+[ro.build.version.security_patch]:[2016-01-01] </p>
+
+<h2 id=revisions>Revisions</h2>
+
+
+<ul>
+  <li> January 04, 2016: Bulletin published.
+  <li> January 06, 2016: Bulletin revised to include AOSP links.
+  <li> April 28, 2016: Removed CVE-2015-6617 from Acknowledgements and added CVE-2015-6647 to summary table
+
+  </body>
+</html>

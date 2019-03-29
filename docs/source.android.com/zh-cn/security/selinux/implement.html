@@ -1,0 +1,129 @@
+<html devsite><head>
+    <title>实现 SELinux</title>
+    <meta name="project_path" value="/_project.yaml"/>
+    <meta name="book_path" value="/_book.yaml"/>
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+<p>SELinux 设为了“默认拒绝”模式，也就是说，对于在内核中存在钩子的每一次访问，都必须获得政策的明确许可。这意味着政策文件中包含规则、类型、类、权限等方面的大量信息。关于 SELinux 的完整注意事项不在本文档的讨论范围之内，现在您必须要了解的是在启动新的 Android 设备时如何编写政策规则。目前有大量关于 SELinux 的信息可供您参考。关于建议的资源，请参阅<a href="/security/selinux#supporting_documentation">支持文档</a>。</p>
+
+<h2 id="summary_of_steps">步骤总结</h2>
+
+<p>下面简要总结了在 Android 设备上实现 SELinux 时需要执行的步骤：</p>
+
+<ol>
+  <li>在内核和配置中添加 SELinux 支持。
+  </li><li>为通过 <code>init</code> 启动的每项服务（进程或守护进程）分配专用的域。
+  </li><li>通过以下方式标识这些服务：<ul>
+    <li>查看 init.&lt;device&gt;.rc 文件并找到所有服务。
+    </li><li>检查 <code>dmesg</code> 输出中以下形式的警告：“init:  Warning!  Service name needs a SELinux domain defined; please fix!”（init：警告！服务名称需要一个已定义的 SELinux 域；请更正！）。<em></em>
+    </li><li>检查 <code>ps -Z | grep init</code> 输出，看看哪些服务正在 init 域中运行。
+  </li></ul>
+  </li><li>为所有新进程、驱动程序、套接字等添加标签。需要为所有对象添加适当的标签，以确保它们能够与您应用的政策正确交互。请参阅 AOSP 中使用的标签，以便在创建标签名称时参考。
+  </li><li>制定全面涵盖所有标签的安全政策，并将权限限定到其绝对最低级别。
+</li></ol>
+
+<p>原始设备制造商 (OEM) 最好从 AOSP 中的政策入手，然后在这些政策的基础上创建自己的自定义政策。</p>
+
+<h2 id="key_files">关键文件</h2>
+
+<p>SELinux for Android 随附了立即启用 SELinux 所需的一切。您只需集成<a href="https://android.googlesource.com/kernel/common/">最新的 Android 内核</a>，然后整合 <a href="https://android.googlesource.com/platform/system/sepolicy/">system/sepolicy</a> 目录中的文件即可：</p>
+
+<p><a href="https://android.googlesource.com/kernel/common/">https://android.googlesource.com/kernel/common/ </a></p>
+
+<p><a href="https://android.googlesource.com/platform/system/sepolicy/">https://android.googlesource.com/platform/system/sepolicy/</a></p>
+
+<p>这些文件在编译后会包含 SELinux 内核安全政策，并涵盖上游 Android 操作系统。您应该不需要直接修改 system/sepolicy 中的文件，而只需添加您自己的设备专用政策文件（位于 /device/manufacturer/device-name/sepolicy 目录中）即可。</p>
+
+<p>要实现 SELinux，您必须创建或修改以下文件：</p>
+
+<ul>
+  <li><em></em>新的 SELinux 政策源代码 (*.te) 文件 - 位于 <root>/device/manufacturer/device-name/sepolicy 目录中。这些文件用于定义域及其标签。在编译到单个 SELinux 内核政策文件时，新的政策文件会与现有的政策文件组合在一起。
+<p class="caution"><strong>重要提示</strong>：请勿更改 Android 开放源代码项目提供的 app.te 文件，否则可能会破坏所有第三方应用。</p>
+  </root></li><li><em></em>更新后的 BoardConfig.mk Makefile - 位于<device-name>包含 sepolicy 子目录的目录中。如果初始实现中没有 sepolicy 子目录，那么在该子目录创建之后，必须更新 BoardConfig.mk makefile，以引用该子目录。
+  </device-name></li><li><em></em>file_contexts - 位于 sepolicy 子目录中。该文件用于为文件分配标签，并且可供多种用户空间组件使用。在创建新政策时，请创建或更新该文件，以便为文件分配新标签。要应用新的 file_contexts，您必须重新构建文件系统映像，或对要重新添加标签的文件运行 <code>restorecon</code>。在升级时，对 file_contexts 所做的更改会在升级过程中自动应用于系统和用户数据分区。此外，还可以通过以下方式使这些更改在升级过程中自动应用于其他分区：在以允许读写的方式装载相应分区后，将 restorecon_recursive 调用添加到 init.<em>board</em>.rc 文件中。
+  </li><li><em></em>genfs_contexts - 位于 sepolicy 子目录中。该文件用于为不支持扩展属性的文件系统（例如，proc 或 vfat）分配标签。此配置会作为内核政策的一部分进行加载，但更改可能对核心内 inode 无效。要全面应用更改，需要重新启动设备，或卸载后重新装载文件系统。此外，通过使用 context=mount 选项，还可以为装载的特定系统文件（例如 vfat）分配特定标签。
+  </li><li><em></em>property_contexts - 位于 sepolicy 子目录中。该文件用于为 Android 系统属性分配标签，以便控制哪些进程可以设置这些属性。在启动期间以及 selinux.reload_policy 属性每次被设为 1 时，init 进程都会读取此配置。
+  </li><li><em></em>service_contexts - 位于 sepolicy 子目录中。该文件用于为 Android Binder 服务分配标签，以便控制哪些进行可以为相应服务添加（注册）和查找（查询）Binder 引用。在启动期间以及 selinux.reload_policy 属性每次被设为 1 时，servicemanager 进程都会读取此配置。
+  </li><li><em></em>seapp_contexts - 位于 sepolicy 子目录中。该文件用于为应用进程和 /data/data 目录分配标签。在每次应用启动时，Zygote 进程都会读取此配置；在启动期间以及 selinux.reload_policy 属性每次被设为 1 时，installd 都会读取此配置。
+  </li><li><em></em>mac_permissions.xml - 位于 sepolicy 子目录中。该文件用于根据应用签名和应用软件包名称（后者可选）为应用分配 seinfo 标记。然后，分配的 seinfo 标记可在 seapp_contexts 文件中用作密钥，以便为带有该 seinfo 标记的所有应用分配特定标签。在启动期间，system_server 会读取此配置。
+</li></ul>
+
+<p>接下来，只需在 sepolicy 子目录和各个政策文件创建之后，更新 BoardConfig.mk Makefile（位于包含 sepolicy 子目录的目录中）以引用该子目录和这些政策文件即可，如下所示。BOARD_SEPOLICY 变量及其含义记录在 system/sepolicy/README 文件中。</p>
+
+<pre>
+BOARD_SEPOLICY_DIRS += \
+        &lt;root&gt;/device/manufacturer/device-name/sepolicy
+
+BOARD_SEPOLICY_UNION += \
+        genfs_contexts \
+        file_contexts \
+        sepolicy.te
+</pre>
+
+<p class="note"><strong>注意</strong>：从 M 版开始已不再需要 BOARD_SEPOLICY_UNION，因为 BOARD_SEPOLICY_DIRS 变量中包含的任何目录内的所有政策文件都会与基本政策自动合并。</p>
+
+<p>设备在重新编译后会启用 SELinux。现在，您可以根据自己向 Android 操作系统添加的内容自定义自己的 SELinux 政策（如<a href="customize.html">自定义</a>中所述），也可以验证您的现有设置（如<a href="validate.html">验证</a>中所述）。</p>
+
+<p>在新政策文件和 BoardConfig.mk 更新部署到位后，新政策设置会立即自动内置到最终的内核政策文件中。</p>
+
+<h2 id="use_cases">用例</h2>
+
+<p>下面列举了一些在开发软件以及制定关联的 SELinux 政策时需要注意的具体漏洞：</p>
+
+<p><strong>符号链接</strong> - 由于符号链接以文件形式显示，因此通常也是作为文件被读取。这可能会导致漏洞。例如，某些特权组件（例如 init）会更改某些文件的权限，有时会使之极度开放。</p>
+
+<p>这样一来，攻击者便可以将这些文件替换成指向其控制的代码的符号链接，从而重写任意文件。但如果您知道自己的应用绝不会遍历符号链接，则可以通过 SELinux 来禁止您的应用遍历符号链接。</p>
+
+<p><strong>系统文件</strong> - 以应该只有系统服务器可以修改的一系列系统文件为例。由于 netd、init 和 vold 是以 Root 身份运行的，因此它们也可以访问这些系统文件。这样一来，如果 netd 遭到入侵，它将可以入侵这些文件，并可能会入侵系统服务器本身。</p>
+
+<p>借助 SELinux，您可以将这些文件标识为系统服务器数据文件。这样一来，系统服务器就是唯一对这些文件具有读写权限的域。即使 netd 遭到入侵，它也无法将域切换到系统服务器域并访问这些系统文件，就算它是以 Root 身份运行的也是如此。</p>
+
+<p><strong>应用数据</strong> - 另一个示例是必须以 Root 身份运行但不应获得应用数据访问权限的一系列函数。这非常有用，因为可以做出广泛的声明，例如禁止与应用数据无关的特定域访问互联网。</p>
+
+<p><strong>setattr</strong> - 对于 chmod、chown 等命令，您可以标识关联域可以在哪些文件中进行 setattr 操作。这样一来，便可以禁止对这些文件之外的任何文件进行此类更改，即使以 Root 身份进行也不例外。因此，应用可以对带 app_data_files 标签的文件运行 chmod 和 chown 命令，但不能对带 shell_data_files 或 system_data_files 标签的文件运行这些命令。</p>
+
+<h2 id="steps_in_detail">详细步骤</h2>
+
+<p>下面详细介绍了 Android 建议您如何采用并自定义 SELinux 来保护设备：</p>
+
+<ol>
+  <li>在内核中启用 SELinux：
+<code>CONFIG_SECURITY_SELINUX=y</code>
+  </li><li>更改 kernel_cmdline 参数，以便：<br />
+<code>BOARD_KERNEL_CMDLINE := androidboot.selinux=permissive</code>。
+<br />
+这仅适用于初始制定设备政策的情况。在拥有初始引导程序政策后，请移除此参数，以便将设备恢复强制模式，否则设备将无法通过 CTS 验证。</li><li>以宽容模式启动系统，看看在启动时会遇到哪些拒绝事件：<br />
+在 Ubuntu 14.04 或更高版本中：<br />
+<code>adb shell su -c dmesg | grep denied | audit2allow -p out/target/product/<em>board</em>/root/sepolicy</code>
+<br />
+在 Ubuntu 12.04 中：
+<code>adb shell su -c dmesg | grep denied | audit2allow</code>
+  </li><li>评估输出。如需查看相关说明和工具，请参阅<a href="validate.html">验证</a>。
+  </li><li>标识设备以及需要添加标签的其他新文件。
+  </li><li>为您的对象使用现有标签或新标签。查看 *_contexts 文件，了解之前是如何为内容添加标签的，然后根据对标签含义的了解分配一个新标签。这最好是一个能够融入到政策中的现有标签，但有时需要使用新标签，并且还需要关于访问该标签的规则。
+  </li><li>标识应该拥有自己的安全域的域/进程。可能需要为其中每个域/进程从头开始编写政策。例如，从 <code>init</code> 衍生的所有服务都应该有自己的安全域。可以通过以下命令查看保持运行的服务（不过所有服务都需要如此处理）：<br />
+<code>$ adb shell su -c ps -Z | grep init</code><br />
+<code>$ adb shell su -c dmesg | grep 'avc: '</code>
+  </li><li>查看 init.&lt;device&gt;.rc，以找出所有没有类型的服务。应提早为此类服务提供域，以避免向 init 添加规则或将 <code>init</code> 访问权限与其自身政策中的访问权限混淆。
+  </li><li>将 <code>BOARD_CONFIG.mk</code> 设为使用 <code>BOARD_SEPOLICY_*</code> 变量。如需关于如何进行此项设置的详细信息，请参阅 system/sepolicy 中的 README。
+  </li><li>检查 init.&lt;device&gt;.rc 和 fstab.&lt;device&gt; 文件，确保每一次使用“mount”都对应一个添加了适当标签的文件系统，或者指定了 context= mount 选项。
+  </li><li>查看每个拒绝事件，并创建 SELinux 政策来妥善处理每个拒绝事件。请参阅<a href="customize.html">自定义</a>中的示例。
+</li></ol>
+
+</body></html>

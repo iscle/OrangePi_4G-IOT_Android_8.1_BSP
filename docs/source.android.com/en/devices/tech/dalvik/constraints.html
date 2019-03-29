@@ -1,0 +1,903 @@
+<html devsite>
+  <head>
+    <title>Constraints</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>A <code>.dex</code> file is the transport format for Dalvik Bytecode. There are certain
+syntactical and semantical constraints for a file to be a valid <code>.dex</code> file, and
+a runtime is required to support only valid .dex files.</p>
+
+    <h2 id="gen-constraints">General .dex integrity constraints</h2>
+
+    <p>General integrity constraints are concerned with the larger structure of a
+    <code>.dex</code> file, as described in detail in <a href="dex-format.html"><code>.dex</code>
+    format</a>.</p>
+
+    <table>
+      <tr>
+        <th>
+          Identifier
+        </th>
+
+        <th>
+          Description
+        </th>
+      </tr>
+
+      <tr>
+        <td>
+          G1
+        </td>
+
+        <td>
+          The <code>magic</code> number of the <code>.dex</code> file must be
+          <code>dex\n035\0</code> or <code>dex\n037\0</code>.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          G2
+        </td>
+
+        <td>
+          The checksum must be an Adler-32 checksum of the whole file contents
+          except <code>magic</code> and <code>checksum</code> field.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          G3
+        </td>
+
+        <td>
+          The signature must be a SHA-1 hash of the whole file contents except <code>magic</code>,
+          <code>checksum</code>, and <code>signature</code>.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          G4
+        </td>
+
+        <td>
+          The <code>file_size</code> must match the actual file size in bytes.
+        </td>
+      </tr>
+
+
+      <tr>
+        <td>
+          G5
+        </td>
+
+        <td>
+          The <code>header_size</code> must have the value: <code>0x70</code>
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          G6
+        </td>
+
+        <td>
+          The <code>endian_tag</code> must have either the value:
+          <code>ENDIAN_CONSTANT</code> or <code>REVERSE_ENDIAN_CONSTANT</code>
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          G7
+        </td>
+
+        <td>
+          For each of the <code>link</code>, <code>string_ids</code>,
+          <code>type_ids</code>, <code>proto_ids</code>,
+          <code>field_ids</code>, <code>method_ids</code>, <code>class_defs</code>, and
+          <code>data</code> sections, the <code>offset</code> and <code>size</code> fields must be
+          either both zero or both non-zero. In the latter case, the offset must be
+          four-byte-aligned.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          G8
+        </td>
+
+        <td>
+          All offset fields in the header except <code>map_off</code> must be four-byte-aligned.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          G9
+        </td>
+
+        <td>
+          The <code>map_off</code> field must be either zero or point into the
+          data section. In the latter case, the <code>data</code> section must exist.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          G10
+        </td>
+
+        <td>
+          None of the <code>link</code>, <code>string_ids</code>,
+          <code>type_ids</code>, <code>proto_ids</code>, <code>field_ids</code>,
+          <code>method_ids</code>, <code>class_defs</code> and <code>data</code> sections
+          must overlap each other or the header.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          G11
+        </td>
+
+        <td>
+          If a map exists, then each map entry must have a valid type. Each type may appear at most once.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          G12
+        </td>
+
+        <td>
+          If a map exists, then each map entry must have a non-zero offset and
+          size. The offset must point into the corresponding section of the file (i.e. a
+          <code>string_id_item</code> must point into the <code>string_ids</code> section) and the explicit or
+          implicit size of the item must match the actual contents and size of the
+          section.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          G13
+        </td>
+
+        <td>
+          If a map exists, then the offset of map entry <code>n+1</code> must be greater or
+          equal to the offset of map entry <code>n plus than size of map entry n</code>. This implies
+          non-overlapping entries and low-to-high ordering.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          G14
+        </td>
+
+        <td>
+          The following types of entries must have an offset that is
+          four-byte-aligned: <code>string_id_item</code>,
+          <code>type_id_item</code>, <code>proto_id_item</code>,
+          <code>field_id_item</code>,
+          <code>method_id_item</code>, <code>class_def_item</code>,
+          <code>type_list</code>, <code>code_item</code>,
+          <code>annotations_directory_item</code>.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          G15
+        </td>
+
+        <td>
+          For each <code>string_id_item</code>, the <code>string_data_off</code> field must contain a
+          valid reference into the <code>data</code> section. For the referenced <code>string_data_item</code>, the
+          <code>data</code> field must contain a valid MUTF-8 string, and the <code>utf16_size</code> must match
+          the decoded length of the string.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          G16
+        </td>
+
+        <td>
+          For each <code>type_id_item</code>, the <code>descriptor_idx</code> field must contain a valid
+          reference into the <code>string_ids</code> list. The referenced string must be a valid type
+          descriptor.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          G17
+        </td>
+
+        <td>
+          For each <code>proto_id_item</code>, the <code>shorty_idx</code> field must contain a valid
+          reference into the <code>string_ids</code> list. The referenced string must be a valid
+          shorty descriptor. Also, the <code>return_type_idx</code> field must be a valid index into
+          the <code>type_ids</code> section, and the <code>parameters_off</code> field must be either zero or a
+          valid offset pointing into the <code>data</code> section. If non-zero, the parameter list
+          must not contain any void entries.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          G18
+        </td>
+
+        <td>
+          For each <code>field_id_item</code>, both the <code>class_idx</code> and <code>type_idx</code> fields must
+          be valid indices into the <code>type_ids</code> list. The entry referenced by <code>class_idx</code>
+          must be a non-array reference type. In addition, the <code>name_idx</code> field must be a
+          valid reference into the <code>string_ids</code> section, and the contents of the referenced
+          entry must conform to the <code>MemberName</code> specification.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          G19
+        </td>
+
+        <td>
+          For each <code>method_id_item</code>, the <code>class_idx</code> field must be a valid index
+          into the <code>type_ids</code> section, and the referenced entry must be a non-array
+          reference type. The <code>proto_id</code> field must be a valid reference into the <code>proto_ids</code>
+          list. The <code>name_idx</code> field must be a valid reference into the <code>string_ids</code> section,
+          and the contents of the referenced entry must conform to the <code>MemberName</code>
+          specification.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          G20
+        </td>
+
+        <td>
+          For each <code>field_id_item</code>, the <code>class_idx</code> field must be a valid index
+          into the <code>type_ids</code> list. The referenced entry must be a non-array reference
+          type.
+        </td>
+      </tr>
+
+</table>
+
+<h2 id="static-constraints">
+      Static bytecode constraints
+    </h2>
+
+    <p>
+    Static constraints are constraints on individual elements of the bytecode.
+    They usually can be checked without employing control or data-flow analysis
+    techniques.
+    </p>
+
+    <table>
+      <tr>
+        <th>
+          Identifier
+        </th>
+
+        <th>
+          Description
+        </th>
+      </tr>
+
+      <tr>
+        <td>
+          A1
+        </td>
+
+        <td>
+          The <code>insns</code> array must not be empty.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          A2
+        </td>
+
+        <td>
+          The first opcode in the <code>insns</code> array must have index zero.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          A3
+        </td>
+
+        <td>
+          The <code>insns</code> array must contain only valid Dalvik opcodes.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          A4
+        </td>
+
+        <td>
+          The index of instruction <code>n+1</code> must equal the index of
+          instruction <code>n</code> plus the length of instruction
+          <code>n</code>, taking into account possible operands.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          A5
+        </td>
+
+        <td>
+          The last instruction in the <code>insns</code> array must end at index
+          <code>insns_size-1</code>.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          A6
+        </td>
+
+        <td>
+          All <code>goto</code> and <code>if-&lt;kind&gt;</code> targets must
+          be opcodes within the same method.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          A7
+        </td>
+
+        <td>
+          All targets of a <code>packed-switch</code> instruction must be
+          opcodes within the same method. The size and the list of targets
+          must be consistent.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          A8
+        </td>
+
+        <td>
+          All targets of a <code>sparse-switch</code> instruction must be
+          opcodes within the same method. The corresponding table must be
+          consistent and sorted low-to-high.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          A9
+        </td>
+
+        <td>
+          The <code>B</code> operand of the <code>const-string</code> and
+          <code>const-string/jumbo</code> instructions must be a valid index
+          into the string constant pool.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          A10
+        </td>
+
+        <td>
+          The <code>C</code> operand of the <code>iget&lt;kind&gt;</code> and
+          <code>iput&lt;kind&gt;</code> instructions must be a valid index into
+          the field constant pool. The referenced entry must represent an
+          instance field.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          A11
+        </td>
+
+        <td>
+          The <code>C</code> operand of the <code>sget&lt;kind&gt;</code> and
+          <code>sput&lt;kind&gt;</code> instructions must be a valid index into
+          the field constant pool. The referenced entry must represent a static
+          field.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          A12
+        </td>
+
+        <td>
+          The <code>C</code> operand of the <code>invoke-virtual</code>,
+          <code>invoke-super</code>, <code>invoke-direct</code> and
+          <code>invoke-static</code> instructions must be a valid index into the
+          method constant pool.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          A13
+        </td>
+
+        <td>
+          The <code>B</code> operand of the <code>invoke-virtual/range</code>,
+          <code>invoke-super/range</code>, <code>invoke-direct/range</code>, and
+          <code>invoke-static/range</code> instructions must be a valid index
+          into the method constant pool.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          A14
+        </td>
+
+        <td>
+          A method the name of which starts with a '&lt;' must only be invoked
+          implicitly by the VM, not by code originating from a <code>.dex</code> file. The
+          only exception is the instance initializer, which may be invoked by
+          <code>invoke-direct</code>.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          A15
+        </td>
+
+        <td>
+          The <code>C</code> operand of the <code>invoke-interface</code>
+          instruction must be a valid index into the method constant pool. The
+          referenced <code>method_id</code> must belong to an interface (not a
+          class).
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          A16
+        </td>
+
+        <td>
+          The <code>B</code> operand of the <code>invoke-interface/range</code>
+          instruction must be a valid index into the method constant pool.
+          The referenced <code>method_id</code> must belong to an interface (not
+          a class).
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          A17
+        </td>
+
+        <td>
+          The <code>B</code> operand of the <code>const-class</code>,
+          <code>check-cast</code>, <code>new-instance</code>, and
+          <code>filled-new-array/range</code> instructions must be a valid index
+          into the type constant pool.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          A18
+        </td>
+
+        <td>
+          The <code>C</code> operand of the <code>instance-of</code>,
+          <code>new-array</code>, and <code>filled-new-array</code>
+          instructions must be a valid index into the type constant pool.
+        </td>
+      </tr>
+
+     <tr>
+        <td>
+          A19
+        </td>
+
+        <td>
+          The dimensions of an array created by a <code>new-array</code>
+          instruction must be less than <code>256</code>.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          A20
+        </td>
+
+        <td>
+          The <code>new</code> instruction must not refer to array classes,
+          interfaces, or abstract classes.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          A21
+        </td>
+
+        <td>
+          The type referred to by a <code>new-array</code> instruction must be
+          a valid, non-reference type.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          A22
+        </td>
+
+        <td>
+          All registers referred to by an instruction in a single-width
+          (non-pair) fashion must be valid for the current method. That is,
+          their indices must be non-negative and smaller than
+          <code>registers_size</code>.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          A23
+        </td>
+
+        <td>
+          All registers referred to by an instruction in a double-width (pair)
+          fashion must be valid for the current method. That is, their indices
+          must be non-negative and smaller than <code>registers_size-1</code>.
+        </td>
+      </tr>
+      <tr>
+        <td>
+          A24
+        </td>
+
+        <td>
+          The <code>method_id</code> operand of the <code>invoke-virtual</code>
+          and <code>invoke-direct</code> instructions must belong to a class
+          (not an interface). In Dex files prior to version <code>037</code>
+          the same must be true of <code>invoke-super</code> and
+          <code>invoke-static</code> instructions.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          A25
+        </td>
+
+        <td>
+          The <code>method_id</code> operand of the
+          <code>invoke-virtual/range</code> and
+          <code>invoke-direct/range</code> instructions must belong to a class
+          (not an interface). In Dex files prior to version <code>037</code>
+          the same must be true of <code>invoke-super/range</code> and
+          <code>invoke-static/range</code> instructions.
+        </td>
+      </tr>
+    </table>
+
+    <h2 id="struct-constraints">
+      Structural bytecode constraints
+    </h2>
+
+    <p>
+    Structural constraints are constraints on relationships between several
+    elements of the bytecode. They usually can't be checked without employing
+    control or data-flow analysis techniques.
+    </p>
+
+    <table>
+      <tr>
+        <th>
+          Identifier
+        </th>
+
+        <th>
+          Description
+        </th>
+      </tr>
+
+      <tr>
+        <td>
+          B1
+        </td>
+
+        <td>
+          The number and types of arguments (registers and immediate values)
+          must always match the instruction.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          B2
+        </td>
+
+        <td>
+          Register pairs must never be broken up.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          B3
+        </td>
+
+        <td>
+          A register (or pair) has to be assigned first before it can be
+          read.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          B4
+        </td>
+
+        <td>
+          An <code>invoke-direct</code> instruction must invoke an instance
+          initializer or a method only in the current class or one of its
+          superclasses.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          B5
+        </td>
+
+        <td>
+          An instance initializer must be invoked only on an uninitialized
+          instance.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          B6
+        </td>
+
+        <td>
+          Instance methods may be invoked only on and instance fields may only
+          be accessed on already initialized instances.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          B7
+        </td>
+
+        <td>
+          A register that holds the result of a <code>new-instance</code>
+          instruction must not be used if the same
+          <code>new-instance</code> instruction is again executed before
+          the instance is initialized.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          B8
+        </td>
+
+        <td>
+           An instance initializer must call another instance initializer (same
+           class or superclass) before any instance members can be accessed.
+           Exceptions are non-inherited instance fields, which can be assigned
+           before calling another initializer, and the <code>Object</code> class
+           in general.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          B9
+        </td>
+
+        <td>
+           All actual method arguments must be assignment-compatible with their
+           respective formal arguments.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          B10
+        </td>
+
+        <td>
+           For each instance method invocation, the actual instance must be
+           assignment-compatible with the class or interface specified in the
+           instruction.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          B11
+        </td>
+
+        <td>
+           A <code>return&lt;kind&gt;</code> instruction must match its
+           method's return type.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          B12
+        </td>
+
+        <td>
+           When accessing protected members of a superclass, the actual type of
+           the instance being accessed must be either the current class or one
+           of its subclasses.
+        </td>
+      </tr>
+
+     <tr>
+        <td>
+          B13
+        </td>
+
+        <td>
+           The type of a value stored into a static field must be
+           assignment-compatible with or convertible to the field's type.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          B14
+        </td>
+
+        <td>
+           The type of a value stored into a field must be assignment-compatible
+           with or convertible to the field's type.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          B15
+        </td>
+
+        <td>
+           The type of every value stored into an array must be
+           assignment-compatible with the array's component type.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          B16
+        </td>
+
+        <td>
+           The <code>A</code> operand of a <code>throw</code> instruction must
+           be assignment-compatible with <code>java.lang.Throwable</code>.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          B17
+        </td>
+
+        <td>
+           The last reachable instruction of a method must either be a backwards
+           <code>goto</code> or branch, a <code>return</code>, or a
+           <code>throw</code> instruction. It must not be possible to leave the
+           <code>insns</code> array at the bottom.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          B18
+        </td>
+
+        <td>
+          The unassigned half of a former register pair may not be read (is
+          considered invalid) until it has been re-assigned by some other
+          instruction.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          B19
+        </td>
+
+        <td>
+          A <code>move-result&lt;kind&gt;</code> instruction must be immediately
+          preceded (in the <code>insns</code> array) by an
+          <code>invoke-&lt;kind&gt;</code> instruction. The only exception is
+          the <code>move-result-object</code> instruction, which may also be
+          preceded by a <code>filled-new-array</code> instruction.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          B20
+        </td>
+
+        <td>
+          A <code>move-result&lt;kind&gt;</code> instruction must be immediately
+          preceded (in actual control flow) by a matching
+          <code>return-&lt;kind&gt;</code> instruction (it must not be jumped
+          to). The only exception is the <code>move-result-object</code>
+          instruction, which may also be preceded by a
+          <code>filled-new-array</code> instruction.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          B21
+        </td>
+
+        <td>
+          A <code>move-exception</code> instruction must appear only as the
+          first instruction in an exception handler.
+        </td>
+      </tr>
+
+      <tr>
+        <td>
+          B22
+        </td>
+
+        <td>
+          The <code>packed-switch-data</code>, <code>sparse-switch-data</code>,
+          and <code>fill-array-data</code> pseudo-instructions must not be
+          reachable by control flow.
+        </td>
+      </tr>
+    </table>
+
+  </body>
+</html>

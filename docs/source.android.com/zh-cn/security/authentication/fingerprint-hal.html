@@ -1,0 +1,107 @@
+<html devsite><head>
+    <title>Fingerprint HAL</title>
+    <meta name="project_path" value="/_project.yaml"/>
+    <meta name="book_path" value="/_book.yaml"/>
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+<h2 id="overview">概述</h2>
+
+<p>如果设备配有指纹传感器，用户就可以注册一个或多个指纹，然后使用自己的指纹来解锁设备以及执行其他任务。</p>
+
+<p>Android 会利用 Fingerprint 硬件抽象层 (HAL) 连接到供应商专用库和指纹硬件，例如指纹传感器。</p>
+
+<p>要实现 Fingerprint HAL，您必须在某个供应商专用库中实现 <code>fingerprint.h</code> (<code>/hardware/libhardware/include/hardware/fingerprint.h</code>) 中的<a href="#major_functions_in_the_fingerprint_hal">函数</a>；请参阅 <a href="https://android.googlesource.com/platform/hardware/libhardware/+/master/include/hardware/fingerprint.h"><code>fingerprint.h</code></a> 文件中的备注。</p>
+
+<h3 id="fingerprint_matching_flow">指纹匹配流程</h3>
+
+<p>下文概要介绍了指纹匹配流程。该流程假设设备上已经注册了一个指纹，即供应商专用库已为该指纹注册了一个模板。另请参阅<a href="index.html">身份验证</a>。</p>
+
+<p>设备的指纹传感器通常处于闲置状态。但为了响应对 <code>authenticate</code> 或 <code>enroll</code> 函数的调用，指纹传感器会监听触摸操作（并且屏幕可能会在用户触摸指纹传感器时被唤醒）。</p>
+
+<ol>
+  <li>当用户将手指放在指纹传感器上时，供应商专用库会根据当前的已注册模板集判断是否匹配。
+  </li><li>第 1 步的结果会传递到 Fingerprint HAL，后者会将指纹身份验证结果通知给 <code>fingerprintd</code>（Fingerprint 守护进程）。
+</li></ol>
+
+<p>请注意，单个设备上存储的模板越多，进行匹配所需的时间就越长。</p>
+
+<h2 id="architecture">架构</h2>
+
+<p><strong>Fingerprint HAL</strong> 会与以下组件交互：</p>
+
+<ul>
+  <li><strong>FingerprintManager API</strong>：会在应用进程中与应用直接交互。
+  <ul>
+    <li>每个应用都有一个 FingerprintManager 实例。
+    </li><li>FingerprintManager 是与 FingerprintService 进行通信的封装容器。
+  </li></ul>
+  </li><li><strong>FingerprintService</strong>：在系统进程中运行的单例服务，可处理与 <code>fingerprintd</code> 之间的通信。
+  </li><li><strong>fingerprintd（Fingerprint 守护进程）</strong>：FingerprintService 中 Binder 界面的 C/C++ 实现。<code>fingerprintd</code> 守护进程在自己的进程中运行，并会封装 Fingerprint HAL 供应商专用库。
+  </li><li><strong>Fingerprint HAL 供应商专用库</strong>：硬件供应商的 Fingerprint HAL 实现。供应商专用库能够与设备专用硬件进行通信。
+  </li><li><strong>Keystore API 和 Keymaster</strong>：这两种组件可以提供由硬件支持的加密功能，以便在可信执行环境 (TEE) 中安全地存储密钥。
+</li></ul>
+
+<p>如下图所示，供应商专用 HAL 实现需要使用 TEE 要求的通信协议。</p>
+
+<img src="../images/fingerprint-data-flow.png" alt="指纹身份验证的数据流程" id="figure1"/>
+
+<p class="img-caption"><strong>图 1. </strong> 指纹身份验证的概要数据流程</p>
+
+<p>因此，不得将原始图片和处理后的指纹特征传递到不可信内存中。所有此类生物识别数据都需要安全地存储在传感器硬件或可信内存中。（TEE 中的内存被视为可信内存，TEE 之外的内存则被视为不可信内存。）</p>
+
+<p>获取 Root 权限不得损坏生物识别数据。</p>
+
+<p>如下图所示，<code>fingerprintd</code> 会通过 Fingerprint HAL 调用供应商专用库，以便注册指纹以及执行其他操作。</p>
+
+<img src="../images/fingerprint-daemon.png" alt="与 fingerprintd 交互" id="figure2"/>
+<p class="img-caption"><strong>图 2. </strong> Fingerprint 守护进程 (<code>fingerprintd</code>) 与 Fingerprint 供应商专用库之间的交互</p>
+
+<h2 id="fingerprint_implementation_guidelines">Fingerprint 实现准则</h2>
+
+<p>本部分中的准则旨在确保：</p>
+
+<ul>
+  <li>指纹数据不会被泄露</li><li>从设备中移除用户时，一并移除指纹数据</li></ul>
+
+<p>以下是具体准则：</p>
+
+<ol>
+  <li>必须要确保在任何情况下都无法从传感器驱动程序或可信执行环境 (TEE) 以外访问原始指纹数据或衍生内容（例如模板）。只能将硬件访问权限授予 TEE（如果硬件支持它的话），并且必须通过 SELinux 政策对硬件访问权限加以保护。也就是说，串行外设接口 (SPI) 渠道必须只能供 TEE 访问，并且必须有针对所有设备文件的明确 SELinux 政策。
+  </li><li>指纹采集、注册和识别必须在 TEE 内部进行。</li><li>只有加密形式的指纹数据可以存储在文件系统中（即使文件系统本身已加密）。
+  </li><li>指纹模板必须已通过设备专用私钥（例如 AES 密钥）签名，并且必须至少包含绝对文件系统路径、群组和指纹 ID，这样一来，相应模板文件便无法在其他设备上使用，并且无法用于在同一设备上注册的任何其他用户。例如，您将无法复制同一设备上其他用户的指纹数据，也无法从其他设备复制指纹数据。
+  </li><li>实现必须使用 <code>set_active_group()</code> 函数提供的文件系统路径，或提供一种能够在移除用户时一并清空所有用户模板数据的方法。强烈建议将指纹模板文件以加密形式存储在提供的路径中。如果因 TEE 存储要求导致这种做法不可行，实现人员必须添加一些钩子，以确保在移除用户时一并移除相关数据。
+</li></ol>
+
+<h2 id="major_functions_in_the_fingerprint_hal">Fingerprint HAL 中的主要函数</h2>
+
+<p>以下是 <code>/hardware/libhardware/include/hardware/fingerprint.h</code> 文件中的主要函数。您可以查看该文件中的详细说明。</p>
+
+<ul>
+  <li><strong>enroll：</strong> 将 HAL 状态机切换到开始收集和存储指纹模板的状态。注册完成后或超时后，HAL 状态机会立即返回到闲置状态。
+  </li><li><strong>pre_enroll：</strong> 生成一个独一无二的令牌，以指明指纹注册已开始。为 <code>enroll</code> 函数提供令牌，以确保事先已经过身份验证（例如使用密码）。一旦确认了设备凭据，便会开始封装令牌并对其进行相应的处理（例如，进行 HMAC 处理），以防被篡改。在注册期间必须检查令牌，以确认令牌仍然有效。
+  </li><li><strong>get_authenticator_id：</strong> 返回与当前指纹集关联的令牌。
+  </li><li><strong>cancel：</strong> 取消所有待处理的注册或验证操作。HAL 状态机会返回到闲置状态。
+  </li><li><strong>enumerate：</strong> 同步调用，用于枚举所有已知指纹模板。
+  </li><li><strong>remove：</strong> 删除指纹模板。
+  </li><li><strong>set_active_group：</strong> 限定只能对属于指定群组（通过群组标识符 (GID) 来标识）的指纹集执行某项 HAL 操作。
+  </li><li><strong>authenticate：</strong> 验证与指纹相关的操作（通过操作 ID 来标识）。
+  </li><li><strong>set_notify：</strong> 注册将从 HAL 获得通知的用户函数。如果 HAL 状态机处于繁忙状态，该函数会被屏蔽，直到 HAL 不再处于繁忙状态为止。
+</li></ul>
+
+</body></html>

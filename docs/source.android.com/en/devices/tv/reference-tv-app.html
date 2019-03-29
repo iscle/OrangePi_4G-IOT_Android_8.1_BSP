@@ -1,0 +1,193 @@
+<html devsite>
+  <head>
+    <title>Reference TV App</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+
+<p>A TV application that plays live TV content is required for Android TV devices.
+A reference TV application (<a href="https://play.google.com/store/apps/details?id=com.google.android.tv">Live TV</a>)
+is provided alongside the Android platform, which can be used as-is,
+customized, extended, or replaced. The
+<a href="https://android.googlesource.com/platform/packages/apps/TV/">source code</a>
+is available in the Android Open Source Project.</p>
+
+<p>This article summarizes how to build and customize a system TV App based
+on Live TV for your Android television device. (You may extend your TV application to implement device
+manufacturer or country-specific features, however this is not in the scope of
+the reference TV App.)</p>
+
+<h2 id=dependencies>Dependencies</h2>
+
+
+<p>The TV application is a component of the
+<a href="/devices/tv/">TV Input Framework</a> (TIF) and cannot be used
+independently of the other components. This means that only devices with TIF
+will be able to run the
+<a href="https://play.google.com/store/apps/details?id=com.google.android.tv">Live TV</a> application.</p>
+
+<p>The Live TV application depends on Android APIs. Different branches have
+different dependencies on API levels:</p>
+
+<p class="table-caption" id="table-1">
+  <strong>Table 1.</strong> Live TV branches.</p>
+<table>
+ <tr>
+    <th>Branch</th>
+    <th>Target API level</th>
+    <th>Minimum API level</th>
+ </tr>
+ <tr>
+    <td><a href="https://android.googlesource.com/platform/packages/apps/TV/+/master">master</a></td>
+    <td>24 (Android 7.0)</td>
+    <td>23</td>
+ </tr>
+
+ <tr>
+    <td><a href="https://android.googlesource.com/platform/packages/apps/TV/+/android-live-tv">android-live-tv</a></td>
+    <td>23 (Android 6.0)</td>
+    <td>21</td>
+ </tr>
+ <tr>
+    <td><a href="https://android.googlesource.com/platform/packages/apps/TV/+/android-live-tv-l-mr1">android-live-tv-l-mr1</a></td>
+    <td>22 (Android 5.1)</td>
+    <td>21</td>
+ </tr>
+</table>
+
+
+<h2 id=get_the_source>Get the source</h2>
+
+
+<p>To get started, select which version of Live TV you’d like from Git. The
+instructions below are for the current version of Live TV, but you can
+easily select an earlier version by changing the branch from master to a
+different one listed in the table above.</p>
+
+
+<pre class="devsite-click-to-copy">
+<code class="devsite-terminal">mkdir live-tv && cd live-tv</code>
+<code class="devsite-terminal">repo init -u <a href="https://android.googlesource.com/platform/manifest">https://android.googlesource.com/platform/manifest</a> -b master</code>
+<code class="devsite-terminal">repo sync -j8 -c</code>
+</pre>
+
+
+<h2 id=build>Build</h2>
+
+
+<p>To build the Live TV code, run:</p>
+
+<pre class="devsite-click-to-copy">
+<code class="devsite-terminal">. build/envsetup.sh</code>
+<code class="devsite-terminal">tapas LiveTv x86</code>
+<code class="devsite-terminal">make LiveTv</code>
+</pre>
+
+
+<h2 id=push>Push</h2>
+
+
+<p>To push Live TV to your test device:</p>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+adb install -r -d $OUT/system/priv-app/LiveTv/LiveTv.apk
+</pre>
+
+<p>If the developer wants the LIVE TV app to have system permissions, the first time it
+is installed it needs to be pushed to /system/priv-app with:</p>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+adb push $OUT/system/priv-app/LiveTv/LiveTv.apk  /system/priv-app/LiveTv/
+</pre>
+
+<h2 id=test>Test</h2>
+
+
+<p>Once Live TV is on your device, you should test that it is properly
+integrated. In addition to running the <a href="/compatibility/cts/index.html">Compatibility test suite</a> and the <a href="http://source.android.com/compatibility/cts/verifier.html">CTS Verifier tests</a> for the TV app, you can use these tests below:</p>
+
+<h3 id=unit_tests>Unit tests</h3>
+
+
+<p>There are unit and functional tests for the Live TV app. You must have a
+device (or emulator) connected to run the tests.</p>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+adb shell logcat -c
+m LiveTv TVTestInput TVUnitTests -j20 &&\
+adb install -r -d $OUT/system/priv-app/LiveTv/LiveTv.apk &&\
+adb install -r -d $OUT/system/app/TVTestInput/TVTestInput.apk && \
+adb install -r -d $OUT/data/app/TVUnitTests/TVUnitTests.apk && \
+adb shell pm clear <a href="http://com.android.providers.tv/">com.android.providers.tv</a> && \
+adb shell pm clear <a href="http://com.google.android.tv/">com.google.android.tv</a> && \
+adb shell am instrument \
+  -e testSetupMode unit \
+  -w com.android.tv.testinput/.instrument.TestSetupInstrumentation &&\
+adb shell input keyevent KEYCODE_HOME &&\
+adb shell am instrument \
+  -w 'com.android.tv.tests/android.support.test.runner.AndroidJUnitRunner'
+</pre>
+
+
+<h3 id=functional_tests>Functional Tests</h3>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+adb shell logcat -c
+m LiveTv TVTestInput TVFuncTests -j20 &&\
+adb install -r -d $OUT/system/priv-app/LiveTv/LiveTv.apk &&\
+adb install -r -d $OUT/system/app/TVTestInput/TVTestInput.apk && \
+adb install -r -d $OUT/data/app/TVFuncTests/TVFuncTests.apk && \
+adb shell pm clear <a href="http://com.android.providers.tv/">com.android.providers.tv</a> && \
+adb shell pm clear <a href="http://com.google.android.tv/">com.google.android.tv</a> && \
+adb shell am instrument \
+  -e testSetupMode func \
+  -w com.android.tv.testinput/.instrument.TestSetupInstrumentation &&\
+adb shell input keyevent KEYCODE_HOME &&\
+adb shell am instrument \
+  -w 'com.android.tv.tests.ui/android.support.test.runner.AndroidJUnitRunner'
+</pre>
+
+
+<h3 id=jank_tests>Jank Tests</h3>
+
+
+<p>The Jank tests look for dropped frames and delays in rendering.</p>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+adb shell logcat -c
+m LiveTv TVTestInput TVJankTests -j20 &&\
+adb install -r -d $OUT/system/priv-app/LiveTv/LiveTv.apk &&\
+adb install -r -d $OUT/system/app/TVTestInput/TVTestInput.apk &&\
+adb install -r -d $OUT/data/app/TVJankTests/TVJankTests.apk &&\
+adb shell pm clear <a href="http://com.android.providers.tv/">com.android.providers.tv</a> &&\
+adb shell pm clear <a href="http://com.google.android.tv/">com.google.android.tv</a> &&\
+echo "Creating a lot of channels and EPG data, this may take a while" &&\
+adb shell am instrument \
+  -e testSetupMode jank \
+  -w com.android.tv.testinput/.instrument.TestSetupInstrumentation &&\
+adb shell input keyevent KEYCODE_HOME &&\
+adb shell am instrument \
+  -w 'com.android.tv.tests.jank/android.support.test.runner.AndroidJUnitRunner'
+</pre>
+
+  </body>
+</html>

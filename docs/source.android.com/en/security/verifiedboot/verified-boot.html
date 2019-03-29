@@ -1,0 +1,542 @@
+<html devsite>
+  <head>
+    <title>Verifying Boot</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>Verified boot guarantees the integrity of the device software starting from a
+hardware root of trust up to the system partition. During boot, each stage
+verifies the integrity and authenticity of the next stage before executing it.</p>
+
+<p>This capability can be used to warn users of unexpected changes to the
+software when they acquire a used device, for example. It will also provide an
+additional signal of device integrity for remote attestation, and together with
+encryption and Trusted Execution Environment (TEE) root of trust binding, adds
+another layer of protection for user data against malicious system software.</p>
+
+<p>If verification fails at any stage, the user is visibly
+notified.</p>
+
+<h2 id=glossary>Glossary</h2>
+
+<table>
+  <col width="15%">
+  <col width="85%">
+ <tr>
+    <th>Term</th>
+    <th>Definition</th>
+ </tr>
+ <tr>
+    <td>Boot state</td>
+    <td>The boot state of the device describes the level of protection provided
+        to the end user if the device boots. Boot states are GREEN, YELLOW,
+        ORANGE, and RED.</td>
+ </tr>
+ <tr>
+    <td>Device state</td>
+    <td>The device state indicates how freely software can be flashed to the device.
+        Device states are LOCKED and UNLOCKED.</td>
+ </tr>
+ <tr>
+    <td>dm-verity</td>
+    <td>Linux kernel driver for verifying the integrity of a partition at runtime using
+        a hash tree and signed metadata.</td>
+ </tr>
+ <tr>
+    <td>OEM key</td>
+    <td>The OEM key is a fixed, tamper-protected key available to the bootloader that
+        must be used to verify the boot image.</td>
+ </tr>
+</table>
+
+<h2 id=overview>Overview</h2>
+
+<p>In addition to device state—which already exists in devices and controls
+whether the bootloader allows new software to be flashed—verified boot introduces
+the concept of boot state that indicates the state of device integrity.</p>
+
+<h3 id=classes>Classes</h3>
+
+<p>Two implementation classes exist for verified boot. Depending on how
+fully the device implements this specification, they are defined as follows:</p>
+
+<p><strong>Class A</strong>  implements verified boot with full chain of trust
+up to verified partitions. In other words, the implementation supports the
+LOCKED device state, and GREEN and RED boot states.</p>
+
+<p><strong>Class B</strong> implements Class A, and additionally supports the
+UNLOCKED device state and the ORANGE boot state.</p>
+
+<h3 id=verification_keys>Verification keys</h3>
+
+<p>Bootloader integrity is always verified using a hardware root of trust. For
+verifying boot and recovery partitions, the bootloader has a fixed OEM key
+available to it. It always attempts to verify the boot partition using the OEM
+key first and try other possible keys only if this verification fails.</p>
+
+<p>In Class B implementations, it is possible for the user to flash
+software signed with other keys when the device is UNLOCKED. If the device is
+then LOCKED and verification using the OEM key fails, the bootloader tries
+verification using the certificate embedded in the partition signature.
+However, using a partition signed with anything other than the OEM key
+results in a notification or a warning, as described below.</p>
+
+<h3 id=boot_state>Boot state</h3>
+
+<p>A verified device will ultimately boot into one of the four states during
+each boot attempt:</p>
+
+<ul>
+  <li>GREEN, indicating a full chain of trust extending from the bootloader to
+verified partitions, including the bootloader, boot partition, and all verified
+partitions.
+
+  <li>YELLOW, indicating the boot partition has been verified using the
+embedded certificate, and the signature is valid. The bootloader
+displays a warning and the fingerprint of the public key before allowing
+the boot process to continue.
+
+  <li>ORANGE, indicating a device may be freely modified. Device integrity is
+left to the user to verify out-of-band. The bootloader displays a warning
+to the user before allowing the boot process to continue.
+
+  <li>RED, indicating the device has failed verification. The bootloader
+displays a warning and stops the boot process.
+</ul>
+
+<p>The recovery partition is verified in the exact same way, as well.</p>
+
+<h3 id=device_state>Device state</h3>
+
+<p>The possible device states and their relationship with the four verified
+boot states are:</p>
+<ol>
+  <li>LOCKED, indicating the device cannot be flashed. A LOCKED device
+boots into the GREEN, YELLOW, or RED states during any attempted boot.
+
+  <li>UNLOCKED, indicating the device may be flashed freely and is not intended
+to be verified. An UNLOCKED device always boots to the ORANGE boot state.
+</ol>
+
+<img src="../images/verified_boot.png" alt="Verified boot flow" id="figure1" />
+<p class="img-caption"><strong>Figure 1.</strong> Verified boot flow</p>
+
+<h2 id=detailed_design>Detailed design</h2>
+
+<p>Achieving full chain of trust requires support from both the bootloader and the
+software on the boot partition, which is responsible for mounting further
+partitions. Verification metadata is also appended to the system partition
+and any additional partitions whose integrity should be verified.</p>
+
+<h3 id=bootloader_requirements>Bootloader requirements</h3>
+
+<p>The bootloader is the guardian of the device state and is responsible for
+initializing the TEE and binding its root of trust.</p>
+
+<p>Most importantly, the bootloader verifies the integrity of the boot and/or
+recovery partition before moving execution to the kernel and display the
+warnings specified in the section <a href="#boot_state">Boot state</a>.</p>
+
+<h4 id=changing_device_state>Changing device state</h4>
+
+<p>State changes are performed using the <code>fastboot flashing [unlock |
+lock]</code> command. And to protect user data, <strong>all</strong>
+state transitions wipe the data partitions and ask the user for
+confirmation before data is deleted.</p>
+
+<ol>
+  <li>The UNLOCKED to LOCKED transition is anticipated when a user buys a used
+development device. As a result of locking the device, the user should have
+confidence that it is in a state produced by the device manufacturer, as long
+as there is no warning.
+
+  <li>The LOCKED to UNLOCKED transition is expected in the case where a developer
+wishes to disable verification on the device.
+</ol>
+
+
+<p><code>fastboot</code> commands that alter device state are listed in the table below:</p>
+
+<table>
+  <col width="25%">
+  <col width="75%">
+ <tr>
+    <th><code>fastboot</code> command</th>
+    <th>Description</th>
+ </tr>
+ <tr>
+    <td><code>flashing lock</code></td>
+    <td>
+      <ul>
+        <li>Wipes data after asking the user for confirmation.
+        <li>Clears a write-protected bit to lock the device.
+            Because the bit is write-protected, only the
+            bootloader can change it.
+      </ul>
+    </td>
+ </tr>
+ <tr>
+    <td><code>flashing unlock</code></td>
+    <td>
+      <ul>
+        <li>If the unlock device setting has not been enabled by the user,
+            aborts unlocking
+        <li>Wipes data after asking the user for confirmation
+        <li>Sets a write-protected bit to unlock the device.
+            Because the bit is write-protected, only the
+            bootloader can change it.
+      </ul>
+    </td>
+ </tr>
+</table>
+
+<p>When altering partition contents, the bootloader checks the bits set by
+the above commands as described in the following table:</p>
+
+<table>
+  <col width="25%">
+  <col width="75%">
+ <tr>
+    <th><code>fastboot</code> command</th>
+    <th>Description</th>
+ </tr>
+ <tr>
+    <td><code>flash &lt;partition&gt;</code></td>
+    <td>If the bit set by <code>flashing unlock</code> is set, flash the
+      partition. Otherwise, do not allow flashing.
+    </td>
+ </tr>
+</table>
+
+<p>The same checks should be performed for any <code>fastboot</code> command
+that can be used to change the contents of partitions.</p>
+
+<p class="note"><strong>Note</strong>: Class B implementations support
+changing device state.</p>
+
+<h4 id=binding_tee_root_of_trust>Binding TEE root of trust</h4>
+
+<p>If TEE is available, the bootloader passes the following information to
+the TEE after boot/recovery partition verification and TEE initialization
+to bind the Keymaster root of trust:</p>
+
+<ol>
+  <li>the public key that was used to sign the boot partition
+  <li>the current device state (LOCKED or UNLOCKED)
+</ol>
+
+<p>This changes the keys derived by the TEE. Taking disk encryption as an example,
+this prevents user data from being decrypted when the device state changes.</p>
+
+<p class="note"><strong>Note:</strong> This means if the system software or the
+device state changes, encrypted user data will no longer be accessible as the
+TEE will attempt to use a different key to decrypt the data.</p>
+
+<h4 id="initializing-attestation">Initializing attestation</h4>
+<p>
+Similar to root of trust binding, if TEE is available, the bootloader passes it
+the following information to initialize attestation:
+</p>
+<ol>
+<li>the current boot state (GREEN, YELLOW, ORANGE)
+<li>the operating system version
+<li>the operating system security patch level
+</ol>
+<h4 id=booting_into_recovery>Booting into recovery</h4>
+
+<p>The recovery partition should be verified in exactly the same manner as the
+boot partition.</p>
+
+<h4 id=comm_boot_state>Communicating boot state</h4>
+
+<p>System software needs to be able to determine the verification status of
+previous stages. The bootloader specifies the current boot state as a
+parameter on the kernel command line (or through the device tree under
+<code>firmware/android/verifiedbootstate</code>) as described in the table
+below:</p>
+
+<table>
+  <tr>
+    <th>Kernel command line parameter</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td><code>androidboot.verifiedbootstate=green</code></td>
+    <td>Device has booted into GREEN boot state.<br>
+        Boot partition has been verified using the OEM key and it’s valid.</td>
+  </tr>
+  <tr>
+    <td><code>androidboot.verifiedbootstate=yellow</code></td>
+    <td>Device has booted into YELLOW boot state.<br>
+	Boot partition has been verified using the certificate embedded into
+        the signature and it’s valid.</td>
+  </tr>
+  <tr>
+    <td><code>androidboot.verifiedbootstate=orange</code></td>
+    <td>Device has booted into ORANGE boot state.<br>
+        The device is unlocked and no verification has been performed.</td>
+  </tr>
+</table>
+<p class="note"><strong>Note</strong>: The device cannot boot into kernel when
+in the RED boot state, and therefore the kernel command line never includes the
+parameter <code>androidboot.verifiedbootstate=red</code>.</p>
+
+<h3 id=boot_partition>Boot partition</h3>
+
+<p>Once execution has moved to the boot partition, the software there is responsible
+for setting up verification of further partitions. Due to its large size, the
+system partition typically cannot be verified similarly to previous parts but is
+verified as it’s being accessed instead using the dm-verity kernel driver or a
+similar solution.</p>
+
+<p>If dm-verity is used to verify large partitions, the signature of the verity
+metadata appended to each verified partition is verified before the
+partition is mounted and dm-verity is set up for it.</p>
+
+<h4 id=managing_dm-verity>Managing dm-verity</h4>
+
+<p>Implemented as a device mapper target in kernel, dm-verity adds a layer
+on top of a partition and verifies each read block against a hash tree passed to
+it during setup. If it comes across a block that fails to verify, it makes the
+block inaccessible to user space.</p>
+
+<p>When mounting partitions during boot, fs_mgr sets up dm-verity for a
+partition if the <code>verify</code> fs_mgr flag is specified for it in the
+device’s fstab. Verity metadata signature is verified against the public key
+in <code>/verity_key</code>.</p>
+
+<h4 id=recovering_from_dm-verity_errors>Recovering from dm-verity errors</h4>
+
+<p>Because the system partition is by far larger than the boot partition, the
+probability of verification errors is also higher. Specifically, there is a
+larger probability of unintentional disk corruption, which will cause a
+verification failure and can potentially make an otherwise functional device
+unusable if a critical block in the partition can no longer be accessed.
+Forward error correction can be used with dm-verity to mitigate this risk.
+Providing this alternative recovery path is recommended, though it comes at the
+expense of increasing metadata size.</p>
+
+<p>
+By default, dm-verity is configured to function in a “restart” mode where it
+immediately restarts the device when a corrupted block is detected. This makes
+it possible to safely warn the user when the device is corrupted, or to fall
+back to device specific recovery, if available.
+</p>
+
+<p>
+To make it possible for users to still access their data, dm-verity switches
+to I/O Error (EIO) mode if the device boots with known corruption. When in EIO mode,
+dm-verity returns I/O errors for any reads that access corrupted blocks but
+allows the device to keep running. Keeping track of the current mode requires
+persistently storing dm-verity state. The state can be managed either by fs_mgr
+or the bootloader:
+</p>
+
+<ol>
+  <li>To manage dm-verity state in fs_mgr, an additional argument is specified to
+      the <code>verify</code> flag to inform fs_mgr where to store dm-verity state.
+      For example, to store the state on the metadata partition, specify
+      <code>verify=/path/to/metadata</code>.
+      <p class="note"><strong>Note:</strong> fs_mgr switches dm-verity to EIO
+       mode after the first corruption has been detected and resets the mode
+       back to “restart” after the metadata signature of any verified partition
+       has changed.</p>
+  </li>
+  <li>Alternatively, to manage dm-verity state in the bootloader, pass the current
+      mode to the kernel in the <code>androidboot.veritymode</code> command line
+      parameter as follows:
+
+      <table>
+        <tr>
+          <th>Kernel command line parameter</th>
+          <th>Description</th>
+        </tr>
+        <tr>
+          <td><code>androidboot.veritymode=enforcing</code></td>
+          <td>Set up dm-verity in the default “restart” mode.</td>
+        </tr>
+        <tr>
+          <td><code>androidboot.veritymode=eio</code></td>
+          <td>Set up dm-verity in EIO mode.</td>
+        </tr>
+      </table>
+
+      <p class="note">
+      <strong>Note:</strong> Managing state in the bootloader also requires the kernel
+      to set the restart reason correctly when the device restarts due to dm-verity.
+      After corruption has been detected, the bootloader should switch back to
+      “restart” mode when any of the verified partitions have changed.</p>
+  </li>
+</ol>
+
+<p>
+If dm-verity is not started in the “restart” mode for any reason, or verity
+metadata cannot be verified, a warning displays to the user if the device is
+allowed to boot, similar to the one shown before booting into the RED boot
+state. The user must consent to the device to continue booting in EIO mode. If
+user consent is not received in 30 seconds, the device powers off.
+</p>
+
+<p class="note">
+<strong>Note:</strong> dm-verity never starts in logging mode to prevent
+unverified data from leaking into userspace.
+</p>
+
+
+
+<h3 id=verified_partition>Verified partition</h3>
+
+<p>In a verified device, the system partition is always verified. But any
+other read-only partition should also be set to be verified, as well. Any
+read-only partition that contains executable code is verified on a
+verified device. This includes vendor and OEM partitions, if they exist, for example.</p>
+
+<p>To verify a partition, signed verity metadata is
+appended to it. The metadata consists of a hash tree of the partition contents
+and a verity table containing signed parameters and the root of the hash tree.
+If this information is missing or invalid when dm-verity is set up for the
+partition, the device doesn't boot.</p>
+
+<h2 id=implementation_details>Implementation details</h2>
+
+<h3 id=key_types_and_sizes>Key types and sizes</h3>
+
+<p>The OEM key used in AOSP is an RSA key with a modulus of 2048 bits or
+higher and a public exponent of 65537 (F4), meeting the CDD requirements of
+equivalent or greater strength than such a key.</p>
+
+<p>Note that the OEM key typically cannot be rotated if it's compromised, so
+protecting it is important, preferably using a Hardware Security Module (HSM)
+or a similar solution. It's also recommended to use a different key for each
+type of device.</p>
+
+<h3 id=signature_format>Signature format</h3>
+
+<p>The signature on an Android verifiable boot image is an ASN.1 DER-encoded
+message, which can be parsed with a decoder similar to the one found at: <a
+href="https://android.googlesource.com/platform/bootable/recovery/+/f4a6ab27b335b69fbc419a9c1ef263004b561265/asn1_decoder.cpp">platform/bootable/recovery/asn1_decoder.cpp</a><br/>
+The message format itself is as follows:</p>
+
+<pre class="devsite-click-to-copy">
+AndroidVerifiedBootSignature DEFINITIONS ::=
+     BEGIN
+          FormatVersion ::= INTEGER
+          Certificate ::= Certificate
+          AlgorithmIdentifier  ::=  SEQUENCE {
+               algorithm OBJECT IDENTIFIER,
+               parameters ANY DEFINED BY algorithm OPTIONAL
+          }
+          AuthenticatedAttributes ::= SEQUENCE {
+                 target CHARACTER STRING,
+                 length INTEGER
+          }
+
+          Signature ::= OCTET STRING
+     END
+</pre>
+
+<p>The <code>Certificate</code> field is the full X.509 certificate containing
+the public key used for signing, as defined by <a
+href="http://tools.ietf.org/html/rfc5280#section-4.1.1.2">RFC5280</a> section
+4.1. When LOCKED, the bootloader uses the OEM key for verification
+first, and only boot to YELLOW or RED states if the embedded certificate is
+used for verification instead.</p>
+
+<p>The remaining structure is similar to that defined by <a
+href="http://tools.ietf.org/html/rfc5280#section-4.1.1.2">RFC5280</a> sections
+4.1.1.2 and 4.1.1.3 with the exception of the
+<code>AuthenticatedAttributes</code> field. This field contains the length of
+the image to be verified as an integer and the partition where the image can
+be found (boot, recovery, etc.).</p>
+
+<h3 id=signing_and_verifying_an_image>Signing and verifying an image</h3>
+
+<p><strong>To produce a signed image:</strong></p>
+<ol>
+  <li>Generate the unsigned image.
+  <li>0-pad the image to the next page size boundary (omit this step if already
+aligned).
+  <li>Populate the fields of the <code>AuthenticatedAttributes</code> section
+      above based on the padded image and desired target partition.
+  <li>Append the <code>AuthenticatedAttributes</code> structure above to the image.
+  <li>Sign the image.
+</ol>
+
+<p><strong>To verify the image:</strong></p>
+<ol>
+  <li>Determine the size of the image to be loaded including padding (e.g. by reading
+a header).
+  <li>Read the signature located at the offset above.
+  <li>Validate the contents of the <code>AuthenticatedAttributes</code> field.
+      If these values do not validate, treat it as a signature validation error.
+  <li>Verify the image and <code>AuthenticatedAttributes</code> sections.
+</ol>
+
+<h3 id=user_experience>User experience</h3>
+
+<p>A user in the GREEN boot state should see no additional user interaction besides that
+required by normal device boot. In ORANGE and YELLOW boot states, the user sees a
+warning for at least five seconds. Should the user interact with the device during
+this time, the warning remains visible at least 30 seconds longer, or until
+the user dismisses the warning. In the RED boot state, the warning is shown for
+at least 30 seconds, after which the device powers off.</p>
+
+<p>Sample user interaction screens for other states are shown in the following table:</p>
+
+<table>
+ <tr>
+    <th>Device state</th>
+    <th>Sample UX</th>
+    <th> </th>
+ </tr>
+ <tr>
+    <td>YELLOW</td>
+    <td><img src="../images/boot_yellow1.png" alt="Yellow device state 1" id="figure2" />
+        <p class="img-caption"><strong>Figure 2.</strong> Before user interaction</p>
+    </td>
+    <td><img src="../images/boot_yellow2.png" alt="Yellow device state 2" id="figure3" />
+        <p class="img-caption"><strong>Figure 3.</strong> After user interaction</p>
+    </td>
+ </tr>
+ <tr>
+    <td>ORANGE</td>
+    <td><img src="../images/boot_orange.png" alt="Orange device state" id="figure4" />
+        <p class="img-caption"><strong>Figure 4.</strong> Warning that device is
+        unlocked and can’t be verified.</p>
+    </td>
+    <td> </td>
+ </tr>
+ <tr>
+    <td>RED</td>
+    <td><img src="../images/boot_red1.png" alt="Red device state" id="figure5" />
+        <p class="img-caption"><strong>Figure 5.</strong> Verified boot failure
+        warning</p>
+    </td>
+    <td><img src="../images/boot_red2.png" alt="Red device state" id="figure6" />
+        <p class="img-caption"><strong>Figure 6.</strong> Booting into EIO mode
+        warning</p>
+    </td>
+ </tr>
+</table>
+
+  </body>
+</html>

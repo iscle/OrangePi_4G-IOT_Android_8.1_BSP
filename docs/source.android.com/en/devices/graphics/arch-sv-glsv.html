@@ -1,0 +1,231 @@
+<html devsite>
+  <head>
+    <title>SurfaceView and GLSurfaceView</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>The Android app framework UI is based on a hierarchy of objects that start
+with View. All UI elements go through a complicated measurement and layout
+process that fits them into a rectangular area, and all visible View objects are
+rendered to a SurfaceFlinger-created Surface that was set up by the
+WindowManager when the app was brought to the foreground. The app's UI thread
+performs layout and rendering to a single buffer (regardless of the number of
+Layouts and Views and whether or not the Views are hardware-accelerated).</p>
+
+<p>A SurfaceView takes the same parameters as other views, so you can give it a
+position and size, and fit other elements around it. When it comes time to
+render, however, the contents are completely transparent; The View part of a
+SurfaceView is just a see-through placeholder.</p>
+
+<p>When the SurfaceView's View component is about to become visible, the
+framework asks the WindowManager to ask SurfaceFlinger to create a new Surface.
+(This doesn't happen synchronously, which is why you should provide a callback
+that notifies you when the Surface creation finishes.) By default, the new
+Surface is placed behind the app UI Surface, but the default Z-ordering can be
+overridden to put the Surface on top.</p>
+
+<p>Whatever you render onto this Surface will be composited by SurfaceFlinger,
+not by the app. This is the real power of SurfaceView: The Surface you get can
+be rendered by a separate thread or a separate process, isolated from any
+rendering performed by the app UI, and the buffers go directly to
+SurfaceFlinger. You can't totally ignore the UI thread&mdash;you still have to
+coordinate with the Activity lifecycle and you may need to adjust something if
+the size or position of the View changes&mdash;but you have a whole Surface all
+to yourself. Blending with the app UI and other layers is handled by the
+Hardware Composer.</p>
+
+<p>The new Surface is the producer side of a BufferQueue, whose consumer is a
+SurfaceFlinger layer. You can update the Surface with any mechanism that can
+feed a BufferQueue, such as surface-supplied Canvas functions, attach an
+EGLSurface and draw on it with GLES, or configure a MediaCodec video decoder to
+write to it.</p>
+
+<h2 id=composition>Composition and the Hardware Scaler</h2>
+
+<p>Let's take a closer look at <code>dumpsys SurfaceFlinger</code>. The
+following output was taken while playing a movie in Grafika's "Play video
+(SurfaceView)" activity on a Nexus 5 in portrait orientation; the video is QVGA
+(320x240):</p>
+<p><pre>
+    type    |          source crop              |           frame           name
+------------+-----------------------------------+--------------------------------
+        HWC | [    0.0,    0.0,  320.0,  240.0] | [   48,  411, 1032, 1149] SurfaceView
+        HWC | [    0.0,   75.0, 1080.0, 1776.0] | [    0,   75, 1080, 1776] com.android.grafika/com.android.grafika.PlayMovieSurfaceActivity
+        HWC | [    0.0,    0.0, 1080.0,   75.0] | [    0,    0, 1080,   75] StatusBar
+        HWC | [    0.0,    0.0, 1080.0,  144.0] | [    0, 1776, 1080, 1920] NavigationBar
+  FB TARGET | [    0.0,    0.0, 1080.0, 1920.0] | [    0,    0, 1080, 1920] HWC_FRAMEBUFFER_TARGET
+</pre></p>
+
+<ul>
+<li>The <strong>list order</strong> is back to front: the SurfaceView's Surface
+is in the back, the app UI layer sits on top of that, followed by the status and
+navigation bars that are above everything else.</li>
+<li>The <strong>source crop</strong> values indicate the portion of the
+Surface's buffer that SurfaceFlinger will display. The app UI was given a
+Surface equal to the full size of the display (1080x1920), but as there is no
+point rendering and compositing pixels that will be obscured by the status and
+navigation bars, the source is cropped to a rectangle that starts 75 pixels from
+the top and ends 144 pixels from the bottom. The status and navigation bars have
+smaller Surfaces, and the source crop describes a rectangle that begins at the
+top left (0,0) and spans their content.</li>
+<li>The <strong>frame</strong> values specify the rectangle where pixels
+appear on the display. For the app UI layer, the frame matches the source crop
+because we are copying (or overlaying) a portion of a display-sized layer to the
+same location in another display-sized layer. For the status and navigation
+bars, the size of the frame rectangle is the same, but the position is adjusted
+so the navigation bar appears at the bottom of the screen.</li>
+<li>The <strong>SurfaceView layer</strong> holds our video content. The source crop
+matches the video size, which SurfaceFlinger knows because the MediaCodec
+decoder (the buffer producer) is dequeuing buffers that size. The frame
+rectangle has a completely different size&mdash;984x738.</li>
+</ul>
+
+<p>SurfaceFlinger handles size differences by scaling the buffer contents to
+fill the frame rectangle, upscaling or downscaling as needed. This particular
+size was chosen because it has the same aspect ratio as the video (4:3), and is
+as wide as possible given the constraints of the View layout (which includes
+some padding at the edges of the screen for aesthetic reasons).</p>
+
+<p>If you started playing a different video on the same Surface, the underlying
+BufferQueue would reallocate buffers to the new size automatically, and
+SurfaceFlinger would adjust the source crop. If the aspect ratio of the new
+video is different, the app would need to force a re-layout of the View to match
+it, which causes the WindowManager to tell SurfaceFlinger to update the frame
+rectangle.</p>
+
+<p>If you're rendering on the Surface through some other means (such as GLES),
+you can set the Surface size using the <code>SurfaceHolder#setFixedSize()</code>
+call. For example, you could configure a game to always render at 1280x720,
+which would significantly reduce the number of pixels that must be touched to
+fill the screen on a 2560x1440 tablet or 4K television. The display processor
+handles the scaling. If you don't want to letter- or pillar-box your game, you
+could adjust the game's aspect ratio by setting the size so that the narrow
+dimension is 720 pixels but the long dimension is set to maintain the aspect
+ratio of the physical display (e.g. 1152x720 to match a 2560x1600 display).
+For an example of this approach, see Grafika's "Hardware scaler exerciser"
+activity.</p>
+
+<h2 id=glsurfaceview>GLSurfaceView</h2>
+
+<p>The GLSurfaceView class provides helper classes for managing EGL contexts,
+inter-thread communication, and interaction with the Activity lifecycle. That's
+it. You do not need to use a GLSurfaceView to use GLES.</p>
+
+<p>For example, GLSurfaceView creates a thread for rendering and configures an
+EGL context there. The state is cleaned up automatically when the activity
+pauses. Most apps won't need to know anything about EGL to use GLES with
+GLSurfaceView.</p>
+
+<p>In most cases, GLSurfaceView is very helpful and can make working with GLES
+easier. In some situations, it can get in the way. Use it if it helps, don't
+if it doesn't.</p>
+
+<h2 id=activity>SurfaceView and the Activity Lifecycle</h2>
+
+<p>When using a SurfaceView, it's considered good practice to render the Surface
+from a thread other than the main UI thread. This raises some questions about
+the interaction between that thread and the Activity lifecycle.</p>
+
+<p>For an Activity with a SurfaceView, there are two separate but interdependent
+state machines:</p>
+
+<ol>
+<li>Application onCreate/onResume/onPause</li>
+<li>Surface created/changed/destroyed</li>
+</ol>
+
+<p>When the Activity starts, you get callbacks in this order:</p>
+
+<ul>
+<li>onCreate</li>
+<li>onResume</li>
+<li>surfaceCreated</li>
+<li>surfaceChanged</li>
+</ul>
+
+<p>If you hit back you get:</p>
+
+<ul>
+<li>onPause</li>
+<li>surfaceDestroyed (called just before the Surface goes away)</li>
+</ul>
+
+<p>If you rotate the screen, the Activity is torn down and recreated and you
+get the full cycle. You can tell it's a quick restart by checking
+<code>isFinishing()</code>. It might be possible to start/stop an Activity so
+quickly that <code>surfaceCreated()</code> might actually happen after
+<code>onPause()</code>.</p>
+
+<p>If you tap the power button to blank the screen, you get only
+<code>onPause()</code>&mdash;no <code>surfaceDestroyed()</code>. The Surface
+remains alive, and rendering can continue. You can even keep getting
+Choreographer events if you continue to request them. If you have a lock
+screen that forces a different orientation, your Activity may be restarted when
+the device is unblanked; but if not, you can come out of screen-blank with the
+same Surface you had before.</p>
+
+<p>This raises a fundamental question when using a separate renderer thread with
+SurfaceView: Should the lifespan of the thread be tied to that of the Surface or
+the Activity? The answer depends on what you want to happen when the screen
+goes blank: (1) start/stop the thread on Activity start/stop or (2) start/stop
+the thread on Surface create/destroy.</p>
+
+<p>Option 1 interacts well with the app lifecycle. We start the renderer thread
+in <code>onResume()</code> and stop it in <code>onPause()</code>. It gets a bit
+awkward when creating and configuring the thread because sometimes the Surface
+will already exist and sometimes it won't (e.g. it's still alive after toggling
+the screen with the power button). We have to wait for the surface to be
+created before we do some initialization in the thread, but we can't simply do
+it in the <code>surfaceCreated()</code> callback because that won't fire again
+if the Surface didn't get recreated. So we need to query or cache the Surface
+state, and forward it to the renderer thread.</p>
+
+<p class="note"><strong>Note:</strong> Be careful when passing objects
+between threads. It is best to pass the Surface or SurfaceHolder through a
+Handler message (rather than just stuffing it into the thread) to avoid issues
+on multi-core systems. For details, refer to
+<a href="http://developer.android.com/training/articles/smp.html">Android
+SMP Primer</a>.</p>
+
+<p>Option 2 is appealing because the Surface and the renderer are logically
+intertwined. We start the thread after the Surface has been created, which
+avoids some inter-thread communication concerns, and Surface created/changed
+messages are simply forwarded. We need to ensure rendering stops when the
+screen goes blank and resumes when it un-blanks; this could be a simple matter
+of telling Choreographer to stop invoking the frame draw callback. Our
+<code>onResume()</code> will need to resume the callbacks if and only if the
+renderer thread is running. It may not be so trivial though&mdash;if we animate
+based on elapsed time between frames, we could have a very large gap when the
+next event arrives; an explicit pause/resume message may be desirable.</p>
+
+<p class="note"><strong>Note:</strong> For an example of Option 2, see Grafika's
+"Hardware scaler exerciser."</p>
+
+<p>Both options are primarily concerned with how the renderer thread is
+configured and whether it's executing. A related concern is extracting state
+from the thread when the Activity is killed (in <code>onPause()</code> or
+<code>onSaveInstanceState()</code>); in such cases, Option 1 works best because
+after the renderer thread has been joined its state can be accessed without
+synchronization primitives.</p>
+
+  </body>
+</html>

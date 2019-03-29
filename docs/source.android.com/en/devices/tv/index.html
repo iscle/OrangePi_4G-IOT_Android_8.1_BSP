@@ -1,0 +1,681 @@
+<html devsite>
+  <head>
+    <title>TV Input Framework</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<img style="float: right; margin: 0px 15px 15px 15px;" src="images/ape_fwk_hal_tv.png" alt="Android TV HAL icon"/>
+
+<p>The Android TV Input Framework (TIF) simplifies delivery of live content to Android TV. The Android TIF provides a standard API for manufacturers to create input modules for controlling Android TV, and enables live TV search and recommendations via metadata published by the TV Input.</p>
+<p>The framework does not seek to implement TV standards or regional requirements, but does make it easier for device manufacturers to meet regional digital TV broadcast standards without re-implementation. Documentation in this section might also be useful to third-party app developers who want to create custom TV Inputs.</p>
+
+<h2 id="components">Components</h2>
+
+<p>The Android TV Input Framework implementation includes a TV Input Manager.
+The TIF works with the TV App, a system app that can’t be replaced by a
+third-party app, to access built-in and IP tuner channels. The TV App
+communicates with TV Input modules supplied by the device manufacturer or other
+parties through the TV Input Manager.</p>
+
+<p>The TV Input Framework consists of:</p>
+
+<ul>
+  <li>TV Provider (<code>com.android.providers.tv.TvProvider</code>): a database of channels, programs, and associated permissions
+  <li>TV App (<code>com.android.tv.TvActivity</code>): the app that handles user interaction
+  <li>TV Input Manager (<code>android.media.tv.TvInputManager</code>): allows the TV Inputs to communicate with the TV App
+  <li>TV Input: an app representing physical or virtual tuners and input ports
+  <li>TV Input HAL (<code>tv_input</code> module): a hardware definition that allows system TV Inputs to access
+TV-specific hardware when implemented
+  <li>Parental Control: the technology to allow blocking of channels and programs
+  <li>HDMI-CEC: the technology to allow remote control of various devices over HDMI
+</ul>
+
+<p>These components are covered in detail below. See the following diagram for a
+detailed view of the Android TV Input Framework architecture.</p>
+
+<img src="images/TIF_Overview.png" alt="Overview of the Android TIF architecture">
+<p class="img-caption"><strong>Figure 1.</strong> Android TV Input Framework (TIF) architecture</p>
+
+<h2 id="flow">Flow</h2>
+
+<p>Here is how the architecture is exercised:</p>
+
+<ol>
+  <li>The user sees and interacts with the TV App, a system app that can’t be
+replaced by a third-party app.
+  <li>The TV App displays the AV content from the TV Input.
+  <li>The TV App cannot talk directly with the TV Inputs. The TV Input Manager
+identifies the state of TV Inputs for the TV App. See <em>TV Input Manager</em> below for more details about these limitations.
+</ol>
+
+<h2 id="permissions">Permissions</h2>
+
+<ul>
+  <li>Only <code><a
+href="http://developer.android.com/guide/topics/manifest/permission-element.html#plevel">signatureOrSystem</a></code>
+TV Inputs and TV App have full access to the TV Provider database and are able
+to receive KeyEvents.
+  <li>Only system TV Inputs can access the TV Input HAL through the TV Input Manager
+service. TV Inputs are accessed one-to-one via TV Input Manager sessions.
+  <li>Third-party TV Inputs have package-locked access to the TV Provider database
+and can READ/WRITE only to matching package rows.
+  <li>Third-party TV inputs can either display their own content or content from a
+device manufacturer’s passthrough TV inputs, like HDMI1. They can’t display
+content from non-passthrough TV inputs, like a built-in or IPTV tuner.
+  <li><code>TV_INPUT_HARDWARE</code> permission for a hardware TV Input app, signals the TV Input Manager Service
+to notify the TV Input service on boot to call the TV Input Manager Service and
+add its TV Inputs. This permission allows a hardware TV Input app to support
+multiple TV Inputs per TV Input service, as well as being able to dynamically
+add and remove its supported TV Inputs.
+</ul>
+
+<h2 id="tv_provider">TV Provider</h2>
+
+<p>The TV Provider database stores the channels and programs from TV Inputs. The
+TV Provider also publishes and manages the associated permissions so that TV
+Inputs can see only their own records. For instance, a specific TV Input can
+see only the channels and programs it has supplied and is prohibited from
+accessing any other TV Inputs’ channels and programs. </p>
+
+<p>The TV Provider maps "broadcast genre" to "canonical genre" internally. TV
+Inputs are responsible for populating "broadcast genre" with the value in the
+underlying broadcast standard, and the "canonical genre" field will
+automatically be populated with the correct associated genre from <code>android.provider.TvContract.Genres</code>. For example, with broadcast standard ATSC A/65 and program with genre 0x25
+(meaning “Sports”), the TV Input will populate the “broadcast genre” with the
+String “Sports” and TV Provider will populate the “canonical genre” field with
+the mapped value <code>android.provider.TvContract.Genres.SPORTS</code>.</p>
+
+<p>See the diagram below for a detailed view of the TV Provider. </p>
+
+<img src="images/TIF_TV_Provider.png" alt="Android TV Provider">
+<p class="img-caption"><strong>Figure 2.</strong> Android TV Provider</p>
+
+<p><em>Only apps in the privileged system partition can read the entire TV Provider
+database. </em></p>
+
+<p>Passthrough TV inputs do not store channels and programs. </p>
+
+<p>In addition to the standard fields for channels and programs, the TV Provider
+database also offers a BLOB type field, <code>COLUMN_INTERNAL_PROVIDER_DATA</code>, in each table that TV Inputs may use to store arbitrary data. That BLOB data
+can include custom information, such as frequency of the associated tuner, and
+may be provided in a protocol buffer or another form. A Searchable field is
+available to make certain channels unavailable in search (such as to meet
+country-specific requirements for content protection).</p>
+
+<h3 id="tv_provider_database_field_examples">Database field examples</h3>
+
+<p>The TV Provider supports structured data in channel (<code>android.provider.TvContract.Channels</code>) and program (<code>android.provider.TvContract.Programs</code>) tables. These tables are populated and accessed by TV Inputs and system apps
+like the TV App. These tables have four types of fields:</p>
+
+<ul>
+  <li><strong>Display: </strong>Display fields contain information that apps may want to make visible to the
+user, like a channel’s name (<code>COLUMN_DISPLAY_NAME</code>) or number (<code>COLUMN_DISPLAY_NUMBER</code>), or the title of the program being viewed.
+  <li><strong>Metadata:</strong> There are three fields for identifying content, according to relevant
+standards, like a channel’s transport stream ID (<code>COLUMN_TRANSPORT_STREAM_ID</code>), original network ID (<code>COLUMN_ORIGINAL_NETWORK_ID</code>) and service id (<code>COLUMN_SERVICE_ID</code>).
+  <li><strong>Internal data</strong>: Fields that are for the custom use of TV Inputs.<br>
+    Some fields, like <code>COLUMN_INTERNAL_PROVIDER_DATA</code>, are customizable BLOB fields where a TV Input can store arbitrary metadata
+about their channel or program.
+  <li><strong>Flag: </strong>Flag fields represent whether a channel should be restricted from search,
+browse, or viewing. This can be set only at the channel level. All programs
+defer to the setting on the channel.
+  <ul>
+    <li><code>COLUMN_SEARCHABLE</code>: Restricting search from some channels may be a requirement in certain
+regions. <code>COLUMN_SEARCHABLE = 0</code> means the channel should not be exposed in search results. 
+    <li><code>COLUMN_BROWSABLE</code>: Visible to system applications only. Restricting channel from being browsed
+by applications. <code>COLUMN_BROWSABLE = 0</code> means the channel should not be included in the channel list.
+    <li><code>COLUMN_LOCKED</code>: Visible to system applications only. Restricting channel from being viewed by
+invalid accounts without entering PIN code. <code>COLUMN_LOCKED = 1</code> means the channel should be protected by parental control.
+  </ul>
+</ul>
+
+<p>For a more exhaustive list of the fields, see <code>android/frameworks/base/media/java/android/media/tv/TvContract.java</code></p>
+
+<h3 id="permissions_and_access_control">Permissions and access control</h3>
+
+<p>All fields are visible to anyone with access to the corresponding row. No
+fields are directly accessible to users; they see only what the TV App, System
+apps, or TV Inputs surface.</p>
+
+<ul>
+  <li>Each row has <code>PACKAGE_NAME</code>, the package (app) that owns that row, checked on Query, Insert, Update via
+TvProvider.java.
+A TV Input may access only the information it wrote and is
+cordoned off from the information provided by other TV Inputs.
+  <li>READ, WRITE permissions via AndroidManifest.xml (requires user consent) to
+determine available channels.
+  <li>Only <code>signatureOrSystem</code> apps can acquire <code>ACCESS_ALL_EPG_DATA</code> permission to access the entire database.
+</ul>
+
+<h2 id="tv_input_manager">TV Input Manager</h2>
+
+<p>The TV Input Manager provides a central system API to the overall Android TV
+Input Framework. It arbitrates interaction between apps and TV Inputs and
+provides parental control functionality. TV Input Manager sessions must be
+created one-to-one with TV Inputs. The TV Input Manager allows access to
+installed TV Inputs so apps may:</p>
+
+<ul>
+  <li>List TV inputs and check their status
+  <li>Create sessions and manage listeners
+</ul>
+
+<p>For sessions, a TV Input may be tuned by the TV App only to URIs it has added
+to the TV Provider database, except for passthrough TV Inputs which can be
+tuned to using <code>TvContract.buildChannelUriForPassthroughInput()</code>. A TV Input may also have its volume set. TV Inputs provided and signed by the
+device manufacturer (signature apps) or other apps installed in the system
+partition will have access to the entire TV Provider database. This access can
+be used to construct apps to browse and search across all available TV channels
+and programs.</p>
+
+<p>An app may create and register a <code>TvInputCallback</code> with the <code>android.media.tv.TvInputManager</code> to be called back on a TV Input’s state change or on the addition or removal
+of a TV Input. For example, a TV App can react when a TV Input is disconnected
+by displaying it as disconnected and preventing its selection.</p>
+
+<p>The TV Input Manager abstracts communication between the TV App and TV Inputs.
+The standard interface of TV Input Manager and TV Input allows multiple
+device manufacturers to create their own TV Apps while helping all third-party TV Inputs
+work on all TV Apps.</p>
+
+<h2 id="tv_inputs">TV Inputs</h2>
+
+<p>TV Inputs are Android apps in the sense they have an AndroidManifest.xml and
+are installed (via Play, pre-installed, or sideloaded). Android TV supports
+pre-installed system apps, apps signed by the device manufacturer and
+third-party TV Inputs. </p>
+
+<p>Some inputs, like the HDMI input or built-in tuner input, can be provided only
+by the manufacturer as they speak directly with the underlying hardware.
+Others, such as IPTV, place-shifting, and external STB, can be supplied by
+third parties as APKs on Google Play Store. Once downloaded and installed, the
+new input can be selected within the TV App.</p>
+
+<h3 id=passthrough_input_example>Passthrough input example</h3>
+
+<img src="images/TIF_HDMI_TV_Input.png" alt="Android TV System Input">
+<p class="img-caption"><strong>Figure 3.</strong> Android TV System Input</p>
+
+<p>In this example, the TV Input provided by the device manufacturer is trusted
+and has full access to the TV Provider. As a passthrough TV Input, it does not
+register any channels or programs with the TV Provider. To obtain the URI used
+to reference the passthrough input, use the <code>android.media.tv.TvContract</code> utility method <code>buildChannelUriForPassthroughInput(String inputId)</code>.  The TV App communicates with the TV Input Manager to reach the HDMI TV
+Input. </p>
+
+<h3 id=built-in_tuner_example>Built-in tuner example</h3>
+
+<img src="images/Built-in_Tuner_TV_Input.png" alt="Android TV Built-in Tuner Input">
+<p class="img-caption"><strong>Figure 4.</strong> Android TV Built-in Tuner Input</p>
+
+<p>In this example, the Built-in Tuner TV Input provided by the device
+manufacturer is trusted and has full access to  the TV Provider. </p>
+
+<h3 id=third-party_input_example>Third-party input example</h3>
+
+<img src="images/Third-party_Input_HDMI.png" alt="Android TV third-party input">
+<p class="img-caption"><strong>Figure 5.</strong> Android TV third-party input</p>
+
+<p>In this example, the external STB TV Input is provided by a third party. Since
+that TV Input can’t directly access the HDMI video feed coming in, it must go
+through the TV Input Manager and use the HDMI TV Input provided by the device
+manufacture.</p>
+
+<p>Through the TV Input Manager, the external STB TV Input can speak with the HDMI
+TV Input and ask it to show the video on HDMI1. So the STB TV Input can control
+the TV while the manufacturer-provided HDMI TV Input renders the video.</p>
+
+<h3 id=picture_in_picture_pip_example>Picture in picture (PIP) example </h3>
+
+<img src="images/TIF_PIP-PAP.png" alt="Android TV KeyEvents">
+<p class="img-caption"><strong>Figure 6.</strong> Android TV KeyEvents</p>
+
+<p>The diagram above shows how buttons on a remote control are passed to a
+specific TV Input for picture in picture (PIP) display. Those button presses
+are interpreted by the hardware driver supplied by the device manufacturer,
+converting hardware scancodes to Android keycodes and passing them to the
+standard Android <a href="/devices/input/overview.html">input pipeline</a> <code>InputReader</code> and <code>InputDispatcher</code> functions as <a href="http://developer.android.com/reference/android/view/KeyEvent.html">KeyEvents</a>. These in turn trigger events on the TV App if it is in focus. </p>
+
+<p>Only system TV Inputs are eligible to receive <code>InputEvents</code>, and only if they have the <code>RECEIVE_INPUT_EVENT</code> system permission. The TV Input is responsible to determine which InputEvents
+to consume and should allow the TV App to handle the keys it does not need to
+consume.</p>
+
+<p>The TV App is responsible for knowing which system TV Input is active, meaning
+selected by the user, and to disambiguate incoming <code>KeyEvents</code> and route them to the correct TV Input Manager session, calling <code>dispatchInputEvent()</code> to pass on the event to the associated TV Input. </p>
+
+<h3 id="mheg-5_input_example">MHEG-5 input example</h3>
+
+<p>The following diagram shows a more detailed view of how <code>KeyEvents</code> are routed through the Android TIF.</p>
+
+<img src="images/TIF_MHEG5_app.png" alt="Android TV Red button example">
+<p class="img-caption"><strong>Figure 7.</strong> Android TV Red button example</p>
+
+<p>It depicts the flow of a Red button app, common in Europe for letting users
+access interactive apps on their televisions. An app can be delivered over this
+transport stream. When the button is clicked, it lets users interact with these
+broadcast apps. For example, you might use these broadcast apps to access
+related web pages or sports scores.</p>
+
+<p>See the <em>Broadcast app</em> section to learn how broadcast apps interact with the TV App.</p>
+
+<p>In this example:</p>
+
+<ol>
+  <li>The TV App is in focus and receives all keys.
+  <li><code>KeyEvents</code> (e.g. the Red button) is passed to the active TV Input as <code>InputEvents.</code>
+  <li>The system TV Input integrates with MHEG-5 stack and has the <code>RECEIVE_INPUT_EVENT</code> system permission.
+  <li>On receiving activation keycode (e.g. Red button), the TV Input activates
+broadcast app.
+  <li>TV input consumes <code>KeyEvents</code> as <code>InputEvents</code> and the broadcast app is the focus and handles <code>InputEvents</code> until dismissed. 
+</ol>
+
+<p class="note"><strong>Note</strong>: Third-party TV inputs never receive keys. </p>
+
+<h2 id="tv_input_hal">TV Input HAL</h2>
+
+<p>The TV Input HAL aids development of TV Inputs to access TV-specific hardware.
+As with other Android HALs, the TV Input HAL (<code>tv_input</code>) is
+available in the AOSP source tree and the vendor develops its implementation.</p>
+
+<h2 id="tv_app">TV App</h2>
+
+
+<p>The system TV App presents live TV content to the user. A reference TV
+App (Live TV) is provided alongside the Android platform, which
+can be used as-is, customized, extended, or replaced by device manufacturers.
+The <a href="https://android.googlesource.com/platform/packages/apps/TV/">source code</a>
+is available in the Android Open Source Project, and you can get started with
+it in the <a href="/devices/tv/reference-tv-app.html">Reference TV app</a> article.</p>
+
+<p>Device manufacturers may extend their TV Apps to implement device
+manufacturer or country-specific features, however this is not in the scope of
+TIF or the reference TV App.</p>
+
+<p>At a minimum, the system TV App needs to handle the following tasks:</p>
+
+<h3 id="setup_and_configuration">Setup and configuration</h3>
+
+
+<ul>
+  <li> Auto-detect TV Inputs
+  <li> Let TV Inputs initiate channel setup
+  <li> Control parental settings
+  <li> Edit channels
+</ul>
+
+<h3 id="viewing">Viewing</h3>
+
+
+<ul>
+  <li> Access and navigate all TV channels
+  <li> Access TV program information bar
+  <li> Display Electronic Programming Guide (EPG) data
+  <li> Support multiple audio and subtitle tracks
+  <li> Supply parental control PIN challenge
+  <li> Allow TV Input UI overlay for:
+  <ul>
+    <li> TV standard (HbbTV, etc.)
+  </ul>
+  <li> Populate search results for TV channels and programs
+  <li> Display app linking cards
+  <li> Support timeshifting APIs
+  <li> Handle DVR functionality and support TV recording APIs
+</ul>
+
+<p>This feature set will increase in line with new Android versions
+where the platform TIF APIs are extended. CTS Verifier provides the
+compatibility test coverage. </p>
+
+<h3 id=support_for_third-party_tv_inputs>Support for third-party TV Inputs</h3>
+
+
+<p>Android TV provides developer APIs for third-party TV inputs, enabling
+installed apps to deliver software channels into the live TV experience. To
+ensure a compatible Android device implementation, the system TV App has some
+responsibilities regarding surfacing third-party TV inputs and channels to the
+user. The reference Live TV app provides a compatible implementation; if
+replacing the system TV App, device manufacturers must ensure their own apps
+provide similar compatibility, to meet developer expectations across all
+Android TV devices.</p>
+
+<p>The system TV App must surface third-party inputs alongside the device's
+default live TV service.
+The promise of the developer APIs is that users will be able to find channels
+(once installed) within their standard TV experience.</p>
+
+<p>Visual differentiation between built-in channels and third-party channels is
+allowed, as defined in the TV App section of the Android CDD.</p>
+
+<p>The following sections show how the Live TV application fulfills the CDD
+requirements.</p>
+
+<h4 id=new_channel_setup>New channel setup</h4>
+
+
+<p>The addition of new third-party inputs/channels begins with the user finding
+and installing a TV Input from an
+application store, such as Google Play.</p>
+
+<p>Some third-party TV inputs automatically add channels to the TvProvider
+database. However most will provide a Setup activity to enable the user to set
+up their channels, provide login details, and other actions. The system TV App
+needs to ensure the user can activate this Setup activity, which is why the CDD
+requires third-party inputs be minimal navigation actions away from the main TV
+App.</p>
+
+<p>The reference Live TV app provides the Channel Sources menu for accessing
+inputs.</p>
+
+<img src="images/LiveChannels_settings.png" alt="Go to Settings">
+<p class="img-caption"><strong>Figure 8.</strong> Go to <strong>Settings</strong>.</p>
+
+<img src="images/LiveChannels_channel_sources.png" alt="Go to Channel source in Settings">
+<p class="img-caption"><strong>Figure 9.</strong> Go to <strong>Channel sources</strong> in Settings.</p>
+
+<img src="images/LiveChannels_sources.png" alt="Select your source from the list.">
+<p class="img-caption"><strong>Figure 10.</strong> Select your source from the list.</p>
+
+<img src="images/LiveChannels_Add_channel.png" alt="Add channels from your source">
+<p class="img-caption"><strong>Figure 11.</strong> Add channels from your source</p>
+
+<p>In addition a notification card is shown at the top of the TV App menu after a new TvInput is installed, to take the user directly to the Setup:</p>
+
+<img src="images/LiveChannels_set_up_sources.png" alt="Notification that shows new channel sources are available.">
+<p class="img-caption"><strong>Figure 12.</strong> Notification that shows new channel sources are available.</p>
+
+<p>If the user takes action through the notification, they can select to set up their sources as seen in Figure 10.</p>
+<p>See <a href="http://developer.android.com/training/tv/tif/tvinput.html#setup">Define Your TV Input Service</a>
+for developer expectations in this area.</p>
+
+<h4 id=customize_the_channel_list>Customize the channel list</h4>
+
+
+<p>Device manufacturers may provide a UI to hide certain channels and
+enable users to manage their own EPGs. Live TV includes this facility.</p>
+
+<img src="images/LiveChannels_channel_list.png" alt="Open the channel list in Settings.">
+<p class="img-caption"><strong>Figure 13.</strong> Open the channel list in <strong>Settings</strong>.</p>
+
+<img src="images/LiveChannels_customize_channel-list.png" alt="Customize your channel list.">
+<p class="img-caption"><strong>Figure 14.</strong> Customize your channel list.</p>
+
+<h4 id=epg>EPG</h4>
+
+
+<p>Third-party input developers need to have confidence that users can easily
+navigate to their channels during general usage, across all compatible Android
+TV devices.</p>
+
+<p>Channels from third-party inputs must be presented as part of the device's
+standard live TV experience EPG. Visual separation or separate categories for
+third-party channels can be used (see the TV App section of the Android CDD)—what's key
+is that users are able to find the channels they have installed. </p>
+
+<h4 id=search>Search</h4>
+
+
+<p>Manufacturers must implement the TV App to include search results for global
+search requests in order to ensure the best user experience. Live TV provides an
+implementation (see <a href="https://android.googlesource.com/platform/packages/apps/TV/+/android-live-tv/src/com/android/tv/search/TvProviderSearch.java">com.android.tv.search.TvProviderSearch</a>) which provides results from third-party inputs (required for platform
+compatibility) as well as built-in inputs.</p>
+
+<h4 id="time-shifting">Time shifting</h4>
+<p>
+For devices on Android 6.0 and above, the TV App must support the Android
+framework <a
+href="https://developer.android.com/reference/android/media/tv/TvView.html">time
+shifting APIs</a>. Additionally, manufacturers must implement playback controls
+in the TV App, which allow users to  pause, resume, rewind, and fast forward the
+playback.
+</p>
+<p>
+For TV Inputs that support time shifting, the TV App needs to display playback
+controls.
+</p>
+
+<p>
+<img src="images/TIF_timeshift.png" alt="Playback controls">
+</p>
+<p class="img-caption"><strong>Figure 15.</strong> Playback controls</p>
+
+<h4 id="dvr">DVR</h4>
+<p>
+For devices on Android 7.0 and above, the TV App must support the Android
+framework <a
+href="https://developer.android.com/reference/android/media/tv/TvRecordingClient.html">TV
+recording APIs</a>, to support, list, and play recorded programs.
+</p>
+<p>
+This allows device manufacturers to plug their DVR subsystems into TIF and
+dramatically reduce the integration effort it takes to enable or integrate DVR
+functionality on a TV device. It also enables third parties to provide
+aftermarket DVR systems that can be plugged into an Android TV device.
+</p>
+<p>
+In addition to recording live content, the TV App also handles resource
+conflict. For example, if the device has two tuners, it can record two programs at
+the same time. If the user asks to record three, the TV App must handle the
+conflict and should either surface a notification or request that the user
+schedules a priority for these requests.
+</p>
+<p>
+TV Apps can also implement more sophisticated logic like asking a user if they’d
+like to record all future episodes in a series when they request to record one
+episode.
+</p>
+<p>
+See the following diagram for a view into a possible DVR implementation in
+Android TV.
+</p>
+<p>
+<img src="images/TV_Input_DVR.png" alt="Digital video recording in Android TV">
+</p>
+<p class="img-caption"><strong>Figure 16.</strong> Digital video recording in Android TV</p>
+
+<ol>
+<li>The TV Input Service tells the TV App how many tuners are available so that
+the TV App can handle possible resource conflict.
+<li>The TV App receives a user-initiated request to record a TV program.
+<li>The TV App stores the recording schedule in its internal database.
+<li>When it’s time to record, the TV App passes a request to tune to the channel
+associated with the recording.
+<li>The TV Input Service receives this request, responds with whether or not
+there are appropriate resources, and tunes to the channel.
+<li>Then the TV App passes a request to start recording to
+the TV Input Manger.
+<li>The TV Input Service receives this request and starts recording.
+<li>The TV Input Service stores the actual video data in its storage, which can
+be external storage or cloud storage.
+<li>When it's time to finish the recording, the TV App passes the stop recording
+request to the TV Input Manager.
+<li>Once the TV Input Service receives the request, it stops the recording and
+adds its associated metadata to the TV Provider so that the TV App can show the
+recording to users when requested.</li>
+</ol>
+
+<p>
+For more information about implementing Recording features in your TV Input
+service, see this <a
+href="https://developer.android.com/preview/features/tv-recording-api.html">TV
+Recording</a> article.
+</p>
+
+<h3 id=useful_resources>Useful resources</h3>
+
+
+<ul>
+  <li> The <a href="/compatibility/android-cdd.pdf">Android CDD</a>
+       and documented developer APIs are the definitive references.
+  <li> CTS Verifier exercises the APIs as part of the compatibility testing program.
+Running this against Live TV may be a useful way to see the EPG,
+Search, Parental Control, and other requirements in the context of third-party
+inputs.
+  <li> See <a href="http://developer.android.com/training/tv/tif/tvinput.html#setup">Define Your TV Input Service</a>
+       for developer expectations in this area.
+</ul>
+
+<h2 id="parental_control">Parental Control</h2>
+
+<p>Parental control lets a user block undesired channels and programs, but bypass
+the block by entering a PIN code.</p>
+
+<p>Responsibility for parental control functionality is shared amongst the TV App,
+TV Input Manager service, TV Provider, and TV Input.</p>
+
+<p>Parental control is mandatory, and is covered by CTS Verifier.</p>
+
+<p>A number of countries have defined rating systems that TV Inputs can use via
+the <a href="https://developer.android.com/reference/android/media/tv/TvContentRating.html">
+TVContentRating API</a>. Additionally, TV Inputs can register their own custom
+rating systems as demonstrated by the CTS Verifier test, which introduces a
+'fake' rating. For countries where a standard rating system exists, device
+manufacturers are encouraged to combine the TV Input Framework Parental Control
+with any other mechanisms they may include.</p>
+
+<h3 id="tv_provider">TV Provider</h3>
+
+<p>Each channel row has a <code>COLUMN_LOCKED</code> field that is used to lock
+specific channels from viewing without entering a PIN code. The program field
+<code>COLUMN_CONTENT_RATING</code> is intended for display and is not used to
+enforce parental control.</p>
+
+<h3 id="tv_input_manager">TV Input Manager</h3>
+
+<p>The TV Input Manager stores every blocked <code>TvContentRating</code> and
+responds to <code>isRatingBlocked()</code> to advise if content with the given
+rating should be blocked.</p>
+
+<h3 id="tv_input">TV Input</h3>
+
+<p>The TV Input checks if the current content should be blocked by calling
+<code>isRatingBlocked()</code> on the TV Input Manager when the rating of the
+displayed content has changed
+(on program or channel change), or parental control settings have changed (on
+<code>ACTION_BLOCKED_RATINGS_CHANGED</code> and
+<code>ACTION_PARENTAL_CONTROLS_ENABLED_CHANGED</code>). If the content should
+be blocked, the TV Input disables the audio and video
+and notifies the TV app that the current content is blocked by calling
+<code>notifyContentBlocked(TvContentRating)</code>. If the content should not
+be blocked, the TV Input enables audio and video and notifies the TV App
+the current content is allowed by calling <code>notifyContentAllowed()</code>.</p>
+
+<h3 id="tv_app">TV App</h3>
+
+<p>To honor the parental control APIs, and therefore create a compatible
+platform, the system TV App needs to provide a way for users to manage
+parental control, including for any custom ratings registered by specific apps.</p>
+
+<p>The TV App shows a PIN code UI when it
+is notified by a TV Input that the current content is blocked or when the user
+attempts to view a blocked channel.</p>
+
+<p>The TV App does not directly store the parental control settings. When the user
+changes the parental control settings, every blocked
+<code>TvContentRating</code> is stored by the TV Input Manager, and blocked
+channels are stored by the TV Provider.</p>
+
+<p>The TV App needs to declare the permission
+<code>android.permission.MODIFY_PARENTAL_CONTROLS</code> in order to change
+the parental control settings.</p>
+
+<p>Device manufacturers are encouraged to:</p>
+<ul>
+  <li>Exercise the CTS Verifier parental controls test against the reference
+      Live TV application for a demonstration of the compatibility requirements.</li>
+  <li>Use the Live TV app as reference for their own TV App: in particular see
+      the <a href="https://android.googlesource.com/platform/packages/apps/TV/+/android-live-tv/src/com/android/tv/parental/ContentRatingsManager.java">
+      ContentRatingsManager</a> and
+      <a href="https://android.googlesource.com/platform/packages/apps/TV/+/android-live-tv-l-mr1/src/com/android/tv/ui/sidepanel/parentalcontrols/RatingSystemsFragment.java">
+      RatingSystemsFragment</a> source, and how they handle custom ratings.</li>
+</ul>
+
+
+<h2 id="hdmi-cec">HDMI-CEC</h2>
+
+<p>HDMI-CEC allows one device to control another, thereby enabling a single remote
+to control multiple appliances in a home theater. It is used by Android TV to
+speed setup and allow distant control over various TV Inputs via the central TV
+App. For instance, it may switch inputs, power up or down devices, and more.</p>
+
+<p>The Android TIF implements HDMI-CEC as the HDMI Control Service so that
+device manufacturers merely need to develop low-level drivers that interact with the
+lightweight Android TV HAL, skipping more complex business logic. In providing
+a standard implementation, Android seeks to mitigate compatibility issues by
+reducing fragmented implementations and selective feature support. The HDMI
+Control Service uses the existing Android services, including input and power.</p>
+
+<p>This means existing HDMI-CEC implementations will need to be redesigned to
+interoperate with the Android TIF. We recommend the hardware platform contain a
+microprocessor to receive CEC power on and other commands.</p>
+
+<img src="images/TV_App_CEC_integration.png" alt="CEC integration on Android TV">
+<p class="img-caption"><strong>Figure 17.</strong> CEC integration on Android TV</p>
+
+<ol>
+  <li> The CEC bus receives a command from the currently active source to switch to a
+different source.
+  <li> The driver passes the command to the HDMI-CEC HAL.
+  <li> The HAL notifies all <code>ActiveSourceChangeListeners</code>.
+  <li> THe HDMI Control Service is notified of source change via <code>ActiveSourceChangeListener</code>.
+  <li> The TV Input Manager service generates an intent for the TV App to switch the
+source.
+  <li> The TV App then creates a TV Input Manager Session for the TV Input being
+switched to and calls <code>setMain</code> on that session. 
+  <li> The TV Input Manager Session passes this information on to the HDMI TV Input.
+  <li> The HDMI TV input requests to set sideband surface.
+  <li> The TV Input Manager Service generates a corresponding routing control command
+back to HDMI Control Service when the surface is set.
+</ol>
+
+<h2 id="tv_integration_guidelines">TV integration guidelines</h2>
+
+<h3 id="broadcast_app">Broadcast app</h3>
+
+<p>Because each country has broadcast-specific requirements (MHEG, Teletext,
+HbbTV, and more), manufacturers are expected to supply their own solutions for
+the broadcast app, for example:</p>
+
+<ul>
+  <li> MHEG: native stack
+  <li> Teletext: native stack
+  <li> HbbTV: webkit modification by Opera browser
+</ul>
+
+<p>In the Android L release, Android TV expects device manufacturers to use systems
+integrators or the Android solutions for regional TV stacks, pass the surface
+to TV software stacks, or pass the necessary key code to interact with legacy
+stacks.</p>
+
+<p>Here’s how the broadcast app and TV App interact:</p>
+
+<ol>
+  <li>The TV App is in focus, receiving all keys.
+  <li>The TV App passes keys (e.g. Red button) to the TV Input device.
+  <li>The TV Input device internally integrates with legacy TV stack.
+  <li>On receiving an activation keycode (e.g. Red button), the TV Input device
+activates broadcast apps.
+  <li>A broadcast app takes focus in the TV App and handles user actions.
+</ol>
+
+<p>For voice search/recommendation, the broadcast app may support In-app search
+for voice search.</p>
+
+
+  </body>
+</html>

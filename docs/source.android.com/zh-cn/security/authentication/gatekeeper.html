@@ -1,0 +1,106 @@
+<html devsite><head>
+    <title>Gatekeeper</title>
+    <meta name="project_path" value="/_project.yaml"/>
+    <meta name="book_path" value="/_book.yaml"/>
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+<h2 id="overview">概述</h2>
+
+<p>Gatekeeper 子系统会在可信执行环境 (TEE) 中执行设备解锁图案/密码身份验证。Gatekeeper 会使用由硬件支持的密钥通过 HMAC 注册和验证密码。此外，Gatekeeper 会限制连续失败的验证尝试次数，并且必须根据指定的超时和指定的连续失败尝试次数拒绝服务请求。</p>
+
+<p>当用户验证其密码时，Gatekeeper 会使用 TEE 派生的共享密钥对身份验证认证签名，以发送至<a href="/security/keystore/index.html">由硬件支持的 Keystore</a>。也就是说，Gatekeeper 认证可让 Keystore 知道可以发布与身份验证绑定的密钥（例如，应用创建的密钥）供应用使用了。</p>
+
+<h2 id="architecture">架构</h2>
+
+<p>Gatekeeper 包括以下 3 个主要组件：</p>
+
+<ul>
+  <li><strong>gatekeeperd（Gatekeeper 守护进程）</strong>。
+一种 C++ Binder 服务，其中包含独立于平台的逻辑，并且与 <code>GateKeeperService</code> Java 接口相对应。
+  </li><li><strong>Gatekeeper 硬件抽象层 (HAL)</strong>。
+<code>hardware/libhardware/include/hardware/gatekeeper.h</code> 中的 HAL 接口，是一个实现模块。
+  </li><li><strong>Gatekeeper (TEE)</strong>。
+<code>gatekeeperd</code> 的 TEE 副本。基于 TEE 的 Gatekeeper 实现。
+</li></ul>
+
+<p>实现 Gatekeeper：</p>
+
+<ul>
+  <li>实现 Gatekeeper HAL，具体来说就是实现 <code>gatekeeper.h</code> (<code>hardware/libhardware/include/hardware/gatekeeper.h</code>) 中的函数。请参阅 <a href="#hal_implementation">HAL 实现</a>。
+  </li><li>实现 TEE 特有的 Gatekeeper 组件，部分基于以下标头文件：<code>system/gatekeeper/include/gatekeeper/gatekeeper.h</code>。该标头文件中包括用于创建和访问密钥以及用于计算签名的纯虚函数。请参阅 <a href="#trusty_and_other_implementations">Trusty 和其他实现</a>。
+</li></ul>
+
+<p>如下图所示，<code>LockSettingsService</code> 会通过 Binder 发出一个请求，该请求会到达 Android 操作系统中的 <code>gatekeeperd</code> 守护进程。<code>gatekeeperd</code> 守护进程会发出一个请求，该请求会到达此守护进程在 TEE 中的副本 (Gatekeeper)。</p>
+
+<img src="../images/gatekeeper-flow.png" alt="Gatekeeper 流程" id="figure1"/>
+<p class="img-caption"><strong>图 1.</strong> GateKeeper 进行身份验证的概要数据流程</p>
+
+<p><code>gatekeeperd</code> 守护进程会向 Android 框架 API 授予访问 HAL 的权限，并且会参与向 Keystore 报告设备<a href="index.html">身份验证</a>的活动。<code>gatekeeperd</code> 守护进程会在自己的进程中运行，与系统服务器隔离开来。</p>
+
+<h2 id="hal_implementation">HAL 实现</h2>
+
+<p><code>gatekeeperd</code> 守护进程会利用 HAL 同 <code>gatekeeperd</code> 守护进程的 TEE 副本进行交互，以进行密码身份验证。HAL 实现必须能够签署（注册）和验证 Blob。所有实现都需要遵循每次密码验证成功时生成的身份验证令牌 (AuthToken) 的标准格式。AuthToken 的内容和语义在<a href="index.html">身份验证</a>中进行了介绍。</p>
+
+<p>具体来说就是，要实现 <code>gatekeeper.h</code> 标头文件（位于 <code>hardware/libhardware/include/hardware</code> 文件夹中），需要实现 <code>enroll</code> 和 <code>verify</code> 函数。</p>
+
+<p><code>enroll</code> 函数会获取一个密码 Blob，为其签名，并以句柄的形式返回签名。返回的 Blob（通过调用 <code>enroll</code>）必须有 <code>system/gatekeeper/include/gatekeeper/password_handle.h</code> 中显示的结构。</p>
+
+<p><code>verify</code> 函数需要将通过收到的密码生成的签名与注册的密码句柄进行比较，并确认两者是否一致。</p>
+
+<p>用于注册和验证的密钥不得更改，并且应该可以在每次设备启动时重新派生。</p>
+
+<h2 id="trusty_and_other_implementations">Trusty 和其他实现</h2>
+
+<p><a href="/security/trusty/index.html">Trusty</a> 操作系统是 Google 的开放源代码信任的操作系统，适用于 TEE 环境。Trusty 中包含一个经过批准的 GateKeeper 实现。不过，<strong>所有 TEE 操作系统</strong>均可用于实现 Gatekeeper。TEE <strong>必须</strong>有权访问一个由硬件支持的密钥，以及一个安全的单调时钟（<strong>在暂停状态下运行</strong>）。</p>
+
+<p>Trusty 会使用内部 IPC 系统直接在 Keymaster 和 Trusty Gatekeeper（Gatekeeper 的 Trusty 实现）之间传达共享的密钥。这个共享的密钥用于签署将发送至 Keystore 的 AuthToken，以便提供密码验证认证。Trusty Gatekeeper 会在每次使用该密钥时向 Keymaster 请求该密钥，而不会保留或缓存该密钥的值。实现能够随意以不会降低安全性的任何方式共享该密钥。</p>
+
+<p>HMAC 密钥用于注册和验证密码，是派生的密钥，单独保存在 GateKeeper 中。</p>
+
+<p>Android 树提供了一种通用的 C++ 版本的 GateKeeper 实现，只需添加设备专用例程即可完成。要使用设备专用代码为您的 TEE 实现 TEE Gatekeeper，请参阅以下文件中的函数和命令：</p>
+<pre>
+system/gatekeeper/include/gatekeeper/gatekeeper.h
+</pre>
+
+<p>对于 TEE GateKeeper，合规实现的主要责任有：</p>
+
+<ul>
+  <li>遵循 Gatekeeper HAL</li><li>返回的 AuthTokens 的格式必须符合 AuthToken 规范（在<a href="index.html">身份验证</a>中进行了介绍）</li><li>TEE Gatekeeper 必须能够通过以下方法与 Keymaster 共享 HMAC 密钥：按需通过 TEE IPC 请求密钥，或始终维护密钥值的有效缓存</li></ul>
+
+<h2 id="user_sids">用户 SID</h2>
+
+<p>用户安全 ID（用户 SID）是用户的 TEE 代码。用户 SID 与 Android 用户 ID 之间没有明显的关联。</p>
+
+<p>每当用户注册新密码时，如果未提供之前的密码，系统就会使用加密 PRNG 生成一个用户 SID。这称为“不可信”重新注册。如果用户提供了之前的有效密码，便会发生“可信”重新注册。在这种情况下，用户 SID 会迁移到新密码句柄，从而保留绑定到它的密钥。在一般情况下，Android 框架不允许进行“不可信”重新注册。</p>
+
+<p>注册密码时，用户 SID 会随密码句柄中的密码一起接受 HMAC 处理。</p>
+
+<p>用户 SID 会写入到 <code>verify</code> 函数返回的 AuthToken 中，并且会同所有与身份验证绑定的 Keystore 密钥相关联。如需关于 AuthToken 格式和 Keystore 的更多信息，请参阅<a href="index.html">身份验证</a>。由于对 <code>enroll</code> 函数的不可信调用会更改用户 SID，因此此类调用会使绑定到相应密码的密钥无法再使用。</p>
+
+<p>攻击者在控制 Android 操作系统后可以更改设备密码，但在此过程中，他们需要破坏掉受 Root 保护的敏感密钥。</p>
+
+<h2 id="request_throttling">请求次数限制</h2>
+
+<p>GateKeeper 必须能够安全地限制对用户凭据进行暴力破解的尝试次数。如 <code>gatekeeper.h</code> 文件（位于 <code>hardware/libhardware/include/hardware</code> 中）中所示，HAL 能够返回一个超时（以毫秒数计）。超时旨在通知客户端在超时过去之前不要再次调用 GateKeeper。如果有待处理的超时，GateKeeper 不应处理相关请求。</p>
+
+<p>Gatekeeper 必须先编写一个失败计数器，然后再验证用户密码。如果密码验证成功，则应清除失败计数器。这可以在发出 <code>verify</code> 调用后防止攻击者发起以下攻击：通过停用嵌入式 MMC (eMMC) 来阻止请求次数限制。此外，<code>enroll</code> 函数还会验证用户密码（如果提供了），因此必须以同样的方式对其加以限制。</p>
+
+<p>如果设备支持，强烈建议将失败计数器写入到安全存储空间。如果设备不支持文件级加密，或如果安全存储空间的速度过慢，实现可以直接使用 RPMB。</p>
+
+</body></html>

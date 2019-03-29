@@ -1,0 +1,425 @@
+<html devsite>
+  <head>
+    <title>Configuring Audio Policies</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>Android 7.0 introduces a new audio policy configuration file format (XML) for
+describing your audio topology.</p>
+
+<p>Previous Android releases required using the
+<code>device/&lt;company&gt;/&lt;device&gt;/audio/audio_policy.conf</code>
+to declare the audio devices present on your product (you can see an example of
+this file for the Galaxy Nexus audio hardware in
+<code>device/samsung/tuna/audio/audio_policy.conf</code>). However, .conf is a
+simple proprietary format that is too limited to describe complex topologies for
+applications such as televisions and automobiles.</p>
+
+<p>Android 7.0 deprecates the <code>audio_policy.conf</code> and adds support
+for defining audio topology using an XML file format that is more
+human-readable, has a wide range of editing and parsing tools, and is flexible
+enough to describe complex audio topologies.</p>
+
+<p class="note".<strong>Note:</strong> Android 7.0 preserves support for using
+<code>audio_policy.conf</code>; this legacy format is used by default. To use
+the XML file format, include the build option <code>USE_XML_AUDIO_POLICY_CONF
+:= 1</code> in device makefile.</p>
+
+<h2 id=xml_advantages>Advantages of the XML format</h2>
+<p>As in the .conf file, the new XML file enables defining the number and types
+of output an input stream profiles, devices usable for playback and capture, and
+audio attributes. In addition, the XML format offers the following enhancements:
+</p>
+
+<ul>
+<li>Audio profiles are now structured similar to HDMI Simple Audio Descriptors
+and enable a different set of sampling rates/channel masks for each audio
+format.</li>
+<li>Explicit definitions of all possible connections between devices and
+streams. Previously, an implicit rule made it possible to interconnect all
+devices attached to the same HAL module, preventing the audio policy from
+controlling connections requested with audio patch APIs. In the XML format, the
+topology description now defines connection limitations.</li>
+<li>Support for <em>includes</em> avoids repeating standard A2DP, USB, or
+reroute submit definitions.</li>
+<li>Customizable volume curves. Previously, volume tables were hardcoded. In the
+XML format, volume tables are described and can be customized.</li>
+</ul>
+
+<p>The template at
+<code>frameworks/av/services/audiopolicy/config/audio_policy_configuration.xml</code>
+shows many of these features in use.</p>
+
+<h2 id=xml_file_format>File format and location</h2>
+<p>The new audio policy configuration file is
+<code>audio_policy_configuration.xml</code> and is located in
+<code>/system/etc</code>. To view a simple audio policy configuration in the new
+XML file format, view the example below.</p>
+
+  <section class="expandable">
+    <h4 class="showalways">Show audio policy example</h4>
+<pre class="devsite-click-to-copy">
+&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot; standalone=&quot;yes&quot;?&gt;
+&lt;audioPolicyConfiguration version=&quot;1.0&quot; xmlns:xi=&quot;http://www.w3.org/2001/XInclude&quot;&gt;
+    &lt;globalConfiguration speaker_drc_enabled=&quot;true&quot;/&gt;
+    &lt;modules&gt;
+        &lt;module name=&quot;primary&quot; halVersion=&quot;3.0&quot;&gt;
+            &lt;attachedDevices&gt;
+                &lt;item&gt;Speaker&lt;/item&gt;
+                &lt;item&gt;Earpiece&lt;/item&gt;
+                &lt;item&gt;Built-In Mic&lt;/item&gt;
+            &lt;/attachedDevices&gt;
+            &lt;defaultOutputDevice&gt;Speaker&lt;/defaultOutputDevice&gt;
+            &lt;mixPorts&gt;
+                &lt;mixPort name=&quot;primary output&quot; role=&quot;source&quot; flags=&quot;AUDIO_OUTPUT_FLAG_PRIMARY&quot;&gt;
+                    &lt;profile name=&quot;&quot; format=&quot;AUDIO_FORMAT_PCM_16_BIT&quot;
+                             samplingRates=&quot;48000&quot; channelMasks=&quot;AUDIO_CHANNEL_OUT_STEREO&quot;/&gt;
+                &lt;/mixPort&gt;
+                &lt;mixPort name=&quot;primary input&quot; role=&quot;sink&quot;&gt;
+                    &lt;profile name=&quot;&quot; format=&quot;AUDIO_FORMAT_PCM_16_BIT&quot;
+                             samplingRates=&quot;8000,16000,48000&quot;
+                             channelMasks=&quot;AUDIO_CHANNEL_IN_MONO&quot;/&gt;
+                &lt;/mixPort&gt;
+            &lt;/mixPorts&gt;
+            &lt;devicePorts&gt;
+                &lt;devicePort tagName=&quot;Earpiece&quot; type=&quot;AUDIO_DEVICE_OUT_EARPIECE&quot; role=&quot;sink&quot;&gt;
+                   &lt;profile name=&quot;&quot; format=&quot;AUDIO_FORMAT_PCM_16_BIT&quot;
+                            samplingRates=&quot;48000&quot; channelMasks=&quot;AUDIO_CHANNEL_IN_MONO&quot;/&gt;
+                &lt;/devicePort&gt;
+                &lt;devicePort tagName=&quot;Speaker&quot; role=&quot;sink&quot; type=&quot;AUDIO_DEVICE_OUT_SPEAKER&quot; address=&quot;&quot;&gt;
+                    &lt;profile name=&quot;&quot; format=&quot;AUDIO_FORMAT_PCM_16_BIT&quot;
+                             samplingRates=&quot;48000&quot; channelMasks=&quot;AUDIO_CHANNEL_OUT_STEREO&quot;/&gt;
+                &lt;/devicePort&gt;
+                &lt;devicePort tagName=&quot;Wired Headset&quot; type=&quot;AUDIO_DEVICE_OUT_WIRED_HEADSET&quot; role=&quot;sink&quot;&gt;
+                    &lt;profile name=&quot;&quot; format=&quot;AUDIO_FORMAT_PCM_16_BIT&quot;
+                             samplingRates=&quot;48000&quot; channelMasks=&quot;AUDIO_CHANNEL_OUT_STEREO&quot;/&gt;
+                &lt;/devicePort&gt;
+                &lt;devicePort tagName=&quot;Built-In Mic&quot; type=&quot;AUDIO_DEVICE_IN_BUILTIN_MIC&quot; role=&quot;source&quot;&gt;
+                    &lt;profile name=&quot;&quot; format=&quot;AUDIO_FORMAT_PCM_16_BIT&quot;
+                             samplingRates=&quot;8000,16000,48000&quot;
+                             channelMasks=&quot;AUDIO_CHANNEL_IN_MONO&quot;/&gt;
+                &lt;/devicePort&gt;
+                &lt;devicePort tagName=&quot;Wired Headset Mic&quot; type=&quot;AUDIO_DEVICE_IN_WIRED_HEADSET&quot; role=&quot;source&quot;&gt;
+                    &lt;profile name=&quot;&quot; format=&quot;AUDIO_FORMAT_PCM_16_BIT&quot;
+                             samplingRates=&quot;8000,16000,48000&quot;
+                             channelMasks=&quot;AUDIO_CHANNEL_IN_MONO&quot;/&gt;
+                &lt;/devicePort&gt;
+            &lt;/devicePorts&gt;
+            &lt;routes&gt;
+                &lt;route type=&quot;mix&quot; sink=&quot;Earpiece&quot; sources=&quot;primary output&quot;/&gt;
+                &lt;route type=&quot;mix&quot; sink=&quot;Speaker&quot; sources=&quot;primary output&quot;/&gt;
+                &lt;route type=&quot;mix&quot; sink=&quot;Wired Headset&quot; sources=&quot;primary output&quot;/&gt;
+                &lt;route type=&quot;mix&quot; sink=&quot;primary input&quot; sources=&quot;Built-In Mic,Wired Headset Mic&quot;/&gt;
+            &lt;/routes&gt;
+        &lt;/module&gt;
+        &lt;xi:include href=&quot;a2dp_audio_policy_configuration.xml&quot;/&gt;
+    &lt;/modules&gt;
+
+    &lt;xi:include href=&quot;audio_policy_volumes.xml&quot;/&gt;
+    &lt;xi:include href=&quot;default_volume_tables.xml&quot;/&gt;
+&lt;/audioPolicyConfiguration&gt;
+</pre></section>
+
+<p>The top level structure contains modules that correspond to each audio HAL
+hardware module, where each module has a list of mix ports, device ports, and
+routes:</p>
+<ul>
+<li><strong>Mix ports</strong> describe the possible config profiles for streams
+that can be opened at the audio HAL for playback and capture.</li>
+<li><strong>Device ports</strong> describe the devices that can be attached with
+their type (and optionally address and audio properties, if relevant).</li>
+<li><strong>Routes</strong> (new) is now separated from the mix port descriptor,
+enabling description of routes from device to device or stream to device.</li>
+</ul>
+
+<p>Volume tables are simple lists of points defining the curve used to translate
+form a UI index to a volume in dB. A separate include file provides default
+curves, but each curve for a given use case and device category can be
+overwritten.</p>
+
+  <section class="expandable">
+    <h4 class="showalways">Show volume table example</h4>
+<pre class="devsite-click-to-copy">
+&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
+&lt;volumes&gt;
+    &lt;reference name=&quot;FULL_SCALE_VOLUME_CURVE&quot;&gt;
+        &lt;point&gt;0,0&lt;/point&gt;
+        &lt;point&gt;100,0&lt;/point&gt;
+    &lt;/reference&gt;
+    &lt;reference name=&quot;SILENT_VOLUME_CURVE&quot;&gt;
+        &lt;point&gt;0,-9600&lt;/point&gt;
+        &lt;point&gt;100,-9600&lt;/point&gt;
+    &lt;/reference&gt;
+    &lt;reference name=&quot;DEFAULT_VOLUME_CURVE&quot;&gt;
+        &lt;point&gt;1,-4950&lt;/point&gt;
+        &lt;point&gt;33,-3350&lt;/point&gt;
+        &lt;point&gt;66,-1700&lt;/point&gt;
+        &lt;point&gt;100,0&lt;/point&gt;
+    &lt;/reference&gt;
+&lt;/volumes&gt;
+</pre></section>
+
+  <section class="expandable">
+    <h4 class="showalways">Show volumes example</h4>
+<pre class="devsite-click-to-copy">
+&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
+&lt;volumes&gt;
+    &lt;volume stream=&quot;AUDIO_STREAM_VOICE_CALL&quot; deviceCategory=&quot;DEVICE_CATEGORY_HEADSET&quot; ref=&quot;DEFAULT_VOLUME_CURVE&quot;/&gt;
+    &lt;volume stream=&quot;AUDIO_STREAM_VOICE_CALL&quot; deviceCategory=&quot;DEVICE_CATEGORY_SPEAKER&quot; ref=&quot;DEFAULT_VOLUME_CURVE&quot;/&gt;
+    &lt;volume stream=&quot;AUDIO_STREAM_VOICE_CALL&quot; deviceCategory=&quot;DEVICE_CATEGORY_EARPIECE&quot; ref=&quot;DEFAULT_VOLUME_CURVE&quot;/&gt;
+    &lt;volume stream=&quot;AUDIO_STREAM_VOICE_CALL&quot; deviceCategory=&quot;DEVICE_CATEGORY_EXT_MEDIA&quot; ref=&quot;DEFAULT_VOLUME_CURVE&quot;/&gt;
+
+    &lt;volume stream=&quot;AUDIO_STREAM_SYSTEM&quot; deviceCategory=&quot;DEVICE_CATEGORY_HEADSET&quot; ref=&quot;DEFAULT_VOLUME_CURVE&quot;/&gt;
+    &lt;volume stream=&quot;AUDIO_STREAM_SYSTEM&quot; deviceCategory=&quot;DEVICE_CATEGORY_SPEAKER&quot; ref=&quot;DEFAULT_VOLUME_CURVE&quot;/&gt;
+    &lt;volume stream=&quot;AUDIO_STREAM_SYSTEM&quot; deviceCategory=&quot;DEVICE_CATEGORY_EARPIECE&quot; ref=&quot;DEFAULT_VOLUME_CURVE&quot;/&gt;
+    &lt;volume stream=&quot;AUDIO_STREAM_SYSTEM&quot; deviceCategory=&quot;DEVICE_CATEGORY_EXT_MEDIA&quot; ref=&quot;DEFAULT_VOLUME_CURVE&quot;/&gt;
+
+    &lt;volume stream=&quot;AUDIO_STREAM_RING&quot; deviceCategory=&quot;DEVICE_CATEGORY_HEADSET&quot; ref=&quot;DEFAULT_VOLUME_CURVE&quot;/&gt;
+    &lt;volume stream=&quot;AUDIO_STREAM_RING&quot; deviceCategory=&quot;DEVICE_CATEGORY_SPEAKER&quot; ref=&quot;DEFAULT_VOLUME_CURVE&quot;/&gt;
+    &lt;volume stream=&quot;AUDIO_STREAM_RING&quot; deviceCategory=&quot;DEVICE_CATEGORY_EARPIECE&quot; ref=&quot;DEFAULT_VOLUME_CURVE&quot;/&gt;
+    &lt;volume stream=&quot;AUDIO_STREAM_RING&quot; deviceCategory=&quot;DEVICE_CATEGORY_EXT_MEDIA&quot;ref=&quot;DEFAULT_VOLUME_CURVE&quot;/&gt;
+
+    &lt;volume stream=&quot;AUDIO_STREAM_MUSIC&quot; deviceCategory=&quot;DEVICE_CATEGORY_HEADSET&quot; ref=&quot;DEFAULT_VOLUME_CURVE&quot;/&gt;
+    &lt;volume stream=&quot;AUDIO_STREAM_MUSIC&quot; deviceCategory=&quot;DEVICE_CATEGORY_SPEAKER&quot;&gt;
+        &lt;point&gt;1,-5500&lt;/point&gt;
+        &lt;point&gt;20,-4300&lt;/point&gt;
+        &lt;point&gt;86,-1200&lt;/point&gt;
+        &lt;point&gt;100,0&lt;/point&gt;
+    &lt;/volume&gt;
+    &lt;volume stream=&quot;AUDIO_STREAM_MUSIC&quot; deviceCategory=&quot;DEVICE_CATEGORY_EARPIECE&quot; ref=&quot;DEFAULT_VOLUME_CURVE&quot;/&gt;
+    &lt;volume stream=&quot;AUDIO_STREAM_MUSIC&quot; deviceCategory=&quot;DEVICE_CATEGORY_EXT_MEDIA&quot; ref=&quot;DEFAULT_VOLUME_CURVE&quot;/&gt;
+
+    &lt;volume stream=&quot;AUDIO_STREAM_ALARM&quot; deviceCategory=&quot;DEVICE_CATEGORY_HEADSET&quot; ref=&quot;DEFAULT_VOLUME_CURVE&quot;/&gt;
+    &lt;volume stream=&quot;AUDIO_STREAM_ALARM&quot; deviceCategory=&quot;DEVICE_CATEGORY_SPEAKER&quot; ref=&quot;DEFAULT_VOLUME_CURVE&quot;/&gt;
+    &lt;volume stream=&quot;AUDIO_STREAM_ALARM&quot; deviceCategory=&quot;DEVICE_CATEGORY_EARPIECE&quot; ref=&quot;DEFAULT_VOLUME_CURVE&quot;/&gt;
+    &lt;volume stream=&quot;AUDIO_STREAM_ALARM&quot; deviceCategory=&quot;DEVICE_CATEGORY_EXT_MEDIA&quot; ref=&quot;DEFAULT_VOLUME_CURVE&quot;/&gt;
+
+    &lt;volume stream=&quot;AUDIO_STREAM_NOTIFICATION&quot; deviceCategory=&quot;DEVICE_CATEGORY_HEADSET&quot; ref=&quot;DEFAULT_VOLUME_CURVE&quot;/&gt;
+    &lt;volume stream=&quot;AUDIO_STREAM_NOTIFICATION&quot; deviceCategory=&quot;DEVICE_CATEGORY_SPEAKER&quot; ref=&quot;DEFAULT_VOLUME_CURVE&quot;/&gt;
+    &lt;volume stream=&quot;AUDIO_STREAM_NOTIFICATION&quot; deviceCategory=&quot;DEVICE_CATEGORY_EARPIECE&quot; ref=&quot;DEFAULT_VOLUME_CURVE&quot;/&gt;
+    &lt;volume stream=&quot;AUDIO_STREAM_NOTIFICATION&quot; deviceCategory=&quot;DEVICE_CATEGORY_EXT_MEDIA&quot; ref=&quot;DEFAULT_VOLUME_CURVE&quot;/&gt;
+
+    &lt;volume stream=&quot;AUDIO_STREAM_BLUETOOTH_SCO&quot; deviceCategory=&quot;DEVICE_CATEGORY_HEADSET&quot; ref=&quot;DEFAULT_VOLUME_CURVE&quot;/&gt;
+    &lt;volume stream=&quot;AUDIO_STREAM_BLUETOOTH_SCO&quot; deviceCategory=&quot;DEVICE_CATEGORY_SPEAKER&quot; ref=&quot;DEFAULT_VOLUME_CURVE&quot;/&gt;
+    &lt;volume stream=&quot;AUDIO_STREAM_BLUETOOTH_SCO&quot; deviceCategory=&quot;DEVICE_CATEGORY_EARPIECE&quot; ref=&quot;DEFAULT_VOLUME_CURVE&quot;/&gt;
+    &lt;volume stream=&quot;AUDIO_STREAM_BLUETOOTH_SCO&quot; deviceCategory=&quot;DEVICE_CATEGORY_EXT_MEDIA&quot; ref=&quot;DEFAULT_VOLUME_CURVE&quot;/&gt;
+
+    &lt;volume stream=&quot;AUDIO_STREAM_ENFORCED_AUDIBLE&quot; deviceCategory=&quot;DEVICE_CATEGORY_HEADSET&quot; ref=&quot;DEFAULT_VOLUME_CURVE&quot;/&gt;
+    &lt;volume stream=&quot;AUDIO_STREAM_ENFORCED_AUDIBLE&quot; deviceCategory=&quot;DEVICE_CATEGORY_SPEAKER&quot; ref=&quot;DEFAULT_VOLUME_CURVE&quot;/&gt;
+    &lt;volume stream=&quot;AUDIO_STREAM_ENFORCED_AUDIBLE&quot; deviceCategory=&quot;DEVICE_CATEGORY_EARPIECE&quot; ref=&quot;DEFAULT_VOLUME_CURVE&quot;/&gt;
+    &lt;volume stream=&quot;AUDIO_STREAM_ENFORCED_AUDIBLE&quot; deviceCategory=&quot;DEVICE_CATEGORY_EXT_MEDIA&quot; ref=&quot;DEFAULT_VOLUME_CURVE&quot;/&gt;
+
+    &lt;volume stream=&quot;AUDIO_STREAM_DTMF&quot; deviceCategory=&quot;DEVICE_CATEGORY_SPEAKER&quot; ref=&quot;DEFAULT_VOLUME_CURVE&quot;/&gt;
+    &lt;volume stream=&quot;AUDIO_STREAM_DTMF&quot; deviceCategory=&quot;DEVICE_CATEGORY_SPEAKER&quot; ref=&quot;DEFAULT_VOLUME_CURVE&quot;/&gt;
+    &lt;volume stream=&quot;AUDIO_STREAM_DTMF&quot; deviceCategory=&quot;DEVICE_CATEGORY_EARPIECE&quot; ref=&quot;DEFAULT_VOLUME_CURVE&quot;/&gt;
+    &lt;volume stream=&quot;AUDIO_STREAM_DTMF&quot; deviceCategory=&quot;DEVICE_CATEGORY_EXT_MEDIA&quot; ref=&quot;DEFAULT_VOLUME_CURVE&quot;/&gt;
+
+    &lt;volume stream=&quot;AUDIO_STREAM_TTS&quot; deviceCategory=&quot;DEVICE_CATEGORY_HEADSET&quot; ref=&quot;SILENT_VOLUME_CURVE&quot;/&gt;
+    &lt;volume stream=&quot;AUDIO_STREAM_TTS&quot; deviceCategory=&quot;DEVICE_CATEGORY_SPEAKER&quot; ref=&quot;FULL_SCALE_VOLUME_CURVE&quot;/&gt;
+    &lt;volume stream=&quot;AUDIO_STREAM_TTS&quot; deviceCategory=&quot;DEVICE_CATEGORY_EARPIECE&quot; ref=&quot;SILENT_VOLUME_CURVE&quot;/&gt;
+    &lt;volume stream=&quot;AUDIO_STREAM_TTS&quot; deviceCategory=&quot;DEVICE_CATEGORY_EXT_MEDIA&quot; ref=&quot;SILENT_VOLUME_CURVE&quot;/&gt;
+
+    &lt;volume stream=&quot;AUDIO_STREAM_ACCESSIBILITY&quot; deviceCategory=&quot;DEVICE_CATEGORY_HEADSET&quot; ref=&quot;DEFAULT_VOLUME_CURVE&quot;/&gt;
+    &lt;volume stream=&quot;AUDIO_STREAM_ACCESSIBILITY&quot; deviceCategory=&quot;DEVICE_CATEGORY_SPEAKER&quot; ref=&quot;DEFAULT_VOLUME_CURVE&quot;/&gt;
+    &lt;volume stream=&quot;AUDIO_STREAM_ACCESSIBILITY&quot; deviceCategory=&quot;DEVICE_CATEGORY_EARPIECE&quot; ref=&quot;DEFAULT_VOLUME_CURVE&quot;/&gt;
+    &lt;volume stream=&quot;AUDIO_STREAM_ACCESSIBILITY&quot; deviceCategory=&quot;DEVICE_CATEGORY_EXT_MEDIA&quot; ref=&quot;DEFAULT_VOLUME_CURVE&quot;/&gt;
+
+    &lt;volume stream=&quot;AUDIO_STREAM_REROUTING&quot; deviceCategory=&quot;DEVICE_CATEGORY_HEADSET&quot; ref=&quot;FULL_SCALE_VOLUME_CURVE&quot;/&gt;
+    &lt;volume stream=&quot;AUDIO_STREAM_REROUTING&quot; deviceCategory=&quot;DEVICE_CATEGORY_SPEAKER&quot; ref=&quot;FULL_SCALE_VOLUME_CURVE&quot;/&gt;
+    &lt;volume stream=&quot;AUDIO_STREAM_REROUTING&quot; deviceCategory=&quot;DEVICE_CATEGORY_EARPIECE&quot; ref=&quot;FULL_SCALE_VOLUME_CURVE&quot;/&gt;
+    &lt;volume stream=&quot;AUDIO_STREAM_REROUTING&quot; deviceCategory=&quot;DEVICE_CATEGORY_EXT_MEDIA&quot; ref=&quot;FULL_SCALE_VOLUME_CURVE&quot;/&gt;
+
+    &lt;volume stream=&quot;AUDIO_STREAM_PATCH&quot; deviceCategory=&quot;DEVICE_CATEGORY_HEADSET&quot; ref=&quot;FULL_SCALE_VOLUME_CURVE&quot;/&gt;
+    &lt;volume stream=&quot;AUDIO_STREAM_PATCH&quot; deviceCategory=&quot;DEVICE_CATEGORY_SPEAKER&quot; ref=&quot;FULL_SCALE_VOLUME_CURVE&quot;/&gt;
+    &lt;volume stream=&quot;AUDIO_STREAM_PATCH&quot; deviceCategory=&quot;DEVICE_CATEGORY_EARPIECE&quot; ref=&quot;FULL_SCALE_VOLUME_CURVE&quot;/&gt;
+    &lt;volume stream=&quot;AUDIO_STREAM_PATCH&quot; deviceCategory=&quot;DEVICE_CATEGORY_EXT_MEDIA&quot; ref=&quot;FULL_SCALE_VOLUME_CURVE&quot;/&gt;
+&lt;/volumes&gt;
+</pre></section>
+
+<h2 id=file_inclusions>File inclusions</h2>
+<p>The XML Inclusions (XInclude) method can be used to include audio policy
+configuration information located in other  XML files. All included files must
+follow the structure described above with the following restrictions:</p>
+<ul>
+<li>Files can contain only top-level elements.</li>
+<li>Files cannot contain Xinclude elements.</li>
+</ul>
+<p>Use includes to avoid copying standard Android Open Source Project (AOSP)
+audio HAL modules configuration information to all audio policy configuration
+files (which is prone to errors). A standard audio policy configuration xml file
+is provided for the following audio HALs:</p>
+<ul>
+<li><strong>A2DP:</strong> <code>a2dp_audio_policy_configuration.xml</code></li>
+<li><strong>Reroute submix:</strong> <code>rsubmix_audio_policy_configuration.xml</code></li>
+<li><strong>USB:</strong> <code>usb_audio_policy_configuration.xml</code></li>
+</ul>
+
+<h2 id=code_reorg>Audio policy code reorganization</h2>
+<p>Android 7.0 splits <code>AudioPolicyManager.cpp</code> into several modules
+to make it more maintainable and to highlight what is configurable. The new
+organization of <code>frameworks/av/services/audiopolicy</code> includes the
+following modules:</p>
+
+<table>
+<tr>
+<th>Module</th>
+<th>Description</th>
+</tr>
+
+<tr>
+<td><code>/managerdefault</code></td>
+<td>Includes the generic interfaces and behavior implementation common to all
+applications. Similar to <code>AudioPolicyManager.cpp</code> with engine
+functionality and common concepts abstracted away.</td>
+</tr>
+
+<tr>
+<td><code>/common</code></td>
+<td>Defines base classes (e.g data structures for input output audio stream
+profiles, audio device descriptors, audio patches, audio port, etc.). Previously
+defined inside <code>AudioPolicyManager.cpp</code>.</td>
+</tr>
+
+<tr>
+<td><code>/engine</code></td>
+<td><p>Implements the rules that define which device and volumes should be used for
+a given use case. It implements a standard interface with the generic part, such
+as to get the appropriate device for a given playback or capture use case, or to
+set connected devices or external state (i.e. a call state of forced usage) that
+can alter the routing decision.</p>
+<p>Available in two versions, customized and default; use build option
+<code>USE_CONFIGURABLE_AUDIO_POLICY</code> to select.</p></td>
+</tr>
+
+<tr>
+<td><code>/engineconfigurable</code></td>
+<td>Policy engine implementation that relies on parameter framework (see below).
+Configuration is based on the parameter framework and where the policy is
+defined by XML files.</td>
+</tr>
+
+<tr>
+<td><code>/enginedefault</code></td>
+<td>Policy engine implementation based on previous Android Audio Policy Manager
+implementations. This is the default and includes hard coded rules that
+correspond to current Nexus and AOSP implementations.</td>
+</tr>
+
+<tr>
+<td><code>/service</code></td>
+<td>Includes binder interfaces, threading and locking implementation with
+interface to the rest of the framework.</td>
+</tr>
+
+</table>
+
+<h2 id=policy_config>Configuration using parameter-framework</h2>
+<p>Android 7.0 reorganizes audio policy code to make it easier to understand and
+maintain while also supporting an audio policy defined entirely by configuration
+files. The reorganization and audio policy design is based on Intel's parameter
+framework, a plugin-based and rule-based framework for handling parameters.</p>
+
+<p>Using the new configurable audio policy enables vendors OEMs to:</p>
+<ul>
+<li>Describe a system's structure and its parameters in XML.</li>
+<li>Write (in C++) or reuse a backend (plugin) for accessing described
+parameters.</li>
+<li>Define (in XML or in a domain-specific language) conditions/rules upon which
+a given parameter must take a given value.</li>
+</ul>
+
+<p>AOSP includes an example of an audio policy configuration file that uses the parameter-framework at: <code>Frameworks/av/services/audiopolicy/engineconfigurable/parameter-framework/example/Settings/PolicyConfigurableDomains.xml</code>. For
+details, refer to Intel documentation on the
+<a href="https://github.com/01org/parameter-framework">parameter-framework</a>
+and
+<a href="http://01org.github.io/parameter-framework/hosting/Android_M_Configurable_Audio_Policy.pdf">Android
+Configurable Audio Policy</a>.</p>
+
+<h2 id=policy_routing_apis>Audio policy routing APIs</h2>
+<p>Android 6.0 introduced a public Enumeration and Selection API that sits on
+top of the audio patch/audio port infrastructure and allows application
+developers to indicate a preference for a specific device output or input for
+connected audio records or tracks.</p>
+<p>In Android 7.0, the Enumeration and Selection API is verified by CTS tests
+and is extended to include routing for native C/C++ (OpenSL ES) audio streams.
+The routing of native streams continues to be done in Java, with the addition of
+an <code>AudioRouting</code> interface that supersedes, combines, and deprecates
+the explicit routing methods that were specific to <code>AudioTrack</code> and
+<code>AudioRecord</code> classes.</p>
+
+<p>For details on the Enumeration and Selection API, refer to
+<a href="https://developer.android.com/ndk/guides/audio/opensl-for-android.html?hl=fi#configuration-interface">Android
+configuration interfaces</a> and <code>OpenSLES_AndroidConfiguration.h</code>.
+For details on audio routing, refer to
+<a href="https://developer.android.com/reference/android/media/AudioRouting.html">AudioRouting</a>.
+</p>
+
+<h2 id=multichannel>Multi-channel support</h2>
+
+<p>If your hardware and driver supports multichannel audio via HDMI, you can
+output the audio stream  directly to the audio hardware (this bypasses the
+AudioFlinger mixer so it doesn't get downmixed to two channels.) The audio HAL
+must expose whether an output stream profile supports multichannel audio
+capabilities. If the HAL exposes its capabilities, the default policy manager
+allows multichannel playback over HDMI. For implementation details, see
+<code>device/samsung/tuna/audio/audio_hw.c</code>.</p>
+
+<p>To specify that your product contains a multichannel audio output, edit the
+audio policy configuration file to describe the multichannel output for your
+product. The following example from a Galaxy Nexus shows a <em>dynamic</em>
+channel mask, which means the audio policy manager queries the actual channel
+masks supported by the HDMI sink after connection.</p>
+
+<pre class="devsite-click-to-copy">
+audio_hw_modules {
+  primary {
+    outputs {
+        ...
+        hdmi {
+          sampling_rates 44100|48000
+          channel_masks dynamic
+          formats AUDIO_FORMAT_PCM_16_BIT
+          devices AUDIO_DEVICE_OUT_AUX_DIGITAL
+          flags AUDIO_OUTPUT_FLAG_DIRECT
+        }
+        ...
+    }
+    ...
+  }
+  ...
+}
+</pre>
+
+<p>You can also specify a static channel mask such as
+<code>AUDIO_CHANNEL_OUT_5POINT1</code>. AudioFlinger's mixer downmixes the
+content to stereo automatically when sent to an audio device that does not
+support multichannel audio.</p>
+
+<h2 id=codecs>Media codecs</h2>
+
+<p>Ensure the audio codecs your hardware and drivers support are properly
+declared for your product. For details, see
+<a href="/devices/media/index.html#expose">Exposing Codecs to the
+Framework</a>.</p>
+
+  </body>
+</html>

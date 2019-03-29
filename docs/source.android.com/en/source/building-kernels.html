@@ -1,0 +1,277 @@
+<html devsite>
+  <head>
+    <title>Building Kernels</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>This page details how to build only the kernel. The following instructions
+assume you have not downloaded all of AOSP; if you have already done so, you can
+skip the <code>git clone</code> steps except the step that downloads the kernel
+sources.</p>
+
+<p>All examples in this section use the
+<a href="/source/devices.html#hikey-boards">hikey</a> kernel.</p>
+
+<h2 id="figuring-out-which-kernel-to-build">Selecting a kernel</h2>
+<p>This table lists the name and locations of the kernel sources and binaries:
+<table>
+  <tr>
+    <th>Device</th>
+    <th>Binary location</th>
+    <th>Source location</th>
+    <th>Build configuration</th>
+  </tr>
+  <tr>
+    <td>marlin</td>
+    <td>device/google/marlin-kernel</td>
+    <td>kernel/msm</td>
+    <td>marlin_defconfig</td>
+  </tr>
+  <tr>
+    <td>sailfish</td>
+    <td>device/google/marlin-kernel</td>
+    <td>kernel/msm</td>
+    <td>marlin_defconfig</td>
+  </tr>
+  <tr>
+    <td>hikey</td>
+    <td>device/linaro/hikey-kernel</td>
+    <td>kernel/hikey-linaro</td>
+    <td>hikey_defconfig</td>
+  </tr>
+  <tr>
+    <td>angler</td>
+    <td>device/huawei/angler-kernel</td>
+    <td>kernel/msm</td>
+    <td>angler_defconfig</td>
+  </tr>
+  <tr>
+    <td>bullhead</td>
+    <td>device/lge/bullhead-kernel</td>
+    <td>kernel/msm</td>
+    <td>bullhead_defconfig</td>
+  </tr>
+  <tr>
+    <td>shamu</td>
+    <td>device/moto/shamu-kernel</td>
+    <td>kernel/msm</td>
+    <td>shamu_defconfig</td>
+  </tr>
+  <tr>
+    <td>fugu</td>
+    <td>device/asus/fugu-kernel</td>
+    <td>kernel/x86_64</td>
+    <td>fugu_defconfig</td>
+  </tr>
+  <tr>
+    <td>volantis</td>
+    <td>device/htc/flounder-kernel</td>
+    <td>kernel/tegra</td>
+    <td>flounder_defconfig</td>
+  </tr>
+  <tr>
+    <td>hammerhead</td>
+    <td>device/lge/hammerhead-kernel</td>
+    <td>kernel/msm</td>
+    <td>hammerhead_defconfig</td>
+  </tr>
+  <tr>
+    <td>flo</td>
+    <td>device/asus/flo-kernel/kernel</td>
+    <td>kernel/msm</td>
+    <td>flo_defconfig</td>
+  </tr>
+  <tr>
+    <td>deb</td>
+    <td>device/asus/flo-kernel/kernel</td>
+    <td>kernel/msm</td>
+    <td>flo_defconfig</td>
+  </tr>
+  <tr>
+    <td>manta</td>
+    <td>device/samsung/manta/kernel</td>
+    <td>kernel/exynos</td>
+    <td>manta_defconfig</td>
+  </tr>
+  <tr>
+    <td>mako</td>
+    <td>device/lge/mako-kernel/kernel</td>
+    <td>kernel/msm</td>
+    <td>mako_defconfig</td>
+  </tr>
+  <tr>
+    <td>grouper</td>
+    <td>device/asus/grouper/kernel</td>
+    <td>kernel/tegra</td>
+    <td>tegra3_android_defconfig</td>
+  </tr>
+  <tr>
+    <td>tilapia</td>
+    <td>device/asus/grouper/kernel</td>
+    <td>kernel/tegra</td>
+    <td>tegra3_android_defconfig</td>
+  </tr>
+  <tr>
+    <td>maguro</td>
+    <td>device/samsung/tuna/kernel</td>
+    <td>kernel/omap</td>
+    <td>tuna_defconfig</td>
+  </tr>
+  <tr>
+    <td>toro</td>
+    <td>device/samsung/tuna/kernel</td>
+    <td>kernel/omap</td>
+    <td>tuna_defconfig</td>
+  </tr>
+  <tr>
+    <td>panda</td>
+    <td>device/ti/panda/kernel</td>
+    <td>kernel/omap</td>
+    <td>panda_defconfig</td>
+  </tr>
+  <tr>
+    <td>stingray</td>
+    <td>device/moto/wingray/kernel</td>
+    <td>kernel/tegra</td>
+    <td>stingray_defconfig</td>
+  </tr>
+  <tr>
+    <td>wingray</td>
+    <td>device/moto/wingray/kernel </td>
+    <td>kernel/tegra</td>
+    <td>stingray_defconfig</td>
+  </tr>
+  <tr>
+    <td>crespo</td>
+    <td>device/samsung/crespo/kernel</td>
+    <td>kernel/samsung</td>
+    <td>herring_defconfig</td>
+  </tr>
+  <tr>
+    <td>crespo4g</td>
+    <td>device/samsung/crespo/kernel</td>
+    <td>kernel/samsung</td>
+    <td>herring_defconfig</td>
+  </tr>
+</table>
+
+<p>After determining the device project you want to work with, view the git log
+for the kernel binary. Device projects use the form
+<code>device/<var>VENDOR</var>/<var>NAME</var></code>.</p>
+
+<pre class="devsite-click-to-copy">
+<code class="devsite-terminal">git clone https://android.googlesource.com/kernel/hikey-linaro</code>
+<code class="devsite-terminal">cd hikey-linaro</code>
+<code class="devsite-terminal">git log --max-count=1 kernel</code>
+</pre>
+
+<p>The commit message for the kernel binary contains a partial git log of the
+kernel sources used to build the binary. The first entry in the log is the most
+recent (the one used to build the kernel). Make a note of the commit message
+as you will need it in a later step.</p>
+
+<h2 id="id-version">Identifying kernel version</h2>
+
+<p>To determine the kernel version used in a system image, run the following
+command against the kernel file:</p>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+dd if=kernel bs=1 skip=$(LC_ALL=C grep -a -b -o $'\x1f\x8b\x08\x00\x00\x00\x00\x00' kernel | cut -d ':' -f 1) | zgrep -a 'Linux version'
+</pre>
+
+<p>For Nexus 5 (hammerhead), the command is:</p>
+<pre class="devsite-terminal devsite-click-to-copy">
+dd if=zImage-dtb bs=1 skip=$(LC_ALL=C od -Ad -x -w2 zImage-dtb | grep 8b1f | cut -d ' ' -f1 | head -1) | zgrep -a 'Linux version'
+</pre>
+
+
+<h2 id="downloading-sources">Downloading sources</h2>
+<p>Download the source for the kernel you want to build using the appropriate
+<code>git clone</code> command. For example, the following command clones the <code>common</code> kernel, a generic, customizable kernel:</p>
+<pre class="devsite-terminal devsite-click-to-copy">
+git clone https://android.googlesource.com/kernel/common
+</pre>
+
+<p>A full list of the kernel projects can be found in the <a href="https://android.googlesource.com/kernel">Kernel</a> directory. Below are some of the commonly used kernels and their respective <code>git clone</code> commands.</p>
+
+<p>The <code>exynos</code> project has the kernel sources for Nexus 10, and can be used as a starting point for work on Samsung Exynos chipsets.</p>
+<pre class="devsite-terminal devsite-click-to-copy">git clone https://android.googlesource.com/kernel/exynos</pre>
+
+<p>The <code>goldfish</code> project contains the kernel sources for the emulated platforms.</p>
+<pre class="devsite-terminal devsite-click-to-copy">git clone https://android.googlesource.com/kernel/goldfish</pre>
+
+<p>The <code>hikey-linaro</code> project is used for HiKey reference boards, and can be used as a starting point for work on HiSilicon 620 chipsets.</p>
+<pre class="devsite-terminal devsite-click-to-copy">git clone https://android.googlesource.com/kernel/hikey-linaro</pre>
+
+<p>The <code>msm</code> project has the sources for ADP1, ADP2, Nexus One, Nexus 4, Nexus 5, Nexus 6, Nexus 5X, Nexus 6P, Nexus 7 (2013), Pixel, and Pixel XL, and can be used as a starting point for work on Qualcomm MSM chipsets.</p>
+<pre class="devsite-terminal devsite-click-to-copy">git clone https://android.googlesource.com/kernel/msm</pre>
+
+<p>The <code>omap</code> project is used for PandaBoard and Galaxy Nexus, and can be used as a starting point for work on TI OMAP chipsets.</p>
+<pre class="devsite-terminal devsite-click-to-copy">git clone https://android.googlesource.com/kernel/omap</pre>
+
+<p>The <code>samsung</code> project is used for Nexus S, and can be used as a starting point for work on Samsung Hummingbird chipsets.</p>
+<pre class="devsite-terminal devsite-click-to-copy">git clone https://android.googlesource.com/kernel/samsung</pre>
+
+<p>The <code>tegra</code> project is for Xoom, Nexus 7 (2012), Nexus 9, and can be used as a starting point for work on NVIDIA Tegra chipsets.</p>
+<pre class="devsite-terminal devsite-click-to-copy">git clone https://android.googlesource.com/kernel/tegra</pre>
+
+<p>The <code>x86_64</code> project has the kernel sources for Nexus Player, and can be used as a starting point for work on Intel x86_64 chipsets.</p>
+<pre class="devsite-terminal devsite-click-to-copy">git clone https://android.googlesource.com/kernel/x86_64</pre>
+
+<h2 id="building">Building the kernel</h2>
+<p>When you know the last commit message for a kernel and have successfully
+downloaded the kernel source and prebuilt gcc, you are ready to build the
+kernel. The following build commands use the hikey kernel:</p>
+<pre class="devsite-click-to-copy">
+<code class="devsite-terminal">export ARCH=arm64</code>
+<code class="devsite-terminal">export CROSS_COMPILE=aarch64-linux-android-</code>
+<code class="devsite-terminal">cd hikey-linaro</code>
+<code class="devsite-terminal">git checkout -b android-hikey-linaro-4.1 origin/android-hikey-linaro-4.1</code>
+<code class="devsite-terminal">make hikey_defconfig</code>
+<code class="devsite-terminal">make</code>
+</pre>
+
+<p>To build a different kernel, simply replace <code>hikey-linaro</code> with
+the name of the kernel you want to build.</p>
+
+<p>The image outputs to the <code>arch/arm64/boot/Image</code> directory; the
+kernel binary outputs to the
+<code>arch/arm64/boot/dts/hisilicon/hi6220-hikey.dtb</code> fle. Copy the
+<code>Image</code> directory and the <code>hi6220-hikey.dtb</code> file to the
+<code>hikey-kernel</code> directory.</p>
+
+<p>Alternatively, you can include the <code>TARGET_PREBUILT_KERNEL</code>
+variable while using <code>make bootimage</code> (or any other <code>make</code>
+command line that builds a boot image). This variable is supported by all
+devices as it is set up via <code>device/common/populate-new-device.sh</code>.
+For example:</p>
+
+<pre class="devsite-terminal devsite-click-to-copy">
+export TARGET_PREBUILT_KERNEL=$your_kernel_path/arch/arm/boot/zImage-dtb
+</pre>
+
+<p class="note"><strong>Note:</strong> Kernel names differ by device. To locate
+the correct filename for your kernel, refer to
+<code>device/<var>VENDOR</var>/<var>NAME</var></code> in the kernel source.</p>
+
+  </body>
+</html>

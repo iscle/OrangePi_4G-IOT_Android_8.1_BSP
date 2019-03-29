@@ -1,0 +1,117 @@
+<html devsite>
+  <head>
+    <title>Testing Device Administration</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>To ensure minimal support for managed profiles, OEM devices must contain the
+following essential elements:</p>
+
+<ul>
+  <li>Profile owner (as described in
+  <a href="https://developer.android.com/training/enterprise/app-compatibility.html">Ensuring
+  Compatibility with Managed Profiles</a>)</li>
+  <li>Device owner</li>
+  </ul>
+
+<p>For a complete list of requirements, see
+<a href="/devices/tech/admin/implement.html">Implementing Device
+Administration</a>.</p>
+
+<p>To test device administration features, device owners can use the TestDPC
+application (described below); consider also working directly with other
+enterprise mobility management (EMM) providers.</p>
+
+<h2 id=set_up_the_device_owner_for_testing>Set up device owner for testing</h2>
+<p>Use the following instructions to set up a device owner testing environment.</p>
+
+<ol>
+  <li>Set up the device:
+  <ol>
+  <li style="list-style-type: lower-alpha">Factory reset the target device.</li>
+  <li style="list-style-type: lower-alpha">Ensure you do not add any user accounts
+  (e.g. those used to log into online services) to the device.
+  This can be checked in <em>Settings->Accounts</em>.</li>
+  </ol></li>
+  <li>Set up the testing application using one of the following methods:
+  <ul>
+  <li><a href="https://play.google.com/store/apps/details?id=com.afwsamples.testdpc&hl=en">Download
+  the TestDPC application</a> (available from Google Play).</li>
+  <li><a href="https://github.com/googlesamples/android-testdpc/">Build
+  the TestDPC application</a> (available from github.com).</li>
+  </ul>
+  </li>
+  <li>Set the TestDPC app as the device owner using the following command:<br>
+<pre class="devsite-terminal devsite-click-to-copy">
+adb shell dpm set-device-owner "com.afwsamples.testdpc/.DeviceAdminReceiver"
+</pre>
+  </li>
+  <li>Go through device owner setup on the device (encrypt, select Wi-Fi, etc.)</li>
+</ol>
+
+<h2 id=verify_the_device_owner_was_correctly_setup>Verify device owner setup</h2>
+<p>To verify the device owner was correctly setup, go to <em>Settings >
+Security > Device Administrators</em> and confirm TestDPC is in the
+list. Verify it cannot be disabled (this signifies it is a device owner).</p>
+
+<h2 id=automate>Automated provisioning testing</h2>
+<p>To automate the testing of enterprise provisioning processes, use
+the Android for Work (AfW) Test Harness. For details, see
+<a href="/devices/tech/admin/testing-provision.html">Testing Device
+Provisioning</a>.</p>
+
+<h2 id="troubleshooting">Bug reports and logs</h2>
+<p>In Android 7.0, device owner Device Policy Client (DPCs) can get bug reports
+and view logs for enterprise processes on a managed device.</p>
+
+<p>To trigger a bug report (i.e., the equivalent data collected by <code>adb
+bugreport</code> containing dumpsys, dumpstate, and logcat data), use
+<code>DevicePolicyController.requestBugReport</code>. After the bug report is
+collected, the user is prompted to give consent to send the bug report data.
+Results are received by
+<code>DeviceAdminReceiver.onBugreport[Failed|Shared|SharingDeclined]</code>. For
+details on bug report contents, see
+<a href="/source/read-bug-reports.html">Reading Bug Reports</a>.
+
+<p>In addition, device owner DPCs can also collect logs related to actions a
+user has taken on a managed device. Enterprise process logging is required for
+all devices that report device_admin and enabled by a new log security buffer
+readable only by the system server (i.e., <code>adb logcat -b security</code>
+cannot read the buffer). ActivityManager service and Keyguard components log the
+following events to the security buffer:</p>
+
+<ul>
+<li>Application processes starting</li>
+<li>Keyguard actions (e.g., unlock failure and success)</li>
+<li><code>adb</code> commands issued to the device</li>
+</ul>
+
+<p>To optionally retain logs across reboots (not cold boot) and make these logs
+available to device owner DPCs, a device must have a kernel with
+<code>pstore</code> and <code>pmsg</code> enabled, and DRAM powered and
+refreshed through all stages of reboot to avoid corruption to the logs retained
+in memory. To enable support, use the
+<code>config_supportPreRebootSecurityLogs</code> setting in
+<code>frameworks/base/core/res/res/values/config.xml</code>.</p>
+
+  </body>
+</html>

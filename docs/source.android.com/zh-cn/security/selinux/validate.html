@@ -1,0 +1,107 @@
+<html devsite><head>
+    <title>验证 SELinux</title>
+    <meta name="project_path" value="/_project.yaml"/>
+    <meta name="book_path" value="/_book.yaml"/>
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+<p>Android 强烈建议原始设备制造商 (OEM) 全面测试其 SELinux 实现。制造商在实现 SELinux 时，应先为设备上需要测试的所有内容应用新政策。</p>
+
+<p>应用新政策后，可以通过执行 getenforce 命令来确认 SELinux 在设备上的运行模式是否正确</p>
+
+<p>该命令将会显示全局 SELinux 模式：强制或宽容。请注意，该命令只会显示全局 SELinux 模式。要确定每个域的 SELinux 模式，您必须查看相应的文件，或运行带有适当 (-p) 标记的最新版 <code>sepolicy-analyze</code>（位于 /platform/system/sepolicy/tools/ 中）。</p>
+
+<h2 id="reading_denials">读取拒绝事件</h2>
+
+<p>接下来是检查是否存在错误。错误会以事件日志的形式路由到 dmesg 和 <code>logcat</code>，并可在设备上从本地查看。制造商应先检查这些设备上路由到 dmesg 的 SELinux 输出并优化设置，然后再在宽容模式下公开发布，最后切换到强制模式。SELinux 日志消息中包含“avc:”，因此可以通过 <code>grep</code> 轻松找到。可以通过运行 <code>cat /proc/kmsg</code> 来获取当前的拒绝事件日志，也可以通过运行 cat <code>/proc/last_kmsg</code> 来获取上次启动时的拒绝事件日志。</p>
+
+<p>借助这种输出，制造商可以轻松发现系统用户或组件违反 SELinux 政策的行为。然后，制造商便可以通过对相应软件和/或 SELinux 政策进行更改来防范这种恶意行为。</p>
+
+<p>具体来说就是，这些日志消息会指明在强制模式下哪些进行会失败以及失败原因。示例如下：</p>
+
+<pre>
+avc: denied  { connectto } for  pid=2671 comm="ping" path="/dev/socket/dnsproxyd"
+scontext=u:r:shell:s0 tcontext=u:r:netd:s0 tclass=unix_stream_socket
+</pre>
+
+<p>该输出的解读如下：</p>
+
+<ul>
+  <li>上方的 <code>{ connectto }</code> 表示正在执行的操作。通过它和末尾的 <code>tclass</code> (<code>unix_stream_socket</code>)，您可以大致了解正在对什么对象执行什么操作，在该示例中是某个操作方正在试图连接到 UNIX 信息流套接字。
+  </li><li><code>scontext (u:r:shell:s0)</code> 旨在告诉您发起相应操作的环境，在该示例中是某个作为 shell 运行的操作方。
+  </li><li><code>tcontext (u:r:netd:s0)</code> 旨在告诉您操作目标的环境，在该示例中是某个归 <code>netd</code> 所有的 unix_stream_socket。
+  </li><li>顶部的 <code>comm="ping"</code> 旨在为您提供更多提示，让您了解拒绝事件发生时正在运行的操作。在该示例中，这是一个非常实用的提示。
+</li></ul>
+
+<p>下面是另一个示例：</p>
+
+<pre>
+$ adb shell su root dmesg | grep 'avc: '
+&lt;5&gt; type=1400 audit: avc:  denied  { read write } for  pid=177
+comm="rmt_storage" name="mem" dev="tmpfs" ino=6004 scontext=u:r:rmt:s0
+tcontext=u:object_r:kmem_device:s0 tclass=chr_file
+</pre>
+
+<p>以下是此拒绝事件的关键元素：</p>
+
+<ul>
+  <li>操作 - 试图进行的操作使用括号突出显示：<code>read write</code> 或 <code>setenforce</code>。<em></em>
+  </li><li>操作方 - <code>scontext</code>（来源环境）条目表示操作方，在该示例中是<code> rmt_storage</code> 守护进程。<em></em>
+  </li><li>对象 - <code>tcontext</code>（目标环境）条目表示正在对哪个对象执行操作，在该示例中是 kmem。<em></em>
+  </li><li>结果 - <code>tclass</code>（目标类别）条目表示操作对象的类型，在该示例中是 <code>chr_file</code>（字符设备）。<em></em>
+</li></ul>
+
+<h2 id="switching_to_permissive">切换到宽容模式</h2>
+
+<p class="caution"><strong>重要提示</strong>：生产设备不支持宽容模式。CTS 测试可确认是否已启用强制模式。</p>
+
+<p>要通过 ADB 将设备的 SELinux 执行模式切换到全局宽容模式，请以根用户的身份执行以下命令：</p>
+
+<pre>
+$ adb shell su root setenforce 0
+</pre>
+
+<p>或在内核命令行中输入以下命令（在设备启动初期）：</p>
+
+<pre>
+androidboot.selinux=permissive
+androidboot.selinux=enforcing
+</pre>
+
+<h2 id="using_audit2allow">使用 audit2allow</h2>
+
+<p><code>selinux/policycoreutils/audit2allow</code> 工具可以获取 <code>dmesg</code> 拒绝事件并将其转换成相应的 SELinux 政策声明。因此，该工具有助于大幅加快 SELinux 开发速度。<code>audit2allow</code> 会作为 Android 源代码树的一部分被移植到设备上，并会在您基于源代码编译 Android 时自动进行编译。</p>
+
+<p>要使用该工具，请运行以下命令：</p>
+
+<pre>
+$ adb shell su root dmesg | audit2allow -p $OUT/root/sepolicy
+</pre>
+
+<p>不过，在检查各种潜在增加项是否存在越界权限时务必要谨慎。例如，为 audit2allow 馈送之前显示的 <code>rmt_storage</code> 拒绝事件会导致以下建议的 SELinux 政策声明：</p>
+
+<pre>
+#============= shell ==============
+allow shell kernel:security setenforce;
+#============= rmt ==============
+allow rmt kmem_device:chr_file { read write };
+</pre>
+
+<p>这会授予 <code>rmt</code> 向内核内存写入内容的权限，从而形成明显的安全漏洞。通常情况下，<code>audit2allow</code> 声明只是一个起点，在这之后，可能还需要更改来源域以及目标的标签，并纳入适当的宏，才能获得好的政策。有时，要解决正在检查的拒绝事件，不应对政策进行任何更改，而是应更改违规的应用。</p>
+
+</body></html>

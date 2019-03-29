@@ -1,0 +1,406 @@
+<html devsite>
+  <head>
+    <title>Data Formats</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>
+Android uses a wide variety of audio
+<a href="http://en.wikipedia.org/wiki/Data_format">data formats</a>
+internally, and exposes a subset of these in public APIs,
+<a href="http://en.wikipedia.org/wiki/Audio_file_format">file formats</a>,
+and the
+<a href="https://en.wikipedia.org/wiki/Hardware_abstraction">Hardware Abstraction Layer</a> (HAL).
+</p>
+
+<h2 id="properties">Properties</h2>
+
+<p>
+The audio data formats are classified by their properties:
+</p>
+
+<dl>
+
+  <dt><a href="https://en.wikipedia.org/wiki/Data_compression">Compression</a></dt>
+  <dd>
+    <a href="http://en.wikipedia.org/wiki/Raw_data">Uncompressed</a>,
+    <a href="http://en.wikipedia.org/wiki/Lossless_compression">lossless compressed</a>, or
+    <a href="http://en.wikipedia.org/wiki/Lossy_compression">lossy compressed</a>.
+    PCM is the most common uncompressed audio format. FLAC is a lossless compressed
+    format, while MP3 and AAC are lossy compressed formats.
+  </dd>
+
+  <dt><a href="http://en.wikipedia.org/wiki/Audio_bit_depth">Bit depth</a></dt>
+  <dd>
+    Number of significant bits per audio sample.
+  </dd>
+
+  <dt><a href="https://en.wikipedia.org/wiki/Sizeof">Container size</a></dt>
+  <dd>
+    Number of bits used to store or transmit a sample. Usually
+    this is the same as the bit depth, but sometimes additional
+    padding bits are allocated for alignment. For example, a
+    24-bit sample could be contained within a 32-bit word.
+  </dd>
+
+  <dt><a href="http://en.wikipedia.org/wiki/Data_structure_alignment">Alignment</a></dt>
+  <dd>
+    If the container size is exactly equal to the bit depth, the
+    representation is called <em>packed</em>. Otherwise the representation is
+    <em>unpacked</em>. The significant bits of the sample are typically
+    aligned with either the leftmost (most significant) or rightmost
+    (least significant) bit of the container. It is conventional to use
+    the terms <em>packed</em> and <em>unpacked</em> only when the bit
+    depth is not a
+    <a href="http://en.wikipedia.org/wiki/Power_of_two">power of two</a>.
+  </dd>
+
+  <dt><a href="http://en.wikipedia.org/wiki/Signedness">Signedness</a></dt>
+  <dd>
+    Whether samples are signed or unsigned.
+  </dd>
+
+  <dt>Representation</dt>
+  <dd>
+    Either fixed point or floating point; see below.
+  </dd>
+
+</dl>
+
+<h2 id="fixed">Fixed point representation</h2>
+
+<p>
+<a href="http://en.wikipedia.org/wiki/Fixed-point_arithmetic">Fixed point</a>
+is the most common representation for uncompressed PCM audio data,
+especially at hardware interfaces.
+</p>
+
+<p>
+A fixed-point number has a fixed (constant) number of digits
+before and after the <a href="https://en.wikipedia.org/wiki/Radix_point">radix point</a>.
+All of our representations use
+<a href="https://en.wikipedia.org/wiki/Binary_number">base 2</a>,
+so we substitute <em>bit</em> for <em>digit</em>,
+and <em>binary point</em> or simply <em>point</em> for <em>radix point</em>.
+The bits to the left of the point are the integer part,
+and the bits to the right of the point are the
+<a href="https://en.wikipedia.org/wiki/Fractional_part">fractional part</a>.
+</p>
+
+<p>
+We speak of <em>integer PCM</em>, because fixed-point values
+are usually stored and manipulated as integer values.
+The interpretation as fixed-point is implicit.
+</p>
+
+<p>
+We use <a href="https://en.wikipedia.org/wiki/Two%27s_complement">two's complement</a>
+for all signed fixed-point representations,
+so the following holds where all values are in units of one
+<a href="https://en.wikipedia.org/wiki/Least_significant_bit">LSB</a>:
+</p>
+<pre class="devsite-click-to-copy">
+|largest negative value| = |largest positive value| + 1
+</pre>
+
+<h3 id="q">Q and U notation</h3>
+
+<p>
+There are various
+<a href="https://en.wikipedia.org/wiki/Fixed-point_arithmetic#Notation">notations</a>
+for fixed-point representation in an integer.
+We use <a href="https://en.wikipedia.org/wiki/Q_(number_format)">Q notation</a>:
+Q<em>m</em>.<em>n</em> means <em>m</em> integer bits and <em>n</em> fractional bits.
+The "Q" counts as one bit, though the value is expressed in two's complement.
+The total number of bits is <em>m</em> + <em>n</em> + 1.
+</p>
+
+<p>
+U<em>m</em>.<em>n</em> is for unsigned numbers:
+<em>m</em> integer bits and <em>n</em> fractional bits,
+and the "U" counts as zero bits.
+The total number of bits is <em>m</em> + <em>n</em>.
+</p>
+
+<p>
+The integer part may be used in the final result, or be temporary.
+In the latter case, the bits that make up the integer part are called
+<em>guard bits</em>. The guard bits permit an intermediate calculation to overflow,
+as long as the final value is within range or can be clamped to be within range.
+Note that fixed-point guard bits are at the left, while floating-point unit
+<a href="https://en.wikipedia.org/wiki/Guard_digit">guard digits</a>
+are used to reduce roundoff error and are on the right.
+</p>
+
+<h2 id="floating">Floating point representation</h2>
+
+<p>
+<a href="https://en.wikipedia.org/wiki/Floating_point">Floating point</a>
+is an alternative to fixed point, in which the location of the point can vary.
+The primary advantages of floating-point include:
+</p>
+
+<ul>
+  <li>Greater <a href="https://en.wikipedia.org/wiki/Headroom_(audio_signal_processing)">headroom</a>
+      and <a href="https://en.wikipedia.org/wiki/Dynamic_range">dynamic range</a>;
+      floating-point arithmetic tolerates exceeeding nominal ranges
+      during intermediate computation, and only clamps values at the end
+  </li>
+  <li>Support for special values such as infinities and NaN</li>
+  <li>Easier to use in many cases</li>
+</ul>
+
+<p>
+Historically, floating-point arithmetic was slower than integer or fixed-point
+arithmetic, but now it is common for floating-point to be faster,
+provided control flow decisions aren't based on the value of a computation.
+</p>
+
+<h2 id="androidFormats">Android formats for audio</h2>
+
+<p>
+The major Android formats for audio are listed in the table below:
+</p>
+
+<table>
+
+<tr>
+  <th></th>
+  <th colspan="6"><center>Notation</center></th>
+</tr>
+
+<tr>
+  <th>Property</th>
+  <th>Q0.15</th>
+  <th>Q0.7 <sup>1</sup></th>
+  <th>Q0.23</th>
+  <th>Q0.31</th>
+  <th>float</th>
+</tr>
+
+<tr>
+  <td>Container<br />bits</td>
+  <td>16</td>
+  <td>8</td>
+  <td>24 or 32 <sup>2</sup></td>
+  <td>32</td>
+  <td>32</td>
+</tr>
+
+<tr>
+  <td>Significant bits<br />including sign</td>
+  <td>16</td>
+  <td>8</td>
+  <td>24</td>
+  <td>24 or 32 <sup>2</sup></td>
+  <td>25 <sup>3</sup></td>
+</tr>
+
+<tr>
+  <td>Headroom<br />in dB</td>
+  <td>0</td>
+  <td>0</td>
+  <td>0</td>
+  <td>0</td>
+  <td>126 <sup>4</sup></td>
+</tr>
+
+<tr>
+  <td>Dynamic range<br />in dB</td>
+  <td>90</td>
+  <td>42</td>
+  <td>138</td>
+  <td>138 to 186</td>
+  <td>900 <sup>5</sup></td>
+</tr>
+
+</table>
+
+<p>
+All fixed-point formats above have a nominal range of -1.0 to +1.0 minus one LSB.
+There is one more negative value than positive value due to the
+two's complement representation.
+</p>
+
+<p>
+Footnotes:
+</p>
+
+<ol>
+
+<li>
+All formats above express signed sample values.
+The 8-bit format is commonly called "unsigned", but
+it is actually a signed value with bias of <code>0.10000000</code>.
+</li>
+
+<li>
+Q0.23 may be packed into 24 bits (three 8-bit bytes), or unpacked
+in 32 bits. If unpacked, the significant bits are either right-justified
+towards the LSB with sign extension padding towards the MSB (Q8.23),
+or left-justified towards the MSB with zero fill towards the LSB
+(Q0.31). Q0.31 theoretically permits up to 32 significant bits,
+but hardware interfaces that accept Q0.31 rarely use all the bits.
+</li>
+
+<li>
+Single-precision floating point has 23 explicit bits plus one hidden bit and sign bit,
+resulting in 25 significant bits total.
+<a href="https://en.wikipedia.org/wiki/Denormal_number">Denormal numbers</a>
+have fewer significant bits.
+</li>
+
+<li>
+Single-precision floating point can express values up to &plusmn;1.7e+38,
+which explains the large headroom.
+</li>
+
+<li>
+The dynamic range shown is for denormals up to the nominal maximum
+value &plusmn;1.0.
+Note that some architecture-specific floating point implementations such as
+<a href="https://en.wikipedia.org/wiki/ARM_architecture#NEON">NEON</a>
+don't support denormals.
+</li>
+
+</ol>
+
+<h2 id="conversions">Conversions</h2>
+
+<p>
+This section discusses
+<a href="https://en.wikipedia.org/wiki/Data_conversion">data conversions</a>
+between various representations.
+</p>
+
+<h3 id="floatConversions">Floating point conversions</h3>
+
+<p>
+To convert a value from Q<em>m</em>.<em>n</em> format to floating point:
+</p>
+
+<ol>
+  <li>Convert the value to floating point as if it were an integer (by ignoring the point).</li>
+  <li>Multiply by 2<sup>-<em>n</em></sup>.</li>
+</ol>
+
+<p>
+For example, to convert a Q4.27 internal value to floating point, use:
+</p>
+<pre class="devsite-click-to-copy">
+float = integer * (2 ^ -27)
+</pre>
+
+<p>
+Conversions from floating point to fixed point follow these rules:
+</p>
+
+<ul>
+
+<li>
+Single-precision floating point has a nominal range of &plusmn;1.0,
+but the full range for intermediate values is &plusmn;1.7e+38.
+Conversion between floating point and fixed point for external representation
+(such as output to audio devices) will consider only the nominal range, with
+clamping for values that exceed that range.
+In particular, when +1.0 is converted
+to a fixed-point format, it is clamped to +1.0 minus one LSB.
+</li>
+
+<li>
+Denormals (subnormals) and both +/- 0.0 are allowed in representation,
+but may be silently converted to 0.0 during processing.
+</li>
+
+<li>
+Infinities will either pass through operations or will be silently hard-limited
+to +/- 1.0. Generally the latter is for conversion to a fixed-point format.
+</li>
+
+<li>
+NaN behavior is undefined: a NaN may propagate as an identical NaN, or may be
+converted to a Default NaN, may be silently hard limited to +/- 1.0, or
+silently converted to 0.0, or result in an error.
+</li>
+
+</ul>
+
+<h3 id="fixedConversion">Fixed point conversions</h3>
+
+<p>
+Conversions between different Q<em>m</em>.<em>n</em> formats follow these rules:
+</p>
+
+<ul>
+
+<li>
+When <em>m</em> is increased, sign extend the integer part at left.
+</li>
+
+<li>
+When <em>m</em> is decreased, clamp the integer part.
+</li>
+
+<li>
+When <em>n</em> is increased, zero extend the fractional part at right.
+</li>
+
+<li>
+When <em>n</em> is decreased, either dither, round, or truncate the excess fractional bits at right.
+</li>
+
+</ul>
+
+<p>
+For example, to convert a Q4.27 value to Q0.15 (without dither or
+rounding), right shift the Q4.27 value by 12 bits, and clamp any results
+that exceed the 16-bit signed range. This aligns the point of the
+Q representation.
+</p>
+
+<p>To convert Q7.24 to Q7.23, do a signed divide by 2,
+or equivalently add the sign bit to the Q7.24 integer quantity, and then signed right shift by 1.
+Note that a simple signed right shift is <em>not</em> equivalent to a signed divide by 2.
+</p>
+
+<h3 id="lossyConversion">Lossy and lossless conversions</h3>
+
+<p>
+A conversion is <em>lossless</em> if it is
+<a href="https://en.wikipedia.org/wiki/Inverse_function">invertible</a>:
+a conversion from <code>A</code> to <code>B</code> to
+<code>C</code> results in <code>A = C</code>.
+Otherwise the conversion is <a href="https://en.wikipedia.org/wiki/Lossy_data_conversion">lossy</a>.
+</p>
+
+<p>
+Lossless conversions permit
+<a href="https://en.wikipedia.org/wiki/Round-trip_format_conversion">round-trip format conversion</a>.
+</p>
+
+<p>
+Conversions from fixed point representation with 25 or fewer significant bits to floating point are lossless.
+Conversions from floating point to any common fixed point representation are lossy.
+</p>
+
+  </body>
+</html>

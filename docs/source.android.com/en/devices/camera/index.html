@@ -1,0 +1,193 @@
+<html devsite>
+  <head>
+    <title>Camera</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<img style="float: right; margin: 0px 15px 15px 15px;" src="images/ape_fwk_hal_camera.png" alt="Android Camera HAL icon"/>
+
+<p>Android's camera Hardware Abstraction Layer (HAL) connects the higher level
+camera framework APIs in
+<a href="http://developer.android.com/reference/android/hardware/package-summary.html">android.hardware</a>
+to your underlying camera driver and hardware. The camera subsystem includes
+implementations for camera pipeline components while the camera HAL provides
+interfaces for use in implementing your version of these components.</p>
+
+<p>For the most up-to-date information, refer to the following resources:</p>
+<ul>
+<li><a href="https://android.googlesource.com/platform/hardware/libhardware/+/master/include/hardware/camera.h">camera.h</a> source
+file</li>
+<li><a href="https://android.googlesource.com/platform/hardware/libhardware/+/master/include/hardware/camera3.h">camera3.h</a>
+source file</li>
+<li><a href="https://android.googlesource.com/platform/hardware/libhardware/+/master/include/hardware/camera_common.h">camera_common.h</a>
+source file</li>
+<li><a href="https://developer.android.com/reference/android/hardware/camera2/CameraMetadata.html">CameraMetadata</a>
+developer reference</li>
+</ul>
+
+
+<h2 id="architecture">Architecture</h2>
+<p>The following figure and list describe the HAL components:</p>
+
+<img src="images/ape_fwk_camera.png" alt="Android camera architecture" id="figure1" />
+<p class="img-caption"><strong>Figure 1.</strong> Camera architecture</p>
+
+<dl>
+  <dt>Application framework</dt>
+  <dd>At the application framework level is the app's code, which utilizes the
+  <a href="http://developer.android.com/reference/android/hardware/Camera.html">android.hardware.Camera</a>
+  API to interact with the camera hardware. Internally, this code calls a
+  corresponding JNI glue class to access the native code that interacts with the
+  camera.</dd>
+  <dt>JNI</dt>
+  <dd>The JNI code associated with <a href="http://developer.android.com/reference/android/hardware/Camera.html">android.hardware.Camera</a>
+  is located in
+  <code>frameworks/base/core/jni/android_hardware_Camera.cpp</code>. This code
+  calls the lower level native code to obtain access to the physical camera
+  and returns data that is used to create the
+  <a href="http://developer.android.com/reference/android/hardware/Camera.html">android.hardware.Camera</a>
+  object at the framework level.</dd>
+  <dt>Native framework<dt>
+  <dd>The native framework defined in <code>frameworks/av/camera/Camera.cpp</code>
+  provides a native equivalent to the
+  <a href="http://developer.android.com/reference/android/hardware/Camera.html">android.hardware.Camera</a>
+  class. This class calls the IPC binder proxies to obtain access to the camera
+  service.</dd>
+  <dt>Binder IPC proxies</dt>
+  <dd>The IPC binder proxies facilitate communication over process boundaries.
+  There are three camera binder classes that are located in
+  <code>frameworks/av/camera</code> directory that calls into camera service.
+  ICameraService is the interface to the camera service, ICamera is the
+  interface to a specific opened camera device, and ICameraClient is the
+  device's interface back to the application framework.</dd>
+  <dt>Camera service</dt>
+  <dd>The camera service, located in
+  <code>frameworks/av/services/camera/libcameraservice/CameraService.cpp</code>,
+  is the actual code that interacts with the HAL.</dd>
+  <dt>HAL</dt>
+  <dd>The hardware abstraction layer defines the standard interface that the
+  camera service calls into and that you must implement to have your camera
+  hardware function correctly.</dd>
+  <dt>Kernel driver</dt>
+  <dd>The camera's driver interacts with the actual camera hardware and your
+  implementation of the HAL. The camera and driver must support YV12 and NV21
+  image formats to provide support for previewing the camera image on the
+  display and video recording.</dd>
+</dl>
+
+<h2 id="implementing">Implementing the HAL</h2>
+<p>The HAL sits between the camera driver and the higher level Android framework
+and defines an interface you must implement so apps can correctly operate the
+camera hardware. The HAL interface is defined in the
+<code>hardware/libhardware/include/hardware/camera.h</code> and
+<code>hardware/libhardware/include/hardware/camera_common.h</code> header files.
+</p>
+
+<p><code>camera_common.h</code> defines <code>camera_module</code>, a standard
+structure to obtain general information about the camera, such as the camera ID
+and properties common to all cameras (i.e., whether it is a front- or
+back-facing camera).</p>
+
+<p>
+<code>camera.h</code> contains code that corresponds to
+<a href="http://developer.android.com/reference/android/hardware/Camera.html">android.hardware.Camera</a>. This header file declares a
+<code>camera_device</code> struct that in turn contains a
+<code>camera_device_ops</code> struct with pointers to functions that implement
+the HAL interface. For documentation on the camera parameters developers can
+set, refer to <code>frameworks/av/include/camera/CameraParameters.h</code>.
+These parameters are set with the function pointed to by <code>int
+(*set_parameters)(struct camera_device *, const char *parms)</code> in the HAL.
+</p>
+
+<p>For an example of a HAL implementation, refer to the implementation for the
+Galaxy Nexus HAL in <code>hardware/ti/omap4xxx/camera</code>.</p>
+
+
+<h2 id="configuring">Configuring the shared library</h2>
+<p>Set up the Android build system to correctly package the HAL implementation
+into a shared library and copy it to the appropriate location by creating an
+<code>Android.mk</code> file:</p>
+
+<ol>
+<li>Create a <code>device/&lt;company_name&gt;/&lt;device_name&gt;/camera</code>
+directory to contain your library's source files.</li>
+
+<li>Create an <code>Android.mk</code> file to build the shared library. Ensure
+the Makefile contains the following lines:
+<pre class="devsite-click-to-copy">
+LOCAL_MODULE := camera.&lt;device_name&gt;
+LOCAL_MODULE_RELATIVE_PATH := hw
+</pre>
+<p>Your library must be named <code>camera.&lt;device_name&gt;</code>
+(<code>.so</code> is appended automatically), so Android can correctly load the
+library. For an example, see the Makefile for the Galaxy Nexus camera located in
+<code>hardware/ti/omap4xxx/Android.mk</code>.</p></li>
+
+<li>Specify your device has camera features by copying the necessary feature XML
+files in the <code>frameworks/native/data/etc</code> directory with your
+device's Makefile. For example, to specify your device has a camera flash and
+can autofocus, add the following lines in your device's
+<code>&lt;device&gt;/&lt;company_name&gt;/&lt;device_name&gt;/device.mk</code>
+Makefile:
+<pre class="devsite-click-to-copy">
+PRODUCT_COPY_FILES := \ ...
+
+PRODUCT_COPY_FILES += \
+frameworks/native/data/etc/android.hardware.camera.flash-autofocus.xml:system/etc/permissions/android.hardware.camera.flash-autofocus.xml \
+</pre>
+<p>For an example of a device Makefile, see
+<code>device/samsung/tuna/device.mk</code>.</p></li>
+
+<li>Declare your camera’s media codec, format, and resolution capabilities in
+<code>device/&lt;company_name&gt;/&lt;device_name&gt;/media_profiles.xml</code>
+and <code>device/&lt;company_name&gt;/&lt;device_name&gt;/media_codecs.xml</code>
+XML files. For details, see
+<a href="/devices/media/index.html#expose">Exposing codecs to the
+framework</a>.</li>
+
+<li>Add the following lines in your device's
+<code>device/&lt;company_name&gt;/&lt;device_name&gt;/device.mk</code> Makefile
+to copy the <code>media_profiles.xml</code> and <code>media_codecs.xml</code>
+files to the appropriate location:
+<pre class="devsite-click-to-copy">
+# media config xml file
+PRODUCT_COPY_FILES += \
+    &lt;device&gt;/&lt;company&gt;/&lt;device&gt;/media_profiles.xml:system/etc/media_profiles.xml
+
+# media codec config xml file
+PRODUCT_COPY_FILES += \
+    &lt;device&gt;/&lt;company&gt;/&lt;device&gt;/media_codecs.xml:system/etc/media_codecs.xml
+</pre></li>
+
+<li>To include the Camera app in your device's system image, specify it in the
+<code>PRODUCT_PACKAGES</code> variable in your device's
+<code>device/&lt;company&gt;/&lt;device&gt;/device.mk</code>
+Makefile:
+<pre class="devsite-click-to-copy">
+PRODUCT_PACKAGES := \
+Gallery2 \
+...
+</pre></li>
+</ol>
+
+  </body>
+</html>

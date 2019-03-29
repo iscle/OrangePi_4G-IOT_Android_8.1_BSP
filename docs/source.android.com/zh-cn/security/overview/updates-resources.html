@@ -1,0 +1,183 @@
+<html devsite><head>
+    <title>安全更新和资源</title>
+    <meta name="project_path" value="/_project.yaml"/>
+    <meta name="book_path" value="/_book.yaml"/>
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+<h2 id="android_security_bug_lifecycle">Android 安全错误生命周期</h2>
+
+<p>Android 安全团队负责管理在 Android 平台中发现的以及在 Android 设备绑定的众多核心 Android 应用中发现的安全漏洞。</p>
+
+<p>Android 安全团队会通过内部研究找出安全漏洞，并会对第三方报告的错误采取应对措施。外部错误的来源包括：通过 <a href="https://issuetracker.google.com/issues/new?component=190951">Android 安全问题模板</a>报告的问题、已发布和预发布的学术研究、上游开放源代码项目维护人员、来自设备制造商合作伙伴的通知，以及博客或社交媒体中发布的已公开披露的问题。</p>
+
+<h2 id="report-issues">报告安全问题</h2>
+
+<p>任何开发者、Android 用户或安全研究人员都可以通过 <a href="https://issuetracker.google.com/issues/new?component=190951">Android 安全问题模板</a>将潜在安全问题通知给 Android 安全团队。</p>
+
+<p>外部人员无法查看标记为安全问题的错误，不过在问题经过评估或得到解决后，这些错误最终可能会对外公开。如果您打算提交旨在解决安全问题的补丁程序或兼容性测试套件 (CTS) 测试，请将其附加到错误报告中，然后等待我们的回复，得到我们的回复后再将相应代码上传到 AOSP。</p>
+
+<h2 id="triaging_bugs">为错误分类</h2>
+
+<p>在处理安全漏洞时，第一项任务是确定错误的严重程度以及受影响的 Android 组件。严重程度决定问题的优先级，受影响的组件决定由谁来修复错误、谁将会收到通知以及如何将修复程序提供给用户。</p>
+
+<h3 id="process_types">进程类型</h3>
+<p>下表涵盖了各类进程的定义。进程类型可以按应用或进程的类型来定义，也可以按进程的运行区域来定义。下表按照权限从小到大的顺序排列。</p>
+<table>
+ <tbody><tr>
+    <th>进程类型</th>
+    <th>类型定义</th>
+ </tr>
+ <tr>
+    <td>受限进程</td>
+    <td>在高度受限的 SELinux 域中运行的进程。<br />或<br />受限程度远远超过普通应用的进程。</td>
+ </tr>
+ <tr>
+    <td>非特权进程</td>
+    <td>第三方应用或进程。<br />或<br />在 SELinux <code>untrusted_app</code> 域中运行的应用或进程。</td>
+ </tr>
+ <tr>
+    <td>特权进程</td>
+    <td>功能受 SELinux <code>untrusted_app</code> 域限制的应用或进程。<br />或<br />拥有第三方应用无法获得的重要权限的应用或进程。</td>
+ </tr>
+ <tr>
+    <td>内核</td>
+    <td>属于内核一部分的功能，或在与内核相同的 CPU 环境中运行的功能（例如，设备驱动程序）。</td>
+ </tr>
+ <tr>
+    <td>可信执行环境 (TEE)</td>
+    <td>一种受保护的组件，甚至可以抵御恶意内核的攻击。</td>
+ </tr>
+</tbody></table>
+
+<h3 id="severity">严重程度</h3>
+
+<p>错误的严重程度通常能够反映错误被成功利用后可能造成的潜在危害。可以按照以下条件判断严重程度：</p>
+<table>
+ <tbody><tr>
+    <th>分级</th>
+    <th>被成功利用的后果</th>
+ </tr>
+ <tr>
+    <td><strong>严重</strong></td>
+    <td>
+          <ul>
+             <li>攻击者可以在特权进程中远程执行任意代码</li><li>设备永久损坏（只有重新刷写整个操作系统才能修复设备）</li><li>攻击者可以在未经授权的情况下访问受 TEE 保护的数据</li><li>设备遭到远程发起的永久性拒绝服务攻击（设备无法再使用：完全永久性损坏，或需要重新刷写整个操作系统）</li></ul>
+    </td>
+ </tr>
+ <tr>
+     <td><strong>高</strong></td>
+     <td>
+          <ul>
+             <li>攻击者可以在非特权进程中远程执行任意代码</li><li>攻击者可以远程访问受保护的数据（通常仅限本地安装的应用在请求并获得权限后才可以访问的数据，或仅限特权进程访问的数据）</li><li>攻击者可以远程绕过用户互动要求（攻击者能够访问通常需要由用户发起的功能或需要获得用户许可后方可使用的功能）</li><li>攻击者可以从本地在特权进程中执行任意代码</li><li>设备遭到从本地发起的永久性拒绝服务攻击（设备无法再使用：完全永久性损坏，或需要重新刷写整个操作系统）</li><li>攻击者可以全面深入地绕过内核级防护功能，或利用缓解技术存在的漏洞</li><li>设备遭到远程发起的设备暂时性拒绝服务攻击（远程挂起或重新启动设备）</li><li>攻击者可以从本地绕过针对任何开发者或针对任何安全设置修改的用户互动要求</li><li>攻击者可以全面绕过将应用数据与其他应用隔离开来的操作系统保护功能</li><li>攻击者可以绕过锁定屏幕</li></ul>
+    </td>
+ </tr>
+ <tr>
+     <td><strong>中</strong></td>
+     <td>
+          <ul>
+             <li>攻击者可以在受限进程中远程执行任意代码</li><li>攻击者可以从本地绕过用户互动要求（攻击者能够访问通常需要由用户发起的功能或需要获得用户许可后方可使用的功能）</li><li>设备遭到从本地发起的暂时性拒绝服务攻击（设备需要恢复出厂设置）</li><li>攻击者可以全面深入地绕过用户级防护功能，或在特权进程中利用缓解技术存在的漏洞</li><li>攻击者可以远程访问不受保护的数据（通常可供本地安装的所有应用访问的数据）</li><li>攻击者可以绕过设备保护功能/恢复出厂设置保护功能</li></ul>
+    </td>
+ </tr>
+ <tr>
+     <td><strong>低</strong></td>
+     <td>
+          <ul>
+             <li>攻击者可以全面深入地绕过用户级防护功能，或在非特权进程中利用缓解技术存在的漏洞</li><li>设备遭到从本地发起的暂时性拒绝服务攻击（可通过以下方法解决：使设备启动到安全模式并移除存在问题的应用；或者如果设备不支持安全模式，则将设备恢复出厂设置）</li></ul>
+     </td>
+ </tr>
+</tbody></table>
+
+<h4 id="local_vs_remote">本地和远程</h4>
+
+<p>远程攻击向量指攻击者可以在不安装应用或不实际接触设备的情况下利用的错误。这包括因浏览网页、阅读电子邮件、接收短信或连接到恶意网络而触发的错误。为了进行严重程度分级，Android 安全团队还会将“邻近”攻击向量视为远程攻击向量。这包括只能被实际接近目标设备的攻击者利用的错误，例如需要发送格式错误的 WLAN 数据包或蓝牙数据包的错误。</p>
+
+<p>本地攻击需要受害者安装应用才能得逞。为了进行严重程度分级，Android 安全团队还会将现实攻击向量视为本地攻击。这包括只能被实际接触到设备的攻击者利用的错误，例如锁定屏幕中的错误，或需要插入 USB 数据线的错误。Android 安全团队还会将基于 NFC 的攻击视为本地攻击。</p>
+
+<h3 id="rating_modifiers">分级调节方式</h3>
+<p>虽然通常可以轻松确定安全漏洞的严重程度，但分级可能会因具体情况而异。</p>
+<table>
+ <tbody><tr>
+    <th>原因</th>
+    <th>影响</th>
+ </tr>
+ <tr>
+    <td>需要作为特权进程运行才能执行攻击</td>
+    <td>严重程度降低 1 级</td>
+ </tr>
+ <tr>
+    <td>漏洞特有的详细信息会限制相应问题造成的影响</td>
+    <td>严重程度降低 1 级</td>
+ </tr>
+</tbody></table>
+
+<h3 id="affected_component">受影响的组件</h3>
+
+<p>开发团队负责根据错误所在的组件来修复错误。该组件可能是 Android 平台的核心组件、原始设备制造商 (OEM) 提供的内核驱动程序，或 Nexus 设备上某个预先加载的应用。</p>
+
+<p>AOSP 代码中的错误由 Android 工程团队负责修复。严重程度为“低”的错误、特定组件内的错误或者已经是众所周知的错误可以直接在已公开发布的 AOSP master 分支中进行修复；除此之外的其他错误都会先在我们的内部代码库中进行修复。</p>
+
+<p>组件也是会影响用户如何获取更新的一种因素。如果是框架或内核存在的错误，用户将需要使用无线下载 (OTA) 的固件更新，每个原始设备制造商 (OEM) 都需要推送此类更新。如果是 Google Play 中发布的应用或库（例如，Lollipop 及更高版本中的 Gmail、Google Play 服务、WebView）存在的错误，可以通过 Google Play 向 Android 用户发送更新。</p>
+
+<h2 id="notifying_partners">通知合作伙伴</h2>
+
+<p>当 AOSP 内严重程度为“中”或更高的安全漏洞得到修复后，我们会将问题详细信息通知 Android 合作伙伴，并至少提供针对 3 种最新 Android 版本的补丁程序。Android 安全团队目前提供针对 Android 4.4 版 (KitKat)、5.0 版 (Lollipop)、5.1 版 (Lollipop MR1) 以及 6.0 版 (Marshmallow) 的补丁程序。具体会针对哪些最新版本提供补丁程序会随着每个新 Android 版本的发布而发生变化。</p>
+
+<h2 id="releasing_code_to_aosp">向 AOSP 发布代码</h2>
+
+<p>如果安全错误发生在 AOSP 组件内，我们会先向用户发布 OTA 更新，然后再将修复程序推送到 AOSP。如果问题的严重程度为“低”，我们可能会先直接将修复程序提交到 AOSP master 分支，然后再发布修复程序。</p>
+
+<h2 id="android_updates">接收 Android 更新</h2>
+
+<p>对 Android 系统的更新一般会通过 OTA 更新文件包提供给设备。这些更新可能来自生产相应设备的原始设备制造商 (OEM)，也可能来自向相应设备提供服务的运营商。Google Nexus 设备更新由 Google Nexus 团队在相应更新通过运营商技术验收 (TA) 测试程序之后予以提供。Google 还会发布可以旁加载到设备的 <a href="https://developers.google.com/android/nexus/images">Nexus 出厂映像</a>。</p>
+
+<h2 id="updating_google_services">更新 Google 服务</h2>
+
+<p>除了针对安全错误提供补丁程序之外，Android 安全团队还会审核安全错误，以确定是否有其他方式来保护用户。例如，Google Play 会扫描所有应用并移除任何试图利用安全错误的应用。对于通过 Google Play 之外的途径安装的应用，带有 Google Play 服务的设备可能还会使用<a href="https://support.google.com/accounts/answer/2812853">验证应用</a>功能来警告用户注意可能有害的应用。</p>
+
+<h2 id="other_resources">其他资源</h2>
+
+<p>面向 Android 应用开发者的信息：<a href="https://developer.android.com">https://developer.android.com</a></p>
+
+<p>您可以从各个 Android 开放源代码和开发者网站上找到安全信息。建议您先查看以下网址中提供的安全信息：<br />
+<a href="/security/index.html">https://source.android.com/security/index.html</a><br />
+<a href="https://developer.android.com/training/articles/security-tips.html">https://developer.android.com/training/articles/security-tips.html</a></p>
+
+<h3 id="reports">报告</h3>
+<p>Android 安全团队有时会发布报告或白皮书。以下是一些最新发布的内容。</p>
+<ul>
+  <li><a href="/security/reports/Google_Android_Security_2016_Report_Final.pdf">Android 安全性 2016 年年度回顾报告</a></li>
+  <li><a href="/security/reports/Google_Android_Security_2015_Report_Final.pdf">Android 安全性 2015 年年度回顾报告</a></li>
+  <li><a href="/security/reports/Google_Android_Security_2014_Report_Final.pdf">Android 安全性 2014 年年度回顾报告</a></li>
+  <li><a href="/security/reports/Android_WhitePaper_Final_02092016.pdf">Android 安全性白皮书</a></li>
+  <li><a href="/security/reports/Google_Android_Security_PHA_classifications.pdf">潜在有害应用分类</a></li>
+</ul>
+
+<h3 id="slides">演示文稿</h3>
+<p>Android 安全团队会开展各种会议和对话活动。以下是他们使用的一些幻灯片：</p>
+<ul>
+  <li><a href="/security/reports/Android-Bootcamp-2016-Verified-Boot-and-Encryption.pdf">验证启动和加密</a></li>
+  <li><a href="/security/reports/Android-Bootcamp-2016-SafetyNet.pdf">SafetyNet</a></li>
+  <li><a href="/security/reports/Android-Bootcamp-2016-New-App-Lifecycle-for-Encryption.pdf">新应用加密生命周期</a></li>
+  <li><a href="/security/reports/Android-Bootcamp-2016-Keeping-Google-Play-safe.pdf">维护 Google Play 的安全</a></li>
+  <li><a href="/security/reports/Android-Bootcamp-2016-Defense-in-depth-efforts.pdf">深度防御措施</a></li>
+  <li><a href="/security/reports/Android-Bootcamp-2016-Android-Keystore-Attestation.pdf">Keystore 认证</a></li>
+  <li><a href="/security/reports/Android-Bootcamp-2016-Android-Attack-Team.pdf">Android 防攻击团队</a></li>
+</ul>
+
+</body></html>

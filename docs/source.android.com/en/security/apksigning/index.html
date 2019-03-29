@@ -1,0 +1,140 @@
+<html devsite>
+  <head>
+    <title>Application Signing</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>
+Application signing allows developers to identify the author of the application
+and to update their application without creating complicated interfaces and
+permissions. Every application that is run on the Android platform must be <a
+href="https://developer.android.com/studio/publish/app-signing.html">signed by
+the developer</a>. Applications that attempt to install without being signed
+will be rejected by either Google Play or the package installer on the Android
+device.
+</p>
+<p>
+On Google Play, application signing bridges the trust Google has with the
+developer and the trust the developer has with their application. Developers
+know their application is provided, unmodified, to the Android device; and
+developers can be held accountable for behavior of their application.
+</p>
+<p>
+On Android, application signing is the first step to placing an application in
+its Application Sandbox. The signed application certificate defines which user
+ID is associated with which application; different applications run under
+different user IDs. Application signing ensures that one application cannot
+access any other application except through well-defined IPC.
+</p>
+<p>
+When an application (APK file) is installed onto an Android device, the Package
+Manager verifies that the APK has been properly signed with the certificate
+included in that APK. If the certificate (or, more accurately, the public key in
+the certificate) matches the key used to sign any other APK on the device, the
+new APK has the option to specify in the manifest that it will share a UID with
+the other similarly-signed APKs.
+</p>
+<p>
+Applications can be signed by a third-party (OEM, operator, alternative market)
+or self-signed. Android provides code signing using self-signed certificates
+that developers can generate without external assistance or permission.
+Applications do not have to be signed by a central authority. Android currently
+does not perform CA verification for application certificates.
+</p>
+<p>
+Applications are also able to declare security permissions at the Signature
+protection level, restricting access only to applications signed with the same
+key while maintaining distinct UIDs and Application Sandboxes. A closer
+relationship with a shared Application Sandbox is allowed via the <a
+href="https://developer.android.com/guide/topics/manifest/manifest-element.html#uid">shared
+UID feature</a> where two or more applications signed with same developer key
+can declare a shared UID in their manifest.
+</p>
+<h2>APK signing schemes</h2>
+<p>
+Android supports two application signing schemes, one based on JAR signing (v1
+scheme) and <a href="v2.html">APK Signature Scheme v2 (v2 scheme)</a>, which
+was introduced in Android Nougat (Android 7.0).
+</p>
+<p>
+For maximum compatibility, applications should be signed both with v1 and v2
+schemes. Android Nougat and newer devices install apps signed with v2 scheme
+more quickly than those signed only with v1 scheme. Older Android platforms
+ignore v2 signatures and thus need apps to contain v1 signatures.
+</p>
+<h3 id="v1">JAR signing (v1 scheme)</h3>
+<p>
+APK signing has been a part of Android from the beginning. It is based on <a
+href="https://docs.oracle.com/javase/8/docs/technotes/guides/jar/jar.html#Signed_JAR_File">
+signed JAR</a>. For details on using this scheme, see the Android Studio documentation on
+<a href="https://developer.android.com/studio/publish/app-signing.html">Signing
+your app</a>.
+</p>
+<p>
+v1 signatures do not protect some parts of the APK, such as ZIP metadata. The
+APK verifier needs to process lots of untrusted (not yet verified) data
+structures and then discard data not covered by the signatures. This offers a
+sizeable attack surface. Moreover, the APK verifier must uncompress all
+compressed entries, consuming more time and memory. To address these issues,
+Android 7.0 introduced APK Signature Scheme v2.
+</p>
+<h3 id="v2">APK Signature Scheme v2 (v2 scheme)</h3>
+<p>
+Android 7.0 introduces APK signature scheme v2 (v2 scheme). The contents of the
+APK are hashed and signed, then the resulting APK Signing Block is inserted
+into the APK. For details on applying the v2 scheme to an application, refer to
+<a href="https://developer.android.com/about/versions/nougat/android-7.0.html#apk_signature_v2">APK
+Signature Scheme v2</a> in the Android N Developer Preview.
+</p>
+<p>
+During validation, v2 scheme treats the APK file as a blob and performs signature
+checking across the entire file. Any modification to the APK, including ZIP metadata
+modifications, invalidates the APK signature. This form of APK verification is
+substantially faster and enables detection of more classes of unauthorized
+modifications.
+</p>
+<p>
+The new format is backwards compatible, so APKs signed with the new signature
+format can be installed on older Android devices (which simply ignore the extra
+data added to the APK), as long as these APKs are also v1-signed.
+</p>
+<p>
+  <img src="../images/apk-validation-process.png" alt="APK signature verification process" id="figure1" />
+</p>
+<p class="img-caption"><strong>Figure 1.</strong> APK signature verification
+process (new steps in red)</p>
+
+<p>
+Whole-file hash of the APK is verified against the v2 signature stored in the
+APK Signing Block. The hash covers everything except the APK Signing Block,
+which contains the v2 signature. Any modification to the APK outside of the APK
+Signing Block invalidates the APK's v2 signature. APKs with stripped v2
+signature are rejected as well, because their v1 signature specifies that the
+APK was v2-signed, which makes Android Nougat and newer refuse to verify APKs
+using their v1 signatures.
+</p>
+
+<p>For details on the APK signature verification process, see the <a href="v2.html#verification">
+Verification section</a> of APK Signature Scheme v2.</p>
+
+  </body>
+</html>

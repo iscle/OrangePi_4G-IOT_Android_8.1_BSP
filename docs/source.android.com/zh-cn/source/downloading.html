@@ -1,0 +1,187 @@
+<html devsite><head>
+    <title>下载源代码</title>
+    <meta name="project_path" value="/_project.yaml"/>
+    <meta name="book_path" value="/_book.yaml"/>
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+<p>Android 源代码树位于由 Google 托管的 Git 代码库中。Git 代码库中包含 Android 源代码的元数据，其中包括与对源代码进行的更改以及更改日期相关的元数据。本文档介绍了如何下载特定 Android 代码流水线的源代码树。
+</p>
+<p>要从特定设备的出厂映像开始，请参阅<a href="running.html#selecting-device-build">选择设备版本</a>。
+</p>
+<h2 id="installing-repo">安装 Repo</h2>
+<p>Repo 是一款工具，可让您在 Android 环境中更轻松地使用 Git。要详细了解 Repo，请参阅<a href="developing.html">开发</a>部分。
+</p>
+<p>要安装 Repo，请执行以下操作：</p>
+<ol>
+  <li>
+    <p>确保主目录下有一个 bin/ 目录，并且该目录包含在路径中：</p>
+    <pre>
+<code>$ mkdir ~/bin
+$ PATH=~/bin:$PATH
+</code>
+</pre>
+  </li>
+  <li>
+    <p>下载 Repo 工具，并确保它可执行：</p>
+    <pre>
+$ curl https://storage.googleapis.com/git-repo-downloads/repo &gt; ~/bin/repo
+$ chmod a+x ~/bin/repo
+</pre>
+  </li>
+</ol>
+<p>对于 1.21 版，Repo 的 SHA-1 校验和为 b8bd1804f432ecf1bab730949c82b93b0fc5fede</p>
+<p>对于 1.22 版，Repo 的 SHA-1 校验和为 da0514e484f74648a890c0467d61ca415379f791</p>
+<p>对于 1.23 版，Repo 的 SHA-1 校验和为 ac9d646f6d699f6822a6bc787d3e7338ae7ab6ed</p>
+<h2 id="initializing-a-repo-client">初始化 Repo 客户端</h2>
+<p>安装 Repo 后，设置您的客户端以访问 Android 源代码代码库：</p>
+<ol>
+  <li>
+    <p>创建一个空目录来存放您的工作文件。如果您使用的是 MacOS，必须在区分大小写的文件系统中创建该目录。为其指定一个您喜欢的任意名称：</p>
+<pre>
+$ mkdir WORKING_DIRECTORY
+$ cd WORKING_DIRECTORY
+</pre>
+  </li>
+  <li>
+    <p>使用您的真实姓名和电子邮件地址配置 Git。要使用 Gerrit 代码审核工具，您需要一个与<a href="https://www.google.com/accounts">已注册的 Google 帐号</a>关联的电子邮件地址。确保这是您可以接收邮件的有效地址。您在此处提供的姓名将显示在您提交的代码的提供方信息中。
+    </p>
+<pre>
+$ git config --global user.name "Your Name"
+$ git config --global user.email "you@example.com"
+</pre>
+  </li>
+
+  <li>
+    <p>运行 <code>repo init</code> 以获取最新版本的 Repo 及其最近的所有错误更正内容。您必须为清单指定一个网址，该网址用于指定 Android 源代码中包含的各个代码库将位于工作目录中的什么位置。
+    </p>
+<pre>
+$ repo init -u https://android.googlesource.com/platform/manifest
+</pre>
+    <p>要对“master”以外的分支进行校验，请使用 <code>-b</code> 来指定相应分支。要查看分支列表，请参阅<a href="build-numbers.html#source-code-tags-and-builds">源代码标记和版本</a>。
+    </p>
+<pre>
+$ repo init -u https://android.googlesource.com/platform/manifest -b android-4.0.1_r1
+</pre>
+  </li>
+</ol>
+<p>初始化成功后，系统将显示一条消息，告诉您 Repo 已在工作目录中完成初始化。客户端目录中现在应包含一个 <code>.repo</code> 目录，清单等文件将保存在该目录下。
+</p>
+<h2 id="getting-the-files">下载 Android 源代码树</h2>
+<p>要将 Android 源代码树从默认清单中指定的代码库下载到工作目录，请运行以下命令：</p>
+<pre>$ repo sync</pre>
+<p>Android 源代码文件将位于工作目录中对应的项目名称下。初始同步操作将需要 1 个小时或更长时间才能完成。要详细了解 <code>repo
+  sync</code> 和其他 Repo 命令，请参阅<a href="developing.html">开发</a>部分。
+</p>
+<h2 id="using-authentication">使用身份验证</h2>
+<p>默认情况下，访问 Android 源代码均为匿名操作。为了防止服务器被过度使用，每个 IP 地址都有一个相关联的配额。
+</p>
+<p>当与其他用户共用一个 IP 地址时（例如，在越过 NAT 防火墙访问源代码代码库时），系统甚至会针对常规使用模式（例如，许多用户在短时间内从同一个 IP 地址同步新客户端）触发配额。
+</p>
+<p>在这种情况下，可以使用进行身份验证的访问方式，此类访问方式会对每位用户使用单独的配额，而不考虑 IP 地址。
+</p>
+<p>第一步是使用<a href="https://android.googlesource.com/new-password">密码生成器</a>生成密码，然后按照密码生成器页面中的说明进行操作。
+</p>
+<p>第二步是通过使用以下清单 URI，强制使用进行身份验证的访问方式：<code>https://android.googlesource.com/a/platform/manifest</code>。请注意 <code>/a/</code> 目录前缀如何触发强制性身份验证。您可以通过以下命令将现有客户端转换为使用强制性身份验证：</p>
+<pre>
+$ repo init -u https://android.googlesource.com/a/platform/manifest
+</pre>
+<h2 id="troubleshooting-network-issues">排查网络问题</h2>
+<p>在使用代理的情况下下载内容（在一些企业环境中很常见）时，您可能需要明确指定 Repo 随后使用的代理：</p>
+<pre>
+$ export HTTP_PROXY=http://&lt;proxy_user_id&gt;:&lt;proxy_password&gt;@&lt;proxy_server&gt;:&lt;proxy_port&gt;
+$ export HTTPS_PROXY=http://&lt;proxy_user_id&gt;:&lt;proxy_password&gt;@&lt;proxy_server&gt;:&lt;proxy_port&gt;
+</pre>
+<p>一种比较少见的情况是，Linux 客户端遇到连接问题，在下载期间（通常是在“正在接收对象”期间）被卡住。有人曾报告称，调整 TCP/IP 堆栈的设置并使用非并行命令可以改善这种情况。您需要拥有 root 权限才能修改 TCP 设置：</p>
+<pre>
+$ sudo sysctl -w net.ipv4.tcp_window_scaling=0
+$ repo sync -j1
+</pre>
+<h2 id="using-a-local-mirror">使用本地镜像</h2>
+<p>当您使用多个客户端时（尤其是在带宽不足的情况下），最好为所有服务器内容创建一个本地镜像，并从该镜像同步客户端（不需要访问网络）。一个完整镜像的下载文件比两个客户端的下载文件要小一些，而且包含更多信息。
+</p>
+<p>以下说明假定在 <code>/usr/local/aosp/mirror</code> 中创建镜像。第一步是创建并同步镜像本身。请注意 <code>--mirror</code> 标志，该标志只能在创建新客户端时指定：</p>
+<pre>
+$ mkdir -p /usr/local/aosp/mirror
+$ cd /usr/local/aosp/mirror
+$ repo init -u https://android.googlesource.com/mirror/manifest --mirror
+$ repo sync
+</pre>
+<p>同步镜像后，您就可以从镜像创建新客户端了。请注意，务必要指定一个绝对路径：</p>
+<pre>$ mkdir -p /usr/local/aosp/master
+$ cd /usr/local/aosp/master
+$ repo init -u /usr/local/aosp/mirror/platform/manifest.git
+$ repo sync
+</pre>
+<p>最后，要将客户端与服务器同步，您需要将镜像与服务器同步，然后再将客户端与镜像同步：</p>
+<pre>
+$ cd /usr/local/aosp/mirror
+$ repo sync
+$ cd /usr/local/aosp/master
+$ repo sync
+</pre>
+<p>您可以将镜像存储在 LAN 服务器上，然后通过 NFS、SSH 或 Git 访问它。您还可以将其存储在移动存储盘上，并在用户之间或计算机之间传用该存储盘。
+</p>
+<h2 id="verifying-git-tags">验证 Git 标记</h2>
+<p>将以下公钥加载到您的 GnuPG 密钥数据库中。该密钥用于签署代表各版本的带批注标记。
+</p>
+<pre>
+$ gpg --import
+</pre>
+<p>复制并粘贴以下密钥，然后输入 EOF (Ctrl-D) 以结束输入并处理密钥。
+</p>
+<pre>
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+Version: GnuPG v1.4.2.2 (GNU/Linux)
+
+mQGiBEnnWD4RBACt9/h4v9xnnGDou13y3dvOx6/t43LPPIxeJ8eX9WB+8LLuROSV
+lFhpHawsVAcFlmi7f7jdSRF+OvtZL9ShPKdLfwBJMNkU66/TZmPewS4m782ndtw7
+8tR1cXb197Ob8kOfQB3A9yk2XZ4ei4ZC3i6wVdqHLRxABdncwu5hOF9KXwCgkxMD
+u4PVgChaAJzTYJ1EG+UYBIUEAJmfearb0qRAN7dEoff0FeXsEaUA6U90sEoVks0Z
+wNj96SA8BL+a1OoEUUfpMhiHyLuQSftxisJxTh+2QclzDviDyaTrkANjdYY7p2cq
+/HMdOY7LJlHaqtXmZxXjjtw5Uc2QG8UY8aziU3IE9nTjSwCXeJnuyvoizl9/I1S5
+jU5SA/9WwIps4SC84ielIXiGWEqq6i6/sk4I9q1YemZF2XVVKnmI1F4iCMtNKsR4
+MGSa1gA8s4iQbsKNWPgp7M3a51JCVCu6l/8zTpA+uUGapw4tWCp4o0dpIvDPBEa9
+b/aF/ygcR8mh5hgUfpF9IpXdknOsbKCvM9lSSfRciETykZc4wrRCVGhlIEFuZHJv
+aWQgT3BlbiBTb3VyY2UgUHJvamVjdCA8aW5pdGlhbC1jb250cmlidXRpb25AYW5k
+cm9pZC5jb20+iGAEExECACAFAknnWD4CGwMGCwkIBwMCBBUCCAMEFgIDAQIeAQIX
+gAAKCRDorT+BmrEOeNr+AJ42Xy6tEW7r3KzrJxnRX8mij9z8tgCdFfQYiHpYngkI
+2t09Ed+9Bm4gmEO5Ag0ESedYRBAIAKVW1JcMBWvV/0Bo9WiByJ9WJ5swMN36/vAl
+QN4mWRhfzDOk/Rosdb0csAO/l8Kz0gKQPOfObtyYjvI8JMC3rmi+LIvSUT9806Up
+hisyEmmHv6U8gUb/xHLIanXGxwhYzjgeuAXVCsv+EvoPIHbY4L/KvP5x+oCJIDbk
+C2b1TvVk9PryzmE4BPIQL/NtgR1oLWm/uWR9zRUFtBnE411aMAN3qnAHBBMZzKMX
+LWBGWE0znfRrnczI5p49i2YZJAjyX1P2WzmScK49CV82dzLo71MnrF6fj+Udtb5+
+OgTg7Cow+8PRaTkJEW5Y2JIZpnRUq0CYxAmHYX79EMKHDSThf/8AAwUIAJPWsB/M
+pK+KMs/s3r6nJrnYLTfdZhtmQXimpoDMJg1zxmL8UfNUKiQZ6esoAWtDgpqt7Y7s
+KZ8laHRARonte394hidZzM5nb6hQvpPjt2OlPRsyqVxw4c/KsjADtAuKW9/d8phb
+N8bTyOJo856qg4oOEzKG9eeF7oaZTYBy33BTL0408sEBxiMior6b8LrZrAhkqDjA
+vUXRwm/fFKgpsOysxC6xi553CxBUCH2omNV6Ka1LNMwzSp9ILz8jEGqmUtkBszwo
+G1S8fXgE0Lq3cdDM/GJ4QXP/p6LiwNF99faDMTV3+2SAOGvytOX6KjKVzKOSsfJQ
+hN0DlsIw8hqJc0WISQQYEQIACQUCSedYRAIbDAAKCRDorT+BmrEOeCUOAJ9qmR0l
+EXzeoxcdoafxqf6gZlJZlACgkWF7wi2YLW3Oa+jv2QSTlrx4KLM=
+=Wi5D
+-----END PGP PUBLIC KEY BLOCK-----
+</pre>
+<p>导入密钥后，您可以通过以下命令验证任何标记：</p>
+<pre>
+$ git tag -v TAG_NAME
+</pre>
+<p>如果您尚未<a href="initializing.html#ccache">设置 ccache</a>，现在是设置它的最佳时机。
+</p>
+
+</body></html>

@@ -1,0 +1,304 @@
+<html devsite>
+  <head>
+    <title>Implementing Vulkan</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+
+<p>Vulkan is a low-overhead, cross-platform API for high-performance 3D
+graphics. Like OpenGL ES, Vulkan provides tools for creating high-quality,
+real-time graphics in applications. Vulkan advantages include reductions in CPU
+overhead and support for the <a href="https://www.khronos.org/spir">SPIR-V
+Binary Intermediate</a> language.</p>
+
+<p class="note"><strong>Note:</strong> This section describes Vulkan
+implementation; for details on Vulkan architecture, advantages, API, and other
+resources, see <a href="/devices/graphics/arch-vulkan.html">Vulkan
+Architecture</a>.</p>
+
+<p>To implement Vulkan, a device:</p>
+<ul>
+<li>Must include the Vulkan Loader (provided by Android) in the build.</li>
+<li>Must include a Vulkan driver (provided by SoCs such as GPU IHVs) that
+implements the
+<a href="https://www.khronos.org/registry/vulkan/specs/1.0-wsi_extensions/xhtml/vkspec.html">Vulkan
+API</a>. To support Vulkan functionality, the Android device needs capable GPU
+hardware and the associated driver. Consult your SoC vendor to request driver
+support.</li>
+</ul>
+<p>If a Vulkan driver is available on the device, the device needs to declare
+<code>FEATURE_VULKAN_HARDWARE_LEVEL</code> and
+<code>FEATURE_VULKAN_HARDWARE_VERSION</code> system features, with versions that
+accurately reflect the capabilities of the device.</p>
+
+<h2 id=vulkan_loader>Vulkan Loader</h2>
+<p>The primary interface between Vulkan applications and a device's Vulkan
+driver is the Vulkan loader, which is part of Android Open Source Project (AOSP)
+(<code>platform/frameworks/native/vulkan</code>) and installed at
+<code>/system/lib[64]/libvulkan.so</code>. The loader provides the core Vulkan
+API entry points, as well as entry points of a few extensions that are required
+on Android and always present. In particular, Window System Integration (WSI)
+extensions are exported by the loader and primarily implemented in it rather
+than the driver. The loader also supports enumerating and loading layers that
+can expose additional extensions and/or intercept core API calls on their way to
+the driver.</p>
+
+<p>The NDK includes a stub <code>libvulkan.so</code> library that exports the
+same symbols as the loader and which is used for linking. When running on a
+device, applications call the Vulkan functions exported from
+<code>libvulkan.so</code> (the real library, not the stub) to enter trampoline
+functions in the loader (which then dispatch to the appropriate layer or driver
+based on their first argument). The <code>vkGetDeviceProcAddr</code> calls
+return the function pointers to which the trampolines would dispatch (i.e. it
+calls directly into the core API code), so calling through these function
+pointers (rather than the exported symbols) is slightly more efficient as it
+skips the trampoline and dispatch. However, <code>vkGetInstanceProcAddr</code>
+must still call into trampoline code.</p>
+
+<h2 id=driver_emun>Driver enumeration and loading</h2>
+<p>Android expects the GPUs available to the system to be known when the system
+image is built. The loader uses the existing HAL mechanism (see <code><a href="https://android.googlesource.com/platform/hardware/libhardware/+/master/include/hardware/hardware.h">hardware.h</code></a>)
+for discovering and loading the driver. Preferred paths for 32-bit and 64-bit
+Vulkan drivers are:</p>
+
+<pre class="devsite-click-to-copy">
+/vendor/lib/hw/vulkan.&lt;ro.product.platform&gt;.so
+/vendor/lib64/hw/vulkan.&lt;ro.product.platform&gt;.so
+</pre>
+
+<p>Where &lt;<code>ro.product.platform</code>&gt; is replaced by the value of
+the system property of that name. For details and supported alternative
+locations, refer to <code><a href="https://android.googlesource.com/platform/hardware/libhardware/+/master/hardware.c">libhardware/hardware.c</code></a>.</p>
+
+<p>In Android 7.0, the Vulkan <code>hw_module_t</code> derivative is trivial;
+only one driver is supported and the constant string
+<code>HWVULKAN_DEVICE_0</code> is passed to open. If support for multiple
+drivers is added in future versions of Android, the HAL module will export a
+list of strings that can be passed to the <code>module open</code> call.</p>
+
+<p>The Vulkan <code>hw_device_t</code> derivative corresponds to a single
+driver, though that driver can support multiple physical devices. The
+<code>hw_device_t</code> structure can be extended to export
+<code>vkGetGlobalExtensionProperties</code>, <code>vkCreateInstance</code>, and
+<code>vkGetInstanceProcAddr</code> functions. The loader can find all other
+<code>VkInstance</code>, <code>VkPhysicalDevice</code>, and
+<code>vkGetDeviceProcAddr</code> functions by calling
+<code>vkGetInstanceProcAddr</code>.</p>
+
+<h2 id=layer_discover>Layer discovery and loading</h2>
+<p>The Vulkan loader supports enumerating and loading layers that can expose
+additional extensions and/or intercept core API calls on their way to the
+driver. Android 7.0 does not include layers on the system image; however,
+applications may include layers in their APK.</p>
+<p>When using layers, keep in mind that Android's security model and policies
+differ significantly from other platforms. In particular, Android does not allow
+loading external code into a non-debuggable process on production (non-rooted)
+devices, nor does it allow external code to inspect or control the process's
+memory, state, etc. This includes a prohibition on saving core dumps, API
+traces, etc. to disk for later inspection. Only layers delivered as part of the
+application are enabled on production devices, and drivers must not provide
+functionality that violates these policies.</p>
+
+<p>Use cases for layers include:</p>
+<ul>
+<li><strong>Development-time layers</strong>. These layers (validation layers,
+shims for tracing/profiling/debugging tools, etc.) should not be installed on
+the system image of production devices as they waste space for users and should
+be updateable without requiring a system update. Developers who want to use one
+of these layers during development can modify the application package (e.g.
+adding a file to their native libraries directory). IHV and OEM engineers who
+want to diagnose failures in shipping, unmodifiable apps are assumed to have
+access to non-production (rooted) builds of the system image.</li>
+<li><strong>Utility layers</strong>. These layers almost always expose
+extensions, such as a layer that implements a memory manager for device memory.
+Developers choose layers (and versions of those layers) to use in their
+application; different applications using the same layer may still use
+different versions. Developers choose which of these layers to ship in their
+application package.</li>
+<li><strong>Injected (implicit) layers</strong>. Includes layers such as
+framerate, social network, or game launcher overlays provided by the user or
+some other application without the application's knowledge or consent. These
+violate Android's security policies and are not supported.</li>
+</ul>
+
+<p>In the normal state, the loader searches for layers only in the application's
+native library directory and attempts to load any library with a name matching a
+particular pattern (e.g. <code>libVKLayer_foo.so</code>). It does not need a
+separate manifest file as the developer deliberately included these layers and
+reasons to avoid loading libraries before enabling them don't apply.</p>
+
+<p>Android allows layers to be ported with build-environment changes between
+Android and other platforms. For details on the interface between layers and the
+loader, refer to
+<a href="https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers/blob/master/loader/LoaderAndLayerInterface.md">Vulkan
+Loader Specification and Architecture Overview</a>. Versions of the LunarG
+validation layers that have been verified to build and work on Android are
+hosted in the android_layers branch of the
+<a href="https://github.com/KhronosGroup/Vulkan-LoaderAndValidationLayers/tree/android_layers">KhronosGroup/Vulkan-LoaderAndValidationLayers</a>
+project on GitHub.</p>
+
+<h2 id=wsi>Window System Integration (WSI)</h2>
+<p>The Window System Integration (WSI) extensions <code>VK_KHR_surface</code>,
+<code>VK_KHR_android_surface</code>, and <code>VK_KHR_swapchain</code> are
+implemented by the platform and live in <code>libvulkan.so</code>. The
+<code>VkSurfaceKHR</code> and <code>VkSwapchainKHR</code> objects and all
+interaction with <code>ANativeWindow</code> is handled by the platform and is
+not exposed to drivers. The WSI implementation relies on the
+<code>VK_ANDROID_native_buffer</code> extension (described below) which must be
+supported by the driver; this extension is only used by the WSI implementation
+and will not be exposed to applications.</p>
+
+<h3 id=gralloc_usage_flags>Gralloc usage flags</h3>
+<p>Implementations may need swapchain buffers to be allocated with
+implementation-defined private gralloc usage flags. When creating a swapchain,
+the platform asks the driver to translate the requested format and image usage
+flags into gralloc usage flags by calling:</p>
+
+<pre class="devsite-click-to-copy">
+VkResult VKAPI vkGetSwapchainGrallocUsageANDROID(
+    VkDevice            device,
+    VkFormat            format,
+    VkImageUsageFlags   imageUsage,
+    int*                grallocUsage
+);
+</pre>
+
+<p>The <code>format</code> and <code>imageUsage</code> parameters are taken from
+the <code>VkSwapchainCreateInfoKHR</code> structure. The driver should fill
+<code>*grallocUsage</code> with the gralloc usage flags required for the format
+and usage (which are combined with the usage flags requested by the swapchain
+consumer when allocating buffers).</p>
+
+<h3 id=gralloc_usage_flags>Gralloc-backed images</h3>
+
+<p><code>VkNativeBufferANDROID</code> is a <code>vkCreateImage</code> extension
+structure for creating an image backed by a gralloc buffer. This structure is
+provided to <code>vkCreateImage</code> in the <code>VkImageCreateInfo</code>
+structure chain. Calls to <code>vkCreateImage</code> with this structure happen
+during the first call to <code>vkGetSwapChainInfoWSI(..
+VK_SWAP_CHAIN_INFO_TYPE_IMAGES_WSI ..)</code>. The WSI implementation allocates
+the number of native buffers requested for the swapchain, then creates a
+<code>VkImage</code> for each one:</p>
+
+<pre class="devsite-click-to-copy">
+typedef struct {
+    VkStructureType             sType; // must be VK_STRUCTURE_TYPE_NATIVE_BUFFER_ANDROID
+    const void*                 pNext;
+
+    // Buffer handle and stride returned from gralloc alloc()
+    buffer_handle_t             handle;
+    int                         stride;
+
+    // Gralloc format and usage requested when the buffer was allocated.
+    int                         format;
+    int                         usage;
+} VkNativeBufferANDROID;
+</pre>
+
+<p>When creating a gralloc-backed image, the <code>VkImageCreateInfo</code> has
+the following data:</p>
+
+<pre class="devsite-click-to-copy">
+ .imageType           = VK_IMAGE_TYPE_2D
+  .format              = a VkFormat matching the format requested for the gralloc buffer
+  .extent              = the 2D dimensions requested for the gralloc buffer
+  .mipLevels           = 1
+  .arraySize           = 1
+  .samples             = 1
+  .tiling              = VK_IMAGE_TILING_OPTIMAL
+  .usage               = VkSwapChainCreateInfoWSI::imageUsageFlags
+  .flags               = 0
+  .sharingMode         = VkSwapChainCreateInfoWSI::sharingMode
+  .queueFamilyCount    = VkSwapChainCreateInfoWSI::queueFamilyCount
+  .pQueueFamilyIndices = VkSwapChainCreateInfoWSI::pQueueFamilyIndices
+</pre>
+
+<h3 id=acquire_image>Aquiring images</h3>
+<p><code>vkAcquireImageANDROID</code> acquires ownership of a swapchain image
+and imports an externally-signalled native fence into both an existing
+<code>VkSemaphore</code> object and an existing <code>VkFence</code> object:</p>
+
+<pre class="devsite-click-to-copy">
+VkResult VKAPI vkAcquireImageANDROID(
+    VkDevice            device,
+    VkImage             image,
+    int                 nativeFenceFd,
+    VkSemaphore         semaphore,
+    VkFence             fence
+);
+</pre>
+
+<p>This function is called during <code>vkAcquireNextImageWSI</code> to import a
+native fence into the <code>VkSemaphore</code> and <code>VkFence</code> objects
+provided by the application (however, both semaphore and fence objects are
+optional in this call). The driver may also use this opportunity to recognize
+and handle any external changes to the gralloc buffer state; many drivers won't
+need to do anything here. This call puts the <code>VkSemaphore</code> and
+<code>VkFence</code> into the same pending state as
+<code>vkQueueSignalSemaphore</code> and <code>vkQueueSubmit</code> respectively,
+so queues can wait on the semaphore and the application can wait on the fence.</p>
+
+<p>Both objects become signalled when the underlying native fence signals; if
+the native fence has already signalled, then the semaphore is in the signalled
+state when this function returns. The driver takes ownership of the fence fd and
+is responsible for closing it when no longer needed. It must do so even if
+neither a semaphore or fence object is provided, or even if
+<code>vkAcquireImageANDROID</code> fails and returns an error. If fenceFd is -1,
+it is as if the native fence was already signalled.</p>
+
+<h3 id=acquire_image>Releasing images</h3>
+<p><code>vkQueueSignalReleaseImageANDROID</code> prepares a swapchain image for
+external use, and creates a native fence and schedules it to be signalled when
+prior work on the queue has completed:</p>
+
+<pre class="devsite-click-to-copy">
+VkResult VKAPI vkQueueSignalReleaseImageANDROID(
+    VkQueue             queue,
+    VkImage             image,
+    int*                pNativeFenceFd
+);
+</pre>
+
+<p>This API is called during <code>vkQueuePresentWSI</code> on the provided
+queue. Effects are similar to <code>vkQueueSignalSemaphore</code>, except with a
+native fence instead of a semaphore. Unlike <code>vkQueueSignalSemaphore</code>,
+however, this call creates and returns the synchronization object that will be
+signalled rather than having it provided as input. If the queue is already idle
+when this function is called, it is allowed (but not required) to set
+<code>*pNativeFenceFd</code> to -1. The file descriptor returned in
+*<code>pNativeFenceFd</code> is owned and will be closed by the caller.</p>
+
+<h3 id=update_drivers>Updating drivers</h3>
+
+<p>Many drivers can ignore the image parameter, but some may need to prepare
+CPU-side data structures associated with a gralloc buffer for use by external
+image consumers. Preparing buffer contents for use by external consumers should
+have been done asynchronously as part of transitioning the image to
+<code>VK_IMAGE_LAYOUT_PRESENT_SRC_KHR</code>.</p>
+
+<h2 id=validation>Validation</h2>
+<p>OEMs can test their Vulkan implementation using CTS, which includes
+<a href="/devices/graphics/cts-integration.html">drawElements
+Quality Program (dEQP)</a> tests that exercise the Vulkan Runtime.</p>
+
+  </body>
+</html>

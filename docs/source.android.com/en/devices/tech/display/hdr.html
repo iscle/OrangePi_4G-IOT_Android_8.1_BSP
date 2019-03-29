@@ -1,0 +1,707 @@
+<html devsite>
+  <head>
+    <title>HDR Video Playback</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>High dynamic range (HDR) video is the next frontier in high-quality
+video decoding, bringing unmatched scene reproduction qualities. It does
+so by significantly increasing the dynamic range of the luminance component
+(from the current 100 cd/m<sup>2</sup> to 1000s of cd/m<sup>2</sup>) and by using a much wider
+color space (BT 2020). This is now a central element of the 4K UHD evolution
+in the TV space.</p>
+
+<p>In Android 7.0, initial HDR support has been added, which includes the
+creation of proper constants for the discovery and setup of HDR video
+pipelines. That means defining codec types and display modes and specifying
+how HDR data must be passed to MediaCodec and supplied to HDR decoders. HDR
+is only supported in tunneled video playback mode.</p>
+
+<p>The purpose of this document is to help application developers support HDR stream
+playback, and help OEMs and SOCs enable the HDR features on Android 7.0.</p>
+
+<h2 id="technologies">Supported HDR technologies</h2>
+
+<p>As of Android 7.0 release, the following HDR technologies are supported.
+
+<table>
+<tbody>
+<tr>
+<th>Technology
+</th>
+<th>Dolby-Vision
+</th>
+<th>HDR10
+</th>
+<th>VP9-HLG
+</th>
+<th>VP9-PQ
+</th>
+</tr>
+<tr>
+<th>Codec
+</th>
+<td>AVC/HEVC
+</td>
+<td>HEVC
+</td>
+<td>VP9
+</td>
+<td>VP9
+</td>
+</tr>
+<tr>
+<th>Transfer Function
+</th>
+<td>ST-2084
+</td>
+<td>ST-2084
+</td>
+<td>HLG
+</td>
+<td>ST-2084
+</td>
+</tr>
+<tr>
+<th>HDR Metadata Type
+</th>
+<td>Dynamic
+</td>
+<td>Static
+</td>
+<td>None
+</td>
+<td>Static
+</td>
+</tr>
+</tbody>
+</table>
+
+<p>In Android 7.0, <b>only HDR playback via tunneled mode is defined</b>,
+but devices may add support for playback of HDR on SurfaceViews using opaque
+video buffers. In other words:</p>
+<ul>
+<li>There is no standard Android API to check if HDR playback is supported
+using non-tunneled decoders.</li>
+<li>Tunneled video decoders that advertise HDR playback capability must
+support HDR playback when connected to HDR-capable displays.</li>
+<li>GL composition of HDR content is not supported by the AOSP Android
+7.0 release.</li>
+</ul>
+
+<h2 id="discovery">Discovery</h2>
+
+<p>HDR Playback requires an HDR-capable decoder and a connection to an
+HDR-capable display. Optionally, some technologies require a specific
+extractor.</p>
+
+<h3 id="display">Display</h3>
+
+<p>Applications shall use the new <code>Display.getHdrCapabilities</code>
+API to query the HDR technologies supported by the specified display. This is
+basically the information in the EDID Static Metadata Data Block as defined
+in CTA-861.3:</p>
+
+<ul>
+
+<li><code>public Display.HdrCapabilities getHdrCapabilities()</code><br>
+Returns the display's HDR capabilities.</li>
+
+<li><code>Display.HdrCapabilities</code><br>
+Encapsulates the HDR capabilities of a given display. For example, what HDR
+types it supports and details about the desired luminance data.</li>
+</ul>
+
+<p><b>Constants:</b></p>
+
+<ul>
+<li><code>int HDR_TYPE_DOLBY_VISION</code><br>
+Dolby Vision support.</li>
+
+<li><code>int HDR_TYPE_HDR10</code><br>
+HDR10 / PQ support.</li>
+
+<li><code>int HDR_TYPE_HLG</code><br>
+Hybrid Log-Gamma support.</li>
+
+<li><code>float INVALID_LUMINANCE</code><br>
+Invalid luminance value.</li>
+</ul>
+
+<p><b>Public Methods:</b></p>
+
+<ul>
+<li><code>float getDesiredMaxAverageLuminance()</code><br>
+Returns the desired content max frame-average luminance data in cd/cd/m<sup>2</sup> for
+this display.</li>
+
+<li><code>float getDesiredMaxLuminance()</code><br>
+Returns the desired content max luminance data in cd/cd/m<sup>2</sup> for this display.</li>
+
+<li><code>float getDesiredMinLuminance()</code><br>
+Returns the desired content min luminance data in cd/cd/m<sup>2</sup> for this display.</li>
+
+<li><code>int[] getSupportedHdrTypes()</code><br>
+Gets the supported HDR types of this display (see constants). Returns empty
+array if HDR is not supported by the display.</li>
+</ul>
+
+<h3 id="decoder">Decoder</h3>
+
+<p>Applications shall use the existing
+<a href="https://developer.android.com/reference/android/media/MediaCodecInfo.CodecCapabilities.html#profileLevels">
+<code>CodecCapabilities.profileLevels</code></a> API to verify support for the
+new HDR capable profiles:</p>
+
+<h4>Dolby-Vision</h4>
+
+<p><code>MediaFormat</code> mime constant:</p>
+<pre class="devsite-click-to-copy">
+String MIMETYPE_VIDEO_DOLBY_VISION
+</pre>
+
+<p><code>MediaCodecInfo.CodecProfileLevel</code> profile constants:</p>
+<pre class="devsite-click-to-copy">
+int DolbyVisionProfileDvavPen
+int DolbyVisionProfileDvavPer
+int DolbyVisionProfileDvheDen
+int DolbyVisionProfileDvheDer
+int DolbyVisionProfileDvheDtb
+int DolbyVisionProfileDvheDth
+int DolbyVisionProfileDvheDtr
+int DolbyVisionProfileDvheStn
+</pre>
+
+<p>Dolby Vision video layers and metadata must be concatenated into a single
+buffer per frames by video applications. This is done automatically by the
+Dolby-Vision capable MediaExtractor.</p>
+
+<h4>HEVC HDR 10</h4>
+
+<p><code>MediaCodecInfo.CodecProfileLevel</code> profile constants:</p>
+<pre class="devsite-click-to-copy">
+int HEVCProfileMain10HDR10
+</pre>
+
+<h4>VP9 HLG & PQ</h4>
+
+<p><code>MediaCodecInfo.CodecProfileLevel</code> profile
+constants:</p>
+<pre class="devsite-click-to-copy">
+int VP9Profile2HDR
+int VP9Profile3HDR
+</pre>
+
+<p>If a platform supports an HDR-capable decoder, it shall also support an
+HDR-capable extractor.</p>
+
+<p>Only tunneled decoders are guaranteed to play back HDR content. Playback
+by non-tunneled decoders may result in the HDR information being lost and
+the content being flattened into an SDR color volume.</p>
+
+<h3 id="extractor">Extractor</h3>
+
+<p>The following containers are supported for the various HDR technologies
+on Android 7.0:</p>
+
+<table>
+<tbody>
+<tr>
+<th>Technology
+</th>
+<th>Dolby-Vision
+</th>
+<th>HDR10
+</th>
+<th>VP9-HLG
+</th>
+<th>VP9-PQ
+</th>
+</tr>
+<tr>
+<th>Container
+</th>
+<td>MP4
+</td>
+<td>MP4
+</td>
+<td>WebM
+</td>
+<td>WebM
+</td>
+</tr>
+</tbody>
+</table>
+
+<p>Discovery of whether a track (of a file) requires HDR support is not
+supported by the platform. Applications may parse the codec-specific data
+to determine if a track requires a specific HDR profile.</p>
+
+<h3 id ="summary">Summary</h3>
+
+<p>Component requirements for each HDR technology are shown in the following table:</p>
+
+<div style="overflow:auto">
+<table>
+<tbody>
+<tr>
+<th>Technology
+</th>
+<th>Dolby-Vision
+</th>
+<th>HDR10
+</th>
+<th>VP9-HLG
+</th>
+<th>VP9-PQ
+</th>
+</tr>
+<tr>
+<th>Supported HDR type (Display)
+</th>
+<td>HDR_TYPE_DOLBY_VISION
+</td>
+<td>HDR_TYPE_HDR10
+</td>
+<td>HDR_TYPE_HLG
+</td>
+<td>HDR_TYPE_HDR10
+</td>
+</tr>
+<tr>
+<th>Container (Extractor)
+</th>
+<td>MP4
+</td>
+<td>MP4
+</td>
+<td>WebM
+</td>
+<td>WebM
+</td>
+</tr>
+<tr>
+<th>Decoder
+</th>
+<td>MIMETYPE_VIDEO_DOLBY_VISION
+</td>
+<td>MIMETYPE_VIDEO_HEVC
+</td>
+<td>MIMETYPE_VIDEO_VP9
+</td>
+<td>MIMETYPE_VIDEO_VP9
+</td>
+</tr>
+<tr>
+<th>Profile (Decoder)
+</th>
+<td>One of the Dolby profiles
+</td>
+<td>HEVCProfileMain10HDR10
+</td>
+<td>VP9Profile2HDR or
+VP9Profile3HDR
+</td>
+<td>VP9Profile2HDR or
+VP9Profile3HDR
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<br>
+
+<p>Notes:</p>
+<ul>
+<li>Dolby-Vision bitstreams are packaged in an MP4 container in a way defined
+by Dolby. Applications may implement their own Dolby-capable extractors as
+long as they package the access units from the corresponding layers into a
+single access unit for the decoder as defined by Dolby.</li>
+<li>A platform may support an HDR-capable extractor, but no corresponding
+HDR-capable decoder.</li>
+</ul>
+
+<h2 id="playback">Playback</h2>
+
+<p>After an application has verified support for HDR playback, it can play
+back HDR content nearly the same way as it plays back non-HDR content,
+with the following caveats:</p>
+
+<ul>
+<li>For Dolby-Vision, whether or not a specific media file/track requires
+an HDR capable decoder is not immediately available. The application must
+have this information in advance or be able to obtain this information by
+parsing the codec-specific data section of the MediaFormat.</li>
+<li><code>CodecCapabilities.isFormatSupported</code> does not consider whether
+the tunneled decoder feature is required for supporting such a profile.</li>
+</ul>
+
+<h2 id="enablinghdr">Enabling HDR platform support</h2>
+
+<p>SoC vendors and OEMs must do additional work to enable HDR platform
+support for a device.</p>
+
+<h3 id="platformchanges">Platform changes in Android 7.0 for HDR</h3>
+
+<p>Here are some key changes in the platform (Application/Native layer)
+that OEMs and SOCs need to be aware of.</p>
+
+<h3 id="display">Display</h3>
+
+<h4>Hardware composition</h4>
+
+<p>HDR-capable platforms must support blending HDR content with non-HDR
+content. The exact blending characteristics and operations are not defined
+by Android as of release 7.0, but the process generally follows these steps:</p>
+<ol>
+<li>Determine a linear color space/volume that contains all layers to be
+composited, based on the layers' color, mastering, and potential dynamic
+metadata.
+<br>If compositing directly to a display, this could be the linear space
+that matches the display's color volume.</li>
+<li>Convert all layers to the common color space.</li>
+<li>Perform the blending.</li>
+<li>If displaying through HDMI:
+<ol style="list-style-type: lower-alpha">
+<li>Determine the color, mastering, and potential dynamic metadata for the
+blended scene.</li>
+<li>Convert the resulting blended scene to the derived color
+space/volume.</li>
+</ol>
+</li>
+<li>If displaying directly to the display, convert the resulting blended
+scene to the required display signals to produce that scene.
+</li>
+</ol>
+
+<h4>Display discovery</h4>
+
+<p>HDR display discovery is only supported via HWC2. Device implementers must
+selectively enable the HWC2 adapter that is released with Android 7.0 for this
+feature to work. Therefore, platforms must add support for HWC2 or extend the
+AOSP framework to allow a way to provide this information. HWC2 exposes a new
+API to propagate HDR Static Data to the framework and the application.</p>
+
+<h4>HDMI</h4>
+
+<ul>
+<li>A connected HDMI display advertises
+its HDR capability through HDMI EDID as defined in
+<a href="https://standards.cta.tech/kwspub/published_docs/CTA-861.3-Preview.pdf">
+CTA-861.3</a>
+section 4.2.</li>
+<li>The following EOTF mapping shall be used:
+<ul>
+<li>ET_0 Traditional gamma - SDR Luminance Range: not mapped to any HDR
+type</li>
+<li>ET_1 Traditional gamma - HDR Luminance Range: not mapped to any HDR
+type</li>
+<li>ET_2 SMPTE ST 2084 - mapped to HDR type HDR10</li>
+</ul>
+</li>
+<li>The signaling of Dolby Vision or HLG support over HDMI is done as defined
+by their relevant bodies.</li>
+<li>Note that the HWC2 API uses float desired luminance values, so the 8-bit
+EDID values must be translated in a suitable fashion.</li>
+</ul>
+
+<h3 id="decoders">Decoders</h3>
+
+<p>Platforms must add HDR-capable tunneled decoders and advertise their HDR
+support. Generally, HDR-capable decoders must:</p>
+<ul>
+<li>Support tunneled decoding (<code>FEATURE_TunneledPlayback</code>).</li>
+<li>Support HDR static metadata
+(<code>OMX.google.android.index.describeHDRColorInfo</code>) and its
+propagation to the display/hardware composition. For HLG, appropriate metadata
+must be submitted to the display.</li>
+<li>Support color description
+(<code>OMX.google.android.index.describeColorAspects</code>) and its
+propagation to the display/hardware composition.</li>
+<li>Support HDR embedded metadata as defined by the relevant standard.</li>
+</ul>
+
+<h4>Dolby Vision decoder support</h4>
+
+<p>To support Dolby Vision, platforms must add a Dolby-Vision capable
+HDR OMX decoder. Given the specifics of Dolby Vision, this is normally a
+wrapper decoder around one or more AVC and/or HEVC decoders as well as a
+compositor. Such decoders must:</p>
+<ul>
+<li>Support mime type "video/dolby-vision."</li>
+<li>Advertise supported Dolby Vision profiles/levels.</li>
+<li>Accept access units that contain the sub-access-units of all layers as
+defined by Dolby.</li>
+<li>Accept codec-specific data defined by Dolby. For example, data containing
+Dolby Vision profile/level and possibly the codec-specific data for the
+internal decoders.</li>
+<li>Support adaptive switching between Dolby Vision profiles/levels as
+required by Dolby.</li>
+</ul>
+
+<p>When configuring the decoder, the actual Dolby profile is not communicated
+to the codec. This is only done via codec-specific data after the decoder
+has been started. A platform could choose to support multiple Dolby Vision
+decoders: one for AVC profiles, and another for HEVC profiles to be able to
+initialize underlying codecs during configure time. If a single Dolby Vision
+decoder supports both types of profiles, it must also support switching
+between those dynamically in an adaptive fashion.</p>
+<p>If a platform provides a Dolby-Vision capable decoder in addition to the
+general HDR decoder support, it must:</p>
+
+<ul>
+<li>Provide a Dolby-Vision aware extractor, even if it does not support
+HDR playback.</li>
+<li>Provide a decoder that supports at least Dolby Vision profile X/level
+Y.</li>
+</ul>
+
+<h4>HDR10 decoder support</h4>
+
+<p>To support HDR10, platforms must add an HDR10-capable OMX decoder. This
+is normally a tunneled HEVC decoder that also supports parsing and handling
+HDMI related metadata. Such a decoder (in addition to the general HDR decoder
+support) must:</p>
+<ul>
+<li>Support mime type "video/hevc."</li>
+<li>Advertise supported HEVCMain10HDR10. HEVCMain10HRD10 profile support
+also requires supporting the HEVCMain10 profile, which requires supporting
+the HEVCMain profile at the same levels.</li>
+<li>Support parsing the mastering metadata SEI blocks, as well as other HDR
+related info contained in SPS.</li>
+</ul>
+
+<h4>VP9 decoder support</h4>
+
+<p>To support VP9 HDR, platforms must add a VP9 Profile2-capable HDR OMX
+decoder. This is normally a tunneled VP9 decoder that also supports handling
+HDMI related metadata. Such decoders (in addition to the general HDR decoder
+support) must:</p>
+<ul>
+<li>Support mime type "video/x-vnd.on2.vp9."</li>
+<li>Advertise supported VP9Profile2HDR. VP9Profile2HDR profile support also
+requires supporting VP9Profile2 profile at the same level.</li>
+</ul>
+
+<h3 id="extractors">Extractors</h3>
+
+<h4>Dolby Vision extractor support</h4>
+
+<p>Platforms that support Dolby Vision decoders must add Dolby extractor
+(called Dolby Extractor) support for Dolby Video content.</p>
+<ul>
+<li>A regular MP4 extractor can only extract the base layer from a file,
+but not the enhancement or metadata layers. So a special Dolby extractor is
+needed to extract the data from the file.</li>
+<li>The Dolby extractor must expose 1 to 2 tracks for each Dolby video track
+(group):
+<ul>
+<li>A Dolby Vision HDR track with the type of "video/dolby-vision" for the
+combined 2/3-layers Dolby stream. The HDR track's access-unit format, which
+defines how to package the access units from the base/enhancement/metadata
+layers into a single buffer to be decoded into a single HDR frame, is to be
+defined by Dolby.</li>
+<li>If a Dolby Vision video track contains a separate (backward compatible)
+base-layer (BL), the extractor must also expose this as a separate "video/avc"
+or "video/hevc" track. The extractor must provide regular AVC/HEVC access
+units for this track.</li>
+<li>The BL track must have the same track-unique-ID ("track-ID") as the
+HDR track so the app understands that these are two encodings of the same
+video.</li>
+<li>The application can decide which track to choose based on the platform's
+capability.</li>
+</ul>
+</li>
+<li>The Dolby Vision profile/level must be exposed in the track format of
+the HDR track.</li>
+<li>If a platform provides a Dolby-Vision capable decoder, it must also provide
+a Dolby-Vision aware extractor, even if it does not support HDR playback.</li>
+</ul>
+
+<h4>HDR10 and VP9 HDR extractor support</h4>
+
+<p>There are no additional extractor requirements to support HDR10 or VP9
+HLG. Platforms must extend MP4 extractor to support VP9 PQ in MP4. HDR
+static metadata must be propagated in the VP9 PQ bitstream, such that this
+metadata is passed to the VP9 PQ decoder and to the display via the normal
+MediaExtractor =&gt; MediaCodec pipeline.</p>
+
+<h3 id="stagefright">Stagefright extensions for Dolby Vision support</h3>
+
+<p>Platforms must add Dolby Vision format support to Stagefright:</p>
+<ul>
+<li>Support for port definition query for compressed port.</li>
+<li>Support profile/level enumeration for DV decoder.</li>
+<li>Support exposing DV profile/level for DV HDR tracks.</li>
+</ul>
+
+<h2 id="implementationnotes">Technology-specific implementation details</h2>
+
+<h3 id="hdr10decoder">HDR10 decoder pipeline</h3>
+
+<p><img src="/devices/tech/images/hdr10_decoder_pipeline.png"></p>
+
+<p class="img-caption"><strong>Figure 1.</strong> HDR10 pipeline</p>
+
+<p>HDR10 bitstreams are packaged in MP4 containers. Applications use a regular
+MP4 extractor to extract the frame data and send it to the decoder.</p>
+
+<ul>
+<li><b>MPEG4 Extractor</b><br>
+HDR10 bitstreams are recognized as just a normal HEVC stream by a
+MPEG4Extractor and the HDR track with the type "video/HEVC" will be
+extracted. The framework picks an HEVC video decoder that supports the
+Main10HDR10 profile to decode that track.</li>
+
+<li><b>HEVC Decoder</b><br>
+HDR information is in either SEI or SPS. The HEVC decoder first receives
+frames that contain the HDR information. The decoder then extracts the HDR
+information and notifies the application that it is decoding an HDR video. HDR
+information is bundled into decoder output format, which is propagated to
+the surface later.</li>
+</ul>
+
+<h4>Vendor actions</h4>
+<ol>
+<li>Advertise supported HDR decoder profile and level OMX type. Example:<br>
+<code>OMX_VIDEO_HEVCProfileMain10HDR10</code> (and <code>Main10</code>)</li>
+<li>Implement support for index:
+'<code>OMX.google.android.index.describeHDRColorInfo</code>'</li>
+<li>Implement support for index:
+'<code>OMX.google.android.index.describeColorAspects</code>'</li>
+<li>Implement support for SEI parsing of mastering metadata.</li>
+</ol>
+
+<h3 id="dvdecoder">Dolby Vision decoder pipeline</h3>
+
+<p><img src="/devices/tech/images/dolby_vision_decoder_pipleline.png"></p>
+
+<p class="img-caption"><strong>Figure 2.</strong> Dolby Vision pipeline</p>
+
+<p>Dolby-bitstreams are packaged in MP4 containers as defined by
+Dolby. Applications could, in theory, use a regular MP4 extractor to extract
+the base layer, enhancement layer, and metadata layer independently; however,
+this does not fit the current Android MediaExtractor/MediaCodec model.</p>
+
+<ul>
+<li>DolbyExtractor:
+<ul>
+<li>Dolby-bitstreams are recognized by a DolbyExtractor, which exposes the
+various layers as 1 to 2 tracks for each dolby video track (group):
+<ul>
+<li>An HDR track with the type of "video/dolby-vision" for the combined
+2/3-layers dolby stream. The HDR track's access-unit format, which defines
+how to package the access units from the base/enhancement/metadata layers
+into a single buffer to be decoded into a single HDR frame, is to be defined
+by Dolby.</li>
+<li>(Optional, only if the BL is backward compatible) A BL track contains
+only the base layer, which must be decodable by regular MediaCodec decoder,
+for example, AVC/HEVC decoder. The extractor should provide regular AVC/HEVC
+access units for this track. This BL track must have the same track-unique-ID
+("track-ID") as the Dolby track so the application understands that these
+are two encodings of the same video.</li>
+</ul>
+<li>The application can decide which track to choose based on the platform's
+capability.</li>
+<li>Because an HDR track has a specific HDR type, the framework will pick
+a Dolby video decoder to decode that track. The BL track will be decoded by
+a regular AVC/HEVC video decoder.</li>
+</ul>
+
+<li>DolbyDecoder:
+<ul>
+<li>The DolbyDecoder receives access units that contain the required access
+units for all layers (EL+BL+MD or BL+MD)</li>
+<li>CSD (codec specific data, such as SPS+PPS+VPS) information for the
+individual layers can be packaged into 1 CSD frame to be defined by
+Dolby. Having a single CSD frame is required.</li>
+</ul>
+</ul>
+
+<h4>Dolby actions</h4>
+<ol>
+<li>Define the packaging of access units for the various Dolby container
+schemes (e.g. BL+EL+MD) for the abstract Dolby decoder (i.e. the buffer
+format expected by the HDR decoder).</li>
+<li>Define the packaging of CSD for the abstract Dolby decoder.</li>
+</ol>
+
+<h4>Vendor actions</h4>
+<ol>
+<li>Implement Dolby extractor. This can also be done by Dolby.</li>
+<li>Integrate DolbyExtractor into the framework.  The entry point is
+<code>frameworks/av/media/libstagefright/MediaExtractor.cpp</code>.</li>
+<li>Declare HDR decoder profile and level OMX
+type. Example: <code>OMX_VIDEO_DOLBYPROFILETYPE</code> and
+<code>OMX_VIDEO_DOLBYLEVELTYP</code>.</li>
+<li>Implement support for index:
+<code>'OMX.google.android.index.describeColorAspects</code>'</li>
+<li>Propagate the dynamic HDR metadata to the app and surface in each
+frame. Typically this information must be packaged into the decoded frame
+as defined by Dolby, because the HDMI standard does not provide a way to
+pass this to the display.</li>
+</ol>
+
+<h3 id="v9decoder">VP9 decoder pipeline</h3>
+
+<p><img src="/devices/tech/images/vp9-pq_decoder_pipleline.png"></p>
+
+<p class="img-caption"><strong>Figure 3.</strong> VP9-PQ pipeline</p>
+
+<p>VP9 bitstreams are packaged in WebM containers in a way defined by WebM
+team. Applications need to use a WebM extractor to extract HDR metadata from
+the bitstream before sending frames to the decoder.</p>
+
+<ul>
+<li>WebM Extractor:
+<ul>
+<li>WebM Extractor extracts the HDR <a
+href="http://www.webmproject.org/docs/container/#colour">metadata</a>
+and frames from the <a
+href="http://www.webmproject.org/docs/container/#location-of-the-colour-element-in-an-mkv-file">
+container</a>.</li>
+</ul>
+
+<li>VP9 Decoder:
+<ul>
+<li>Decoder receives Profile2 bitstreams and decodes them as normal VP9
+streams.</li>
+<li>Decoder receives any HDR static metadata from the framework.</li>
+<li>Decoder receives static metadata via the bitstream access units for VP9
+PQ streams.</li>
+<li>VP9 decoder must be able to propagate the HDR static/dynamic metadata
+to the display.</li>
+</ul>
+</ul>
+
+<h4>Vendor Actions</h4>
+
+<ol>
+<li>Implement support for index:
+<code>OMX.google.android.index.describeHDRColorInfo</code></li>
+<li>Implement support for index:
+<code>OMX.google.android.index.describeColorAspects</code></li>
+<li>Propagate HDR static metadata</li>
+</ol>
+
+  </body>
+</html>

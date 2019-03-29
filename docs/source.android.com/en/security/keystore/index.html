@@ -1,0 +1,104 @@
+<html devsite>
+  <head>
+    <title>Hardware-backed Keystore</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>The availability of a trusted execution environment in a system on a chip (SoC)
+offers an opportunity for Android devices to provide hardware-backed, strong
+security services to the Android OS, to platform services, and even to
+third-party apps. Developers seeking the Android-specific extensions should go
+to <a
+href="https://developer.android.com/reference/android/security/keystore/KeyGenParameterSpec.html">android.security.keystore</a>.</p>
+
+<p>Keystore has been <a href="features.html">significantly enhanced</a> in
+Android 6.0 with the addition of symmetric cryptographic primitives, AES and
+HMAC, and the addition of an access control system for hardware-backed
+keys. Access controls are specified during key generation and enforced for the
+lifetime of the key. Keys can be restricted to be usable only after the user has
+authenticated, and only for specified purposes or with specified cryptographic
+parameters. For more information, please see the <a
+href="implementer-ref.html">Implementer's Reference</a>.</p>
+
+<p>Before Android 6.0, Android already had a simple, hardware-backed crypto
+services API, provided by versions 0.2 and 0.3 of the Keymaster Hardware
+Abstraction Layer (HAL).  Keystore provided digital signing and verification
+operations, plus generation and import of asymmetric signing key pairs. This is
+already implemented on many devices, but there are many security goals that
+cannot easily be achieved with only a signature API. Keystore in Android 6.0
+extends the Keystore API to provide a broader range of capabilities.</p>
+
+<h2 id=goals>Goals</h2>
+
+<p>The goal of the Android 6.0 Keystore API and the underlying Keymaster 1.0 HAL
+is to provide a basic but adequate set of cryptographic primitives to allow the
+implementation of protocols using access-controlled, hardware-backed keys.</p>
+
+<p>In addition to expanding the range of cryptographic primitives, Keystore in
+Android 6.0 adds the following:</p>
+
+<ul>
+  <li>A usage control scheme to allow key usage to be limited, to mitigate the risk
+of security compromise due to misuse of keys
+  <li>An access control scheme to enable restriction of keys to specified users,
+clients, and a defined time range
+</ul>
+
+<h2 id=architecture>Architecture</h2>
+
+<p>The Keymaster HAL is an OEM-provided, dynamically-loadable library used by the
+Keystore service to provide hardware-backed cryptographic services.  HAL
+implementations must not perform any sensitive operations in user space, or even
+in kernel space.  Sensitive operations are delegated to a secure processor
+reached through some kernel interface. The resulting architecture looks
+like the following:</p>
+
+<div align="center">
+  <img src="/security/images/access-to-keymaster.png" alt="Access to Keymaster" id="figure1" />
+</div>
+<p class="img-caption"><strong>Figure 1.</strong> Access to Keymaster</p>
+
+<p>Within an Android device, the "client" of the Keymaster HAL consists of
+multiple layers (e.g. app, framework, Keystore daemon), but that can be ignored
+for the purposes of this document. This means that the described Keymaster HAL
+API is low-level, used by platform-internal components, and not exposed to app
+developers. The higher-level API, for API level 23, is described on the <a
+href="https://developer.android.com/reference/android/security/keystore/KeyGenParameterSpec.html">Android
+Developer site</a>.</p>
+
+<p>The purpose of the Keymaster HAL is not to implement the security-sensitive
+algorithms but only to marshal and unmarshal requests to the secure world. The
+wire format is implementation-defined.</p>
+
+<h2 id=compatibility_with_previous_versions>Compatibility with previous versions</h2>
+
+<p>The Keymaster v1.0 HAL is completely incompatible with the
+previously-released HALs, e.g. Keymaster v0.2 and v0.3.  To facilitate
+interoperability on pre-Marshmallow devices that launched with the older
+Keymaster HALs, Keystore provides an adapter that implements the 1.0 HAL with
+calls to the existing hardware library. The result cannot provide the full range
+of functionality in the 1.0 HAL. In particular, it will only support RSA and
+ECDSA algorithms, and all of the key authorization enforcement will be performed
+by the adapter, in the non-secure world.</p>
+
+  </body>
+</html>

@@ -1,0 +1,336 @@
+<html devsite>
+  <head>
+    <title>Retail Demo Mode</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>
+Android 7.1.1 and later offer system-level support for retail mode so
+users may readily examine the devices in action. This feature enables anyone in
+a retail environment to get a quick, safe, and consistent demonstration of an
+Android device and significantly reduce the cost and complexity of a retail mode
+for OEMs so that demonstration units are commonplace.
+</p>
+
+<h2 id="key-use-cases">Key use cases</h2>
+
+<ul>
+<li>Any off-the-shelf Android device can be set to retail mode by adding a
+single demo video to the build.
+<li>All devices have a video highlighting the unique features of the device.
+<li>Devices work in both online and offline environments.
+<li>Device are self maintaining, requiring minimal interaction by
+employees.</li></ul>
+
+<h2 id="lifecycle">Lifecycle</h2>
+
+<img src="/devices/tech/display/images/retail-demo-flow.png" alt="retail demo mode flow" width="XXX" id="retail-demo-flow" />
+<p class="img-caption">
+  <strong>Figure 1.</strong> Retail demonstration mode option in Language selection
+</p>
+
+<h3 id="setup-wizard-suw">Setup Wizard (SUW)</h3>
+
+<p>
+Retail employees can enable retail mode directly from the first screen of any setup
+wizard by selecting the language <strong>Retail demo</strong> at the bottom of
+the list. This option is available for new devices shipped fresh from the
+factory. Once a consumer setup has completed, retail mode may no longer be
+available.  Once selected, the device finishes SUW with an abbreviated flow.
+</p>
+
+<img src="/devices/tech/display/images/retail-demo-wizard.png" alt="retail demo wizard use" width="XXX" id="retail-demo-wizard" />
+<p class="img-caption">
+  <strong>Figure 2.</strong> Retail demonstration mode option in Language
+selection
+</p>
+
+<h3 id="guest-session">Guest session</h3>
+
+<p>
+When the device enters retail mode, it switches to a new demo user and
+automatically starts the custom launcher specified in the overlay resource
+(described under Implementation).  By default, this custom launcher plays the
+demo video on repeat until the user touches the screen to begin a guest session.
+At that time, the custom launcher starts the system launcher and then exits.
+OEMs can alter the custom launcher to additionally launch another service or
+activity on exit. See the <em>Implementation</em> section for details.
+</p>
+
+<p>
+In order to maintain the integrity of retail mode, keyguard is disabled and
+certain actions from Quick Settings that could adversely affect retail mode are
+also disallowed, including:
+</p>
+
+<ul>
+  <li>Airplane mode toggle
+  <li>Removing or modifying Wi-Fi access points (Settings)
+  <li>Changing carrier (Settings)
+  <li>Configuring hotspot (Settings)
+  <li>User switching
+</ul>
+
+<p>
+Additionally, access is also blocked to some global settings that can affect
+retail mode by disabling:
+</p>
+
+<ul>
+  <li>Wi-Fi settings
+  <li>Cellular network configuration options, particularly hotspots
+  <li>Bluetooth configuration
+  <li>Backup & Reset, Date & Time, and Mobile Networks (they do not show up at
+all)
+</ul>
+
+<p>
+If the user is idle for some period of time (90 seconds by default), retail mode
+will show a system dialog to prompt the user to either exit the session or
+continue. If the user chooses to exit or if there's no response for five
+seconds, retail mode kills/wipes the current demo user, switches to a new demo
+user, and loops through the original video again. If someone turns off the
+screen using the power button, it comes back on automatically after a few
+seconds.
+</p>
+
+<p>
+After exiting a demo session, devices mute themselves and reset some global
+settings, including:
+</p>
+
+<ul>
+  <li>Brightness
+  <li>Auto-rotation
+  <li>Flashlight
+  <li>Language
+  <li>Accessibility</li></ul>
+
+<h3 id="exiting-retail-mode">Exiting retail mode</h3>
+
+<p>
+In order to exit retail mode, retail employees must factory reset the device
+from the boot loader.
+</p>
+
+<h2 id="examples-and-source">Examples and source</h2>
+
+<p>
+Find the custom launcher that plays a video in a loop within:</p>
+<pre class="devsite-click-to-copy">
+/packages/apps/RetailDemo
+</pre>
+
+<h2 id="implementation">Implementation</h2>
+
+<h3 id="enabling-retaildemomodeservice">Enabling RetailDemoModeService</h3>
+
+<p>
+Setup wizard sets a Global setting <code>Global.DEVICE_DEMO_MODE=true</code> to
+indicate that the device has entered retail mode. Upon seeing this setting,
+<code>RetailDemoModeService</code> creates and switches to demo user when user 0
+is started, enables the custom launcher specified in an overlay resource, and
+disables SUW.  System Server and SystemUI also use this flag to manage aspects
+of retail mode.
+</p>
+
+<h3 id="setting-custom-launcher-or-video-player">Setting custom launcher or
+video player</h3>
+
+<p>
+An OEM specifies a custom launcher by overriding the framework resource
+<code>config_demoModeLauncherComponent</code> specified in:
+<code>/frameworks/base/core/res/res/config.xml</code>
+</p>
+
+<p>
+For example, with:
+</p>
+
+<pre class="devsite-click-to-copy">
+&lt;!-- Component that is the default launcher when Retail Mode is enabled. --&gt;
+&lt;string name="config_demoModeLauncherComponent"&gt;com.android.retaildemo/.DemoPlayer&lt;/string&gt;
+</pre>
+<p>
+The retail demo DemoPlayer app located at
+<code>/packages/apps/RetailDemo</code> is the default custom launcher in the
+Android Open Source Project (AOSP).  The app looks for a video in
+<code>/data/preloads/demo/retail_demo.mp4</code> and plays it in a loop. When
+the user touches the screen, the custom launcher disables its activity
+component, which results in the default system launcher starting up.
+</p>
+
+<p>The custom launcher must have its custom component marked as disabled by default so that it
+doesn't show up in non-demo scenarios. In the demo scenario, System Server
+enables the specified <code>config_demoModeLauncherComponent</code> when
+starting a new demo session.
+</p>
+
+<p>
+Setup wizard also looks for the above video to provide an affordance to enter
+retail mode. SUW can be modified to look for some other OEM-specific sign that
+retail mode is supported if the video is not a part of the demo.
+</p>
+
+<p>
+If there are system A/B partitions, the system B partition must contain the demo
+video at <code>/preloads/demo</code>. This gets copied to
+<code>/data/preloads/demo</code> on first boot.
+</p>
+
+<p>
+To set retail mode-specific settings, use:
+<code>Settings.Global.retail_demo_mode_constants</code>. E.g.:
+<code>user_inactivity_timeout_ms=90000,warning_dialog_timeout_ms=10000</code>
+</p>
+
+<p class="note"><strong>Note:</strong> 90000 milliseconds is the current
+timeout default but is configurable.
+</p>
+
+<h3 id="finding-sample-images">Finding sample images</h3>
+
+<p>
+This feature places sample photos in a special folder that is visible to any
+gallery app. The photos are available only in demo mode and cannot be modified
+by the demo user as they are in a protected directory.
+</p>
+
+<h3 id="preventing-google-accounts">Preventing Google accounts</h3>
+
+<p>
+Certain restrictions are set in the guest user, similar to managed
+device/profile policies that prevent apps and users from performing certain
+operations. One of these restrictions is <code>DISALLOW_MODIFY_ACCOUNTS</code>.
+With this restriction, AccountManager and Settings do not allow the addition of
+accounts. Some Google apps react to this restriction and show an error message,
+and others will not prompt for an account (such as YouTube and Photos).
+</p>
+
+<p>
+OEM apps should also check if <code>DISALLOW_MODIFY_ACCOUNTS</code> is set. But this is a
+general problem not unique to retail mode. It is likely already solved for
+enterprise use cases.
+</p>
+
+<h3 id="customizing-the-system-launcher">Customizing the system launcher</h3>
+
+<p>
+OEMs are free to choose their layout but should include apps that function well
+on the home screen and hotseat.
+</p>
+
+<h3 id="Customizing-built-in-apps">Customizing built-in apps for retail demo mode</h3>
+
+<p>
+Built-in apps may have their experience for retail demo mode customized by
+calling the API <code>UserManager.isDemoUser()</code> to see if the app is
+launched in a demo environment.
+</p>
+
+<h3 id="following-demo-video-guidelines">Following demo video guidelines</h3>
+
+<p>
+Demonstration videos should be in portrait layout (or natural orientation of the
+device, if tablet) and can be any length greater than five seconds. Content
+should not result in burn-in, since it will be played 24/7 when on display.
+</p>
+
+<h2 id="maintenance">Maintenance</h2>
+
+<h3 id="bringing-the-device-out-of-retail-mode">Bringing the device out of
+retail mode</h3>
+
+<p>
+This can be done only by factory resetting from the boot loader.
+</p>
+
+<h3 id="auto-ota-of-system-software">Auto-OTA of system software</h3>
+
+<p>
+By default, when retail mode is enabled, device policy is set to over-the-air
+(OTA) update automatically. Retail devices will download, reboot, and install
+the update (respecting battery thresholds) without confirmation even if it is
+marked as optional.
+</p>
+
+<p class="caution"><strong>Caution:</strong>
+If using System A/B partitions for OTA, once an OTA is received, the device
+cannot find original retail mode resources in the System B partition. So any
+subsequent factory reset will result in an inability to go back into retail
+mode.
+</p>
+
+<h3 id="updating-demo-video-via-the-web">Updating demo video via the web</h3>
+
+<p>
+The RetailDemo app in <code>/packages/apps/RetailDemo</code> has the ability to
+update the demo video if there is network connectivity. The URL to download the
+video from can be configured by overriding the following string value in the
+RetailDemo app:
+</p>
+
+<pre class="devsite-click-to-copy">
+&lt;!-- URL where the retail demo video can be downloaded from. --&gt;
+&lt;string name="retail_demo_video_download_url"&gt;&lt;/string&gt;
+</pre>
+
+<p>
+If different videos need to be used in different regions, then different
+download URLs can be configured by using locale-specific string resources
+<code>res/values-*/strings.xml. </code>For example, if different videos need to
+be used in the U.S. and the U.K., then corresponding download URLs can be placed
+in <code>res/values-en-rUS/strings.xml</code> and
+<code>res/values-en-rGB/strings.xml</code>, respectively.
+</p>
+
+<p>
+In <code>res/values-en-rUS/strings.xml</code>:
+</p>
+
+<pre class="devsite-click-to-copy">
+&lt;string name="retail_demo_video_download_url"&gt;download URL for US video goes here&lt;/string&gt;
+</pre>
+
+<p>
+And similarly in <code>res/values-en-rGB/strings.xml</code>:
+</p>
+
+<pre class="devsite-click-to-copy">
+&lt;string name="retail_demo_video_download_url"&gt;download URL for UK video goes here&lt;/string&gt;
+</pre>
+
+<p>
+This video will be downloaded at most once per every device reboot. When the
+video on the device is being played, RetailDemo app will check in the background
+if the download URL is provided and the video at the URL is newer than the one
+being played.
+
+<p>
+If so, RetailDemo app will download this video and start playing
+it. Once this video is downloaded, the downloaded video will be used for playing
+in the demo sessions going forward. None of the checks happen again until after
+next reboot.
+</p>
+
+  </body>
+</html>

@@ -1,0 +1,60 @@
+<html devsite><head>
+    <title>应用签名</title>
+    <meta name="project_path" value="/_project.yaml"/>
+    <meta name="book_path" value="/_book.yaml"/>
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+<p>通过应用签名，开发者可以标识应用创作者并更新其应用，而无需创建复杂的接口和权限。在 Android 平台上运行的每个应用都必须要有<a href="https://developer.android.com/studio/publish/app-signing.html">开发者的签名</a>。Google Play 或 Android 设备上的软件包安装程序会拒绝没有获得签名就尝试安装的应用。
+</p>
+<p>在 Google Play 上，应用签名可以将 Google 对开发者的信任和开发者对自己的应用的信任联系在一起。这样一来，开发者就知道自己的应用是以未经修改的形式提供给 Android 设备，并且可以对其应用的行为负责。
+</p>
+<p>在 Android 上，应用签名是将应用放入其应用沙盒的第一步。已签名的应用证书定义了哪个用户 ID 与哪个应用相关联；不同的应用要以不同的用户 ID 运行。应用签名可确保一个应用无法访问任何其他应用的数据，通过明确定义的 IPC 进行访问时除外。</p>
+<p>当应用（APK 文件）安装到 Android 设备上时，软件包管理器会验证 APK 是否已经过适当签名（已使用 APK 中包含的证书签名）。如果该证书（或更准确地说，证书中的公钥）与设备上的任何其他 APK 使用的签名密钥一致，那么这个新 APK 就可以选择在清单中指定它将与其他以类似方式签名的 APK 共用一个 UID。
+</p>
+<p>应用可以由第三方（OEM、运营商、其他应用市场）签名，也可以自行签名。Android 提供了使用自签名证书进行代码签名的功能，而开发者无需外部协助或许可即可生成自签名证书。应用并非必须由核心机构签名。Android 目前不对应用证书进行 CA 认证。
+</p>
+<p>应用还可以在“签名”保护级别声明安全权限，以便只有使用同一个密钥签名的应用可以获得此仅限，同时让这些应用可以各自维持单独的 UID 和应用沙盒。通过<a href="https://developer.android.com/guide/topics/manifest/manifest-element.html#uid">共用 UID 功能</a>，多个应用可以共用一个应用沙盒，从而建立起更紧密的联系。在该功能中，使用同一个开发者密钥签名的两个或更多应用可以在其清单中声明共用的 UID。</p>
+<h2>APK 签名方案</h2>
+<p>Android 支持两种应用签名方案，一种是基于 JAR 签名的方案（v1 方案），另一种是 Android Nougat (Android 7.0) 中引入的 <a href="v2.html">APK 签名方案 v2（v2 方案）</a>。
+</p>
+<p>为了最大限度地提高兼容性，应同时采用 v1 和 v2 这两种方案对应用进行签名。与只通过 v1 方案签名的应用相比，通过 v2 方案签名的应用能够更快速地安装到 Android Nougat 及更高版本的设备上。更低版本的 Android 平台会忽略 v2 签名，这就需要应用包含 v1 签名。
+</p>
+<h3 id="v1">JAR 签名（v1 方案）</h3>
+<p>从一开始，APK 签名就是 Android 的一个有机部分。该方案基于<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/jar/jar.html#Signed_JAR_File">签名的 JAR</a>。如要详细了解如何使用该方案，请参阅介绍如何<a href="https://developer.android.com/studio/publish/app-signing.html">为您的应用签名</a>的 Android Studio 文档。
+</p>
+<p>v1 签名不保护 APK 的某些部分，例如 ZIP 元数据。APK 验证程序需要处理大量不可信（尚未经过验证）的数据结构，然后会舍弃不受签名保护的数据。这会导致相当大的受攻击面。此外，APK 验证程序必须解压所有已压缩的条目，而这需要花费更多时间和内存。为了解决这些问题，Android 7.0 中引入了 APK 签名方案 v2。
+</p>
+<h3 id="v2">APK 签名方案 v2（v2 方案）</h3>
+<p>Android 7.0 中引入了 APK 签名方案 v2（v2 方案）。该方案会对 APK 的内容进行哈希处理和签名，然后将生成的“APK 签名分块”插入到 APK 中。如要详细了解如何在应用中使用 v2 方案，请参阅 Android N 开发者预览版中的 <a href="https://developer.android.com/about/versions/nougat/android-7.0.html#apk_signature_v2">APK 签名方案 v2</a>。
+</p>
+<p>在验证期间，v2 方案会将 APK 文件视为 Blob，并对整个文件进行签名检查。对 APK 进行的任何修改（包括对 ZIP 元数据进行的修改）都会使 APK 签名作废。这种形式的 APK 验证不仅速度要快得多，而且能够发现更多种未经授权的修改。
+</p>
+<p>新的签名格式向后兼容，因此，使用这种新格式签名的 APK 可在更低版本的 Android 设备上进行安装（会直接忽略添加到 APK 的额外数据），但前提是这些 APK 还带有 v1 签名。
+</p>
+<p>
+  <img src="../images/apk-validation-process.png" alt="APK 签名验证过程" id="figure1"/>
+</p>
+<p class="img-caption"><strong>图 1.</strong> APK 签名验证过程（新步骤以红色显示）</p>
+
+<p>验证程序会对照存储在“APK 签名分块”中的 v2 签名对 APK 的全文件哈希进行验证。该哈希涵盖除“APK 签名分块”（其中包含 v2 签名）之外的所有内容。在“APK 签名分块”以外对 APK 进行的任何修改都会使 APK 的 v2 签名作废。v2 签名被删除的 APK 也会被拒绝，因为 v1 签名指明相应 APK 带有 v2 签名，所以 Android Nougat 及更高版本会拒绝使用 v1 签名验证 APK。
+</p>
+
+<p>如需关于 APK 签名验证过程的详细信息，请参阅 APK 签名方案 v2 的<a href="v2.html#verification">“验证”部分</a>。</p>
+
+</body></html>

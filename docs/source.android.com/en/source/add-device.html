@@ -1,0 +1,475 @@
+<html devsite>
+  <head>
+    <title>Adding a New Device</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>Use the information in this page to create the Makefiles for your device and
+product. Please note, unlike the other pages in this section, the contents here
+are applicable only when creating an entirely new device type and are intended
+for company build and product teams only.</p>
+
+<h2 id="build-layers">Understand Build Layers</h2>
+
+<p>The build hierarchy includes the abstraction layers that correspond to the
+physical makeup of a device. These layers are described in the table below.
+Each layer relates to the one above it in a one-to-many relationship. For
+example, an architecture can have more than one board and each board can have
+more than one product. You may define an element in a given layer as a
+specialization of an element in the same layer, thus eliminating copying and
+simplifying maintenance.</p>
+
+<table>
+ <tbody><tr>
+  <th>Layer</th>
+  <th>Example</th>
+  <th>Description</th>
+ </tr>
+  <tr>
+    <td>Product</td>
+    <td>myProduct, myProduct_eu, myProduct_eu_fr, j2, sdk</td>
+    <td>The product layer defines the feature specification of a shipping
+    product such as the modules to build, locales supported, and the
+    configuration for various locales. In other words, this is the name
+    of the overall product. Product-specific variables are defined in
+    product definition Makefiles. A product can inherit from other
+    product definitions, which simplifies maintenance. A common method
+    is to create a base product that contains features that apply for
+    all products, then creating product variants based on that base
+    product. For example, you can have two products that differ only by
+    their radios (CDMA vs GSM) inherit from the same base product that
+    does not define a radio.
+</td>
+
+  </tr>
+ <tr>
+    <td>Board/Device</td>
+    <td>sardine, trout, goldfish</td>
+    <td>The device/board layer represents the physical layer of plastic on the
+    device (i.e. the industrial design of the device). For example, North American
+    devices probably include QWERTY keyboards whereas devices sold in France
+    probably include AZERTY keyboards. This layer also represents the bare
+    schematics of a product. These include the peripherals on the board and their
+    configuration. The names used are merely codes for different board/device
+    configurations.</td>
+  </tr>
+<tr>
+    <td>Arch</td>
+    <td>arm, x86, mips, arm64, x86_64, mips64</td>
+    <td>The architecture layer describes the processor configuration and ABI
+    (Application Binary Interface) running on the board. </td>
+  </tr>
+</table>
+
+<h2 id="build-variants">Use Build Variants</h2>
+
+<p>When building for a particular product, it's often useful to have minor
+variations on what is ultimately the final release build. In a module
+definition, the module can specify tags with <code>LOCAL_MODULE_TAGS</code>,
+which can be one or more values of <code>optional</code> (default),
+<code>debug</code>, <code>eng</code>.</p>
+
+<p>If a module doesn't specify a tag (by <code>LOCAL_MODULE_TAGS</code>), its
+tag defaults to <code>optional</code>. An optional module is installed only if
+it is required by product configuration with <code>PRODUCT_PACKAGES</code>.
+
+<p>These are the currently-defined build variants:</p>
+
+<table border=1>
+<tr>
+    <td>
+        <code>eng</code>
+    </td>
+    <td>
+        This is the default flavor.
+<ul>
+<li>Installs modules tagged with: <code>eng</code> and/or <code>debug</code>.</li>
+<li>Installs modules according to the product definition files, in
+addition to tagged modules.</li>
+<li><code>ro.secure=0</code></li>
+<li><code>ro.debuggable=1</code></li>
+<li><code>ro.kernel.android.checkjni=1</code></li>
+<li><code>adb</code> is enabled by default.</li>
+</ul>
+    </td>
+</tr>
+<tr>
+    <td>
+        <code>user</code>
+    </td>
+    <td>
+        This is the flavor intended to be the final release bits.
+<ul>
+<li>Installs modules tagged with <code>user</code>.</li>
+<li>Installs modules according to the product definition files, in
+addition to tagged modules.</li>
+<li><code>ro.secure=1</code> </li>
+<li><code>ro.debuggable=0</code> </li>
+<li><code>adb</code> is disabled by default.</li>
+</ul>
+    </td>
+</tr>
+<tr>
+    <td>
+        <code>userdebug</code>
+    </td>
+    <td>
+        The same as <code>user</code>, except:
+<ul>
+<li>Also installs modules tagged with <code>debug</code>.</li>
+<li><code>ro.debuggable=1</code></li>
+<li><code>adb</code> is enabled by default.</li>
+</ul>
+    </td>
+</tr>
+</table>
+
+<h2 id="use-resource-overlays">Customize the Build with Resource Overlays</h2>
+
+<p>The Android build system uses resource overlays to customize
+a product at build time. Resource overlays specify resource
+files that are applied on top of the defaults. To use resource overlays, modify the project
+buildfile to set <code>PRODUCT_PACKAGE_OVERLAYS</code> to a
+path relative to your top-level directory. That path becomes a shadow root searched along with
+the current root  when the build system searches for resources.</p>
+
+<p>The most commonly customized settings are contained in the file <a
+href="https://android.googlesource.com/platform/frameworks/base/+/master/core/res/res/values/config.xml">frameworks/base/core/res/res/config.xml</a>.</p>
+
+<p> To set up a resource overlay on this file, add the overlay directory to the
+project buildfile, as follows:</p>
+
+<pre class="devsite-click-to-copy">
+PRODUCT_PACKAGE_OVERLAYS := device/<var>DEVICE_IMPLEMENTER</var>/<var>DEVICE_NAME</var>/overlay
+</pre>
+
+<p>or</p>
+
+<pre class="devsite-click-to-copy">
+PRODUCT_PACKAGE_OVERLAYS := vendor/<var>VENDOR_NAME</var>/overlay
+</pre>
+
+<p> Then, add an overlay file to the directory, for example:</p>
+
+<pre class="devsite-click-to-copy">
+vendor/foobar/overlay/frameworks/base/core/res/res/config.xml
+</pre>
+
+<p> Any strings or string arrays found in the overlay <code>config.xml</code> file replace
+those found in the original file.</p>
+
+<h2 id="build-a-product">Build a Product</h2>
+
+<p>
+There are many ways to organize the source files for your device. We'll briefly
+go over how the Nexus 6 implementation was organized as an example, but you can
+organize your source files and build the way you see fit.
+</p>
+<p>
+Nexus 6 was implemented with a main device configuration named
+<code>shamu</code>. From this device configuration, a product is created with a
+product definition Makefile that declares product-specific information about
+the device such as the name and model. You can view the
+<code>device/moto/shamu</code> directory to see how all of this is setup.
+</p>
+<h3 id="makefiles">Write the Makefiles</h3>
+<p>
+  The following steps describe how to set up product Makefiles in a way similar
+to that of the Nexus 6 product line:
+</p>
+<ol>
+  <li>Create a <code>device/&lt;company_name&gt;/&lt;device_name&gt;</code> directory for your
+  product. For example, <code>device/moto/shamu</code>. This directory will contain source code
+  for your device along with the Makefiles to build them.
+  </li>
+
+  <li>Create a <code>device.mk</code> Makefile that declares the files and modules needed for the
+  device. For an example, see <code>device/moto/shamu/device.mk</code>.
+  </li>
+
+  <li>Create a product definition Makefile to create a specific product based on the device. The
+  following Makefile is taken from <code>device/moto/shamu/aosp_shamu.mk</code> as an example.
+  Notice the product is inheriting from the
+  <code>device/moto/shamu/device.mk</code> and
+  <code>vendor/moto/shamu/device-vendor.mk</code> files via the Makefile while
+  also declaring the product-specific information such as name, brand, and model.
+
+<pre class="devsite-click-to-copy">
+# Inherit from the common Open Source product configuration
+$(call inherit-product, $(SRC_TARGET_DIR)/product/aosp_base_telephony.mk)
+
+PRODUCT_NAME := aosp_shamu
+PRODUCT_DEVICE := shamu
+PRODUCT_BRAND := Android
+PRODUCT_MODEL := AOSP on Shamu
+PRODUCT_MANUFACTURER := motorola
+PRODUCT_RESTRICT_VENDOR_FILES := true
+
+$(call inherit-product, device/moto/shamu/device.mk)
+$(call inherit-product-if-exists, vendor/moto/shamu/device-vendor.mk)
+
+PRODUCT_NAME := aosp_shamu
+
+PRODUCT_PACKAGES += \
+    Launcher3
+</pre>
+
+    <p>
+      See <a href="#prod-def">Product Definition Variables</a> for additional product-specific
+      variables you can add to your Makefiles.
+    </p>
+  </li>
+
+  <li>Create an <code>AndroidProducts.mk</code> file that points to the product's Makefiles. In
+  this example, only the product definition Makefile is needed. The example below is from
+  <code>device/moto/shamu/AndroidProducts.mk</code>:
+<pre class="devsite-click-to-copy">
+#
+# This file should set PRODUCT_MAKEFILES to a list of product makefiles
+# to expose to the build system.  LOCAL_DIR will already be set to
+# the directory containing this file.
+#
+# This file may not rely on the value of any variable other than
+# LOCAL_DIR; do not use any conditionals, and do not look up the
+# value of any variable that isn't set in this file or in a file that
+# it includes.
+#
+
+PRODUCT_MAKEFILES := \
+    $(LOCAL_DIR)/aosp_shamu.mk
+</pre>
+  </li>
+
+  <li>Create a <code>BoardConfig.mk</code> Makefile that contains board-specific configurations.
+  For an example, see <code>device/moto/shamu/BoardConfig.mk</code>.
+  </li>
+
+  <li>Create a <code>vendorsetup.sh</code> file to add your product (a "lunch combo") to the build
+  along with a <a href="#build-variants">build variant</a> separated by a dash. For example:
+<pre class="devsite-click-to-copy">
+add_lunch_combo <var>&lt;PRODUCT_NAME&gt;</var>-userdebug
+</pre>
+  </li>
+
+  <li>At this point, you can create more product variants based on the same device.
+  </li>
+
+</ol>
+<h3 id="prod-def">Set Product Definition Variables</h3>
+<p>
+  Product-specific variables are defined in the product's Makefile. Variables maintained in a
+  product definition files include:
+</p>
+<table>
+  <tbody>
+    <tr>
+      <th>
+        Parameter
+      </th>
+      <th>
+        Description
+      </th>
+      <th>
+        Example
+      </th>
+    </tr>
+    <tr>
+      <td>
+        PRODUCT_AAPT_CONFIG
+      </td>
+      <td>
+        <code>aapt</code> configurations to use when creating packages
+      </td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>
+        PRODUCT_BRAND
+      </td>
+      <td>
+        The brand (e.g., carrier) the software is customized for, if any
+      </td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>
+        PRODUCT_CHARACTERISTICS
+      </td>
+      <td>
+        <code>aapt</code> characteristics to allow adding variant-specific resources to a package.
+      </td>
+      <td>
+        tablet,nosdcard
+      </td>
+    </tr>
+    <tr>
+      <td>
+        PRODUCT_COPY_FILES
+      </td>
+      <td>
+        List of words like <code>source_path:destination_path</code>. The file at the source path
+        should be copied to the destination path when building this product. The rules for the copy
+        steps are defined in config/Makefile
+      </td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>
+        PRODUCT_DEVICE
+      </td>
+      <td>
+        Name of the industrial design. This is also the board name, and the build system uses it to locate the <code>BoardConfig.mk.</code>
+      </td>
+      <td>
+        <code>tuna</code>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        PRODUCT_LOCALES
+      </td>
+      <td>
+        A space-separated list of two-letter language code, two-letter country code pairs that
+        describe several settings for the user, such as the UI language and time, date and currency
+        formatting. The first locale listed in PRODUCT_LOCALES is used as the product's default locale.
+      </td>
+      <td>
+        <code>en_GB de_DE es_ES fr_CA</code>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        PRODUCT_MANUFACTURER
+      </td>
+      <td>
+        Name of the manufacturer
+      </td>
+      <td>
+        <code>acme</code>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        PRODUCT_MODEL
+      </td>
+      <td>
+        End-user-visible name for the end product
+      </td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>
+        PRODUCT_NAME
+      </td>
+      <td>
+        End-user-visible name for the overall product. Appears in the Settings &gt; About screen.
+      </td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>
+        PRODUCT_OTA_PUBLIC_KEYS
+      </td>
+      <td>
+        List of Over the Air (OTA) public keys for the product
+      </td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>
+        PRODUCT_PACKAGES
+      </td>
+      <td>
+        Lists the APKs and modules to install.
+      </td>
+      <td>
+        <code>Calendar Contacts</code>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        PRODUCT_PACKAGE_OVERLAYS
+      </td>
+      <td>
+        Indicate whether to use default resources or add any product specific overlays
+      </td>
+      <td>
+        <code>vendor/acme/overlay</code>
+      </td>
+    </tr>
+    <tr>
+      <td>
+        PRODUCT_PROPERTY_OVERRIDES
+      </td>
+      <td>
+        List of system property assignments in the format "key=value"
+      </td>
+      <td></td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="ANDROID_VENDOR_KEYS">Set ANDROID_VENDOR_KEYS to connect over USB</h3>
+
+<p>The <code>ANDROID_VENDOR_KEYS</code> environment variable enables device
+manufacturers to access production builds over <code>adb</code>. Generate a key
+for each release that every device will accept, store those internally (such as at
+<code>vendor/oem-name/security/adb/</code>), and then use
+<code>ANDROID_VENDOR_KEYS</code> to tell <code>adb</code> to use these canonical
+keys rather than random keys.</p>
+
+<p>Use the <code>ANDROID_VENDOR_KEYS</code> environment variable to
+point to the directory containing the generated <code>adb</code> public and
+private keys used for encryption. The private key is stored in file. The public
+key is stored in file.pub. The <code>ANDROID_VENDOR_KEYS</code> environment
+variable points to a file or directory where the generated key pairs are
+stored.</p>
+
+<p>This variable is set to a file or directory that contains 2048-bit RSA
+authentication key pairs generated with the <code>adb keygen</code> file command.
+These key pairs are in addition to the RSA key pairs generated by the ADB
+server. An RSA key pair is needed when you use <code>adb</code> to connect over
+USB for the first time.</p>
+
+<p>You must accept the host computer's RSA key to explicitly grant
+<code>adb</code> access to the device. By default key pairs generated by the
+ADB server are stored in the following key store directories as
+<code>adbkey</code> (private key) and <code>adbkey.pub</code> (public key):</p>
+
+<p>For file locations, on MacOS, this will likely be:
+<code>$HOME/.android</code>.  On Windows and Linux, this will be:
+<code>%USERPOFILE%\.android</code>. On Windows, RSA authentication keys can
+also be in <code>C:\Windows\System32\config\systemprofile\.android</code> in
+some cases. When the ADB server needs a key, it first searches the ADB server
+key store directory. If no keys are found, it then checks the
+<code>ANDROID_VENDOR_KEYS</code> environment variable. If no keys are found,
+the local ADB server generates and saves a new key pair in the ADB server key
+store directory.</p>
+
+<p class="note"><strong>Note:</strong> You can override the default directory
+where the ADB server stores RSA keys by setting the
+<code>ANDROID_SDK_HOME</code> environment variable. On the device, keys are
+stored in the <code>/data/misc/adb/adb_keys/</code> file, and new authorized
+keys are appended to the same file as you accept them.</p>
+
+  </body>
+</html>

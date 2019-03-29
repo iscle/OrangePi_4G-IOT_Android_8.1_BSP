@@ -1,0 +1,1288 @@
+<html devsite>
+  <head>
+    <title>Implementer's Reference</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>This page provides details to assist implementers of <a href="index.html">Keymaster</a> HALs. It
+covers each tag and each function in the HAL.</p>
+
+<h2 id=authorization_tags>Authorization tags</h2>
+
+<p>Except as noted in the tag descriptions, all of the tags below are used during
+key generation to specify key characteristics.</p>
+
+<h3 id=km_tag_purpose>KM_TAG_PURPOSE</h3>
+
+<p>Specifies the set of purposes for which the key may be used.</p>
+
+<p>Possible values are defined by the following enumeration:</p>
+
+<pre class="devsite-click-to-copy">
+typedef enum {
+    KM_PURPOSE_ENCRYPT = 0,
+    KM_PURPOSE_DECRYPT = 1,
+    KM_PURPOSE_SIGN = 2,
+    KM_PURPOSE_VERIFY = 3,
+} keymaster_purpose_t;
+</pre>
+
+<p>This tag is repeatable; keys may be generated with multiple values, although an
+operation has a single purpose. When the <a href="#begin">begin</a> function is called to
+start an operation, the purpose of the operation is
+specified. If the purpose specified to the operation is not authorized by the
+key, the operation must fail with <code>KM_ERROR_INCOMPATIBLE_PURPOSE</code>.</p>
+
+<h3 id=km_tag_algorithm>KM_TAG_ALGORITHM</h3>
+
+<p>Specifies the cryptographic algorithm with which the key is used.</p>
+
+<p>Possible values are defined by the following enumeration:</p>
+
+<pre class="devsite-click-to-copy">
+typedef enum {
+    KM_ALGORITHM_RSA = 1,
+    KM_ALGORITHM_EC = 3,
+    KM_ALGORITHM_AES = 32,
+    KM_ALGORITHM_HMAC = 128,
+} keymaster_algorithm_t;
+</pre>
+
+<p>This tag is not repeatable.</p>
+
+<h3 id=km_tag_key_size>KM_TAG_KEY_SIZE</h3>
+
+<p>Specifies the size, in bits, of the key, measuring in the normal way for the
+key's algorithm. For example, for RSA keys, <code>KM_TAG_KEY_SIZE</code> specifies
+the size of the public modulus. For AES keys it specifies the length
+of the secret key material.</p>
+
+<p>This tag is not repeatable.</p>
+
+<h3 id=km_tag_block_mode>KM_TAG_BLOCK_MODE</h3>
+
+<p>Specifies the block cipher mode(s) with which the key may be used. This tag is
+only relevant to AES keys.</p>
+
+<p>Possible values are defined by the following enumeration:</p>
+
+<pre class="devsite-click-to-copy">
+typedef enum {
+    KM_MODE_ECB = 1,
+    KM_MODE_CBC = 2,
+    KM_MODE_CTR = 3,
+    KM_MODE_GCM = 32,
+} keymaster_block_mode_t;
+</pre>
+
+<p>This tag is repeatable, and for AES key operations a mode must be specified in
+the <code>additional_params</code> argument of <a href="#begin">begin</a>. If the specified
+mode is not in the modes associated with the key, the
+operation must fail with <code>KM_ERROR_INCOMPATIBLE_BLOCK_MODE</code>.</p>
+
+<h3 id=km_tag_digest>KM_TAG_DIGEST</h3>
+
+<p>Specifies the digest algorithms which may be used with the key to perform
+signing and verification operations. This tag is relevant to RSA, ECDSA and
+HMAC keys.</p>
+
+<p>Possible values are defined by the following enumeration:</p>
+
+<pre class="devsite-click-to-copy">
+typedef enum {
+    KM_DIGEST_NONE = 0,
+    KM_DIGEST_MD5 = 1,
+    KM_DIGEST_SHA1 = 2,
+    KM_DIGEST_SHA_2_224 = 3,
+    KM_DIGEST_SHA_2_256 = 4,
+    KM_DIGEST_SHA_2_384 = 5,
+    KM_DIGEST_SHA_2_512 = 6,
+}
+keymaster_digest_t;
+</pre>
+
+<p>This tag is repeatable. For signing and verification operations a digest must
+be specified in the <code>additional_params</code> argument of <a href="#begin">begin</a>.
+If the specified digest is not in the digests associated with the key, the
+operation must fail with <code>KM_ERROR_INCOMPATIBLE_DIGEST</code>.</p>
+
+<h3 id=km_tag_padding>KM_TAG_PADDING</h3>
+
+<p>Specifies the padding modes which may be used with the key. This tag is
+relevant to RSA and AES keys.</p>
+
+<p>Possible values are defined by the following enumeration:</p>
+
+<pre class="devsite-click-to-copy">
+typedef enum {
+    KM_PAD_NONE = 1,
+    KM_PAD_RSA_OAEP = 2,
+    KM_PAD_RSA_PSS = 3,
+    KM_PAD_RSA_PKCS1_1_5_ENCRYPT = 4,
+    KM_PAD_RSA_PKCS1_1_5_SIGN = 5,
+    KM_PAD_PKCS7 = 64,
+} keymaster_padding_t;
+</pre>
+
+<p><code>KM_PAD_RSA_OAEP</code> and <code>KM_PAD_RSA_PKCS1_1_5_ENCRYPT</code> are used
+only for RSA encryption/decryption keys and specify RSA PKCS#1v2 OAEP
+padding and RSA PKCS#1 v1.5 randomized padding, respectively. <code>KM_PAD_RSA_PSS</code> and
+<code>KM_PAD_RSA_PKCS1_1_5_SIGN</code> are used only for RSA signing/verification keys and
+specify RSA PKCS#1v2 PSS
+padding and RSA PKCS#1 v1.5 deterministic padding, respectively. Note also that
+the RSA PSS padding mode is incompatible with <a href="#km_tag_digest">KM_DIGEST_NONE</a>.</p>
+
+<p><code>KM_PAD_NONE</code> may be used with either RSA or AES keys. For AES keys,
+if <code>KM_PAD_NONE</code> is used with block mode ECB or CBC and the data to be encrypted
+or decrypted
+is not a multiple of the AES block size in length, the call to finish must fail
+with <code>KM_ERROR_INVALID_INPUT_LENGTH</code>.</p>
+
+<p><code>KM_PAD_PKCS7</code> may only be used with AES keys, and only with ECB and CBC modes.</p>
+
+<p>This tag is repeatable. A padding mode must be specified in the call to
+<a href="#begin">begin</a>. If the specified mode is not authorized for the key,
+the operation must fail
+with <code>KM_ERROR_INCOMPATIBLE_BLOCK_MODE</code>.</p>
+
+<h3 id=km_tag_caller_nonce>KM_TAG_CALLER_NONCE</h3>
+
+<p>Specifies that the caller is allowed to provide a nonce for nonce-requiring
+operations.</p>
+
+<p>This tag is boolean, so the possible values are true (if the tag is present)
+and false (if the tag is not present).</p>
+
+<p>This tag is used only for AES keys, and is only relevant for CBC, CTR and GCM
+block modes. If the tag is not present, implementations should reject any
+operation which provides <a href="#km_tag_nonce">KM_TAG_NONCE</a> to <a href="#begin">begin</a>
+with <code>KM_ERROR_CALLER_NONCE_PROHIBITED</code>.</p>
+
+<p>This tag is not repeatable.</p>
+
+<h3 id=km_tag_min_mac_length>KM_TAG_MIN_MAC_LENGTH</h3>
+
+<p>Required for HMAC keys and AES keys that support GCM mode, this tag specifies
+the minimum length of MAC that can be requested or verified with this key.</p>
+
+<p>This value is the minimum MAC length, in bits. It must be a multiple of 8. For
+HMAC keys, the value must be at least 64. For GCM keys it must be at least 96
+and must not exceed 128.</p>
+
+<h3 id=km_tag_rsa_public_exponent>KM_TAG_RSA_PUBLIC_EXPONENT</h3>
+
+<p>Specifies the value of the public exponent for an RSA key pair. This tag is
+relevant only to RSA keys, and required for all RSA keys.</p>
+
+<p>The value is a 64-bit unsigned integer that must satisfy the requirements of an
+RSA public exponent. Because it is specified by the caller and therefore cannot
+be chosen by the implementation, it must be a prime number. Trustlets are
+required to support the value 2^16+1. It is recommended that other reasonable
+values be supported, in particular the value 3. If no exponent is specified or
+if the specified exponent is not supported, key generation must fail
+with <code>KM_ERROR_INVALID_ARGUMENT</code>.</p>
+
+<p>This tag is not repeatable.</p>
+
+<h3 id=km_tag_blob_usage_requirements>KM_TAG_BLOB_USAGE_REQUIREMENTS</h3>
+
+<p>Specifies the system environment conditions which must hold for the generated
+key to be used.</p>
+
+<p>Possible values are defined by the following enumeration:</p>
+
+<pre class="devsite-click-to-copy">
+typedef enum {
+    KM_BLOB_STANDALONE = 0,
+    KM_BLOB_REQUIRES_FILE_SYSTEM = 1,
+} keymaster_key_blob_usage_requirements_t;
+</pre>
+
+<p>This tag may be specified during key generation to require that the key be
+usable in the specified condition, and must be returned with the key
+characteristics (from <a href="#generate_key">generate_key</a> and
+<a href="#get_key_characteristics">get_key_characteristics</a>). If
+the caller specifies <code>KM_TAG_BLOB_USAGE_REQUIREMENTS</code> with
+value <code>KM_BLOB_STANDALONE</code> the trustlet must return a key blob
+which can be used without file system
+support. This is critical for devices with encrypted disks, where the file
+system may not be available until after a Keymaster key is used to decrypt the
+disk.</p>
+
+<p>This tag is not repeatable.</p>
+
+<h3 id=km_tag_bootloader_only>KM_TAG_BOOTLOADER_ONLY</h3>
+
+<p>Specifies that the key may only be used by the bootloader.</p>
+
+<p>This tag is boolean, so the possible values are true (if the tag is present)
+and false (if the tag is not present).</p>
+
+<p>Any attempt to use a key with <code>KM_TAG_BOOTLOADER_ONLY</code> from the
+Android system must fail with <code>KM_ERROR_INVALID_KEY_BLOB</code>.</p>
+
+<p>This tag is not repeatable.</p>
+
+<h3 id=km_tag_active_datetime>KM_TAG_ACTIVE_DATETIME</h3>
+
+<p>Specifies the date and time at which the key becomes active. Prior to this
+time, any attempt to use the key must fail with <code>KM_ERROR_KEY_NOT_YET_VALID</code>.</p>
+
+<p>The value is a 64-bit integer representing milliseconds since January 1, 1970.</p>
+
+<p>This tag is not repeatable.</p>
+
+<h3 id=km_tag_origination_expire_datetime>KM_TAG_ORIGINATION_EXPIRE_DATETIME</h3>
+
+<p>Specifies the date and time at which the key expires for signing and encryption
+purposes. After this time, any attempt to use a key
+with <a href="#km_tag_purpose">KM_PURPOSE_SIGN</a> or
+<a href="#km_tag_purpose">KM_PURPOSE_ENCRYPT</a> provided
+to <a href="#begin">begin</a> must fail with <code>KM_ERROR_KEY_EXPIRED</code>.</p>
+
+<p>The value is a 64-bit integer representing milliseconds since January 1, 1970.</p>
+
+<p>This tag is not repeatable.</p>
+
+<h3 id=km_tag_usage_expire_datetime>KM_TAG_USAGE_EXPIRE_DATETIME</h3>
+
+<p>Specifies the date and time at which the key expires for verification and
+decryption purposes. After this time, any attempt to use a key with
+<a href="#km_tag_purpose">KM_PURPOSE_VERIFY</a> or <a href="#km_tag_purpose">KM_PURPOSE DECRYPT</a>
+provided to <a href="#begin">begin</a> must fail with <code>KM_ERROR_KEY_EXPIRED</code>.</p>
+
+<p>The value is a 64-bit integer representing milliseconds since January 1, 1970.</p>
+
+<p>This tag is not repeatable.</p>
+
+<h3 id=km_tag_min_seconds_between_ops>KM_TAG_MIN_SECONDS_BETWEEN_OPS</h3>
+
+<p>Specifies the minimum amount of time that must elapse between allowed
+operations using a key. This can be used to rate-limit uses of keys in contexts
+where unlimited use may enable brute force attacks.</p>
+
+<p>The value is a 32-bit integer representing seconds between allowed operations.</p>
+
+<p>When a key with this tag is used in an operation, a timer should be started
+during the <a href="#finish">finish</a> or <a href="#abort">abort</a> call. Any
+call to <a href="#begin">begin</a> that is received before the timer indicates
+that the interval specified by <code>KM_TAG_MIN_SECONDS_BETWEEN_OPS</code> has
+elapsed must fail with <code>KM_ERROR_KEY_RATE_LIMIT_EXCEEDED</code>. This
+requirement implies that a trustlet must keep a table of timers for keys
+with this tag. Because Keymaster memory is often limited, it is acceptable for
+this table to have a fixed maximum size and for Keymaster to fail operations
+which attempt to use keys with this tag when the table is full. At least 32
+in-use keys must be accommodated, and table slots must be aggressively reused
+when key minimum-usage intervals expire. If an operation fails because the
+table is full, Keymaster should return <code>KM_ERROR_TOO_MANY_OPERATIONS</code>.</p>
+
+<p>This tag is not repeatable.</p>
+
+<h3 id=km_tag_max_uses_per_boot>KM_TAG_MAX_USES_PER_BOOT</h3>
+
+<p>Specifies the maximum number of times that a key may be used between system
+reboots. This is another mechanism to rate-limit key use.</p>
+
+<p>The value is a 32-bit integer representing uses per boot.</p>
+
+<p>When a key with this tag is used in an operation, a key-associated counter
+should be incremented during the <a href="#begin">begin</a> call. After the key counter
+has exceeded this value, all subsequent attempts
+to use the key must fail with <code>KM_ERROR_MAX_OPS_EXCEEDED</code>, until the device is
+restarted. This requirement implies that a trustlet must
+keep a table of use counters for keys with this tag. Because Keymaster memory
+is often limited, it is acceptable for this table to have a fixed maximum size
+and for Keymaster to fail operations that attempt to use keys with this tag
+when the table is full. At least 16 keys must be accommodated. If an operation
+fails because the table is full, Keymaster should return <code>KM_ERROR_TOO_MANY_OPERATIONS</code>.</p>
+
+<p>This tag is not repeatable.</p>
+
+<h3 id=km_tag_user_secure_id>KM_TAG_USER_SECURE_ID</h3>
+
+<p>Specifies that a key may only be used under a particular secure user
+authentication state. This tag is mutually exclusive
+with <a href="#km_tag_no_auth_required">KM_TAG_NO_AUTH_REQUIRED</a>.</p>
+
+<p>The value is a 64-bit integer specifying the authentication policy state value
+which must be present in an authentication token (provided to <a href="#begin">begin</a> with
+the <a href="#km_tag_auth_token">KM_TAG_AUTH_TOKEN</a>) to authorize use of the key. Any
+call to <a href="#begin">begin</a> with a key with this tag that does not provide an
+authentication token, or provides an
+authentication token without a matching policy state value, must fail.</p>
+
+<p>This tag is repeatable. If any of the provided values matches any policy state
+value in the authentication token, the key is authorized for use. Otherwise the operation
+must fail with <code>KM_ERROR_KEY_USER_NOT_AUTHENTICATED</code>.</p>
+
+<h3 id=km_tag_no_auth_required>KM_TAG_NO_AUTH_REQUIRED</h3>
+
+<p>Specifies that no authentication is required to use this key. This tag is
+mutually exclusive with <a href="#km_tag_user_secure_id">KM_TAG_USER_SECURE_ID</a>.</p>
+
+<p>This tag is boolean, so the possible values are true (if the tag is present)
+and false (if the tag is not present).</p>
+
+<p>This tag is not repeatable.</p>
+
+<h3 id=km_tag_user_auth_type>KM_TAG_USER_AUTH_TYPE</h3>
+
+<p>Specifies the types of user authenticators that may be used to authorize this
+key.  When Keymaster is requested to perform an operation with a key with this
+tag, it must receive an authentication token, and the token's
+<code>authenticator_type</code> field must match the value in the tag.  To be
+precise, it must be true that <code>(ntoh(token.authenticator_type) &
+auth_type_tag_value) != 0</code>, where <code>ntoh</code> is a function that converts
+network-ordered integers to host-ordered integers and
+<code>auth_type_tag_value</code> is the value of this tag.</p>
+
+<p>The value is a 32-bit integer bitmask of values from the enumeration:</p>
+
+<pre class="devsite-click-to-copy">
+typedef enum {
+    HW_AUTH_NONE = 0,
+    HW_AUTH_PASSWORD = 1 &lt;&lt; 0,
+    HW_AUTH_FINGERPRINT = 1 &lt;&lt; 1,
+    // Additional entries should be powers of 2.
+    HW_AUTH_ANY = UINT32_MAX,
+} hw_authenticator_type_t;
+</pre>
+
+<p>This tag is not repeatable.</p>
+
+<h3 id=km_tag_auth_timeout>KM_TAG_AUTH_TIMEOUT</h3>
+
+<p>Specifies the time in seconds for which the key is authorized for use, after
+authentication. If <a href="#km_tag_user_secure_id">KM_TAG_USER_SECURE_ID</a> is present and this tag
+is not, then the key requires authentication for every
+usage (see <a href="#begin">begin</a> for the details of the authentication-per-operation flow).</p>
+
+<p>The value is a 32-bit integer specifying the time in seconds after a successful
+authentication of the user specified by <a href="#km_tag_user_secure_id">KM_TAG_USER_SECURE_ID</a> with
+the authentication method specified
+by <a href="#km_tag_mac_length">KM_TAG_USER_AUTH_TYPE</a> that the key can be used.</p>
+
+<p>This tag is not repeatable.</p>
+
+<h3 id=km_tag_all_applications>KM_TAG_ALL_APPLICATIONS</h3>
+
+<p>Reserved for future use.</p>
+
+<p>This tag is not repeatable.</p>
+
+<h3 id=km_tag_application_id>KM_TAG_APPLICATION_ID</h3>
+
+<p>When provided to <a href="#generate_key">generate_key</a> or <a href="#import_key">import_key</a>,
+this tag specifies data that must be provided during all uses of the key. In
+particular, calls to <a href="#export_key">export_key</a> and
+<a href="#get_key_characteristics">get_key_characteristics</a> must
+provide the same value in the <code>client_id</code> parameter, and
+calls to  <a href="#begin">begin</a> must provide this tag and the
+same associated data as part of the <code>in_params</code> set. If the correct
+data is not provided the function must return <code>KM_ERROR_INVALID_KEY_BLOB</code>.</p>
+
+<p>The content of this tag must be bound to the key <i>cryptographically</i>,
+meaning it must not be possible for an adversary who has access to all of the
+secure world secrets but does not have access to the tag content to decrypt the
+key (without brute-forcing the tag content).</p>
+
+<p>The value is a blob, an arbitrary-length array of bytes.</p>
+
+<p>This tag is not repeatable.</p>
+
+<h3 id=km_tag_application_data>KM_TAG_APPLICATION_DATA</h3>
+
+<p>When provided to <a href="#generate_key">generate_key</a> or <a href="#import_key">import_key</a>,
+this tag specifies data that must be provided during all uses of the key. In
+particular, calls to <a href="#export_key">export_key</a> and
+<a href="#get_key_characteristics">get_key_characteristics</a> must
+provide the same value to the <code>client_id</code> parameter, and calls
+to <a href="#begin">begin</a> must provide this tag and the same associated
+data as part of the <code>in_params</code> set. If the correct data is not
+provided, the function must return <code>KM_ERROR_INVALID_KEY_BLOB</code>.</p>
+
+<p>The content of this tag must be bound to the key <i>cryptographically</i>,
+meaning it must not be possible for an adversary who has access to all of the
+secure world secrets but does not have access to the tag content to decrypt the
+key (without brute-forcing the tag content, which applications can prevent by
+specifying sufficiently high-entropy content).</p>
+
+<p>The value is a blob, an arbitrary-length array of bytes.</p>
+
+<p>This tag is not repeatable.</p>
+
+<h3 id=km_tag_creation_datetime>KM_TAG_CREATION_DATETIME</h3>
+
+<p>Specifies the date and time the key was created, in milliseconds since January
+1, 1970. This tag is optional and informational only.</p>
+
+<p>This tag is not repeatable.</p>
+
+<h3 id=km_tag_origin>KM_TAG_ORIGIN</h3>
+
+<p>Specifies where the key was created, if known. This tag may not be specified
+during key generation or import, and must be added to the key characteristics
+by the trustlet.</p>
+
+<p>The possible values are defined in <code>keymaster_origin_t</code>:</p>
+
+<pre class="devsite-click-to-copy">
+typedef enum {
+    KM_ORIGIN_GENERATED = 0,
+    KM_ORIGIN_IMPORTED = 2,
+    KM_ORIGIN_UNKNOWN = 3,
+} keymaster_key_origin_t
+</pre>
+
+<p>The full meaning of the value depends not only on the value but on whether it's
+found in the hardware-enforced or software-enforced characteristics list.</p>
+
+<p><code>KM_ORIGIN_GENERATED</code> indicates that Keymaster generated the key.
+If in the hardware-enforced list,
+the key was generated in secure hardware and is permanently hardware-bound. If
+in the software-enforced list, the key was generated in SoftKeymaster and is
+not hardware-bound.</p>
+
+<p><code>KM_ORIGIN_IMPORTED</code> indicates that the key was generated outside
+of Keymaster and imported into
+Keymaster. If in the hardware-enforced list, it is permanently hardware-bound,
+although copies outside of secure hardware may exist. If in the
+software-enforces list, the key was imported into SoftKeymaster and is not
+hardware-bound.</p>
+
+<p><code>KM_ORIGIN_UNKNOWN</code> should only appear in the hardware-enforced list.
+It indicates that the key is
+hardware-bound, but it is not known whether the key was originally generated in
+secure hardware or was imported. This only occurs when keymaster0 hardware is
+being used to emulate keymaster1 services.</p>
+
+<p>This tag is not repeatable.</p>
+
+<h3 id=km_tag_rollback_resistant>KM_TAG_ROLLBACK_RESISTANT</h3>
+
+<p>Indicates that the key is rollback-resistant, meaning that when deleted
+by <a href="#delete_key">delete_key</a> or <a href="#delete_all_keys">delete_all_keys</a>,
+the key is guaranteed to be permanently deleted and unusable. It's possible
+that keys without this tag could be deleted and then restored from backup.</p>
+
+<p>This tag is boolean, so the possible values are true (if the tag is present)
+and false (if the tag is not present).</p>
+
+<p>This tag is not repeatable.</p>
+
+<h3 id=km_tag_root_of_trust>KM_TAG_ROOT_OF_TRUST</h3>
+
+<p>Specifies the "root of trust," the key used by verified boot to validate the
+operating system booted (if any). This tag is never provided to or returned
+from Keymaster in the key characteristics.</p>
+
+<h3 id=km_tag_associated_data>KM_TAG_ASSOCIATED_DATA</h3>
+
+<p>Provides "associated data" for AES-GCM encryption or decryption. This tag is
+provided to <a href="#update">update</a> and specifies data that is not
+encrypted/decrypted but is used in computing
+the GCM tag.</p>
+
+<p>The value is a blob, an arbitrary-length array of bytes.</p>
+
+<p>This tag is not repeatable.</p>
+
+<h3 id=km_tag_nonce>KM_TAG_NONCE</h3>
+
+<p>Provides or returns a nonce or Initialization Vector (IV) for AES GCM, CBC or
+CTR encryption or decryption. This tag is provided to <a href="#begin">begin</a>
+during encryption and decryption operations. It may only be provided to <a href="#begin">begin</a>
+if the key has <a href="#km_tag_caller_nonce">KM_TAG_CALLER_NONCE</a>. If not provided,
+an appropriate nonce or IV will be randomly generated by
+Keymaster and returned from begin.</p>
+
+<p>The value is a blob, an arbitrary-length array of bytes. Allowed lengths depend
+on the mode: GCM nonces are 12 bytes in length; CBC and CTR IVs are 16 bytes in
+length.</p>
+
+<p>This tag is not repeatable.</p>
+
+<h3 id=km_tag_auth_token>KM_TAG_AUTH_TOKEN</h3>
+
+<p>Provides an authentication token (see the Authentication page) to
+<a href="#begin">begin</a>, <a href="#update">update</a> or <a href="#finish">finish</a>,
+to prove user authentication for a key operation that requires
+it (key has <a href="#km_tag_user_secure_id">KM_TAG_USER_SECURE_ID</a>).</p>
+
+<p>The value is a blob which contains a <code>hw_auth_token_t</code> structure.</p>
+
+<p>This tag is not repeatable.</p>
+
+<h3 id=km_tag_mac_length>KM_TAG_MAC_LENGTH</h3>
+
+<p>Provides the requested length of a MAC or GCM authentication tag, in bits.</p>
+
+<p>The value is the MAC length in bits. It must be a multiple of 8 and must be at
+least as large as the value of <a href="#km_tag_min_mac_length">KM_TAG_MIN_MAC_LENGTH</a>
+associated with the key.</p>
+
+<h2 id=functions>Functions</h2>
+
+<h3 id=deprecated_functions>Deprecated functions</h3>
+
+<p>The following functions are in the <code>keymaster1_device_t</code> definition but
+should not be implemented. The function pointers should be set
+to <code>NULL</code>:</p>
+
+<ul>
+  <li><code>generate_keypair</code>
+  <li><code>import_keypair</code>
+  <li><code>get_keypair_public</code>
+  <li><code>delete_keypair</code>
+  <li><code>delete_all</code>
+  <li><code>sign_data</code>
+  <li><code>verify_data</code>
+</ul>
+
+<h3 id=general_implementation_guidelines>General implementation guidelines</h3>
+
+<p>The following guidelines apply to all functions in the API.</p>
+
+<h4 id=input_pointer_parameters>Input pointer parameters</h4>
+
+<p>Input pointer parameters that are not used for a given call may be <code>NULL</code>.
+The caller is not required to provide placeholders. For example, some key
+types and modes may not use any values from the <code>in_params</code> argument
+to <a href="#begin">begin</a>, so the caller may set <code>in_params</code>
+to <code>NULL</code> or provide an empty parameter set. It is also acceptable for the caller to
+provide unused parameters, and Keymaster methods should not issue errors.</p>
+
+<p>If a required input parameter is NULL, Keymaster methods should return
+<code>KM_ERROR_UNEXPECTED_NULL_POINTER</code>.</p>
+
+<h4 id=output_pointer_parameters>Output pointer parameters</h4>
+
+<p>Similar to input pointer parameters, unused output pointer parameters
+may be <code>NULL</code>. If a method needs to return data in an output
+parameter found to be <code>NULL</code>, it should return <code>KM_ERROR_OUTPUT_PARAMETER_NULL</code>.</p>
+
+<h4 id=api_misuse>API misuse</h4>
+
+<p>There are many ways that callers can make requests that don't make sense or are
+foolish but not technically wrong. Keymaster1 implementations are not required
+to fail in such cases or issue a diagnostic. Use of too-small keys,
+specification of irrelevant input parameters, reuse of IVs or nonces,
+generation of keys with no purposes (hence useless) and the like should not be
+diagnosed by implementations. Omission of required parameters, specification of
+invalid required parameters, and similar errors must be diagnosed.</p>
+
+<p>It is the responsibility of apps, the framework, and Android keystore to ensure
+that the calls to Keymaster modules are sensible and useful.</p>
+
+<h3 id=get_supported_algorithms>get_supported_algorithms</h3>
+
+<p>Returns the list of algorithms supported by the Keymaster hardware
+implementation. A software implementation must return an empty list; a hybrid
+implementation must return a list containing only the algorithms that are
+supported by hardware.</p>
+
+<p>Keymaster1 implementations must support RSA, EC, AES and HMAC.</p>
+
+<h3 id=get_supported_block_modes>get_supported_block_modes</h3>
+
+<p>Returns the list of AES block modes supported by the Keymaster hardware
+implementation for a specified algorithm and purpose.</p>
+
+<p>For RSA, EC and HMAC, which are not block ciphers, the method must return an
+empty list for all valid purposes. Invalid purposes should cause the method to
+return <code>KM_ERROR_INVALID_PURPOSE</code>.</p>
+
+<p>Keymaster1 implementations must support ECB, CBC, CTR and GCM for AES
+encryption and decryption.</p>
+
+<h3 id=get_supported_padding_modes>get_supported_padding_modes</h3>
+
+<p>Returns the list of padding modes supported by the Keymaster hardware
+implementation for a specified algorithm and purpose.</p>
+
+<p>HMAC and EC have no notion of padding so the method must return an empty list
+for all valid purposes. Invalid purposes should cause the method to return <code>KM_ERROR_INVALID_PURPOSE</code>.</p>
+
+<p>For RSA, keymaster1 implementations must support:</p>
+
+<ul>
+  <li>Unpadded encryption, decryption, signing and verification. For unpadded
+encryption and signing, if the message is shorter than the public modulus,
+implementations must left-pad it with zeros. For unpadded decryption and
+verification, the input length must match the public modulus size.
+  <li>PKCS#1 v1.5 encryption and signing padding modes
+  <li>PSS with a minimum salt length of 20
+  <li>OAEP
+</ul>
+
+<p>For AES in ECB and CBC modes, keymaster1 implementations must support no
+padding and PKCS#7-padding. CTR and GCM modes must support only no padding.</p>
+
+<h3 id=get_supported_digests>get_supported_digests</h3>
+
+<p>Returns the list of digest modes supported by the Keymaster hardware
+implementation for a specified algorithm and purpose.</p>
+
+<p>No AES modes support or require digesting, so the method must return an empty
+list for valid purposes.</p>
+
+<p>Keymaster1 implementations are allowed to implement a subset of the defined
+digests, but must provide SHA-256. It is strongly recommended that keymaster1
+implementations provide MD5, SHA1, SHA-224, SHA-256, SHA384 and SHA512 (the
+full set of defined digests).</p>
+
+<h3 id=get_supported_import_formats>get_supported_import_formats</h3>
+
+<p>Returns the list of import formats supported by the Keymaster hardware
+implementation of a specified algorithm.</p>
+
+<p>Keymaster1 implementations must support the PKCS#8 format (without password
+protection) for importing RSA and EC key pairs, and must support RAW import of
+AES and HMAC key material.</p>
+
+<h3 id=get_supported_export_formats>get_supported_export_formats</h3>
+
+<p>Returns the list of export formats supported by the Keymaster hardware
+implementation of a specified algorithm.</p>
+
+<p>Keymaster1 implementations must support the X.509 format for exporting RSA and
+EC public keys. Export of private keys or asymmetric keys must not be
+supported.</p>
+
+<h3 id=add_rng_entropy>add_rng_entropy</h3>
+
+<p>Adds caller-provided entropy to the pool used by the Keymaster1 implementation
+for generating random numbers, for keys, IVs, etc.</p>
+
+<p>Keymaster1 implementations must <strong>securely</strong> mix the provided
+entropy into their pool, which must also contain
+internally-generated entropy from a hardware random number generator. Mixing
+must have the property that an attacker with complete control of either
+the <code>add_rng_entropy</code>-provided bits or the hardware-generated bits, but not both, cannot predict
+bits generated from the entropy pool with probability greater than ½.</p>
+
+<p>Keymaster1 implementations that attempt to estimate the entropy in their
+internal pool must assume that data provided by <code>add_rng_entropy</code> contains no entropy.</p>
+
+<h3 id=generate_key>generate_key</h3>
+
+<p>Generates a new cryptographic key, specifying associated authorizations, which
+will be permanently bound to the key. Keymaster1 implementations must make it
+impossible to use a key in any way inconsistent with the authorizations
+specified at generation time. With respect to authorizations that the secure
+hardware cannot enforce, the secure hardware's obligation is limited to
+ensuring that the unenforceable authorizations associated with the key cannot
+be modified, so that every call to <a href="#get_key_characteristics">get_key_characteristics</a>
+will return the original value. In addition, the characteristics returned by <code>generate_key</code>
+must allocate authorizations correctly between the hardware-enforced and
+software-enforced lists.  See <a href="#get_key_characteristics">get_key_characteristics</a>
+for more details.</p>
+
+<p>The parameters that must be provided to <code>generate_key</code> depend on the type of key
+being generated. This section will summarize the
+required and allowed tags for each type of key. <a href="#km_tag_algorithm">KM_TAG_ALGORITHM</a>
+is always required, to specify the type.</p>
+
+<h4 id=rsa_keys>RSA keys</h4>
+
+<p>The following parameters are required when generating an RSA key.</p>
+
+<ul>
+  <li><a href="#km_tag_key_size">KM_TAG_KEY_SIZE</a> specifies the size of the public
+  modulus, in bits. If omitted, the method must
+return <code>KM_ERROR_UNSUPPORTED_KEY_SIZE</code>. Values that must be supported are
+1024, 2048, 3072 and 4096. It is
+recommended to support all key sizes that are a multiple of 8.
+  <li><a href="#km_tag_rsa_public_exponent">KM_TAG_RSA_PUBLIC_EXPONENT</a> specifies
+  the RSA public exponent value. If omitted, the method must
+  return <code>KM_ERROR_INVALID_ARGUMENT</code>.
+  Implementations must support the values 3 and 65537. It is recommended to
+support all prime values up to 2^64.
+</ul>
+
+<p>The following parameters are not required to generate an RSA key, but creating
+an RSA key without them will produce a key that is unusable.
+The <code>generate_key</code> function should not return an error if these parameters are omitted.</p>
+
+<ul>
+  <li><a href="#km_tag_purpose">KM_TAG_PURPOSE</a> specifies allowed purposes.
+  All purposes must be supported for RSA keys, in
+any combination.
+  <li><a href="#km_tag_digest">KM_TAG_DIGEST</a> specifies digest algorithms that
+  may be used with the new key. Implementations
+that do not support all digest algorithms must accept key generation requests
+that include unsupported digests. The unsupported digests should be placed in
+the "software-enforced" list in the returned key characteristics. This is
+because the key will be usable with those other digests, but digesting will be
+performed in software. Then hardware will be called to perform the operation
+with <code>KM_DIGEST_NONE</code>.
+  <li><a href="#km_tag_padding">KM_TAG_PADDING</a> specifies the padding modes
+  that may be used with the new key. Implementations
+that do not support all digest algorithms must place <code>KM_PAD_RSA_PSS</code>
+and <code>KM_PAD_RSA_OAEP</code> in the software-enforced list of the key
+characteristics if any unsupported
+digest algorithms are specified.
+</ul>
+
+<h4 id=ecdsa_keys>ECDSA keys</h4>
+
+<p>Only <a href="#km_tag_key_size">KM_TAG_KEY_SIZE</a> is required to generate an
+ECDSA key. It is used to select the EC group.
+Implementations must support values 224, 256, 384 and 521, which indicate the
+NIST p-224, p-256, p-384 and p521 curves, respectively.</p>
+
+<p><a href="#km_tag_digest">KM_TAG_DIGEST</a> is also needed for a useful ECDSA key,
+but is not required for generation.</p>
+
+<h4 id=aes_keys>AES keys</h4>
+
+<p>Only <a href="#km_tag_key_size">KM_TAG_KEY_SIZE</a> is required when
+generating an AES key. If omitted, the method must return <code>KM_ERROR_UNSUPPORTED_KEY_SIZE</code>.
+Values that must be supported are 128 and 256. It is recommended to support
+192-bit AES keys.</p>
+
+<p>The following parameters are particularly relevant for AES keys, but not
+required to generate one:</p>
+
+<ul>
+  <li><code>KM_TAG_BLOCK_MODE</code> specifies the block modes with which the new key may be used.
+  <li><code>KM_TAG_PADDING</code> specifies the padding modes that may be used. This is only relevant for ECB
+and CBC modes.
+</ul>
+
+<p>If the GCM block mode is specified, then <a href="#km_tag_min_mac_length">KM_TAG_MIN_MAC_LENGTH</a>
+must be provided. If omitted, the method must return
+<code>KM_ERROR_MISSING_MIN_MAC_LENGTH</code>. The value of the tag must be a multiple of 8 and must
+be at least 96 and no more than 128.</p>
+
+<h4 id=hmac_keys>HMAC keys</h4>
+
+<p>The following parameters are required for HMAC key generation:</p>
+
+<ul>
+  <li><a href="#km_tag_key_size">KM_TAG_KEY_SIZE</a> specifies the key size in bits. Values
+  smaller than 64 and values that are not
+multiples of 8 must not be supported. All multiples of 8, from 64 to 512, must
+be supported. Larger values may be supported.
+  <li><a href="#km_tag_min_mac_length">KM_TAG_MIN_MAC_LENGTH</a> specifies the minimum length of
+  MACs that can be generated or verified with
+this key. The value must be a multiple of 8 and must be at least 64.
+  <li><a href="#km_tag_digest">KM_TAG_DIGEST</a> specifies the digest algorithm for the key. Exactly
+  one digest must be
+specified, otherwise return <code>KM_ERROR_UNSUPPORTED_DIGEST</code>. If the digest is not supported
+by the trustlet, return <code>KM_ERROR_UNSUPPORTED_DIGEST</code>.
+</ul>
+
+<h4 id=key_characteristics>Key characteristics</h4>
+
+<p>If the characteristics argument is non-NULL, <code>generate_key</code> must return the newly-generated
+key's characteristics divided appropriately
+into hardware-enforced and software-enforced lists. See <a href="#get_key_characteristics">get_key_characteristics</a>
+for a description of which characteristics go in which list. The returned
+characteristics must include all of the parameters specified to key generation,
+except <a href="#km_tag_application_id">KM_TAG_APPLICATION_ID</a> and
+<a href="#km_tag_application_data">KM_TAG_APPLICATION_DATA</a>.
+If these tags were included in the key parameters, they must be removed from
+the returned characteristics; it must not be possible to find their values by
+examining the returned key blob. However, they must be cryptographically bound
+to the key blob, so that if the correct values are not provided when the key is
+used, usage will fail. Similarly, <a href="#km_tag_root_of_trust">KM_TAG_ROOT_OF_TRUST</a> must
+be cryptographically bound to the key, but it may not be specified during
+key creation or import and must never be returned.</p>
+
+<p>In addition to the provided tags, the trustlet must also
+add <a href="#km_tag_origin">KM_TAG_ORIGIN</a>, with the value <code>KM_ORIGIN_GENERATED</code>,
+and if the key is rollback resistant, <a href="#km_tag_rollback_resistant">KM_TAG_ROLLBACK_RESISTANT</a>.</p>
+
+<h4 id=rollback_resistance>Rollback resistance </h4>
+
+<p>Rollback resistance means that once a key is deleted with
+<a href="#delete_key">delete_key</a> or <a href="#delete_all_keys">delete_all_keys</a>,
+it is guaranteed by secure hardware never to be usable again. Implementations
+without rollback resistance will typically return generated or imported key
+material to the caller as a key blob, an encrypted and authenticated form. When
+keystore deletes the key blob, the key is gone, but an attacker who has
+previously managed to retrieve the key material can potentially restore it to
+the device.</p>
+
+<p>A key is rollback resistant if the secure hardware guarantees that deleted keys
+cannot be restored later. This is generally done by storing additional key
+metadata in a trusted location that cannot be manipulated by an attacker. On
+mobile devices, the mechanism used for this is usually Replay Protected Memory
+Blocks (RPMB). Because the number of keys that may be created is essentially
+unbounded and the trusted storage used for rollback resistance may be limited
+in size, it is required that this method succeed even if rollback resistance
+cannot be provided for the new key. In that case,
+<a href="#km_tag_rollback_resistant">KM_TAG_ROLLBACK_RESISTANT</a> should not be
+added to the key characteristics.</p>
+
+<h3 id=get_key_characteristics>get_key_characteristics</h3>
+
+<p>Returns parameters and authorizations associated with the provided key, divided
+into two sets: hardware-enforced and software-enforced. The description here
+applies equally to the key characteristics lists returned
+by <a href="#generate_key">generate_key</a> and <a href="#import_key">import_key</a>.</p>
+
+<p>If <code>KM_TAG_APPLICATION_ID</code> was provided during key generation
+or import, the same value must provided to
+this method in the <code>client_id</code> argument. Otherwise, the
+method must return <code>KM_ERROR_INVALID_KEY_BLOB</code>. Similarly,
+if <code>KM_TAG_APPLICATION_DATA </code>was provided during generation
+or import, the same value must be provided to
+this method in the <code>app_data</code> argument.</p>
+
+<p>The characteristics returned by this method completely describe the type and
+usage of the specified key.</p>
+
+<p>The general rule for deciding whether a given tag belongs in the
+hardware-enforced or software-enforced list is that if the meaning of the tag
+is fully assured by secure hardware, it is hardware-enforced. Otherwise, it's
+software enforced. Below is a list of specific tags whose correct allocation
+may be unclear:</p>
+
+<ul>
+  <li><a href="#km_tag_algorithm">KM_TAG_ALGORITHM</a>, <a href="#km_tag_key_size">KM_TAG_KEY_SIZE</a>,
+  and <a href="#km_tag_rsa_public_exponent">KM_TAG_RSA_PUBLIC_EXPONENT</a> are
+  intrinsic properties of the key. For any key that is secured by hardware,
+these will be in the hardware-enforced list, because the statement that, for
+example, "This RSA key material is only used as an RSA key" is enforced by
+hardware because the hardware will use it in no other way and software has no
+access to the key material and cannot use it at all.
+  <li><a href="#km_tag_digest">KM_TAG_DIGEST</a> values that are supported by the
+  secure hardware are to be placed in the
+hardware-supported list. Unsupported digests go in the software-supported list.
+  <li><a href="#km_tag_padding">KM_TAG_PADDING</a> values generally go in the
+  hardware-supported list, but if there is a
+possibility that a specific padding mode may have to be performed by software,
+they go in the software-enforced list. Such a possibility arises for RSA keys
+that permit PSS or OAEP padding with digest algorithms that are not supported
+by the secure hardware.
+  <li><a href="#km_tag_user_secure_id">KM_TAG_USER_SECURE_ID</a> and
+  <a href="#km_tag_mac_length">KM_TAG_USER_AUTH_TYPE</a> are hardware-enforced
+  only if user authentication is hardware enforced. For
+that to be true, the Keymaster trustlet and the relevant authentication
+trustlet must both be secure and must share a secret HMAC key used to sign and
+validate authentication tokens. See the Authentication page for details.
+  <li><a href="#km_tag_active_datetime">KM_TAG_ACTIVE_DATETIME</a>,
+  <a href="#km_tag_origination_expire_datetime">KM_TAG_ORIGINATION_EXPIRE_DATETIME</a>,
+  and <a href="#km_tag_usage_expire_datetime">KM_TAG_USAGE_EXPIRE_DATETIME</a> tags
+  require access to a verifiably correct wall clock. Most secure hardware
+will only have access to time information provided by the non-secure OS, which
+means the tags are software-enforced.
+  <li><a href="#km_tag_origin">KM_TAG_ORIGIN</a> is always in the hardware list for
+  hardware-bound keys. Its presence in that
+list is the way higher layers determine that a key is hardware-backed.
+</ul>
+
+<h3 id=import_key>import_key</h3>
+
+<p>Imports key material into Keymaster hardware. Key definition parameters and
+output characteristics are handled the same as for <code>generate_key</code>,
+with the following exceptions:</p>
+
+<ul>
+  <li><a href="#km_tag_key_size">KM_TAG_KEY_SIZE</a> and
+  <a href="#km_tag_rsa_public_exponent">KM_TAG_RSA_PUBLIC_EXPONENT</a> (for RSA keys only)
+  are not required in the input parameters. If not provided,
+the trustlet must deduce the values from the provided key material and add
+appropriate tags and values to the key characteristics. If the parameters are
+provided, the trustlet must validate them against the key material. In the
+event of a mismatch, the method must return <code>KM_ERROR_IMPORT_PARAMETER_MISMATCH</code>.
+  <li>The returned <a href="#km_tag_origin">KM_TAG_ORIGIN</a> must have the
+  value <code>KM_ORIGIN_IMPORTED</code>.
+</ul>
+
+<h3 id=export_key>export_key</h3>
+
+<p>Exports a public key from a Keymaster RSA or EC key pair.</p>
+
+<p>If <code>KM_TAG_APPLICATION_ID</code> was provided during key generation or import,
+the same value must provided to
+this method in the <code>client_id</code> argument. Otherwise, the method must return
+<code>KM_ERROR_INVALID_KEY_BLOB</code>. Similarly, if <code>KM_TAG_APPLICATION_DATA</code>
+was provided during generation or import, the same value must be provided to
+this method in the <code>app_data</code> argument.</p>
+
+<h3 id=delete_key>delete_key</h3>
+
+<p>Deletes the provided key. This method is optional, and will likely be
+implemented only by Keymaster modules that provide rollback resistance.</p>
+
+<h3 id=delete_all_keys>delete_all_keys</h3>
+
+<p>Deletes all keys. This method is optional, and will likely be implemented only
+by Keymaster modules that provide rollback resistance.</p>
+
+<h3 id=begin>begin</h3>
+
+<p>Begins a cryptographic operation, using the specified key, for the specified
+purpose, with the specified parameters (as appropriate), and returns an
+operation handle which is used with <a href="#update">update</a> and <a
+href="#finish">finish</a> to complete the operation. The operation handle is
+also used as the "challenge" token in authenticated operations, and for such
+operations must be included in the <code>challenge</code> field of the
+authentication token.</p>
+
+<p>A Keymaster implementation must support at least 16 concurrent
+operations. Keystore will use up to 15, leaving one for vold to use for password
+encryption. When Keystore has 15 operations in progress (<code>begin</code> has
+been called, but <code>finish</code> or <code>abort</code> have not yet been
+called) and it receives a request to begin a 16th, it will call
+<code>abort</code> on the least-recently used operation to reduce the number of
+active operations to 14 before calling <code>begin</code> to start the
+newly-requested operation.
+
+<p>If <a href="#km_tag_application_id">KM_TAG_APPLICATION_ID</a> or <a
+href="#km_tag_application_data">KM_TAG_APPLICATION_DATA</a> were specified
+during key generation or import, calls to <code>begin</code> must include those
+tags with the originally-specified values in the <code>in_params</code> argument
+to this method.</p>
+
+<h4 id=authorization_enforcement>Authorization enforcement</h4>
+
+<p>During this method, the following key authorizations must be enforced by the
+trustlet if the implementation placed them in the "hardware-enforced"
+characteristics and if the operation is not a public key operation. Public key
+operations, meaning <code>KM_PURPOSE_ENCRYPT</code> and <code>KM_PURPOSE_VERIFY</code>,
+with RSA or EC keys, must be allowed to succeed even if authorization
+requirements are not met.</p>
+
+<ul>
+  <li><a href="#km_tag_purpose">KM_TAG_PURPOSE</a> requires that the purpose specified
+  for this method match one of the purposes
+in the key authorizations, unless the requested operation is a public key
+operation, meaning that the key is RSA or EC and the purpose is <code>KM_PURPOSE_ENCRYPT</code>
+or <code>KM_PURPOSE_VERIFY</code>. Note that <code>KM_PURPOSE_ENCRYPT</code> is not valid for EC keys.
+Begin should return <code>KM_ERROR_UNSUPPORTED_PURPOSE</code> in that case.
+  <li><a href="#km_tag_active_datetime">KM_TAG_ACTIVE_DATETIME</a> requires comparison with a trusted
+  UTC time source. If the current date and
+time is prior to the tag value, the method must return <code>KM_ERROR_KEY_NOT_YET_VALID</code>.
+  <li><a href="#km_tag_origination_expire_datetime">KM_TAG_ORIGINATION_EXPIRE_DATETIME</a> requires
+  comparison with a trusted UTC time source. If the current date and
+time is later than the tag value and the purpose is <code>KM_PURPOSE_ENCRYPT</code> or <code>KM_PURPOSE_SIGN</code>,
+the method must return <code>KM_ERROR_KEY_EXPIRED</code>.
+  <li><a href="#km_tag_usage_expire_datetime">KM_TAG_USAGE_EXPIRE_DATETIME</a> requires comparison with a
+  trusted UTC time source. If the current date and
+time is later than the tag value and the purpose is <code>KM_PURPOSE_DECRYPT</code> or <code>KM_PURPOSE_VERIFY</code>,
+the method must return <code>KM_ERROR_KEY_EXPIRED</code>.
+  <li><a href="#km_tag_min_seconds_between_ops">KM_TAG_MIN_SECONDS_BETWEEN_OPS</a> requires comparison with a
+  trusted relative timer indicating the last use of
+the key. If the last use time plus the tag value is less than the current time,
+the method must return <code>KM_ERROR_KEY_RATE_LIMIT_EXCEEDED</code>. See the tag description for
+important implementation requirements.
+  <li><a href="#km_tag_max_uses_per_boot">KM_TAG_MAX_USES_PER_BOOT</a> requires comparison against a
+  secure counter that tracks the uses of the key
+since boot time. If the count of previous uses exceeds the tag value, the
+method must return <code>KM_ERROR_KEY_MAX_OPS_EXCEEDED</code>.
+  <li><a href="#km_tag_user_secure_id">KM_TAG_USER_SECURE_ID</a> is enforced by this method only
+  if the key also has <a href="#km_tag_auth_timeout">KM_TAG_AUTH_TIMEOUT</a>. If the key has both,
+  then this method must have received a <a href="#km_tag_auth_token">KM_TAG_AUTH_TOKEN</a> in
+  <code>in_params</code> and that token must be valid, meaning that the HMAC field validates correctly.
+In addition, at least one of the <a href="#km_tag_user_secure_id">KM_TAG_USER_SECURE_ID</a>
+values from the key must match at least one of the secure ID values in the
+token. Finally, the key must also have a <a href="#km_tag_mac_length">KM_TAG_USER_AUTH_TYPE</a> and
+it must match the auth type in the token. If any of these requirements is
+not met, the method must return <code>KM_ERROR_KEY_USER_NOT_AUTHENTICATED</code>.
+  <li><a href="#km_tag_caller_nonce">KM_TAG_CALLER_NONCE</a> allows the caller to specify a nonce
+  or initialization vector (IV). If the key
+does not have this tag but the caller provided <a href="#km_tag_nonce">KM_TAG_NONCE</a> to this method,
+<code>KM_ERROR_CALLER_NONCE_PROHIBITED</code> must be returned.
+  <li><a href="#km_tag_bootloader_only">KM_TAG_BOOTLOADER_ONLY</a> specifies that the key may only be
+  used by the bootloader. If this method is
+called with a bootloader-only key after the bootloader has finished executing,
+it must return <code>KM_ERROR_INVALID_KEY_BLOB</code>.
+</ul>
+
+<h4 id=rsa_keys>RSA keys</h4>
+
+<p>All RSA key operations must specify exactly one padding mode in <code>in_params</code>. If
+unspecified or specified more than once, the method must return <code>KM_ERROR_UNSUPPORTED_PADDING_MODE</code>.</p>
+
+<p>RSA signing and verification operations require a digest, as do RSA encryption
+and decryption operations with OAEP padding mode. For those cases, the caller
+must specify exactly one digest in <code>in_params</code>. If unspecified or specified more than once,
+the method must return <code>KM_ERROR_UNSUPPORTED_DIGEST</code>.</p>
+
+<p>Private key operations (<code>KM_PURPOSE_DECYPT</code> and <code>KM_PURPOSE_SIGN</code>) require
+authorization of digest and padding, which means that the specified
+values must be in the key authorizations. If not, the method must return <code>KM_ERROR_INCOMPATIBLE_DIGEST</code>
+or <code>KM_ERROR_INCOMPATIBLE_PADDING</code>, as appropriate. Public key operations
+(<code>KM_PURPOSE_ENCRYPT</code> and <code>KM_PURPOSE_VERIFY</code>) are permitted with
+unauthorized digest or padding.</p>
+
+<p>With the exception of <code>KM_PAD_NONE</code>, all RSA padding modes are applicable only to
+certain purposes. Specifically, <code>KM_PAD_RSA_PKCS1_1_5_SIGN</code> and <code>KM_PAD_RSA_PSS</code>
+only support signing and verification, while <code>KM_PAD_RSA_PKCS1_1_1_5_ENCRYPT</code> and
+<code>KM_PAD_RSA_OAEP</code> only support encryption and decryption. The method must return
+<code>KM_ERROR_UNSUPPORTED_PADDING_MODE</code> if the specified mode does not support the specified purpose.</p>
+
+<p>There are some important interactions between padding modes and digests:</p>
+
+<ul>
+
+  <li><code>KM_PAD_NONE</code> indicates that a "raw" RSA operation will be
+  performed. If signing or verifying, <code>KM_DIGEST_NONE</code> must be
+  specified for the digest. No digest is required for unpadded encryption or
+  decryption.
+
+  <li><code>KM_PAD_RSA_PKCS1_1_5_SIGN</code> padding requires a digest. The
+  digest may be <code>KM_DIGEST_NONE</code>, in which case the Keymaster
+  implementation cannot build a proper PKCS#1 v1.5 signature structure, because
+  it cannot add the DigestInfo structure. Instead, the implementation must
+  construct <code>0x00 || 0x01 || PS || 0x00 || M</code>, where M is the
+  provided message and PS is the padding string. The size of the RSA key must be
+  at least 11 bytes larger than the message, otherwise the method must return
+  <code>KM_ERROR_INVALID_INPUT_LENGTH</code>.
+
+  <li><code>KM_PAD_RSA_PKCS1_1_1_5_ENCRYPT</code> padding does not require a digest.
+
+  <li><code>KM_PAD_RSA_PSS</code> padding requires a digest, which may not be
+  <code>KM_DIGEST_NONE</code>.  If <code>KM_DIGEST_NONE</code> is specified, the
+  method must return <code>KM_ERROR_INCOMPATIBLE_DIGEST</code>. In addition, the
+  size of the RSA key must be at least 22 bytes larger than the output size of
+  the digest. Otherwise, the method must return
+  <code>KM_ERROR_INCOMPATIBLE_DIGEST</code>.
+
+  <li><code>KM_PAD_RSA_OAEP</code> padding requires a digest, which may not be
+  <code>KM_DIGEST_NONE</code>.  If <code>KM_DIGEST_NONE</code> is specified, the
+  method must return <code>KM_ERROR_INCOMPATIBLE_DIGEST</code>.
+
+</ul>
+
+<h4 id=ec_keys>EC keys</h4>
+
+<p>EC key operations must specify exactly one padding mode in <code>in_params</code>.
+If unspecified or specified more than once,
+return <code>KM_ERROR_UNSUPPORTED_PADDING_MODE</code>.</p>
+
+<p>Private key operations (<code>KM_PURPOSE_SIGN</code>) require authorization of the
+digest, which means that the specified value must be in the key authorizations.
+If not, return <code>KM_ERROR_INCOMPATIBLE_DIGEST</code>.
+Public key operations (<code>KM_PURPOSE_VERIFY</code>) are permitted with unauthorized digest or padding.</p>
+
+<h4 id=aes_keys>AES keys</h4>
+
+<p>AES key operations must specify exactly one block mode and one padding mode in <code>in_params</code>.
+If either value is unspecified or specified more than once, return <code>KM_ERROR_UNSUPPORTED_BLOCK_MODE</code> or
+<code>KM_ERROR_UNSUPPORTED_PADDING_MODE</code>. The specified modes must be authorized by the key.
+Otherwise, the method must
+return <code>KM_ERROR_INCOMPATIBLE_BLOCK_MODE</code> or <code>KM_ERROR_INCOMPATIBLE_PADDING_MODE</code>.</p>
+
+<p>If the block mode is <code>KM_MODE_GCM</code>, <code>in_params</code> must specify <code>KM_TAG_MAC_LENGTH</code>, and the
+specified value must be a multiple of 8 and must not be greater than
+128, or less than the value of <code>KM_TAG_MIN_MAC_LENGTH</code> in the key authorizations. For MAC lengths greater than 128 or non-multiples of
+8, return <code>KM_ERROR_UNSUPPORTED_MAC_LENGTH</code>. For values less than the key's minimum length, return <code>KM_ERROR_INVALID_MAC_LENGTH</code>.</p>
+
+<p>If the block mode is <code>KM_MODE_GCM</code> or <code>KM_MODE_CTR</code>, the specified padding mode must
+be <code>KM_PAD_NONE</code>. For <code>KM_MODE_ECB</code> or <code>KM_MODE_CBC</code>, the mode may
+be <code>KM_PAD_NONE</code> or <code>KM_PAD_PKCS7</code>. If the padding mode doesn't meet these
+requirements, return <code>KM_ERROR_INCOMPATIBLE_PADDING_MODE</code>.</p>
+
+<p>If the block mode is <code>KM_MODE_CBC</code>, <code>KM_MODE_CTR</code>, or <code>KM_MODE_GCM</code>, an initialization vector or nonce is needed.
+In most cases, callers should not
+provide an IV or nonce and the Keymaster implementation must generate a random
+IV or nonce and return it via <a href="#km_tag_nonce">KM_TAG_NONCE</a> in <code>out_params</code>. CBC
+and CTR IVs are 16 bytes. GCM nonces are 12 bytes. If the key
+authorizations contain <a href="#km_tag_caller_nonce">KM_TAG_CALLER_NONCE</a>, then the caller may
+provide an IV/nonce with <a href="#km_tag_nonce">KM_TAG_NONCE</a> in <code>in_params</code>. If a
+nonce is provided when <a href="#km_tag_caller_nonce">KM_TAG_CALLER_NONCE</a> is not authorized,
+return <code>KM_ERROR_CALLER_NONCE_PROHIBITED</code>. If a nonce is not provided when
+<a href="#km_tag_caller_nonce">KM_TAG_CALLER_NONCE</a> is authorized, generate a random IV/nonce.</p>
+
+<h4 id=hmac_keys>HMAC keys</h4>
+
+<p>HMAC key operations must specify <code>KM_TAG_MAC_LENGTH</code> in <code>in_params</code>.
+The specified value must be a multiple of 8 and must not be greater than the
+digest length, or less than the value of <code>KM_TAG_MIN_MAC_LENGTH</code> in the key authorizations.
+For MAC lengths greater than the digest length or
+non-multiples of 8, return <code>KM_ERROR_UNSUPPORTED_MAC_LENGTH</code>. For values less than
+the key's minimum length, return <code>KM_ERROR_INVALID_MAC_LENGTH</code>.</p>
+
+<h3 id=update>update</h3>
+
+<p>Provides data to process in an ongoing operation started with <a href="#begin">begin</a>.
+The operation is specified by the <code>operation_handle</code> parameter.</p>
+
+<p>To provide more flexibility for buffer handling, implementations of this method
+have the option of consuming less data than was provided. The caller is
+responsible for looping to feed the rest of the data in subsequent calls. The
+amount of input consumed must be returned in the <code>input_consumed</code> parameter.
+Implementations must always consume at least one byte, unless the
+operation cannot accept any more; if more than zero bytes are provided and zero
+bytes are consumed, callers will consider this an error and abort the
+operation.</p>
+
+<p>Implementations may also choose how much data to return, as a result of the
+update. This is only relevant for encryption and decryption operations, since
+signing and verification return no data until <a href="#finish">finish</a>. It is recommended
+to return data as early as possible, rather than buffer it.</p>
+
+<h4 id=error_handling>Error handling</h4>
+
+<p>If this method returns an error code other than <code>KM_ERROR_OK</code>, the operation is
+aborted and the operation handle must be invalidated. Any
+future use of the handle, with this method or <a href="#finish">finish</a> or <a href="#abort">abort</a>,
+must return <code>KM_ERROR_INVALID_OPERATION_HANDLE</code>.</p>
+
+<h4 id=authorization_enforcement>Authorization enforcement</h4>
+
+<p>Key authorization enforcement is performed primarily in <a href="#begin">begin</a>. The one exception
+is the case where the key has:</p>
+
+<ul>
+  <li>One or more <a href="#km_tag_user_secure_id">KM_TAG_USER_SECURE_IDs</a>, and
+  <li>Does not have a <a href="#km_tag_auth_timeout">KM_TAG_AUTH_TIMEOUT</a>
+</ul>
+
+<p>In this case, the key requires an authorization per operation, and the update
+method must receive a <a href="#km_tag_auth_token">KM_TAG_AUTH_TOKEN</a> in the <code>in_params</code> argument.
+The token must be valid (HMAC must verify) and it must contain a
+matching secure user ID, must match the key's <a href="#km_tag_mac_length">KM_TAG_USER_AUTH_TYPE</a>, and must
+contain the operation handle of the current operation in the
+challenge field. If these requirements aren't met, return <code>KM_ERROR_KEY_USER_NOT_AUTHENTICATED</code>.</p>
+
+<p>The caller must provide the authentication token to every call to <a href="#update">update</a> and
+<a href="#finish">finish</a>. The implementation need only validate the token once if it prefers.</p>
+
+<h4 id=rsa_keys>RSA keys</h4>
+
+<p>For signing and verification operations with <code>KM_DIGEST_NONE</code>, this method must accept
+the entire block to be signed or verified in a single
+update. It may not consume only a portion of the block. It still must accept
+the data in multiple updates if the caller chooses to provide it that way,
+however. If the caller provides more data to sign than can be used (length of
+data exceeds RSA key size), return <code>KM_ERROR_INVALID_INPUT_LENGTH</code>.</p>
+
+<h4 id=ecdsa_keys>ECDSA keys</h4>
+
+<p>For signing and verification operations with <code>KM_DIGEST_NONE</code>, this method must accept the
+entire block to be signed or verified in a single
+update. This method may not consume only a portion of the block.</p>
+
+<p>However, this method still must accept the data in multiple updates if the
+caller chooses to provide it that way. If the caller provides more data to sign
+than can be used, the data should be silently truncated. (This differs from the
+handling of excess data provided in similar RSA operations. The reason for this
+is compatibility with legacy clients.)</p>
+
+<h4 id=aes_keys>AES keys</h4>
+
+<p>AES GCM mode supports "associated authentication data," provided via the
+<a href="#km_tag_associated_data">KM_TAG_ASSOCIATED_DATA</a> tag in the <code>in_params</code> argument.
+The associated data may be provided in repeated calls (important if
+the data is too large to send in a single block) but must always precede data
+to be encrypted or decrypted. An update call may receive both associated data
+and data to encrypt/decrypt, but subsequent updates may not include associated
+data. If the caller provides associated data to an update call after a call
+that includes data to encrypt/decrypt, return <code>KM_ERROR_INVALID_TAG</code>.</p>
+
+<p>For GCM encryption, the tag is appended to the ciphertext by <a href="#finish">finish</a>.
+During decryption, the last <code>KM_TAG_MAC_LENGTH</code> bytes of the data provided to the last
+update call is the tag. Since a given
+invocation of <a href="#update">update</a> cannot know if it's the last invocation, it must process all but the tag
+length and buffer the possible tag data for processing during <a href="#finish">finish</a>.</p>
+
+<h3 id=finish>finish</h3>
+
+<p>Finished an ongoing operation started with <a href="#begin">begin</a>, processing all of the
+as-yet-unprocessed data provided by <a href="#update">update</a>(s).</p>
+
+<p>This method is the last one called in an operation, so all processed data must
+be returned.</p>
+
+<p>Whether it completes successfully or returns an error, this method finalizes
+the operation and therefore invalidates the provided operation handle. Any
+future use of the handle, with this method or <a href="#update">update</a> or
+<a href="#abort">abort</a>, must return <code>KM_ERROR_INVALID_OPERATION_HANDLE</code>.</p>
+
+<p>Signing operations return the signature as the output. Verification operations
+accept the signature in the <code>signature</code> parameter, and return no output.</p>
+
+<h4 id=authorization_enforcement>Authorization enforcement</h4>
+
+<p>Key authorization enforcement is performed primarily in <a href="#begin">begin</a>. The one exception is the case where the key has:</p>
+
+<ul>
+  <li>One or more <a href="#km_tag_user_secure_id">KM_TAG_USER_SECURE_IDs</a>, and
+  <li>Does not have a <a href="#km_tag_auth_timeout">KM_TAG_AUTH_TIMEOUT</a>
+</ul>
+
+<p>In this case, the key requires an authorization per operation, and the update
+method must receive a <a href="#km_tag_auth_token">KM_TAG_AUTH_TOKEN</a> in the <code>in_params</code> argument.
+The token must be valid (HMAC must verify) and it must contain a
+matching secure user ID, must match the key's <a href="#km_tag_mac_length">KM_TAG_USER_AUTH_TYPE</a>, and must
+contain the operation handle of the current operation in the
+challenge field. If these requirements aren't met, return <code>KM_ERROR_KEY_USER_NOT_AUTHENTICATED</code>.</p>
+
+<p>The caller must provide the authentication token to every call to <a href="#update">update</a> and <a href="#finish">finish</a>.
+The implementation need only validate the token once if it prefers.</p>
+
+<h4 id=rsa_keys>RSA keys</h4>
+
+<p>Some additional requirements, depending on the padding mode:</p>
+
+<ul>
+  <li><strong>KM_PAD_NONE</strong>. For unpadded signing and encryption operations, if the provided data is
+shorter than the key, the data must be zero-padded on the left before
+signing/encryption. If the data is the same length as the key but numerically
+larger, return <code>KM_ERROR_INVALID_ARGUMENT</code>. For verification and decryption operations, the data must be exactly as long
+as the key. Otherwise, return <code>KM_ERROR_INVALID_INPUT_LENGTH.</code>
+  <li><strong>KM_PAD_RSA_PSS</strong>. For PSS-padded signature operations, the PSS salt must be at least 20 bytes
+in length and randomly-generated. The salt may be longer; the reference
+implementation uses maximally-sized salt. The digest specified with <a href="#km_tag_digest">KM_TAG_DIGEST</a> in
+<code>input_params</code> on <a href="#begin">begin</a> is used as the PSS digest algorithm, and SHA1 is used as the MGF1 digest
+algorithm.
+  <li><strong>KM_PAD_RSA_OAEP</strong>. The digest specified with <a href="#km_tag_digest">KM_TAG_DIGEST</a> in
+  <code>input_params</code> on <a href="#begin">begin</a> is used as the OAEP digest algorithm, and SHA1 is used as the MGF1 digest
+algorithm.
+</ul>
+
+<h4 id=ecdsa_keys>ECDSA keys</h4>
+
+<p>If the data provided for unpadded signing or verification is too long, truncate
+it.</p>
+
+<h4 id=aes_keys>AES keys</h4>
+
+<p>Some additional requirements, depending on block mode:</p>
+
+<ul>
+  <li><strong>KM_MODE_ECB</strong> or <strong>KM_MODE_CBC</strong>. If padding is <code>KM_PAD_NONE</code> and the
+  data length is not a multiple of the AES block size, return <code>KM_ERROR_INVALID_INPUT_LENGTH</code>. If
+  padding is <code>KM_PAD_PKCS7</code>, pad the data per the PKCS#7 specification. Note that PKCS#7 requires that if
+the data is a multiple of the block length, an additional padding block must be
+added.
+  <li><strong>KM_MODE_GCM</strong>. During encryption, after processing all plaintext, compute the
+  tag (<a href="#km_tag_mac_length">KM_TAG_MAC_LENGTH</a> bytes) and append it to the returned ciphertext.
+  During decryption, process
+the last <a href="#km_tag_mac_length">KM_TAG_MAC_LENGTH</a> bytes as the tag. If tag verification fails,
+return <code>KM_ERROR_VERIFICATION_FAILED</code>.
+</ul>
+
+<h3 id=abort>abort</h3>
+
+<p>Aborts the in-progress operation. After the call to abort, return <code>KM_ERROR_INVALID_OPERATION_HANDLE</code> for
+any subsequent use of the provided operation handle with <a href="#update">update</a>,
+<a href="#finish">finish</a>, or <a href="#abort">abort</a>.</p>
+
+  </body>
+</html>

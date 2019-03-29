@@ -1,0 +1,417 @@
+<html devsite>
+  <head>
+    <title>Features</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>This page contains information about the features of <a href="index.html">Keystore</a>
+in Android 6.0.</p>
+
+<h2 id=cryptographic_primitives>Cryptographic primitives</h2>
+
+<p>Keystore provides the following categories of operations:</p>
+
+<ul>
+  <li>Key generation
+  <li>Import and export of asymmetric keys (no key wrapping)
+  <li>Import of raw symmetric keys (again, no wrapping)
+  <li>Asymmetric encryption and decryption with appropriate padding modes
+  <li>Asymmetric signing and verification with digesting and appropriate padding
+modes
+  <li>Symmetric encryption and decryption in appropriate modes, including an AEAD
+mode
+  <li>Generation and verification of symmetric message authentication codes
+</ul>
+
+<p>Protocol elements, such as purpose, mode and padding, as well
+as <a href="#key_access_control">access control constraints</a>,
+must be specified when keys are generated or imported and are permanently
+bound to the key, ensuring the key cannot be used in any other way.</p>
+
+<p>In addition to the list above, there is one more service that Keymaster
+implementations must provide but which is not exposed as an API: Random number
+generation. This is used internally for generation of keys, Initialization
+Vectors (IVs), random padding and other elements of secure protocols that
+require randomness.</p>
+
+<h2 id=required_primitives>Required primitives</h2>
+
+<p>All implementations must provide:</p>
+
+<ul>
+  <li><a href="http://en.wikipedia.org/wiki/RSA_(cryptosystem)">RSA</a>
+  <ul>
+    <li>2048, 3072 and 4096-bit key support are required
+    <li>Support for public exponent F4 (2^16+1)
+    <li>Required padding modes for RSA signing are:
+    <ul>
+      <li>No padding (deprecated, will be removed in the future)
+      <li>RSASSA-PSS (<code>KM_PAD_RSA_PSS</code>)
+      <li>RSASSA-PKCS1-v1_5 (<code>KM_PAD_RSA_PKCS1_1_5_SIGN</code>)
+    </ul>
+    <li>Required digest modes for RSA signing are:
+    <ul>
+      <li>No digest (deprecated, will be removed in the future)
+      <li>SHA-256
+    </ul>
+    <li>Required padding modes for RSA encryption/decryption are:
+    <ul>
+      <li>Unpadded
+      <li>RSAES-OAEP (<code>KM_PAD_RSA_OAEP</code>)
+      <li>RSAES-PKCS1-v1_5 (<code>KM_PAD_RSA_PKCS1_1_5_ENCRYPT</code>)
+    </ul>
+  </ul>
+  <li><a href="http://en.wikipedia.org/wiki/Elliptic_Curve_DSA">ECDSA</a>
+  <ul>
+    <li>224, 256, 384 and 521-bit key support are required, using the NIST P-224,
+P-256, P-384 and P-521 curves, respectively
+    <li>Required digest modes for ECDSA are:
+    <ul>
+      <li>No digest (deprecated, will be removed in the future)
+      <li>SHA-256
+    </ul>
+  </ul>
+  <li><a href="http://en.wikipedia.org/wiki/Advanced_Encryption_Standard">AES</a>
+  <ul>
+    <li>128 and 256-bit keys are required
+    <li><a href="http://en.wikipedia.org/wiki/Block_cipher_mode_of_operation#Cipher-block_chaining_.28CBC.29">CBC</a>,
+    CTR, ECB and and GCM. The GCM implementation must not allow the use of tags
+smaller than 96 bits or nonce lengths other than 96 bits.
+    <li>Padding modes <code>KM_PAD_NONE</code> and <code>KM_PAD_PKCS7</code> must
+    be supported for CBC and ECB modes. With no padding, CBC or ECB mode
+encryption must fail if the input isn't a multiple of the block size.
+  </ul>
+  <li><a href="http://en.wikipedia.org/wiki/Hash-based_message_authentication_code">HMAC</a>
+  <a href="http://en.wikipedia.org/wiki/SHA-2">SHA-256</a>, with any key size up to at least 32 bytes.
+</ul>
+</ul>
+
+<p>SHA1 and the other members of the SHA2 family (SHA-224, SHA384 and SHA512) are
+strongly recommended, but not required. Keystore will provide them in software
+if the hardware Keymaster implementation doesn't provide them.</p>
+
+<p>Some primitives are also recommended for interoperability with other systems:</p>
+
+<ul>
+  <li>Smaller key sizes for RSA
+  <li>Arbitrary public exponents for RSA
+</ul>
+
+<h2 id=key_access_control>Key access control</h2>
+
+<p>Hardware-based keys that can never be extracted from the device don't provide
+much security if an attacker can use them at will (though they're more secure
+than keys which <em>can</em> be exfiltrated). Thus, it's crucial that Keystore
+enforce access controls.</p>
+
+<p>Access controls are defined as an "authorization list" of tag/value pairs.
+Authorization tags are 32-bit integers and the values are a variety of types.
+Some tags may be repeated to specify multiple values. Whether a tag may be
+repeated is specified in the documentation for the tag. When a key is created,
+the caller specifies an authorization list. The Keymaster implementation
+underlying Keystore will modify the list to specify some additional information,
+such as whether the key has rollback protection, and return a "final"
+authorization list, encoded into the returned key blob. Any attempt to use the
+key for any cryptographic operation must fail if the final authorization list is
+modified.</p>
+
+<p>The set of possible tags is defined in the enumeration <code>keymaster_authorization_tag_t</code> and
+the set must be permanently fixed (though it can be extended).
+Names are prefixed with <code>KM_TAG_</code>. The top
+four bits of tag IDs are used to indicate the type.</p>
+
+<p>Possible types include:</p>
+
+<p><strong><code>KM_ENUM</code>:</strong> Many tags' values are defined in enumerations. For example, the possible
+values of <code>KM_TAG_PURPOSE</code> are defined in enum <code>keymaster_purpose_t</code>.</p>
+
+<p><strong><code>KM_ENUM_REP</code></strong>: Same as <code>KM_ENUM</code>, except that the tag may
+be repeated in an authorization list. Repetition
+indicates multiple authorized values. For example, an encryption key will
+likely have <code>KM_PURPOSE_ENCRYPT</code> and <code>KM_PURPOSE_DECRYPT</code>.</p>
+
+<p><strong><code>KM_UINT</code>:</strong> 32-bit unsigned integers. Example: <code>KM_TAG_KEY_SIZE</code></p>
+
+<p><strong><code>KM_UINT_REP</code></strong>: Same as <code>KM_UINT</code>, except that the tag may be
+repeated in an authorization list. Repetition indicates multiple authorized values.</p>
+
+<p><strong><code>KM_ULONG</code></strong>: 64-bit unsigned integers. Example: <code>KM_TAG_RSA_PUBLIC_EXPONENT</code></p>
+
+<p><strong><code>KM_ULONG_REP</code></strong>: Same as <code>KM_ULONG</code>, except that the tag may be
+repeated in an authorization list. Repetition
+indicates multiple authorized values.</p>
+
+<p><strong><code>KM_DATE</code></strong>: Date/time values, expressed as milliseconds since January 1, 1970.
+Example: <code>KM_TAG_PRIVKEY_EXPIRE_DATETIME</code></p>
+
+<p><strong><code>KM_BOOL</code></strong>: True or false. A tag of type <code>KM_BOOL</code> is assumed
+to be "false" if the tag is not present and "true" if present. Example: <code>KM_TAG_ROLLBACK_RESISTANT</code></p>
+
+<p><strong><code>KM_BIGNUM</code></strong>: Arbitrary-length integers, expressed as a byte array
+in big-endian order. Example: <code>KM_TAG_RSA_PUBLIC_EXPONENT</code></p>
+
+<p><strong><code>KM_BYTES</code></strong>: A sequence of bytes. Example: <code>KM_TAG_ROOT_OF_TRUST</code></p>
+
+<h3 id=hardware_vs_software_enforcement>Hardware vs. software enforcement</h3>
+
+<p>Not all secure hardware will implement the same features. To support a
+variety of approaches, Keymaster 1.0 distinguishes between secure and non-secure
+world access control enforcement, which we call hardware and software
+enforcement, respectively.</p>
+
+<p>Implementations are required to:</p>
+
+<ul>
+
+  <li>Enforce exact matching (not enforcement) of all authorizations.
+  Authorization lists in key blobs must exactly match the authorizations
+  returned during key generation, including ordering. Any mismatch must cause an
+  error diagnostic.
+
+  <li>Declare the authorizations whose semantic values are enforced.
+
+</ul>
+
+<p>The API mechanism for declaring hardware-enforced authorizations is in the
+<code>keymaster_key_characteristics_t</code> structure. It divides the
+authorization list into two sub-lists, <code>hw_enforced</code> and
+<code>sw_enforced</code>. The secure hardware is responsible for placing the
+appropriate values in each, based on what it can enforce.</p>
+
+<p>In addition, Keystore implements software-based enforcement of <em>all</em>
+authorizations, whether they're enforced by the secure hardware or not.</p>
+
+<p>For example, consider a TrustZone-based implementation that does not support
+key expiration. A key with an expiration date may still be created. That key's
+authorization list will include the tag
+<code>KM_TAG_ORIGINATION_EXPIRE_DATETIME</code> with the expiration date. A
+request to Keystore for the key characteristics will find this tag in the
+<code>sw_enforced</code> list and the secure hardware will not enforce the
+expiration requirement. However, attempts to use the key after expiration will
+be rejected by Keystore.</p>
+
+<p>If the device is then upgraded with secure hardware that does support
+expiration, then a request for key characteristics will find
+<code>KM_TAG_ORIGINATION_EXPIRE_DATETIME</code> in the <code>hw_enforced</code>
+list, and attempts to use the key after expiration will fail even if the
+keystore is somehow subverted or bypassed.</p>
+
+<h3 id=cryptographic_message_construction_authorizations>Cryptographic message construction authorizations</h3>
+
+<p>The following tags are used to define the cryptographic characteristics of
+operations using the associated key: <code>KM_TAG_ALGORITHM</code>, <code>KM_TAG_KEY_SIZE</code>,
+<code>KM_TAG_BLOCK_MODE</code>, <code>KM_TAG_PADDING</code>, <code>KM_TAG_CALLER_NONCE</code>, and <code>KM_TAG_DIGEST</code></p>
+
+<p><code>KM_TAG_PADDING</code>, <code>KM_TAG_DIGEST</code>, and <code>KM_PAD_BLOCK_MODE</code>
+are repeatable, meaning that multiple values may be associated with a single
+key, and the value to be used will be specified at operation time.</p>
+
+<h3 id=purpose>Purpose</h3>
+
+<p>Keys have an associated set of purposes, expressed as one or more authorization
+entries with tag <code>KM_TAG_PURPOSE</code>, which defines how they can be used.  The purposes are:</p>
+
+<ul>
+  <li><code>KM_PURPOSE_ENCRYPT</code>
+  <li><code>KM_PURPOSE_DECRYPT</code>
+  <li><code>KM_PURPOSE_SIGN</code>
+  <li><code>KM_PURPOSE_VERIFY</code>
+</ul>
+
+<p>Any key can have any subset of these purposes. Note that some combinations
+create security problems. For example, an RSA key that can be used to both
+encrypt and to sign allows an attacker who can convince the system to decrypt
+arbitrary data to generate signatures.</p>
+
+<h3 id=import_and_export>Import and export</h3>
+
+<p>Keymaster supports export of public keys only, in X.509 format, and import of:</p>
+
+<ul>
+  <li>Public and private key pairs in DER-encoded PKCS#8 format, without
+password-based encryption, and
+  <li>Symmetric keys as raw bytes
+</ul>
+
+<p>To ensure that imported keys can be distinguished from securely-generated
+keys, <code>KM_TAG_ORIGIN</code> is included in the appropriate key
+authorization list. For example, if a key
+was generated in secure hardware, <code>KM_TAG_ORIGIN</code> with
+value <code>KM_ORIGIN_GENERATED</code> will be found in
+the <code>hw_enforced</code> list of the key characteristics, while a key
+that was imported into secure
+hardware will have the value <code>KM_ORIGIN_IMPORTED</code>.</p>
+
+<h3 id=user_authentication>User authentication</h3>
+
+<p>Secure Keymaster implementations do not implement user authentication, but
+depend on other trusted apps which do. For the interface that must be
+implemented by these apps, see the Gatekeeper page.</p>
+
+<p>User authentication requirements are specified via two sets of tags. The first
+set indicate which user can use the key:</p>
+
+<ul>
+  <li><code>KM_TAG_ALL_USERS</code> indicates the key is usable by all users. If
+  present, <code>KM_TAG_USER_ID</code> and <code>KM_TAG_USER_SECURE_ID</code> must not be present.
+  <li><code>KM_TAG_USER_ID</code> has a numeric value specifying the ID of the authorized user.
+  Note that this
+is the Android user ID (for multi-user), not the application UID, and it is
+enforced by non-secure software only. If present, <code>KM_TAG_ALL_USERS</code> must not be present.
+  <li><code>KM_TAG_USER_SECURE_ID</code> has a 64-bit numeric value specifying the secure user ID
+  that must be provided
+in a secure authentication token to unlock use of the key. If repeated, the key
+may be used if any of the values is provided in a secure authentication token.
+</ul>
+
+<p>The second set indicate whether and when the user must be authenticated. If
+neither of these tags is present, but <code>KM_TAG_USER_SECURE_ID</code> is, authentication is
+required for every use of the key.</p>
+
+<ul>
+  <li><code>KM_NO_AUTHENTICATION_REQUIRED</code> indicates no user authentication is required, though
+  the key still may only be
+used by apps running as the user(s) specified by <code>KM_TAG_USER_ID</code>.
+  <li><code>KM_TAG_AUTH_TIMEOUT</code> is a numeric value specifying, in seconds, how fresh the user
+  authentication
+must be to authorize key usage. This applies only to private/secret key
+operations. Public key operations don't require authentication. Timeouts do not
+cross reboots; after a reboot, all keys are "never authenticated." The timeout
+may be set to a large value to indicate that authentication is required once
+per boot (2^32 seconds is ~136 years; presumably Android devices are rebooted
+more often than that).
+</ul>
+
+<h3 id=client_binding>Client binding</h3>
+
+<p>Client binding, the association of a key with a particular client
+application, is done via an optional client ID and some optional client data
+(<code>KM_TAG_APPLICATION_ID</code> and <code>KM_TAG_APPLICATION_DATA</code>,
+respectively). Keystore treats these values as opaque blobs, only ensuring that
+the same blobs presented during key generation/import are presented for every
+use and are byte-for-byte identical. The client binding data is not returned by
+Keymaster. The caller must know it in order to use the key.</p>
+
+<p>This feature is not exposed to applications.
+
+<h3 id=expiration>Expiration</h3>
+
+<p>Keystore supports restricting key usage by date. Key start of validity and
+key expirations can be associated with a key and Keymaster will refuse to
+perform key operations if the current date/time is outside of the valid
+range. The key validity range is specified with the tags
+<code>KM_TAG_ACTIVE_DATETIME</code>,
+<code>KM_TAG_ORIGINATION_EXPIRE_DATETIME</code>, and
+<code>KM_TAG_USAGE_EXPIRE_DATETIME</code>.  The distinction between
+"origination" and "usage" is based on whether the key is being used to
+"originate" a new ciphertext/signature/etc., or to "use" an existing
+ciphertext/signature/etc. Note that this distinction is not exposed to
+applications.</p>
+
+<p>The <code>KM_TAG_ACTIVE_DATETIME</code>, <code>KM_TAG_ORIGINATION_EXPIRE_DATETIME</code>,
+and <code>KM_TAG_USAGE_EXPIRE_DATETIME</code> tags are optional. If the tags are absent, it is
+assumed that the key in
+question can always be used to decrypt/verify messages.</p>
+
+<p>Because wall-clock time is provided by the non-secure world, it's unlikely that
+the expiration-related tags will be in the hardware-enforced list. Hardware
+enforcement of expiry would require that the secure world somehow obtain
+trusted time and data, for example via a challenge response protocol with a
+trusted remote timeserver.</p>
+
+<h3 id=root_of_trust_binding>Root of trust binding</h3>
+
+<p>Keystore requires keys to be bound to a root of trust, which is a bitstring
+provided to the Keymaster secure hardware during startup, preferably by the
+bootloader. This bitstring must be cryptographically bound to every key managed
+by Keymaster.</p>
+
+<p>The root of trust consists of the public key used to verify the signature on
+the boot image and the lock state of the device. If the public key is changed to
+allow a different system image to be used or if the lock state is changed, then
+none of the Keymaster-protected keys created by the previous system will be
+usable, unless the previous root of trust is restored and a system that is
+signed by that key is booted. The goal is to increase the value of the
+software-enforced key access controls by making it impossible for an
+attacker-installed operating system to use Keymaster keys.</p>
+
+<h3 id=standalone_keys>Standalone keys</h3>
+
+<p>Some Keymaster secure hardware may choose to store key material internally
+and return handles rather than encrypted key material. Or there may be other
+cases in which keys cannot be used until some other non-secure or secure world
+system component is available. The Keymaster 1.0 HAL allows the caller to
+request that a key be "standalone," via the <code>KM_TAG_STANDALONE</code> tag,
+meaning that no resources other than the blob and the running Keymaster system
+are required. The tags associated with a key may be inspected to see whether a
+key is standalone. At present, only two values are defined:</p>
+
+<ul>
+  <li><code>KM_BLOB_STANDALONE</code>
+  <li><code>KM_BLOB_REQUIRES_FILE_SYSTEM</code>
+</ul>
+
+<p>This feature is not exposed to applications.
+
+<h3 id=velocity>Velocity</h3>
+
+<p>When it's created, the maximum usage velocity can be specified
+with <code>KM_TAG_MIN_SECONDS_BETWEEN_OPS</code>.
+TrustZone implementations will refuse to perform cryptographic operations
+with that key if an operation was performed less
+than <code>KM_TAG_MIN_SECONDS_BETWEEN_OPS</code> seconds earlier.</p>
+
+<p>The simple approach to implementing velocity limits is a table of key IDs and
+last-use timestamps. This table will likely be of limited size, but must
+accommodate at least 16 entries. In the event that the table is full and no
+entries may be updated or discarded, secure hardware implementations must "fail
+safe," preferring to refuse all velocity-limited key operations until one of the
+entries expires. It is acceptable for all entries to expire upon reboot.</p>
+
+<p>Keys can also be limited to <em>n</em> uses per boot with
+<code>KM_TAG_MAX_USES_PER_BOOT</code>.  This also requires a tracking table,
+which must accommodate at least four keys, and must also fail safe. Note that
+applications will be unable to create per-boot limited keys. This feature will
+not be exposed through Keystore and will be reserved for system operations.</p>
+
+<p>This feature is not exposed to applications.</p>
+
+<h3 id=random_number_generator_re-seeding>Random number generator re-seeding</h3>
+
+<p>Because secure hardware must generate random numbers for key material and
+Initialization Vectors (IVs), and because hardware random number generators may
+not always be fully trustworthy, the Keymaster HAL provides an interface to
+allow the client to provide additional entropy which will be mixed into the
+random numbers generated.</p>
+
+<p>A hardware random-number generator must be used as the primary seed source,
+and the seed data provided through the external API must not be the sole source
+of randomness used for number generation. Further, the mixing operation used
+must ensure that the random output is unpredictable if any one of the seed
+sources is unpredictable.</p>
+
+<p>This feature is not exposed to applications but is used by the framework,
+which regularly provides additional entropy, retrieved from a Java SecureRandom
+instance, to the secure hardware.
+
+  </body>
+</html>

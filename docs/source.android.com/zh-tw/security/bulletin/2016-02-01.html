@@ -1,0 +1,489 @@
+<html devsite>
+  <head>
+    <title>Nexus 安全性公告 - 2016 年 2 月</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p><em>發佈日期：2016 年 2 月 1 日 | 更新日期：2016 年 3 月 7 日</em></p>
+
+<p>Google 已根據 Android 安全性公佈欄每月發佈程序，
+透過 OTA 更新機制發佈了 Nexus 裝置的安全性更新。
+此外，Nexus 韌體映像檔也已經發佈到 
+<a href="https://developers.google.com/android/nexus/images">Google Developers 網站</a>上。
+LMY49G 以上版本以及 Android M (安全修補等級在 2016 年 2 月 1 日之後) 
+均已解決了下列問題。請參閱 
+<a href="https://support.google.com/nexus/answer/4457705">Nexus 說明文件</a>，
+瞭解如何查看安全修補等級。</p>
+
+<p>合作夥伴是在 2016 年 1 月 4 日或之前收到有關公告中
+所述問題的相關通知。在適用情況下，這些問題的
+原始碼修補程式已經發佈到 Android 開放原始碼計劃 
+(AOSP) 存放區。</p>
+
+<p>在這些問題中，最嚴重的就是「最高」等級的安全性漏洞。當系統執行
+媒體檔案時，遠端程式碼可利用這類漏洞，透過電子郵件、網頁瀏覽活動
+和多媒體訊息等方法，自動在受影響的裝置上執行。Broadcom Wi-Fi 驅動程式中
+的「遠端程式碼執行漏洞」就被歸類為「最高」等級；一旦您連上與攻擊者相同的網路，
+遠端程式碼便可利用這類漏洞在受影響的裝置上執行。</p>
+
+<p>針對各方新回報的這些漏洞，我們並未收到任何客戶濫用檢舉。
+如果您想進一步瞭解 <a href="/security/enhancements/index.html">Android 安全性平台防護措施</a>和
+服務防護措施 (例如 SafetyNet) 如何加強 Android 平台的安全性，
+請參閱<a href="#mitigations">因應措施</a>一節。我們建議所有客戶接受這些裝置更新。</p>
+
+<h2 id="security_vulnerability_summary">安全性漏洞摘要</h2>
+
+
+<p>下表列出各種安全性漏洞、相應的常見弱點與漏洞編號 (CVE) 及
+評定嚴重程度。<a href="/security/overview/updates-resources.html#severity">嚴重程度評定標準</a>
+是假設平台與服務的因應防護措施基於開發目的而被停用，
+或是遭到有心人士破解，然後推算當有人惡意運用漏洞時，
+裝置會受到多大的影響，據此評定漏洞的嚴重程度。</p>
+<table>
+ <tr>
+    <th>問題</th>
+    <th>CVE</th>
+    <th>嚴重程度</th>
+ </tr>
+ <tr>
+    <td>Broadcom Wi-Fi 驅動程式中的遠端程式碼執行漏洞</td>
+    <td>CVE-2016-0801<br>
+        CVE-2016-0802</td>
+    <td>最高</td>
+ </tr>
+ <tr>
+    <td>媒體伺服器中的遠端程式碼執行漏洞</td>
+    <td>CVE-2016-0803<br>
+        CVE-2016-0804</td>
+    <td>最高</td>
+ </tr>
+ <tr>
+    <td>Qualcomm 效能模組中的權限升級漏洞</td>
+    <td>CVE-2016-0805</td>
+    <td>最高</td>
+ </tr>
+ <tr>
+    <td>Qualcomm Wi-Fi 驅動程式中的權限升級漏洞</td>
+    <td>CVE-2016-0806</td>
+    <td>最高</td>
+ </tr>
+ <tr>
+    <td>Debugger Daemon 中的權限升級漏洞</td>
+    <td>CVE-2016-0807</td>
+    <td>最高</td>
+ </tr>
+ <tr>
+    <td>Minikin 中的拒絕服務漏洞</td>
+    <td>CVE-2016-0808</td>
+    <td>高</td>
+ </tr>
+ <tr>
+    <td>Wi-Fi 中的權限升級漏洞</td>
+    <td>CVE-2016-0809</td>
+    <td>高</td>
+ </tr>
+ <tr>
+    <td>媒體伺服器中的權限升級漏洞</td>
+    <td>CVE-2016-0810</td>
+    <td>高</td>
+ </tr>
+ <tr>
+    <td>libmediaplayerservice 中的資訊外洩漏洞</td>
+    <td>CVE-2016-0811</td>
+    <td>高</td>
+ </tr>
+ <tr>
+    <td>設定精靈中的權限升級漏洞</td>
+    <td>CVE-2016-0812<br>
+        CVE-2016-0813</td>
+    <td>中</td>
+ </tr>
+</table>
+
+
+<h3 id="mitigations">因應措施</h3>
+
+
+<p>本節概要說明 <a href="https://source.android.com/security/enhancements/index.html">Android 安全性平台</a>和 SafetyNet 等服務防護方案所提供的因應措施。這些措施
+能有效防範有心人士在 Android 系統上惡意運用安全性漏洞來達到
+他們的目的。</p>
+
+<ul>
+  <li>Android 平台持續推出新的版本來強化安全性，因此有心人士越來越難
+在 Android 系統上找出漏洞加以利用。我們建議所有使用者盡可能
+更新至最新版的 Android。
+  <li>Android 安全性小組採用「驗證應用程式」和 SafetyNet 主動監控
+濫用情形，這些功能如果發現應用程式可能有害，將在安裝作業前
+發出警告。Google Play 內禁止發佈任何可用於獲取裝置 Root 權限的工具。為了
+在使用者安裝 Google Play 外的應用程式時提供保護，系統預設會啟用驗證應用程式，
+並向使用者發出警告，提醒他們留意目前已知會獲取 Root 權限的應用程式。
+「驗證應用程式」會盡可能找出已知會利用權限升級漏洞的惡意應用程式，
+並封鎖這類應用程式的安裝程序。如果使用者已安裝這類應用程式，「驗證應用程式」
+會通知使用者，並嘗試移除該應用程式。
+  <li>在適用情況下，Google Hangouts 和 Messenger 應用程式不會自動
+將媒體內容傳送給媒體伺服器這類的處理程序。
+</li></li></li></ul>
+
+<h3 id="acknowledgements">特別銘謝</h3>
+
+
+<p>感謝以下研究人員做出的貢獻：</p>
+
+<ul>
+  <li> Android 與 Chrome 安全性小組：CVE-2016-0809、CVE-2016-0810
+  <li>Broadgate 小組：CVE-2016-0801、CVE-2015-0802
+  <li> <a href="http://www.360safe.com/">奇虎 360</a> 的 <a href="http://c0reteam.org">C0RE 小組</a>成員 Chiachih Wu (<a href="https://twitter.com/chiachih_wu">@chiachih_wu</a>)、
+Mingjian Zhou (<a href="https://twitter.com/Mingjian_Zhou">@Mingjian_Zhou</a>) 和 Xuxian Jiang：CVE-2016-0804
+  <li>Google Pixel C 小組的 David Riley：CVE-2016-0812
+  <li> 奇虎 360 IceSword 實驗室
+的 Gengjia Chen (<a href="https://twitter.com/@chengjia4574">@chengjia4574</a>)：CVE-2016-0805
+  <li>騰訊 KeenLab (<a href="https://twitter.com/keen_lab">@keen_lab</a>) 
+的 Qidan He (<a href="https://twitter.com/@Flanker_hqd">@Flanker_hqd</a>)：CVE-2016-0811
+  <li> 趨勢科技 (<a href="http://www.trendmicro.com">www.trendmicro.com</a>) 
+的 Seven Shen (<a href="https://twitter.com/@lingtongshen">@lingtongshen</a>)：CVE-2016-0803
+  <li> 阿里巴巴的 Weichao Sun (<a href="https://twitter.com/sunblate">@sunblate</a>)：CVE-2016-0808
+  <li> Android 安全性小組成員 Zach Riggle (<a href="https://twitter.com/@ebeip90">@ebeip90</a>)：CVE-2016-0807
+</li></li></li></li></li></li></li></li></li></li></li></ul>
+
+<h2 id="security_vulnerability_details">安全性漏洞詳情</h2>
+
+
+<p>下列各節針對上方<a href="#security_vulnerability_summary">安全性漏洞摘要</a>中列出的
+各項安全性漏洞提供了詳細
+資訊，包括問題說明、嚴重程度評定原因，以及一份漏洞資訊表，
+顯示漏洞的 CVE、相關錯誤、嚴重程度、受影響版本和回報日期。
+如果相關錯誤有 AOSP 修訂項目，該錯誤編號會連結到相對應的修訂項目參考資料。
+如果單一錯誤有多項相關變更，可透過該錯誤編號後面的編號連結開啟其他 AOSP 
+參考資料。</p>
+
+<h3 id="remote_code_execution_vulnerability_in_broadcom_wi-fi_driver">Broadcom Wi-Fi 驅動程式中的遠端程式碼執行漏洞</h3>
+
+
+<p>Broadcom Wi-Fi 驅動程式中有多項遠端執行漏洞；
+遠端攻擊者可以透過這些漏洞，利用特製的無線控制
+訊息封包在核心環境中執行遠端程式碼，藉此
+破壞核心記憶體。如果使用者連上與攻擊者相同的
+網路，就可能觸發這類漏洞。由於這個問題可能會
+讓遠端程式碼在使用者並未採取任何動作的情況下，逕自在
+核心環境中執行，因此嚴重程度被評定為「最高」。</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>錯誤</th>
+    <th>嚴重程度</th>
+    <th>最新版本</th>
+    <th>回報日期</th>
+ </tr>
+ <tr>
+    <td>CVE-2016-0801</td>
+    <td><a href="https://android.googlesource.com/kernel/msm/+/68cdc8df1cb6622980b791ce03e99c255c9888af^!">ANDROID-25662029</a><br>
+   <a href="https://android.googlesource.com/kernel/msm/+/68cdc8df1cb6622980b791ce03e99c255c9888af^!">ANDROID-25662233</a></td>
+    <td>最高</td>
+    <td>4.4.4, 5.0, 5.1.1, 6.0, 6.0.1</td>
+    <td>2015 年 10 月 25 日</td>
+ </tr>
+ <tr>
+    <td>CVE-2016-0802</td>
+    <td><a href="https://android.googlesource.com/kernel/msm/+/3fffc78f70dc101add8b82af878d53457713d005^%21/">ANDROID-25306181</a></td>
+    <td>最高</td>
+    <td>4.4.4, 5.0, 5.1.1, 6.0, 6.0.1</td>
+    <td>2015 年 10 月 26 日</td>
+ </tr>
+</table>
+
+<h3 id="remote_code_execution_vulnerability_in_mediaserver">媒體伺服器中的遠端程式碼執行漏洞</h3>
+
+<p>在處理某些特殊的媒體檔案及資料時，攻擊者
+可能會利用媒體伺服器中的漏洞造成記憶體出錯，
+並執行遠端程式碼當做媒體伺服器處理程序。</p>
+
+<p>受影響的功能是作業系統的核心部分，而多款
+應用程式都允許遠端內容連到這項功能，其中
+最常見的內容是多媒體訊息和瀏覽器中播放的媒體。</p>
+
+<p>由於這個問題可能會讓遠端程式碼在媒體伺服器服務環境內
+執行，因此嚴重程度被評定為「最高」。媒體伺服器服務
+能夠存取音訊和視訊串流，以及第三方應用程式
+一般無法存取的權限。</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>錯誤 (附有 AOSP 連結)</th>
+    <th>嚴重程度</th>
+    <th>最新版本</th>
+    <th>回報日期</th>
+ </tr>
+ <tr>
+    <td>CVE-2016-0803</td>
+    <td><a href="https://android.googlesource.com/platform%2Fframeworks%2Fav/+/50270d98e26fa18b20ca88216c3526667b724ba7">ANDROID-25812794</a></td>
+    <td>最高</td>
+    <td>4.4.4, 5.0, 5.1.1, 6.0, 6.0.1</td>
+    <td>2015 年 11 月 19 日</td>
+ </tr>
+ <tr>
+    <td>CVE-2016-0804</td>
+    <td><a href="https://android.googlesource.com/platform%2Fframeworks%2Fav/+/224858e719d045c8554856b12c4ab73d2375cf33">ANDROID-25070434</a></td>
+    <td>最高</td>
+    <td>5.0, 5.1.1, 6.0, 6.0.1</td>
+    <td>2015 年 10 月 12 日</td>
+ </tr>
+</table>
+
+
+<h3 id="elevation_of_privilege_vulnerability_in_qualcomm_performance_module">Qualcomm 效能模組中的權限升級漏洞</h3>
+
+
+<p>Qualcomm ARM 處理器的效能事件管理元件含有
+權限升級漏洞，可能會讓本機惡意應用程式在核心內
+執行任何程式碼。由於這個問題可能會導致本機裝置受到
+永久性破壞，而只能以還原 (Re-flash) 作業系統的方式修復，
+因此嚴重程度被評定為「最高」。</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>錯誤</th>
+    <th>嚴重程度</th>
+    <th>最新版本</th>
+    <th>回報日期</th>
+ </tr>
+ <tr>
+    <td>CVE-2016-0805</td>
+    <td>ANDROID-25773204*</td>
+    <td>最高</td>
+    <td>4.4.4, 5.0, 5.1.1, 6.0, 6.0.1</td>
+    <td>2015 年 11 月 15 日</td>
+ </tr>
+</table>
+
+<p>* 這個問題的修補程式並未放在 AOSP 中，而是包含在最新的 Nexus 裝置專用二進位檔驅動程式中。您可以前往 <a href="https://developers.google.com/android/nexus/drivers">Google Developers 網站</a>下載這些驅動程式。</p>
+
+<h3 id="elevation_of_privilege_vulnerability_in_qualcomm_wifi_driver">Qualcomm Wi-Fi 驅動程式中的權限升級漏洞</h3>
+
+
+<p>本機惡意應用程式可利用 Qualcomm Wi-Fi 驅動程式
+中的一項漏洞，在核心環境內執行任何
+程式碼。由於這個問題可能會導致本機裝置受到永久性破壞，
+而只能以還原 (Re-flash) 作業系統的方式修復，
+因此嚴重程度被評定為「最高」。</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>錯誤</th>
+    <th>嚴重程度</th>
+    <th>最新版本</th>
+    <th>回報日期</th>
+ </tr>
+ <tr>
+    <td>CVE-2016-0806</td>
+    <td>ANDROID-25344453*</td>
+    <td>最高</td>
+    <td>4.4.4, 5.0, 5.1.1, 6.0, 6.0.1</td>
+    <td>2015 年 11 月 15 日</td>
+ </tr>
+</table>
+
+<p>* 這個問題的修補程式並未放在 AOSP 中，而是包含在最新的 Nexus 裝置專用二進位檔驅動程式中。您可以前往 <a href="https://developers.google.com/android/nexus/drivers">Google Developers 網站</a>下載這些驅動程式。</p>
+
+<h3 id="elevation_of_privilege_vulnerability_in_the_debuggerd">Debuggerd 中的權限升級漏洞</h3>
+
+
+<p>Debuggerd 元件中的權限升級漏洞可能會讓
+本機惡意應用程式在裝置根環境內執行任何
+程式碼。由於這個問題可能會導致本機裝置受到永久性破壞，
+而只能以還原 (Re-flash) 作業系統的方式修復，
+因此嚴重程度被評定為「最高」。</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>錯誤 (附有 AOSP 連結)</th>
+    <th>嚴重程度</th>
+    <th>最新版本</th>
+    <th>回報日期</th>
+ </tr>
+ <tr>
+    <td>CVE-2016-0807</td>
+    <td><a href="https://android.googlesource.com/platform%2Fsystem%2Fcore/+/d917514bd6b270df431ea4e781a865764d406120">ANDROID-25187394</a></td>
+    <td>最高</td>
+    <td>6.0 和 6.0.1</td>
+    <td>Google 內部</td>
+ </tr>
+</table>
+
+
+<h3 id="denial_of_service_vulnerability_in_minikin">Minikin 中的拒絕服務漏洞</h3>
+
+
+<p>Minikin 媒體庫中的拒絕服務漏洞可讓本機
+攻擊者暫時封鎖受影響裝置的存取權。攻擊者可以
+使系統載入不受信任的字型，造成 Minikin 元件中
+發生溢位現象而導致當機。由於拒絕服務會導致裝置
+不斷重新啟動，因此嚴重程度被評定為「高」。</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>錯誤 (附有 AOSP 連結)</th>
+    <th>嚴重程度</th>
+    <th>最新版本</th>
+    <th>回報日期</th>
+ </tr>
+ <tr>
+    <td>CVE-2016-0808</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/minikin/+/ed4c8d79153baab7f26562afb8930652dfbf853b">ANDROID-25645298</a></td>
+    <td>高</td>
+    <td>5.0、5.1.1、6.0、6.0.1</td>
+    <td>2015 年 11 月 3 日</td>
+ </tr>
+</table>
+
+
+<h3 id="elevation_of_privilege_vulnerability_in_wi-fi">Wi-Fi 中的權限升級漏洞</h3>
+
+
+<p>Wi-Fi 元件中的權限升級漏洞可能會讓本機
+惡意應用程式在系統環境內執行任何
+程式碼。只有鄰近本機的裝置才會受到這個問題影響。
+由於這個問題可用於遠端取得「<a href="http://developer.android.com/guide/topics/manifest/permission-element.html#plevel">一般</a>」權限，因此嚴重程度被評定為「高」。通常只有安裝在本機的第三方
+應用程式才能存取這類權限。</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>錯誤 (附有 AOSP 連結)</th>
+    <th>嚴重程度</th>
+    <th>最新版本</th>
+    <th>回報日期</th>
+ </tr>
+ <tr>
+    <td>CVE-2016-0809</td>
+    <td><a href="https://android.googlesource.com/platform/hardware/broadcom/wlan/+/2c5a4fac8bc8198f6a2635ede776f8de40a0c3e1^%21/#F0">ANDROID-25753768</a></td>
+    <td>高</td>
+    <td>6.0、6.0.1</td>
+    <td>Google 內部</td>
+ </tr>
+</table>
+
+
+<h3 id="elevation_of_privilege_vulnerability_in_mediaserver">媒體伺服器中的權限升級漏洞</h3>
+
+
+<p>媒體伺服器中的權限升級漏洞可能會讓本機
+惡意應用程式在進階系統應用程式的環境內
+執行任何程式碼。由於這個問題可用於取得
+某些進階權限 (例如 <a href="http://developer.android.com/guide/topics/manifest/permission-element.html#plevel">Signature</a> 或 <a href="http://developer.android.com/guide/topics/manifest/permission-element.html#plevel">SignatureOrSystem</a> 等第三方應用程式無法存取的權限)，因此嚴重程度被評定為「高」。</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>錯誤 (附有 AOSP 連結)</th>
+    <th>嚴重程度</th>
+    <th>最新版本</th>
+    <th>回報日期</th>
+ </tr>
+ <tr>
+    <td>CVE-2016-0810</td>
+    <td><a href="https://android.googlesource.com/platform%2Fframeworks%2Fav/+/19c47afbc402542720ddd280e1bbde3b2277b586">ANDROID-25781119</a></td>
+    <td>高</td>
+    <td>4.4.4, 5.0, 5.1.1, 6.0, 6.0.1</td>
+    <td>Google 內部</td>
+ </tr>
+</table>
+
+
+<h3 id="information_disclosure_vulnerability_in_libmediaplayerservice">libmediaplayerservice 中的資訊外洩漏洞</h3>
+
+
+<p>libmediaplayerservice 中的資訊外洩漏洞可能會讓
+有心人士規避系統用於防範攻擊者濫用平台
+的安全措施。由於這些問題也能用來取得
+某些進階權限 (例如 <a href="http://developer.android.com/guide/topics/manifest/permission-element.html#plevel">Signature</a> 或 <a href="http://developer.android.com/guide/topics/manifest/permission-element.html#plevel">SignatureOrSystem</a> 等第三方應用程式無法存取的權限)，因此嚴重程度被評定為「高」。</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>錯誤 (附有 AOSP 連結)</th>
+    <th>嚴重程度</th>
+    <th>最新版本</th>
+    <th>回報日期</th>
+ </tr>
+ <tr>
+    <td>CVE-2016-0811</td>
+    <td><a href="https://android.googlesource.com/platform%2Fframeworks%2Fav/+/22f824feac43d5758f9a70b77f2aca840ba62c3b">ANDROID-25800375</a></td>
+    <td>高</td>
+    <td>6.0, 6.0.1</td>
+    <td>2015 年 11 月 16 日</td>
+ </tr>
+</table>
+
+
+<h3 id="elevation_of_privilege_vulnerability_in_setup_wizard">設定精靈中的權限升級漏洞</h3>
+
+
+<p>設定精靈中的漏洞可讓惡意攻擊者規避恢復原廠
+設定的防護機制，並取得裝置存取權。由於這個問題可能會
+讓能夠實際操作裝置的人規避恢復原廠設定的防護
+機制，使攻擊者能夠重設裝置、清除所有資料，
+因此嚴重程度被評定為「中」。</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>錯誤 (附有 AOSP 連結)</th>
+    <th>嚴重程度</th>
+    <th>最新版本</th>
+    <th>回報日期</th>
+ </tr>
+ <tr>
+    <td>CVE-2016-0812</td>
+    <td><a href="https://android.googlesource.com/platform%2Fframeworks%2Fbase/+/84669ca8de55d38073a0dcb01074233b0a417541">ANDROID-25229538</a></td>
+    <td>中</td>
+    <td>5.1.1、6.0</td>
+    <td>Google 內部</td>
+ </tr>
+ <tr>
+    <td>CVE-2016-0813</td>
+    <td><a href="https://android.googlesource.com/platform%2Fframeworks%2Fbase/+/16a76dadcc23a13223e9c2216dad1fe5cad7d6e1">ANDROID-25476219</a></td>
+    <td>中</td>
+    <td>5.1.1、6.0、6.0.1</td>
+    <td>Google 內部</td>
+ </tr>
+</table>
+
+<h3 id="common_questions_and_answers">常見問題與解答</h3>
+
+<p>如果您在閱讀這篇公告後有任何疑問，建議您查看本節的
+常見問答。</p>
+
+<p><strong>1. 如何判斷我目前的裝置軟體版本是否已修正這些問題？</strong></p>
+
+<p>LMY49G 以上版本以及 Android 6.0 (安全修補等級在 2016 年 2 月 1 日之後) 
+均已解決了這些問題。請參閱 <a href="https://support.google.com/nexus/answer/4457705">Nexus 說明文件</a>，瞭解如何查看安全修補等級。提供
+這些更新的裝置製造商應將修補程式字串等級設定為：
+[ro.build.version.security_patch]:[2016-02-01]</p>
+
+<h2 id="revisions">修訂版本</h2>
+
+
+<ul>
+  <li> 2016 年 2 月 1 日：發佈公告。
+  <li> 2016 年 2 月 2 日：修訂公告，加入 AOSP 連結。
+  <li> 2016 年 3 月 7 日：修訂公告，加入其他 AOSP 連結。
+
+</li></li></li></ul>
+
+  </body>
+</html>

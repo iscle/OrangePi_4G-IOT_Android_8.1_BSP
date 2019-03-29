@@ -1,0 +1,2146 @@
+<html devsite><head>
+    <title>Android のセキュリティに関する公開情報 - 2017 年 4 月</title>
+    <meta name="project_path" value="/_project.yaml"/>
+    <meta name="book_path" value="/_book.yaml"/>
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+<p><em>2017 年 4 月 3 日公開 | 2017 年 4 月 5 日更新</em></p>
+<p>Android のセキュリティに関する公開情報には、Android 搭載端末に影響を与えるセキュリティの脆弱性の詳細を掲載しています。情報の公開に伴い、Nexus 端末に対するセキュリティ アップデートを無線（OTA）アップデートで配信しました。Google 端末のファームウェア イメージも <a href="https://developers.google.com/android/nexus/images">Google デベロッパー サイト</a>でリリースしています。2017 年 4 月 5 日以降のセキュリティ パッチ レベルでは、下記のすべての問題に対処しています。端末のセキュリティ パッチ レベルを確認する方法については、<a href="https://support.google.com/pixelphone/answer/4457705#pixel_phones&nexus_devices">Pixel と Nexus のアップデート スケジュール</a>をご覧ください。</p>
+<p>パートナーには、この公開情報に記載の問題について 2017 年 3 月 6 日までに通知済みです。Android オープンソース プロジェクト（AOSP）のレポジトリに、下記の問題に対するソースコードのパッチをリリースしています。また、この公開情報では、これらのパッチへのリンクに加え、AOSP 以外のパッチへのリンクも掲載しています。</p>
+<p>下記の問題のうち最も重大度の高いものは、多様な方法（メール、ウェブの閲覧、MMS など）により、攻撃対象の端末でメディア ファイルを処理する際にリモートでのコード実行が可能になるおそれのある重大なセキュリティの脆弱性です。<a href="/security/overview/updates-resources.html#severity">重大度の判定</a>は、攻撃を受けた端末でその脆弱性が悪用された場合の影響に基づくもので、プラットフォームやサービスでのリスク軽減策が開発目的や不正に回避されたために無効にされた場合を前提としています。</p>
+<p>この新たに報告された問題によって実際のユーザー端末が不正使用された報告はありません。<a href="/security/enhancements/index.html">Android セキュリティ プラットフォームの保護</a>や <a href="https://developer.android.com/training/safetynet/index.html">SafetyNet</a> のようなサービスの保護について詳しくは、<a href="#mitigations">Android と Google サービスでのリスク軽減策</a>をご覧ください。こうした保護により、Android プラットフォームのセキュリティが改善されます。</p>
+<p>ご利用の端末で上記の更新を行うことをすべてのユーザーにおすすめします。</p>
+
+<h2 id="announcements">お知らせ</h2>
+<ul>
+<li>この公開情報では、2 つのセキュリティ パッチ レベル文字列を定義しています。これは、すべての Android 搭載端末で同様の問題が発生する一部の脆弱性をサブセットとし、Android パートナーが迅速かつ柔軟に修正できるようにするためです。詳しくは、<a href="#common-questions-and-answers">一般的な質問と回答</a>をご覧ください。
+ <ul>
+   <li><strong>2017-04-01</strong>: 部分的に対処したセキュリティ パッチ レベル文字列。このセキュリティ パッチ レベル文字列は、2017-04-01（およびそれ以前のすべてのセキュリティ パッチ レベル文字列）に関連するすべての問題に対処していることを示します。</li>
+   <li><strong>2017-04-05</strong>: 完全に対処したセキュリティ パッチ レベル文字列。このセキュリティ パッチ レベル文字列は、2017-04-01 と 2017-04-05（およびそれ以前のすべてのセキュリティ パッチ レベル文字列）に関連するすべての問題に対処していることを示します。</li>
+ </ul>
+</li>
+<li>サポート対象の Google 端末には、2017 年 4 月 5 日のセキュリティ パッチ レベルのアップデート 1 件が OTA で配信されます。</li>
+</ul>
+
+<h2 id="mitigations">Android と Google サービスでのリスク軽減策</h2>
+<p>ここでは、<a href="/security/enhancements/index.html">Android セキュリティ プラットフォーム</a>の保護と SafetyNet のようなサービスの保護によるリスクの軽減について概説します。こうした機能は、Android でセキュリティの脆弱性が悪用される可能性を減らします。</p>
+<ul>
+  <li>Android プラットフォームの最新版での機能強化により、Android にある多くの問題の悪用が困難になります。Google では、すべてのユーザーに対し、できる限り最新バージョンの Android に更新することをおすすめしています。</li>
+  <li>Android セキュリティ チームは、<a href="http://static.googleusercontent.com/media/source.android.com/en//security/reports/Google_Android_Security_2016_Report_Final.pdf">「アプリの確認」や SafetyNet</a> によって脆弱性の悪用を積極的に監視しており、<a href="http://static.googleusercontent.com/media/source.android.com/en//security/reports/Google_Android_Security_PHA_classifications.pdf">有害なおそれのあるアプリ</a>についてユーザーに警告しています。「アプリの確認」は、<a href="http://www.android.com/gms">Google モバイル サービス</a>を搭載した端末ではデフォルトで有効になっており、Google Play 以外からアプリをインストールするユーザーにとっては特に重要です。端末のルート権限を取得するツールは Google Play では禁止されていますが、「アプリの確認」では、ユーザーが検出されたルート権限取得アプリをインストールしようとすると、アプリの入手元に関係なく、ユーザーに警告します。また、「アプリの確認」では、悪意のある既知のアプリで権限昇格の脆弱性が悪用されないように、そのようなアプリのインストールを見つけて阻止します。こうしたアプリが既にインストールされている場合は、ユーザーに通知して、検出されたアプリの削除を試みます。</li>
+  <li>Google ハングアウトやメッセンジャーのアプリでは状況を判断し、メディアサーバーなどのプロセスに自動的にメディアを渡すことはありません。</li>
+</ul>
+
+<h2 id="acknowledgements">謝辞</h2>
+<p>調査にご協力くださった下記の皆様方に感謝いたします（敬称略）。</p>
+<ul>
+  <li>Shellphish Grill チームの Aravind Machiry（donfos）: CVE-2016-5349</li>
+  <li>Tencent、Xuanwu Lab の Daxing Guo（<a href="https://twitter.com/freener0">@freener0</a>）: CVE-2017-0585、CVE-2017-0553</li>
+  <li><a href="mailto:derrek.haxx@gmail.com">Derrek</a>（<a href="https://twitter.com/derrekr6">@derrekr6</a>）および Scott Bauer: CVE-2017-0576</li>
+  <li>Project Zero の Gal Beniamini: CVE-2017-0571、CVE-2017-0570、CVE-2017-0572、CVE-2017-0569、CVE-2017-0561</li>
+  <li>Qihoo 360 Technology Co. Ltd.、IceSword Lab の Gengjia Chen（<a href="https://twitter.com/chengjia4574">@chengjia4574</a>）および <a href="http://weibo.com/jfpan">pjf</a>: CVE-2017-6426、CVE-2017-0581、CVE-2017-0329、CVE-2017-0332、CVE-2017-0566</li>
+  <li>Qihoo 360 Technology Co. Ltd.、Alpha Team の Guang Gong（龚广）（<a href="https://twitter.com/oldfresher">@oldfresher</a>）: CVE-2017-0547</li>
+  <li>Qihoo 360 Technology Co. Ltd.、Alpha Team の Hao Chen および Guang Gong: CVE-2017-6424、CVE-2017-0584、CVE-2017-0454、CVE-2017-0575、CVE-2017-0567</li>
+  <li>Ian Foster（<a href="https://twitter.com/lanrat">@lanrat</a>）: CVE-2017-0554</li>
+  <li>Trend Micro Inc. の Jack Tang: CVE-2017-0579</li>
+  <li><a href="https://skyeye.360safe.com">Qihoo 360 Skyeye Labs</a> の Jianjun Dai（<a href="https://twitter.com/Jioun_dai">@Jioun_dai</a>）: CVE-2017-0559、CVE-2017-0541</li>
+  <li>Qihoo 360、IceSword Lab の Jianqiang Zhao（<a href="https://twitter.com/jianqiangzhao">@jianqiangzhao</a>）および <a href="http://weibo.com/jfpan">pjf</a>: CVE-2017-6425、CVE-2016-5346</li>
+  <li><a href="http://c0reteam.org">C0RE Team</a> の Lubo Zhang（<a href="mailto:zlbzlb815@163.com">zlbzlb815@163.com</a>）および Qihoo 360 Technology Co. Ltd.、IceSword Lab の Yonggang Guo（<a href="https://twitter.com/guoygang">@guoygang</a>）: CVE-2017-0564</li>
+  <li>Google の <a href="mailto:salyzyn@android.com">Mark Salyzyn</a>: CVE-2017-0558</li>
+  <li>Tesla、Product Security Team の Mike Anderson（<a href="https://twitter.com/manderbot">@manderbot</a>）および Nathan Crandall（<a href="https://twitter.com/natecray">@natecray</a>）: CVE-2017-0327、CVE-2017-0328</li>
+  <li>Alibaba Mobile Security Group の Peng Xiao、Chengming Yang、Ning You、Chao Yang、Yang song: CVE-2017-0565</li>
+  <li>Baidu X-Lab（百度安全实验室）の Pengfei Ding（丁鹏飞）、Chenfu Bao（包沉浮）、Lenx Wei（韦韬）: CVE-2016-10236</li>
+  <li>Tencent、KeenLab の Qidan He（何淇丹 - <a href="https://twitter.com/flanker_hqd">@flanker_hqd</a>）: CVE-2017-0544、CVE-2016-10231、CVE-2017-0325</li>
+  <li>HCL Technologies、Aleph Research の Roee Hay（<a href="https://twitter.com/roeehay">@roeehay</a>）: CVE-2017-0582、CVE-2017-0563</li>
+  <li><a href="mailto:sbauer@plzdonthack.me">Scott Bauer</a>（<a href="https://twitter.com/ScottyBauer1">@ScottyBauer1</a>）: CVE-2017-0562、CVE-2017-0339</li>
+  <li>Trend Micro、Mobile Threat Research Team の Seven Shen（<a href="https://twitter.com/lingtongshen">@lingtongshen</a>）: CVE-2017-0578</li>
+  <li>Tim Becker: CVE-2017-0546</li>
+  <li>Uma Sankar Pradhan（<a href="https://twitter.com/umasankar_iitd">@umasankar_iitd</a>）: CVE-2017-0560</li>
+  <li><a href="http://www.trendmicro.com">Trend Micro</a>、<a href="http://blog.trendmicro.com/trendlabs-security-intelligence/category/mobile">Mobile Threat Response Team</a> の V.E.O（<a href="https://twitter.com/vysea">@VYSEa</a>）: CVE-2017-0555、CVE-2017-0538、CVE-2017-0539、CVE-2017-0540、CVE-2017-0557、CVE-2017-0556</li>
+  <li>Alibaba Inc の Weichao Sun（<a href="https://twitter.com/sunblate">@sunblate</a>）: CVE-2017-0549</li>
+  <li>Qihoo 360 Technology Co. Ltd.、Chen of Alpha Team の Wenlin Yang（<a href="https://twitter.com/wenlin_yang">@wenlin_yang</a>）、Guang Gong（<a href="https://twitter.com/oldfresher">@oldfresher</a>）、Hao Chen: CVE-2017-0580、CVE-2017-0577</li>
+  <li>Qihoo 360 Technology Co. Ltd.、IceSword Lab の Yonggang Guo（<a href="https://twitter.com/guoygang">@guoygang</a>）: CVE-2017-0586</li>
+  <li>Qihoo 360 Technology Co. Ltd.、Chengdu Security Response Center の <a href="http://weibo.com/ele7enxxh">Zinuo Han</a>: CVE-2017-0548</li>
+  <li>Google の Zubin Mithra: CVE-2017-0462</li>
+</ul>
+
+<h2 id="2017-04-01-details">セキュリティ パッチ レベル 2017-04-01 の脆弱性の詳細</h2>
+<p>パッチレベル 2017-04-01 に該当するセキュリティ脆弱性の各項目について、下記に詳細を説明します。問題の内容とその重大度の根拠について説明し、CVE、関連する参照先、重大度、更新対象の Google 端末、更新対象の AOSP バージョン（該当する場合）、報告日を表にまとめています。その問題に対処した、一般公開されている変更（AOSP の変更の一覧など）がある場合は、そのバグ ID にリンクを設定しています。複数の変更が同じバグに関係する場合は、バグ ID の後に記載した番号に、追加の参照へのリンクを設定しています。</p>
+
+<h3 id="rce-in-mediaserver">メディアサーバーでのリモートコード実行の脆弱性</h3>
+<p>メディアサーバーにリモートコード実行の脆弱性があるため、攻撃者が特別に細工したファイルを使用して、メディア ファイルやデータの処理中にメモリ破壊を引き起こすおそれがあります。メディアサーバーのプロセスにおいてリモートでコードが実行されるおそれがあるため、この問題は「重大」と判断されています。</p>
+
+<table>
+  <colgroup><col width="18%" />
+  <col width="17%" />
+  <col width="10%" />
+  <col width="19%" />
+  <col width="18%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>更新対象の AOSP バージョン</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0538</td>
+    <td><a href="https://android.googlesource.com/platform/external/libavc/+/494561291a503840f385fbcd11d9bc5f4dc502b8">A-33641588</a></td>
+    <td>重大</td>
+    <td>すべて</td>
+    <td>6.0、6.0.1、7.0、7.1.1</td>
+    <td>2016 年 12 月 13 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0539</td>
+    <td><a href="https://android.googlesource.com/platform/external/libhevc/+/1ab5ce7e42feccd49e49752e6f58f9097ac5d254">A-33864300</a></td>
+    <td>重大</td>
+    <td>すべて</td>
+    <td>5.0.2、5.1.1、6.0、6.0.1、7.0、7.1.1</td>
+    <td>2016 年 12 月 23 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0540</td>
+    <td><a href="https://android.googlesource.com/platform/external/libhevc/+/01ca88bb6c5bdd44e071f8effebe12f1d7da9853">A-33966031</a></td>
+    <td>重大</td>
+    <td>すべて</td>
+    <td>5.0.2、5.1.1、6.0、6.0.1、7.0、7.1.1</td>
+    <td>2016 年 12 月 29 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0541</td>
+    <td><a href="https://android.googlesource.com/platform/external/sonivox/+/56d153259cc3e16a6a0014199a2317dde333c978">A-34031018</a></td>
+    <td>重大</td>
+    <td>すべて</td>
+    <td>4.4.4、5.0.2、5.1.1、6.0、6.0.1、7.0、7.1.1</td>
+    <td>2017 年 1 月 1 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0542</td>
+    <td><a href="https://android.googlesource.com/platform/external/libavc/+/33ef7de9ddc8ea7eb9cbc440d1cf89957a0c267b">A-33934721</a></td>
+    <td>重大</td>
+    <td>すべて</td>
+    <td>6.0、6.0.1、7.0、7.1.1</td>
+    <td>Google 社内</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0543</td>
+    <td><a href="https://android.googlesource.com/platform/external/libavc/+/f634481e940421020e52f511c1fb34aac1db4b2f">A-34097866</a></td>
+    <td>重大</td>
+    <td>すべて</td>
+    <td>6.0、6.0.1、7.0、7.1.1</td>
+    <td>Google 社内</td>
+  </tr>
+</tbody></table>
+
+<h3 id="eop-in-camerabase">CameraBase での権限昇格の脆弱性</h3>
+<p>CameraBase に権限昇格の脆弱性があるため、悪意のあるローカルアプリによって任意のコードが実行されるおそれがあります。特権プロセス内で任意のコードがローカルで実行される可能性があるため、この問題の重大度は「高」と判断されています。</p>
+
+<table>
+  <colgroup><col width="18%" />
+  <col width="17%" />
+  <col width="10%" />
+  <col width="19%" />
+  <col width="18%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>更新対象の AOSP バージョン</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0544</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/av/+/4b49489c12e6862e9a320ebcb53872e809ed20ec">A-31992879</a></td>
+    <td>高</td>
+    <td>すべて</td>
+    <td>4.4.4、5.0.2、5.1.1、6.0、6.0.1、7.0、7.1.1</td>
+    <td>2016 年 10 月 6 日</td>
+  </tr>
+</tbody></table>
+
+<h3 id="eop-in-audioserver">オーディオサーバーでの権限昇格の脆弱性</h3>
+<p>オーディオサーバーに権限昇格の脆弱性があるため、悪意のあるローカルアプリによって特権プロセス内で任意のコードが実行されるおそれがあります。サードパーティのアプリが通常はアクセスできない権限に昇格してローカルにアクセスするのに利用されるおそれがあるので、この問題の重大度は「高」と判断されています。</p>
+
+<table>
+  <colgroup><col width="18%" />
+  <col width="17%" />
+  <col width="10%" />
+  <col width="19%" />
+  <col width="18%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>更新対象の AOSP バージョン</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0545</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/av/+/e5a54485e08400a976092cd5b1c6d909d0e1a4ab">A-32591350</a></td>
+    <td>高</td>
+    <td>すべて</td>
+    <td>5.0.2、5.1.1、6.0、6.0.1、7.0、7.1.1</td>
+    <td>2016 年 10 月 31 日</td>
+  </tr>
+</tbody></table>
+
+<h3 id="eop-in-surfaceflinger">SurfaceFlinger での権限昇格の脆弱性</h3>
+<p>SurfaceFlinger に権限昇格の脆弱性があるため、悪意のあるローカルアプリによって特権プロセス内で任意のコードが実行されるおそれがあります。サードパーティのアプリが通常はアクセスできない権限に昇格してローカルにアクセスすることに利用されるおそれがあるので、この問題の重大度は「高」と判断されています。</p>
+
+<table>
+  <colgroup><col width="18%" />
+  <col width="17%" />
+  <col width="10%" />
+  <col width="19%" />
+  <col width="18%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>更新対象の AOSP バージョン</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0546</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/native/+/45b202513ba7440beaefbf9928f73fb6683dcfbd">A-32628763</a></td>
+    <td>高</td>
+    <td>すべて</td>
+    <td>4.4.4、5.0.2、5.1.1、6.0、6.0.1、7.0、7.1.1</td>
+    <td>2016 年 11 月 2 日</td>
+  </tr>
+</tbody></table>
+
+<h3 id="id-in-mediaserver">メディアサーバーでの情報開示の脆弱性</h3>
+<p>メディアサーバーに情報開示の脆弱性があるため、悪意のあるローカルアプリが権限レベルの範囲外のデータにアクセスするおそれがあります。アプリデータを別のアプリから分離するオペレーティング システムの保護を回避する一般的な方法であるため、この問題の重大度は「高」と判断されています。</p>
+
+<table>
+  <colgroup><col width="18%" />
+  <col width="17%" />
+  <col width="10%" />
+  <col width="19%" />
+  <col width="18%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>更新対象の AOSP バージョン</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0547</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/av/+/9667e3eff2d34c3797c3b529370de47b2c1f1bf6">A-33861560</a></td>
+    <td>高</td>
+    <td>すべて</td>
+    <td>4.4.4、5.0.2、5.1.1、6.0、6.0.1、7.0、7.1.1</td>
+    <td>2016 年 12 月 22 日</td>
+  </tr>
+</tbody></table>
+
+<h3 id="dos-in-libskia">libskia でのサービス拒否の脆弱性</h3>
+<p>libiskia にリモートのサービス拒否の脆弱性があるため、攻撃者が特別に細工したファイルを使用して、端末のハングや再起動を引き起こすおそれがあります。リモートでのサービス拒否の可能性があるため、この問題の重大度は「高」と判断されています。</p>
+
+<table>
+  <colgroup><col width="18%" />
+  <col width="17%" />
+  <col width="10%" />
+  <col width="19%" />
+  <col width="18%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>更新対象の AOSP バージョン</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0548</td>
+    <td><a href="https://android.googlesource.com/platform/external/skia/+/318e3505ac2436c62ec19fd27ebe9f8e7d174544">A-33251605</a></td>
+    <td>高</td>
+    <td>すべて</td>
+    <td>7.0、7.1.1</td>
+    <td>2016 年 11 月 29 日</td>
+  </tr>
+</tbody></table>
+
+<h3 id="dos-in-mediaserver">メディアサーバーでのサービス拒否の脆弱性</h3>
+<p>メディアサーバーにリモートのサービス拒否の脆弱性があるため、攻撃者が特別に細工したファイルを使用して、端末のハングや再起動を引き起こすおそれがあります。リモートでのサービス拒否の可能性があるため、この問題の重大度は「高」と判断されています。</p>
+
+<table>
+  <colgroup><col width="18%" />
+  <col width="17%" />
+  <col width="10%" />
+  <col width="19%" />
+  <col width="18%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>更新対象の AOSP バージョン</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0549</td>
+    <td><a href="https://android.googlesource.com/platform/external/libavc/+/37345554fea84afd446d6d8fbb87feea5a0dde3f">A-33818508</a></td>
+    <td>高</td>
+    <td>すべて</td>
+    <td>6.0、6.0.1、7.0、7.1.1</td>
+    <td>2016 年 12 月 20 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0550</td>
+    <td><a href="https://android.googlesource.com/platform/external/libavc/+/7950bf47b6944546a0aff11a7184947de9591b51">A-33933140</a></td>
+    <td>高</td>
+    <td>すべて</td>
+    <td>6.0、6.0.1、7.0、7.1.1</td>
+    <td>Google 社内</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0551</td>
+    <td><a href="https://android.googlesource.com/platform/external/libavc/+/8b5fd8f24eba5dd19ab2f80ea11a9125aa882ae2">A-34097231</a>
+    [<a href="https://android.googlesource.com/platform/external/libavc/+/494561291a503840f385fbcd11d9bc5f4dc502b8">2</a>]</td>
+    <td>高</td>
+    <td>すべて</td>
+    <td>6.0、6.0.1、7.0、7.1.1</td>
+    <td>Google 社内</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0552</td>
+    <td><a href="https://android.googlesource.com/platform/external/libavc/+/9a00f562a612d56e7b2b989d168647db900ba6cf">A-34097915</a></td>
+    <td>高</td>
+    <td>すべて</td>
+    <td>6.0、6.0.1、7.0、7.1.1</td>
+    <td>Google 社内</td>
+  </tr>
+</tbody></table>
+
+<h3 id="eop-in-libnl">libnl での権限昇格の脆弱性</h3>
+<p>libnl に権限昇格の脆弱性があるため、悪意のあるローカルアプリによって Wi-Fi サービス内で任意のコードが実行されるおそれがあります。最初に特権プロセスへの侵入が必要であり、現在のプラットフォーム構成によってリスクが軽減されているため、この問題の重大度は「中」と判断されています。</p>
+
+<table>
+  <colgroup><col width="18%" />
+  <col width="17%" />
+  <col width="10%" />
+  <col width="19%" />
+  <col width="18%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>更新対象の AOSP バージョン</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0553</td>
+    <td><a href="https://android.googlesource.com/platform/external/libnl/+/f83d9c1c67b6be69a96995e384f50b572b667df0">A-32342065</a></td>
+    <td>中</td>
+    <td>すべて</td>
+    <td>5.0.2、5.1.1、6.0、6.0.1、7.0、7.1.1</td>
+    <td>2016 年 10 月 21 日</td>
+  </tr>
+</tbody></table>
+
+<h3 id="eop-in-telephony">Telephony での権限昇格の脆弱性</h3>
+<p>Telephony コンポーネントに権限昇格の脆弱性があるため、悪意のあるローカルアプリが権限レベルの範囲外の機能にアクセスするおそれがあります。サードパーティのアプリが通常はアクセスできない権限に昇格して機能にアクセスすることに利用される可能性があるため、この問題の重大度は「中」と判断されています。</p>
+
+<table>
+  <colgroup><col width="18%" />
+  <col width="17%" />
+  <col width="10%" />
+  <col width="19%" />
+  <col width="18%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>更新対象の AOSP バージョン</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0554</td>
+    <td><a href="https://android.googlesource.com/platform/packages/services/Telephony/+/aeb795ef2290af1a0e4b14909363bc574e6b3ee7">A-33815946</a>
+    [<a href="https://android.googlesource.com/platform/frameworks/base/+/3294256ba5b9e2ba2d8619d617e3d900e5386564">2</a>]</td>
+    <td>中</td>
+    <td>すべて</td>
+    <td>4.4.4、5.0.2、5.1.1、6.0、6.0.1、7.0、7.1.1</td>
+    <td>2016 年 12 月 20 日</td>
+  </tr>
+</tbody></table>
+
+<h3 id="id-in-mediaserver-2">メディアサーバーでの情報開示の脆弱性</h3>
+<p>メディアサーバーに情報開示の脆弱性があるため、悪意のあるローカルアプリが権限レベルの範囲外のデータにアクセスするおそれがあります。許可を得ずにデータにアクセスすることに利用される可能性があるため、この問題の重大度は「中」と判断されています。</p>
+
+<table>
+  <colgroup><col width="18%" />
+  <col width="17%" />
+  <col width="10%" />
+  <col width="19%" />
+  <col width="18%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>更新対象の AOSP バージョン</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0555</td>
+    <td><a href="https://android.googlesource.com/platform/external/libavc/+/0b23c81c3dd9ec38f7e6806a3955fed1925541a0">A-33551775</a></td>
+    <td>中</td>
+    <td>すべて</td>
+    <td>6.0、6.0.1、7.0、7.1.1</td>
+    <td>2016 年 12 月 12 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0556</td>
+    <td><a href="https://android.googlesource.com/platform/external/libmpeg2/+/f301cff2c1ddd880d9a2c77b22602a137519867b">A-34093952</a></td>
+    <td>中</td>
+    <td>すべて</td>
+    <td>6.0、6.0.1、7.0、7.1.1</td>
+    <td>2017 年 1 月 4 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0557</td>
+    <td><a href="https://android.googlesource.com/platform/external/libmpeg2/+/227c1f829127405e21dab1664393050c652ef71e">A-34093073</a></td>
+    <td>中</td>
+    <td>すべて</td>
+    <td>6.0、6.0.1、7.0、7.1.1</td>
+    <td>2017 年 1 月 4 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0558</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/av/+/50358a80b1724f6cf1bcdf003e1abf9cc141b122">A-34056274</a></td>
+    <td>中</td>
+    <td>すべて</td>
+    <td>4.4.4、5.0.2、5.1.1、6.0、6.0.1、7.0、7.1.1</td>
+    <td>Google 社内</td>
+  </tr>
+</tbody></table>
+
+<h3 id="id-in-libskia">libskia での情報開示の脆弱性</h3>
+<p>libskia に情報開示の脆弱性があるため、悪意のあるローカルアプリが権限レベルの範囲外のデータにアクセスするおそれがあります。許可を得ずにデータにアクセスすることに利用される可能性があるため、この問題の重大度は「中」と判断されています。</p>
+
+<table>
+  <colgroup><col width="18%" />
+  <col width="17%" />
+  <col width="10%" />
+  <col width="19%" />
+  <col width="18%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>更新対象の AOSP バージョン</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0559</td>
+    <td><a href="https://android.googlesource.com/platform/external/skia/+/16882f721279a82a1c860ac689ce570b16fe26a0">A-33897722</a></td>
+    <td>中</td>
+    <td>すべて</td>
+    <td>4.4.4、5.0.2、5.1.1、6.0、6.0.1、7.0、7.1.1</td>
+    <td>2016 年 12 月 25 日</td>
+  </tr>
+</tbody></table>
+
+<h3 id="id-in-factory-reset">出荷時設定での情報開示の脆弱性</h3>
+<p>出荷時設定のプロセスに情報開示の脆弱性があるため、悪意のあるローカルの攻撃者が前の所有者のデータにアクセスするおそれがあります。端末の保護が回避される可能性があるため、この問題の重大度は「中」と判断されています。</p>
+
+<table>
+  <colgroup><col width="18%" />
+  <col width="17%" />
+  <col width="10%" />
+  <col width="19%" />
+  <col width="18%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>更新対象の AOSP バージョン</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0560</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/base/+/efdec8f5688ce6b0a287eddb6d5dad93ffa0e1ee">A-30681079</a></td>
+    <td>中</td>
+    <td>すべて</td>
+    <td>4.4.4、5.0.2、5.1.1、6.0、6.0.1、7.0、7.1.1</td>
+    <td>Google 社内</td>
+  </tr>
+</tbody></table>
+
+<h2 id="2017-04-05-details">セキュリティ パッチ レベル 2017-04-05 の脆弱性の詳細</h2>
+<p>パッチレベル 2017-04-05 に該当するセキュリティ脆弱性の各項目について、下記に詳細を説明します。問題の内容とその重大度の根拠について説明し、CVE、関連する参照先、重大度、更新対象の Google 端末、更新対象の AOSP バージョン（該当する場合）、報告日を表にまとめています。その問題に対処した、一般公開されている変更（AOSP の変更の一覧など）がある場合は、そのバグ ID にリンクを設定しています。複数の変更が同じバグに関係する場合は、バグ ID の後に記載した番号に、追加の参照へのリンクを設定しています。</p>
+
+<h3 id="rce-in-broadcom-wi-fi-firmware">Broadcom Wi-Fi ファームウェアでのリモートコード実行の脆弱性</h3>
+<p>Broadcom Wi-Fi ファームウェアにリモートコード実行の脆弱性があるため、リモートの攻撃者によって Wi-Fi SoC 内で任意のコードが実行されるおそれがあります。Wi-Fi SoC 内でリモートでコードが実行される可能性があるため、この問題は「重大」と判断されています。</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0561</td>
+    <td>A-34199105*<br />
+        B-RB#110814</td>
+    <td>重大</td>
+    <td>Nexus 6、Nexus 6P、Nexus 9、Pixel C、Nexus Player</td>
+    <td>2017 年 1 月 9 日</td>
+  </tr>
+</tbody></table>
+<p>* この問題に対するパッチは公開されていません。アップデートは <a href="https://developers.google.com/android/nexus/drivers">Google デベロッパー サイト</a>から入手できる Nexus 端末用最新バイナリ ドライバに含まれています。</p>
+
+<h3 id="rce-in-qualcomm-crypto-engine-driver">Qualcomm crypto エンジン ドライバでのリモートコード実行の脆弱性</h3>
+<p>Qualcomm crypto エンジン ドライバにリモートコード実行の脆弱性があるため、リモートの攻撃者によってカーネル内で任意のコードが実行されるおそれがあります。カーネル内でリモートでコードが実行される可能性があるため、この問題は「重大」と判断されています。</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-10230</td>
+    <td>A-34389927<br />
+        <a href="https://source.codeaurora.org/quic/la//kernel/msm-3.18/commit/?id=bd9a8fc6d7f6bd1a0b936994630006de450df657">
+QC-CR#1091408</a></td>
+    <td>重大</td>
+    <td>Nexus 5X、Nexus 6、Nexus 6P、Pixel、Pixel XL、Android One</td>
+    <td>2017 年 1 月 10 日</td>
+  </tr>
+</tbody></table>
+
+<h3 id="rce-in-kernel-networking-subsystem">カーネル ネットワーク サブシステムでのリモートコード実行の脆弱性</h3>
+<p>カーネル ネットワーク サブシステムにリモートコード実行の脆弱性があるため、リモートの攻撃者によってカーネル内で任意のコードが実行されるおそれがあります。カーネル内でリモートでコードが実行される可能性があるため、この問題は「重大」と判断されています。</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-10229</td>
+    <td>A-32813456<br />
+        <a href="http://git.kernel.org/cgit/linux/kernel/git/stable/linux-stable.git/commit/?id=197c949e7798fbf28cfadc69d9ca0c2abbf93191">
+アップストリーム カーネル</a></td>
+    <td>重大</td>
+    <td>Nexus 5X、Nexus 6、Nexus 6P、Pixel、Pixel XL、Pixel C、Android One、Nexus Player</td>
+    <td>Google 社内</td>
+  </tr>
+</tbody></table>
+
+<h3 id="eop-in-mediatek-touchscreen-driver">MediaTek タッチスクリーン ドライバでの権限昇格の脆弱性</h3>
+<p>MediaTek タッチスクリーン ドライバに権限昇格の脆弱性があるため、悪意のあるローカルアプリによってカーネル内で任意のコードが実行されるおそれがあります。ローカルでの永久的な端末の侵害につながるおそれがあり、端末を修復するにはオペレーティング システムの再適用が必要になる可能性があるため、この問題は「重大」と判断されています。</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0562</td>
+    <td>A-30202425*<br />
+        M-ALPS02898189</td>
+    <td>重大*</td>
+    <td>なし**</td>
+    <td>2016 年 7 月 16 日</td>
+  </tr>
+</tbody></table>
+<p>* この問題に対するパッチは公開されていません。アップデートは <a href="https://developers.google.com/android/nexus/drivers">Google デベロッパー サイト</a>から入手できる Nexus 端末用最新バイナリ ドライバに含まれています。</p>
+<p>** Android 7.0 以降が搭載されたサポート対象の Google 端末において、適用できるすべてのアップデートがインストールされている場合は、この脆弱性が悪用されることはありません。</p>
+
+<h3 id="eop-in-htc-touchscreen-driver">HTC タッチスクリーン ドライバでの権限昇格の脆弱性</h3>
+<p>HTC タッチスクリーン ドライバに権限昇格の脆弱性があるため、悪意のあるローカルアプリによってカーネル内で任意のコードが実行されるおそれがあります。ローカルでの永久的な端末の侵害につながるおそれがあり、端末を修復するにはオペレーティング システムの再適用が必要になる可能性があるため、この問題は「重大」と判断されています。</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0563</td>
+    <td>A-32089409*<br />
+        </td>
+    <td>重大</td>
+    <td>Nexus 9</td>
+    <td>2016 年 10 月 9 日</td>
+  </tr>
+</tbody></table>
+<p>* この問題に対するパッチは公開されていません。アップデートは <a href="https://developers.google.com/android/nexus/drivers">Google デベロッパー サイト</a>から入手できる Nexus 端末用最新バイナリ ドライバに含まれています。</p>
+
+<h3 id="eop-in-kernel-ion-subsystem">カーネル ION サブシステムでの権限昇格の脆弱性</h3>
+<p>カーネル ION サブシステムに権限昇格の脆弱性があるため、悪意のあるローカルアプリによってカーネル内で任意のコードが実行されるおそれがあります。ローカルでの永久的な端末の侵害につながるおそれがあり、端末を修復するにはオペレーティング システムの再適用が必要になる可能性があるため、この問題は「重大」と判断されています。</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0564</td>
+    <td>A-34276203*<br />
+        </td>
+    <td>重大</td>
+    <td>Nexus 5X、Nexus 6、Nexus 6P、Pixel、Pixel XL、Pixel C、Android One、Nexus Player</td>
+    <td>2017 年 1 月 12 日</td>
+  </tr>
+</tbody></table>
+<p>* この問題に対するパッチは公開されていません。アップデートは <a href="https://developers.google.com/android/nexus/drivers">Google デベロッパー サイト</a>から入手できる Nexus 端末用最新バイナリ ドライバに含まれています。</p>
+
+<h3 id="vulnerabilities-in-qualcomm-components">Qualcomm コンポーネントでの脆弱性</h3>
+<p>Qualcomm コンポーネントに影響する脆弱性は次のとおりです。詳細については、Qualcomm AMSS の 2016 年 10 月のセキュリティに関する公開情報をご覧ください。</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-10237</td>
+    <td>A-31628601**<br />
+        QC-CR#1046751</td>
+    <td>重大</td>
+    <td>なし**</td>
+    <td>Qualcomm 社内</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-10238</td>
+    <td>A-35358527**<br />
+        QC-CR#1042558</td>
+    <td>重大</td>
+    <td>なし***</td>
+    <td>Qualcomm 社内</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-10239</td>
+    <td>A-31624618**<br />
+        QC-CR#1032929</td>
+    <td>高</td>
+    <td>Pixel、Pixel XL</td>
+    <td>Qualcomm 社内</td>
+  </tr>
+</tbody></table>
+<p>* この一連の問題の重大度はベンダーが決定したものです。</p>
+<p>* この問題に対するパッチは公開されていません。アップデートは <a href="https://developers.google.com/android/nexus/drivers">Google デベロッパー サイト</a>から入手できる Nexus 端末用最新バイナリ ドライバに含まれています。</p>
+<p>*** Android 7.0 以降が搭載されたサポート対象の Google 端末において、適用できるすべてのアップデートがインストールされている場合は、この脆弱性が悪用されることはありません。</p>
+
+<h3 id="rce-in-v8">v8 でのリモートコード実行の脆弱性</h3>
+<p>v8 にリモートコード実行の脆弱性があるため、リモートの攻撃者によって特権プロセス内で任意のコードが実行されるおそれがあります。ウェブサイト内でリモートでコードが実行される可能性があるため、この問題の重大度は「高」と判断されています。</p>
+
+<table>
+  <colgroup><col width="18%" />
+  <col width="17%" />
+  <col width="10%" />
+  <col width="19%" />
+  <col width="18%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>更新対象の AOSP バージョン</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-5129</td>
+    <td>A-29178923</td>
+    <td>高</td>
+    <td>なし*</td>
+    <td>6.0、6.0.1、7.0</td>
+    <td>2016 年 7 月 20 日</td>
+  </tr>
+</tbody></table>
+<p>* Android 7.0 以降が搭載されたサポート対象の Google 端末において、適用できるすべてのアップデートがインストールされている場合は、この脆弱性が悪用されることはありません。</p>
+
+<h3 id="rce-in-freetype">Freetype でのリモートコード実行の脆弱性</h3>
+<p>Freetype にリモートコード実行の脆弱性があるため、悪意のあるローカルアプリが特別に細工したフォントを読み込んで、権限のないプロセス内でメモリ破損を引き起こすおそれがあります。このライブラリを使用するアプリ内でリモートでコードが実行される可能性があるため、この問題の重大度は「高」と判断されています。</p>
+
+<table>
+  <colgroup><col width="18%" />
+  <col width="17%" />
+  <col width="10%" />
+  <col width="19%" />
+  <col width="18%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>更新対象の AOSP バージョン</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-10244</td>
+    <td>A-31470908</td>
+    <td>高</td>
+    <td>なし*</td>
+    <td>4.4.4、5.0.2、5.1.1、6.0、6.0.1、7.0</td>
+    <td>2016 年 9 月 13 日</td>
+  </tr>
+</tbody></table>
+<p>* Android 7.0 以降が搭載されたサポート対象の Google 端末において、適用できるすべてのアップデートがインストールされている場合は、この脆弱性が悪用されることはありません。</p>
+
+<h3 id="eop-in-kernel-sound-subsystem">カーネル サウンド サブシステムでの権限昇格の脆弱性</h3>
+<p>カーネル サウンド サブシステムに権限昇格の脆弱性があるため、悪意のあるローカルアプリによってカーネル内で任意のコードが実行されるおそれがあります。最初に特権プロセスへの侵入が必要であるため、この問題の重大度は「高」と判断されています。</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2014-4656</td>
+    <td>A-34464977<br />
+        <a href="http://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/commit/?id=883a1d49f0d77d30012f114b2e19fc141beb3e8e">
+アップストリーム カーネル</a></td>
+    <td>高</td>
+    <td>Nexus 6、Nexus Player</td>
+    <td>2014 年 6 月 26 日</td>
+  </tr>
+</tbody></table>
+
+<h3 id="eop-in-nvidia-crypto-driver">NVIDIA crypto ドライバでの権限昇格の脆弱性</h3>
+<p>NVIDIA crypto ドライバに権限昇格の脆弱性があるため、悪意のあるローカルアプリによってカーネル内で任意のコードが実行されるおそれがあります。最初に特権プロセスへの侵入が必要であるため、この問題の重大度は「高」と判断されています。</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0339</td>
+    <td>A-27930566*<br />
+        N-CVE-2017-0339</td>
+    <td>高</td>
+    <td>Nexus 9</td>
+    <td>2016 年 3 月 29 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0332</td>
+    <td>A-33812508*<br />
+        N-CVE-2017-0332</td>
+    <td>高</td>
+    <td>Nexus 9</td>
+    <td>2016 年 12 月 21 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0327</td>
+    <td>A-33893669*<br />
+        N-CVE-2017-0327</td>
+    <td>高</td>
+    <td>Nexus 9</td>
+    <td>2016 年 12 月 24 日</td>
+  </tr>
+</tbody></table>
+<p>* この問題に対するパッチは公開されていません。アップデートは <a href="https://developers.google.com/android/nexus/drivers">Google デベロッパー サイト</a>から入手できる Nexus 端末用最新バイナリ ドライバに含まれています。</p>
+
+<h3 id="eop-in-mediatek-thermal-driver">MediaTek サーマル ドライバでの権限昇格の脆弱性</h3>
+<p>MediaTek サーマル ドライバに権限昇格の脆弱性があるため、悪意のあるローカルアプリによってカーネル内で任意のコードが実行されるおそれがあります。最初に特権プロセスへの侵入が必要であるため、この問題の重大度は「高」と判断されています。</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0565</td>
+    <td>A-28175904*<br />
+        M-ALPS02696516</td>
+    <td>高</td>
+    <td>なし**</td>
+    <td>2016 年 4 月 11 日</td>
+  </tr>
+</tbody></table>
+<p>* この問題に対するパッチは公開されていません。アップデートは <a href="https://developers.google.com/android/nexus/drivers">Google デベロッパー サイト</a>から入手できる Nexus 端末用最新バイナリ ドライバに含まれています。</p>
+<p>** Android 7.0 以降が搭載されたサポート対象の Google 端末において、適用できるすべてのアップデートがインストールされている場合は、この脆弱性が悪用されることはありません。</p>
+
+<h3 id="eop-in-mediatek-camera-driver">MediaTek カメラドライバでの権限昇格の脆弱性</h3>
+<p>MediaTek カメラドライバに権限昇格の脆弱性があるため、悪意のあるローカルアプリによってカーネル内で任意のコードが実行されるおそれがあります。最初に特権プロセスへの侵入が必要であるため、この問題の重大度は「高」と判断されています。</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0566</td>
+    <td>A-28470975*<br />
+        M-ALPS02696367</td>
+    <td>高</td>
+    <td>なし**</td>
+    <td>2016 年 4 月 29 日</td>
+  </tr>
+</tbody></table>
+<p>* この問題に対するパッチは公開されていません。アップデートは <a href="https://developers.google.com/android/nexus/drivers">Google デベロッパー サイト</a>から入手できる Nexus 端末用最新バイナリ ドライバに含まれています。</p>
+<p>** Android 7.0 以降が搭載されたサポート対象の Google 端末において、適用できるすべてのアップデートがインストールされている場合は、この脆弱性が悪用されることはありません。</p>
+
+<h3 id="eop-in-broadcom-wi-fi-driver">Broadcom Wi-Fi ドライバでの権限昇格の脆弱性</h3>
+<p>Broadcom Wi-Fi ドライバに権限昇格の脆弱性があるため、悪意のあるローカルアプリによってカーネル内で任意のコードが実行されるおそれがあります。最初に特権プロセスへの侵入が必要であるため、この問題の重大度は「高」と判断されています。</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0567</td>
+    <td>A-32125310*<br />
+        B-RB#112575</td>
+    <td>高</td>
+    <td>Nexus 6、Nexus 6P、Nexus 9、Pixel C、Nexus Player</td>
+    <td>2016 年 10 月 12 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0568</td>
+    <td>A-34197514*<br />
+        B-RB#112600</td>
+    <td>高</td>
+    <td>Nexus 6、Nexus 6P、Nexus 9、Pixel C、Nexus Player</td>
+    <td>2017 年 1 月 9 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0569</td>
+    <td>A-34198729*<br />
+        B-RB#110666</td>
+    <td>高</td>
+    <td>Nexus 6、Nexus 6P、Nexus 9、Pixel C、Nexus Player</td>
+    <td>2017 年 1 月 9 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0570</td>
+    <td>A-34199963*<br />
+        B-RB#110688</td>
+    <td>高</td>
+    <td>Nexus 6、Nexus 6P、Nexus 9、Pixel C、Nexus Player</td>
+    <td>2017 年 1 月 9 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0571</td>
+    <td>A-34203305*<br />
+        B-RB#111541</td>
+    <td>高</td>
+    <td>Nexus 6、Nexus 6P、Pixel C、Nexus Player</td>
+    <td>2017 年 1 月 9 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0572</td>
+    <td>A-34198931*<br />
+        B-RB#112597</td>
+    <td>高</td>
+    <td>なし**</td>
+    <td>2017 年 1 月 9 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0573</td>
+    <td>A-34469904*<br />
+        B-RB#91539</td>
+    <td>高</td>
+    <td>Nexus 6、Nexus 6P、Nexus 9、Pixel C、Nexus Player</td>
+    <td>2017 年 1 月 18 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0574</td>
+    <td>A-34624457*<br />
+        B-RB#113189</td>
+    <td>高</td>
+    <td>Nexus 6、Nexus 6P、Nexus 9、Pixel C</td>
+    <td>2017 年 1 月 22 日</td>
+  </tr>
+</tbody></table>
+<p>* この問題に対するパッチは公開されていません。アップデートは <a href="https://developers.google.com/android/nexus/drivers">Google デベロッパー サイト</a>から入手できる Nexus 端末用最新バイナリ ドライバに含まれています。</p>
+<p>** Android 7.0 以降が搭載されたサポート対象の Google 端末において、適用できるすべてのアップデートがインストールされている場合は、この脆弱性が悪用されることはありません。</p>
+
+<h3 id="eop-in-qualcomm-wi-fi-driver">Qualcomm Wi-Fi ドライバでの権限昇格の脆弱性</h3>
+<p>Qualcomm Wi-Fi ドライバに権限昇格の脆弱性があるため、悪意のあるローカルアプリによってカーネル内で任意のコードが実行されるおそれがあります。最初に特権プロセスへの侵入が必要であるため、この問題の重大度は「高」と判断されています。</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0575</td>
+    <td>A-32658595*<br />
+        QC-CR#1103099</td>
+    <td>高</td>
+    <td>Nexus 5X、Pixel、Pixel XL</td>
+    <td>2016 年 11 月 3 日</td>
+  </tr>
+</tbody></table>
+<p>* この問題に対するパッチは公開されていません。アップデートは <a href="https://developers.google.com/android/nexus/drivers">Google デベロッパー サイト</a>から入手できる Nexus 端末用最新バイナリ ドライバに含まれています。</p>
+
+<h3 id="eop-in-nvidia-i2c-hid-driver">NVIDIA I2C HID ドライバでの権限昇格の脆弱性</h3>
+<p>NVIDIA I2C HID ドライバに権限昇格の脆弱性があるため、悪意のあるローカルアプリによってカーネル内で任意のコードが実行されるおそれがあります。最初に特権プロセスへの侵入が必要であるため、この問題の重大度は「高」と判断されています。</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0325</td>
+    <td>A-33040280*<br />
+        N-CVE-2017-0325</td>
+    <td>高</td>
+    <td>Nexus 9、Pixel C</td>
+    <td>2016 年 11 月 20 日</td>
+  </tr>
+</tbody></table>
+<p>* この問題に対するパッチは公開されていません。アップデートは <a href="https://developers.google.com/android/nexus/drivers">Google デベロッパー サイト</a>から入手できる Nexus 端末用最新バイナリ ドライバに含まれています。</p>
+
+<h3 id="eop-in-qualcomm-audio-driver">Qualcomm オーディオ ドライバでの権限昇格の脆弱性</h3>
+<p>Qualcomm オーディオ ドライバに権限昇格の脆弱性があるため、悪意のあるローカルアプリによってカーネル内で任意のコードが実行されるおそれがあります。最初に特権プロセスへの侵入が必要であるため、この問題の重大度は「高」と判断されています。</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0454</td>
+    <td>A-33353700<br />
+        <a href="https://source.codeaurora.org/quic/la/kernel/msm-3.18/commit/?id=cb0701a2f99fa19f01fbd4249bda9a8eadb0241f">
+QC-CR#1104067</a></td>
+    <td>高</td>
+    <td>Nexus 5X、Nexus 6P、Pixel、Pixel XL</td>
+    <td>2016 年 12 月 5 日</td>
+  </tr>
+</tbody></table>
+
+<h3 id="eop-in-qualcomm-crypto-engine-driver">Qualcomm crypto エンジン ドライバでの権限昇格の脆弱性</h3>
+<p>Qualcomm crypto エンジン ドライバに権限昇格の脆弱性があるため、悪意のあるローカルアプリによってカーネル内で任意のコードが実行されるおそれがあります。最初に特権プロセスへの侵入が必要であるため、この問題の重大度は「高」と判断されています。</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0576</td>
+    <td>A-33544431<br />
+        <a href="https://source.codeaurora.org/quic/la/kernel/msm-3.18/commit/?id=2b09507d78b25637df6879cd2ee2031b208b3532">
+QC-CR#1103089</a></td>
+    <td>高</td>
+    <td>Nexus 5X、Nexus 6、Nexus 6P、Pixel、Pixel XL、Android One</td>
+    <td>2016 年 12 月 9 日</td>
+  </tr>
+</tbody></table>
+
+<h3 id="eop-in-htc-touchscreen-driver-2">HTC タッチスクリーン ドライバでの権限昇格の脆弱性</h3>
+<p>HTC タッチスクリーン ドライバに権限昇格の脆弱性があるため、悪意のあるローカルアプリによってカーネル内で任意のコードが実行されるおそれがあります。最初に特権プロセスへの侵入が必要であるため、この問題の重大度は「高」と判断されています。</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0577</td>
+    <td>A-33842951*<br />
+        </td>
+    <td>高</td>
+    <td>なし**</td>
+    <td>2016 年 12 月 21 日</td>
+  </tr>
+</tbody></table>
+<p>* この問題に対するパッチは公開されていません。アップデートは <a href="https://developers.google.com/android/nexus/drivers">Google デベロッパー サイト</a>から入手できる Nexus 端末用最新バイナリ ドライバに含まれています。</p>
+<p>** Android 7.0 以降が搭載されたサポート対象の Google 端末において、適用できるすべてのアップデートがインストールされている場合は、この脆弱性が悪用されることはありません。</p>
+
+<h3 id="eop-in-dts-sound-driver">DTS サウンド ドライバでの権限昇格の脆弱性</h3>
+<p>DTS サウンド ドライバに権限昇格の脆弱性があるため、悪意のあるローカルアプリによってカーネル内で任意のコードが実行されるおそれがあります。最初に特権プロセスへの侵入が必要であるため、この問題の重大度は「高」と判断されています。</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0578</td>
+    <td>A-33964406*<br />
+        </td>
+    <td>高</td>
+    <td>なし**</td>
+    <td>2016 年 12 月 28 日</td>
+  </tr>
+</tbody></table>
+<p>* この問題に対するパッチは公開されていません。アップデートは <a href="https://developers.google.com/android/nexus/drivers">Google デベロッパー サイト</a>から入手できる Nexus 端末用最新バイナリ ドライバに含まれています。</p>
+<p>** Android 7.0 以降が搭載されたサポート対象の Google 端末において、適用できるすべてのアップデートがインストールされている場合は、この脆弱性が悪用されることはありません。</p>
+
+<h3 id="eop-in-qualcomm-sound-codec-driver">Qualcomm サウンド コーデック ドライバでの権限昇格の脆弱性</h3>
+<p>Qualcomm サウンド コーデック ドライバに権限昇格の脆弱性があるため、悪意のあるローカルアプリによってカーネル内で任意のコードが実行されるおそれがあります。最初に特権プロセスへの侵入が必要であるため、この問題の重大度は「高」と判断されています。</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-10231</td>
+    <td>A-33966912<br />
+        <a href="https://source.codeaurora.org/quic/la//kernel/msm-3.18/commit/?id=3bfe5a89916f7d29492e9f6d941d108b688cb804">
+QC-CR#1096799</a></td>
+    <td>高</td>
+    <td>Pixel、Pixel XL</td>
+    <td>2016 年 12 月 29 日</td>
+  </tr>
+</tbody></table>
+
+<h3 id="eop-in-qualcomm-video-driver">Qualcomm ビデオドライバでの権限昇格の脆弱性</h3>
+<p>Qualcomm ビデオドライバに権限昇格の脆弱性があるため、悪意のあるローカルアプリによってカーネル内で任意のコードが実行されるおそれがあります。最初に特権プロセスへの侵入が必要であるため、この問題の重大度は「高」と判断されています。</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0579</td>
+    <td>A-34125463*<br />
+        QC-CR#1115406</td>
+    <td>高</td>
+    <td>Nexus 5X、Nexus 6P、Pixel、Pixel XL</td>
+    <td>2017 年 1 月 5 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-10232</td>
+    <td>A-34386696<br />
+        <a href="https://source.codeaurora.org/quic/la//kernel/msm-3.10/commit/?id=21e0ead58e47798567d846b84f16f89cf69a57ae">
+QC-CR#1024872</a> <a href="https://source.codeaurora.org/quic/la//kernel/msm-3.18/commit/?id=27f7b3b3059f6181e2786f886f4cd92f413bc30c">
+[2]</a></td>
+    <td>高</td>
+    <td>Nexus 5X、Nexus 6P、Pixel、Pixel XL、Android One</td>
+    <td>2017 年 1 月 10 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-10233</td>
+    <td>A-34389926<br />
+        <a href="https://source.codeaurora.org/quic/la/kernel/msm/commit/?id=d793c6d91ecba2a1fd206ad47a4fd408d290addf">
+QC-CR#897452</a></td>
+    <td>高</td>
+    <td>なし**</td>
+    <td>2017 年 1 月 10 日</td>
+  </tr>
+</tbody></table>
+<p>* この問題に対するパッチは公開されていません。アップデートは <a href="https://developers.google.com/android/nexus/drivers">Google デベロッパー サイト</a>から入手できる Nexus 端末用最新バイナリ ドライバに含まれています。</p>
+<p>** Android 7.0 以降が搭載されたサポート対象の Google 端末において、適用できるすべてのアップデートがインストールされている場合は、この脆弱性が悪用されることはありません。</p>
+
+<h3 id="eop-in-nvidia-boot-and-power-management-processor-driver">NVIDIA 起動および電源管理プロセッサ ドライバでの権限昇格の脆弱性</h3>
+<p>NVIDIA 起動および電源管理プロセッサ ドライバに権限昇格の脆弱性があるため、悪意のあるローカルアプリによってこの起動および電源管理プロセッサ内で任意のコードが実行されるおそれがあります。最初に特権プロセスへの侵入が必要であるため、この問題の重大度は「高」と判断されています。</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0329</td>
+    <td>A-34115304*<br />
+        N-CVE-2017-0329</td>
+    <td>高</td>
+    <td>Pixel C</td>
+    <td>2017 年 1 月 5 日</td>
+  </tr>
+</tbody></table>
+<p>* この問題に対するパッチは公開されていません。アップデートは <a href="https://developers.google.com/android/nexus/drivers">Google デベロッパー サイト</a>から入手できる Nexus 端末用最新バイナリ ドライバに含まれています。</p>
+
+<h3 id="eop-in-synaptics-touchscreen-driver">Synaptics タッチスクリーン ドライバでの権限昇格の脆弱性</h3>
+<p>Synaptics タッチスクリーン ドライバに権限昇格の脆弱性があるため、悪意のあるローカルアプリによってカーネル内で任意のコードが実行されるおそれがあります。最初に特権プロセスへの侵入が必要であるため、この問題の重大度は「高」と判断されています。</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0580</td>
+    <td>A-34325986*<br />
+        </td>
+    <td>高</td>
+    <td>なし**</td>
+    <td>2017 年 1 月 16 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0581</td>
+    <td>A-34614485*<br />
+        </td>
+    <td>高</td>
+    <td>なし**</td>
+    <td>2017 年 1 月 22 日</td>
+  </tr>
+</tbody></table>
+<p>* この問題に対するパッチは公開されていません。アップデートは <a href="https://developers.google.com/android/nexus/drivers">Google デベロッパー サイト</a>から入手できる Nexus 端末用最新バイナリ ドライバに含まれています。</p>
+<p>** Android 7.0 以降が搭載されたサポート対象の Google 端末において、適用できるすべてのアップデートがインストールされている場合は、この脆弱性が悪用されることはありません。</p>
+
+<h3 id="eop-in-qualcomm-seemp-driver">Qualcomm Seemp ドライバでの権限昇格の脆弱性</h3>
+<p>Qualcomm Seemp ドライバに権限昇格の脆弱性があるため、悪意のあるローカルアプリによってカーネル内で任意のコードが実行されるおそれがあります。最初に特権プロセスへの侵入が必要であるため、この問題の重大度は「高」と判断されています。</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0462</td>
+    <td>A-33353601<br />
+        <a href="https://source.codeaurora.org/quic/la/kernel/msm-3.18/commit/?id=eb7b1426279e751b1fc3e86f434dc349945c1ae7">
+QC-CR#1102288</a></td>
+    <td>高</td>
+    <td>Pixel、Pixel XL</td>
+    <td>Google 社内</td>
+  </tr>
+</tbody></table>
+
+<h3 id="eop-in-qualcomm-kyro-l2-driver">Qualcomm Kyro L2 ドライバでの権限昇格の脆弱性</h3>
+<p>Qualcomm Kyro L2 ドライバに権限昇格の脆弱性があるため、悪意のあるローカルアプリによってカーネル内で任意のコードが実行されるおそれがあります。最初に特権プロセスへの侵入が必要であるため、この問題の重大度は「高」と判断されています。</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-6423</td>
+    <td>A-32831370<br />
+        <a href="https://source.codeaurora.org/quic/la/kernel/msm-3.18/commit/?id=0f264f812b61884390b432fdad081a3e995ba768">
+QC-CR#1103158</a></td>
+    <td>高</td>
+    <td>Pixel、Pixel XL</td>
+    <td>Google 社内</td>
+  </tr>
+</tbody></table>
+
+<h3 id="eop-in-kernel-file-system">カーネル ファイル システムでの権限昇格の脆弱性</h3>
+<p>カーネル ファイル システムに権限昇格の脆弱性があるため、悪意のあるローカルアプリによってカーネル内で任意のコードが実行されるおそれがあります。最初に特権プロセスへの侵入が必要であるため、この問題の重大度は「高」と判断されています。</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2014-9922</td>
+    <td>A-32761463<br />
+        <a href="http://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/commit/?id=69c433ed2ecd2d3264efd7afec4439524b319121">
+アップストリーム カーネル</a></td>
+    <td>高</td>
+    <td>Nexus 5X、Nexus 6、Nexus 6P、Nexus 9、Pixel、Pixel XL、Pixel C、Android One、Nexus Player</td>
+    <td>Google 社内</td>
+  </tr>
+</tbody></table>
+
+<h3 id="id-in-kernel-memory-subsystem">カーネル メモリ サブシステムでの情報開示の脆弱性</h3>
+<p>カーネル メモリ サブシステムに情報開示の脆弱性があるため、悪意のあるローカルアプリが権限レベルの範囲外のデータにアクセスするおそれがあります。ユーザーの明示的な許可を得ずに機密データにアクセスすることに利用される可能性があるため、この問題の重大度は「高」と判断されています。</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2014-0206</td>
+    <td>A-34465735<br />
+        <a href="https://git.kernel.org/cgit/linux/kernel/git/stable/linux-stable.git/commit/?id=d36db46c2cba973557eb6138d22210c4e0cf17d6">
+アップストリーム カーネル</a></td>
+    <td>高</td>
+    <td>Nexus 6、Nexus Player</td>
+    <td>2014 年 5 月 6 日</td>
+  </tr>
+</tbody></table>
+
+<h3 id="id-in-kernel-networking-subsystem">カーネル ネットワーク サブシステムでの情報開示の脆弱性</h3>
+<p>カーネル ネットワーク サブシステムに情報開示の脆弱性があるため、悪意のあるローカルアプリが権限レベルの範囲外のデータにアクセスするおそれがあります。ユーザーの明示的な許可を得ずに機密データにアクセスすることに利用される可能性があるため、この問題の重大度は「高」と判断されています。</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2014-3145</td>
+    <td>A-34469585<br />
+        <a href="https://git.kernel.org/cgit/linux/kernel/git/stable/linux-stable.git/commit/?id=314760e66c35c8ffa51b4c4ca6948d207e783079">
+アップストリーム カーネル</a> <a href="http://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/commit/?id=05ab8f2647e4221cbdb3856dd7d32bd5407316b3">
+[2]</a></td>
+    <td>高</td>
+    <td>Nexus 6、Nexus Player</td>
+    <td>2014 年 5 月 9 日</td>
+  </tr>
+</tbody></table>
+
+<h3 id="id-in-qualcomm-trustzone">Qualcomm TrustZone での情報開示の脆弱性</h3>
+<p>Qualcomm TrustZone に情報開示の脆弱性があるため、悪意のあるローカルアプリが権限レベルの範囲外のデータにアクセスするおそれがあります。ユーザーの明示的な許可を得ずに機密データにアクセスすることに利用される可能性があるため、この問題の重大度は「高」と判断されています。</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-5349</td>
+    <td>A-29083830<br />
+        <a href="https://source.codeaurora.org/quic/la//kernel/msm-3.18/commit/?id=7c3bf6557c62d904b15507eb451fda8fd7ef750c">
+QC-CR#1021945</a> <a href="https://source.codeaurora.org/quic/la//kernel/msm-3.18/commit/?id=03853a58952834ac3e1e3007c9c680dd4c001a2f">
+[2]</a> <a href="https://source.codeaurora.org/quic/la//kernel/msm-3.18/commit/?id=e3d969000fb60ecb9bc01667fa89957f67763514">
+[3]</a> <a href="https://source.codeaurora.org/quic/la//kernel/msm-3.18/commit/?id=9bd398661cae758ffc557adc7de74ba32654e1f9">
+[4]</a></td>
+    <td>高</td>
+    <td>Nexus 5X、Nexus 6、Nexus 6P、Pixel、Pixel XL、Android One</td>
+    <td>2016 年 6 月 1 日</td>
+  </tr>
+</tbody></table>
+
+<h3 id="id-in-qualcomm-ipa-driver">Qualcomm IPA ドライバでの情報開示の脆弱性</h3>
+<p>Qualcomm IPA ドライバに情報開示の脆弱性があるため、悪意のあるローカルアプリが権限レベルの範囲外のデータにアクセスするおそれがあります。ユーザーの明示的な許可を得ずに機密データにアクセスすることに利用される可能性があるため、この問題の重大度は「高」と判断されています。</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-10234</td>
+    <td>A-34390017<br />
+        <a href="https://source.codeaurora.org/quic/la/kernel/msm-3.10/commit/?id=c7d7492c1e329fdeb28a7901c4cd634d41a996b1">
+QC-CR#1069060</a> <a href="https://source.codeaurora.org/quic/la/kernel/msm-3.18/commit/?id=d12370c7f3ecded1867fbd6b70ded35db55cab1d">
+[2]</a></td>
+    <td>高</td>
+    <td>Nexus 5X、Nexus 6P、Pixel、Pixel XL</td>
+    <td>2017 年 1 月 10 日</td>
+  </tr>
+</tbody></table>
+
+<h3 id="dos-in-kernel-networking-subsystem">カーネル ネットワーク サブシステムでのサービス拒否の脆弱性</h3>
+<p>カーネル ネットワーク サブシステムにサービス拒否の脆弱性があるため、リモートの攻撃者が特別に細工したネットワーク パケットを使用して、端末のハングや再起動を引き起こすおそれがあります。リモートでのサービス拒否のおそれがあるため、この問題の重大度は「高」と判断されています。</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2014-2706</td>
+    <td>A-34160553<br />
+        <a href="https://git.kernel.org/cgit/linux/kernel/git/stable/linux-stable.git/commit/?id=1d147bfa64293b2723c4fec50922168658e613ba">
+アップストリーム カーネル</a></td>
+    <td>高</td>
+    <td>Nexus Player</td>
+    <td>2014 年 4 月 1 日</td>
+  </tr>
+</tbody></table>
+
+<h3 id="dos-in-qualcomm-wi-fi-driver">Qualcomm Wi-Fi ドライバでのサービス拒否の脆弱性</h3>
+<p>Qualcomm Wi-Fi ドライバにサービス拒否の脆弱性があるため、近くにいる攻撃者が Wi-Fi サブシステムでサービス拒否を引き起こすおそれがあります。リモートでのサービス拒否のおそれがあるため、この問題の重大度は「高」と判断されています</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-10235</td>
+    <td>A-34390620<br />
+        <a href="https://source.codeaurora.org/quic/la/platform/vendor/qcom-opensource/wlan/qcacld-2.0/commit/?id=5bb0059243515ecdac138cfdb4cee7259bbd0bbc">
+QC-CR#1046409</a></td>
+    <td>高</td>
+    <td>なし**</td>
+    <td>2017 年 1 月 10 日</td>
+  </tr>
+</tbody></table>
+<p>** Android 7.0 以降が搭載されたサポート対象の Google 端末において、適用できるすべてのアップデートがインストールされている場合は、この脆弱性が悪用されることはありません。</p>
+
+<h3 id="eop-in-kernel-file-system-2">カーネル ファイル システムでの権限昇格の脆弱性</h3>
+<p>カーネル ファイル システムに権限昇格の脆弱性があるため、悪意のあるローカルアプリによって権限レベルの範囲外で任意のコードが実行されるおそれがあります。最初に特権プロセスへの侵入が必要であり、現在のプラットフォーム構成によってリスクが軽減されているため、この問題の重大度は「中」と判断されています。</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-7097</td>
+    <td>A-32458736<br />
+        <a href="http://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/commit/?id=073931017b49d9458aa351605b43a7e34598caef">
+アップストリーム カーネル</a></td>
+    <td>中</td>
+    <td>Nexus 5X、Nexus 6、Nexus 6P、Nexus 9、Pixel、Pixel XL、Pixel C、Nexus Player</td>
+    <td>2016 年 8 月 28 日</td>
+  </tr>
+</tbody></table>
+
+<h3 id="eop-in-qualcomm-wi-fi-driver-2">Qualcomm Wi-Fi ドライバでの権限昇格の脆弱性</h3>
+<p>Qualcomm Wi-Fi ドライバに権限昇格の脆弱性があるため、悪意のあるローカルアプリによってカーネル内で任意のコードが実行されるおそれがあります。最初に特権プロセスへの侵入が必要であり、脆弱性に固有の詳細によって問題の影響が限定されているため、この問題は「中」と判断されています。</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-6424</td>
+    <td>A-32086742<br />
+        <a href="https://source.codeaurora.org/quic/la/platform/vendor/qcom-opensource/wlan/qcacld-2.0/commit/?id=5cc2ac840e36a3342c5194c20b314f0bb95ef7e1">
+QC-CR#1102648</a></td>
+    <td>中</td>
+    <td>Nexus 5X、Pixel、Pixel XL、Android One</td>
+    <td>2016 年 10 月 9 日</td>
+  </tr>
+</tbody></table>
+
+<h3 id="eop-in-broadcom-wi-fi-driver-2">Broadcom Wi-Fi ドライバでの権限昇格の脆弱性</h3>
+<p>Broadcom Wi-Fi ドライバに権限昇格の脆弱性があるため、悪意のあるローカルアプリによってカーネル内で任意のコードが実行されるおそれがあります。最初に特権プロセスへの侵入が必要であり、現在のプラットフォーム構成によってリスクが軽減されているため、この問題の重大度は「中」と判断されています。</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-8465</td>
+    <td>A-32474971*<br />
+        B-RB#106053</td>
+    <td>中</td>
+    <td>Nexus 6、Nexus 6P、Nexus 9、Pixel C、Nexus Player</td>
+    <td>2016 年 10 月 27 日</td>
+  </tr>
+</tbody></table>
+<p>* この問題に対するパッチは公開されていません。アップデートは <a href="https://developers.google.com/android/nexus/drivers">Google デベロッパー サイト</a>から入手できる Nexus 端末用最新バイナリ ドライバに含まれています。</p>
+
+<h3 id="eop-in-htc-oem-fastboot-command">HTC OEM fastboot コマンドでの権限昇格の脆弱性</h3>
+<p>HTC OEM fastboot コマンドに権限昇格の脆弱性があるため、悪意のあるローカルアプリによってセンサーハブ内で任意のコードが実行されるおそれがあります。最初に別の脆弱性を悪用する必要があるため、この問題の重大度は「中」と判断されています。</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0582</td>
+    <td>A-33178836*<br />
+        </td>
+    <td>中</td>
+    <td>Nexus 9</td>
+    <td>2016 年 11 月 28 日</td>
+  </tr>
+</tbody></table>
+<p>* この問題に対するパッチは公開されていません。アップデートは <a href="https://developers.google.com/android/nexus/drivers">Google デベロッパー サイト</a>から入手できる Nexus 端末用最新バイナリ ドライバに含まれています。</p>
+
+<h3 id="eop-in-qualcomm-cp-access-driver">Qualcomm CP アクセス ドライバでの権限昇格の脆弱性</h3>
+<p>Qualcomm アクセス ドライバに権限昇格の脆弱性があるため、悪意のあるローカルアプリによってカーネル内で任意のコードが実行されるおそれがあります。最初に特権プロセスへの侵入が必要であり、脆弱性に固有の詳細情報で問題の影響が限定されているため、この問題は「中」と判断されています。</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0583</td>
+    <td>A-32068683<br />
+        <a href="https://source.codeaurora.org/quic/la/kernel/msm-3.18/commit/?id=452d2ad331d20b19e8a0768c4b6e7fe1b65abe8f">
+QC-CR#1103788</a></td>
+    <td>中</td>
+    <td>Nexus 5X、Nexus 6P、Pixel、Pixel XL、Android One</td>
+    <td>Google 社内</td>
+  </tr>
+</tbody></table>
+
+<h3 id="id-in-kernel-media-driver">カーネル メディア ドライバでの情報開示の脆弱性</h3>
+<p>カーネル メディア ドライバに情報開示の脆弱性があるため、悪意のあるローカルアプリが権限レベルの範囲外のデータにアクセスするおそれがあります。最初に特権プロセスへの侵入が必要であるため、この問題の重大度は「中」と判断されています。</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2014-1739</td>
+    <td>A-34460642<br />
+        <a href="http://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/commit/?id=e6a623460e5fc960ac3ee9f946d3106233fd28d8">
+アップストリーム カーネル</a></td>
+    <td>中</td>
+    <td>Nexus 6、Nexus 9、Nexus Player</td>
+    <td>2014 年 6 月 15 日</td>
+  </tr>
+</tbody></table>
+
+<h3 id="id-in-qualcomm-wi-fi-driver">Qualcomm Wi-Fi ドライバでの情報開示の脆弱性</h3>
+<p>Qualcomm Wi-Fi ドライバに情報開示の脆弱性があるため、悪意のあるローカルアプリが権限レベルの範囲外のデータにアクセスするおそれがあります。最初に特権プロセスへの侵入が必要であるため、この問題の重大度は「中」と判断されています。</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0584</td>
+    <td>A-32074353*<br />
+        QC-CR#1104731</td>
+    <td>中</td>
+    <td>Nexus 5X、Pixel、Pixel XL</td>
+    <td>2016 年 10 月 9 日</td>
+  </tr>
+</tbody></table>
+<p>* この問題に対するパッチは公開されていません。アップデートは <a href="https://developers.google.com/android/nexus/drivers">Google デベロッパー サイト</a>から入手できる Nexus 端末用最新バイナリ ドライバに含まれています。</p>
+
+<h3 id="id-in-broadcom-wi-fi-driver">Broadcom Wi-Fi ドライバでの情報開示の脆弱性</h3>
+<p>Broadcom Wi-Fi ドライバに情報開示の脆弱性があるため、悪意のあるローカルアプリが権限レベルの範囲外のデータにアクセスするおそれがあります。最初に特権プロセスへの侵入が必要であるため、この問題の重大度は「中」と判断されています。</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0585</td>
+    <td>A-32475556*<br />
+        B-RB#112953</td>
+    <td>中</td>
+    <td>Nexus 6、Nexus 6P、Nexus 9、Pixel C、Nexus Player</td>
+    <td>2016 年 10 月 27 日</td>
+  </tr>
+</tbody></table>
+<p>* この問題に対するパッチは公開されていません。アップデートは <a href="https://developers.google.com/android/nexus/drivers">Google デベロッパー サイト</a>から入手できる Nexus 端末用最新バイナリ ドライバに含まれています。</p>
+
+<h3 id="id-in-qualcomm-avtimer-driver">Qualcomm Avtimer ドライバでの情報開示の脆弱性</h3>
+<p>Qualcomm Avtimer ドライバに情報開示の脆弱性があるため、悪意のあるローカルアプリが権限レベルの範囲外のデータにアクセスするおそれがあります。最初に特権プロセスへの侵入が必要であるため、この問題の重大度は「中」と判断されています。</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-5346</td>
+    <td>A-32551280<br />
+        <a href="https://source.codeaurora.org/quic/la//kernel/msm-3.18/commit/?id=6298a474322fb2182f795a622b2faa64abfd8474">
+QC-CR#1097878</a></td>
+    <td>中</td>
+    <td>Pixel、Pixel XL</td>
+    <td>2016 年 10 月 29 日</td>
+  </tr>
+</tbody></table>
+
+<h3 id="id-in-qualcomm-video-driver">Qualcomm ビデオドライバでの情報開示の脆弱性</h3>
+<p>
+Qualcomm ビデオドライバに情報開示の脆弱性があるため、悪意のあるローカルアプリが権限レベルの範囲外のデータにアクセスするおそれがあります。最初に特権プロセスへの侵入が必要であるため、この問題の重大度は「中」と判断されています。</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-6425</td>
+    <td>A-32577085<br />
+        <a href="https://source.codeaurora.org/quic/la/kernel/msm-3.18/commit/?id=ef86560a21fe1f256f6ba772a195201ff202c657">
+QC-CR#1103689</a></td>
+    <td>中</td>
+    <td>Pixel、Pixel XL</td>
+    <td>2016 年 10 月 29 日</td>
+  </tr>
+</tbody></table>
+
+<h3 id="id-in-qualcomm-usb-driver">Qualcomm USB ドライバでの情報開示の脆弱性</h3>
+<p>Qualcomm USB ドライバに情報開示の脆弱性があるため、悪意のあるローカルアプリが権限レベルの範囲外のデータにアクセスするおそれがあります。最初に特権プロセスへの侵入が必要であるため、この問題の重大度は「中」と判断されています。</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-10236</td>
+    <td>A-33280689<br />
+        <a href="https://source.codeaurora.org/quic/la//kernel/msm-3.18/commit/?id=b8199c2b852f1e23c988e10b8fbb8d34c98b4a1c">
+QC-CR#1102418</a></td>
+    <td>中</td>
+    <td>Pixel、Pixel XL</td>
+    <td>2016 年 11 月 30 日</td>
+  </tr>
+</tbody></table>
+
+<h3 id="id-in-qualcomm-sound-driver">Qualcomm サウンド ドライバでの情報開示の脆弱性</h3>
+<p>Qualcomm サウンド ドライバに情報開示の脆弱性があるため、悪意のあるローカルアプリが権限レベルの範囲外のデータにアクセスするおそれがあります。最初に特権プロセスへの侵入が必要であるため、この問題の重大度は「中」と判断されています。</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0586</td>
+    <td>A-33649808<br />
+        QC-CR#1097569</td>
+    <td>中</td>
+    <td>Nexus 5X、Nexus 6、Nexus 6P、Pixel、Pixel XL、Android One</td>
+    <td>2016 年 12 月 13 日</td>
+  </tr>
+</tbody></table>
+
+<h3 id="id-in-qualcomm-spmi-driver">Qualcomm SPMI ドライバでの情報開示の脆弱性</h3>
+<p>Qualcomm SPMI ドライバに情報開示の脆弱性があるため、悪意のあるローカルアプリが権限レベルの範囲外のデータにアクセスするおそれがあります。最初に特権プロセスへの侵入が必要であるため、この問題の重大度は「中」と判断されています。</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-6426</td>
+    <td>A-33644474<br />
+        <a href="https://source.codeaurora.org/quic/la//kernel/msm-3.18/commit/?id=80decd6365deec08c35ecb902a58f9210599b39a">
+QC-CR#1106842</a></td>
+    <td>中</td>
+    <td>Pixel、Pixel XL</td>
+    <td>2016 年 12 月 14 日</td>
+  </tr>
+</tbody></table>
+
+<h3 id="id-in-nvidia-crypto-driver">NVIDIA crypto ドライバでの情報開示の脆弱性</h3>
+<p>NVIDIA crypto ドライバに情報開示の脆弱性があるため、悪意のあるローカルアプリが権限レベルの範囲外のデータにアクセスするおそれがあります。最初に特権プロセスへの侵入が必要であるため、この問題の重大度は「中」と判断されています。</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0328</td>
+    <td>A-33898322*<br />
+        N-CVE-2017-0328</td>
+    <td>中</td>
+    <td>なし**</td>
+    <td>2016 年 12 月 24 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0330</td>
+    <td>A-33899858*<br />
+        N-CVE-2017-0330</td>
+    <td>中</td>
+    <td>なし**</td>
+    <td>2016 年 12 月 24 日</td>
+  </tr>
+</tbody></table>
+<p>* この問題に対するパッチは公開されていません。アップデートは <a href="https://developers.google.com/android/nexus/drivers">Google デベロッパー サイト</a>から入手できる Nexus 端末用最新バイナリ ドライバに含まれています。</p>
+<p>** Android 7.0 以降が搭載されたサポート対象の Google 端末において、適用できるすべてのアップデートがインストールされている場合は、この脆弱性が悪用されることはありません。</p>
+
+<h3 id="vulnerabilities-in-qualcomm-components-2">Qualcomm コンポーネントでの脆弱性</h3>
+<p>Qualcomm コンポーネントに影響する次の脆弱性は、2014～2016 年に Qualcomm AMSS のセキュリティに関する公開情報としてリリースされたものです。その修正を Android のセキュリティ パッチ レベルと関連付けるため、この Android のセキュリティに関する公開情報に追加されています。</p>
+
+<table>
+  <colgroup><col width="19%" />
+  <col width="20%" />
+  <col width="10%" />
+  <col width="23%" />
+  <col width="17%" />
+  </colgroup><tbody><tr>
+    <th>CVE</th>
+    <th>参照</th>
+    <th>重大度</th>
+    <th>更新対象の Google 端末</th>
+    <th>報告日</th>
+  </tr>
+  <tr>
+    <td>CVE-2014-9931</td>
+    <td>A-35445101**<br />
+        QC-CR#612410</td>
+    <td>重大</td>
+    <td>なし**</td>
+    <td>Qualcomm 社内</td>
+  </tr>
+  <tr>
+    <td>CVE-2014-9932</td>
+    <td>A-35434683**<br />
+        QC-CR#626734</td>
+    <td>重大</td>
+    <td>Pixel、Pixel XL</td>
+    <td>Qualcomm 社内</td>
+  </tr>
+  <tr>
+    <td>CVE-2014-9933</td>
+    <td>A-35442512<br />
+        QC-CR#675463</td>
+    <td>重大</td>
+    <td>なし**</td>
+    <td>Qualcomm 社内</td>
+  </tr>
+  <tr>
+    <td>CVE-2014-9934</td>
+    <td>A-35439275**<br />
+        QC-CR#658249</td>
+    <td>重大</td>
+    <td>なし**</td>
+    <td>Qualcomm 社内</td>
+  </tr>
+  <tr>
+    <td>CVE-2014-9935</td>
+    <td>A-35444951**<br />
+        QC-CR#717626</td>
+    <td>重大</td>
+    <td>なし**</td>
+    <td>Qualcomm 社内</td>
+  </tr>
+  <tr>
+    <td>CVE-2014-9936</td>
+    <td>A-35442420**<br />
+        QC-CR#727389</td>
+    <td>重大</td>
+    <td>なし**</td>
+    <td>Qualcomm 社内</td>
+  </tr>
+  <tr>
+    <td>CVE-2014-9937</td>
+    <td>A-35445102**<br />
+        QC-CR#734095</td>
+    <td>重大</td>
+    <td>なし**</td>
+    <td>Qualcomm 社内</td>
+  </tr>
+  <tr>
+    <td>CVE-2015-8995</td>
+    <td>A-35445002**<br />
+        QC-CR#733690</td>
+    <td>重大</td>
+    <td>なし**</td>
+    <td>Qualcomm 社内</td>
+  </tr>
+  <tr>
+    <td>CVE-2015-8996</td>
+    <td>A-35444658**<br />
+        QC-CR#734698</td>
+    <td>重大</td>
+    <td>なし**</td>
+    <td>Qualcomm 社内</td>
+  </tr>
+  <tr>
+    <td>CVE-2015-8997</td>
+    <td>A-35432947**<br />
+        QC-CR#734707</td>
+    <td>重大</td>
+    <td>なし**</td>
+    <td>Qualcomm 社内</td>
+  </tr>
+  <tr>
+    <td>CVE-2015-8998</td>
+    <td>A-35441175**<br />
+        QC-CR#735337</td>
+    <td>重大</td>
+    <td>なし**</td>
+    <td>Qualcomm 社内</td>
+  </tr>
+  <tr>
+    <td>CVE-2015-8999</td>
+    <td>A-35445401**<br />
+        QC-CR#736119</td>
+    <td>重大</td>
+    <td>なし**</td>
+    <td>Qualcomm 社内</td>
+  </tr>
+  <tr>
+    <td>CVE-2015-9000</td>
+    <td>A-35441076**<br />
+        QC-CR#740632</td>
+    <td>重大</td>
+    <td>なし**</td>
+    <td>Qualcomm 社内</td>
+  </tr>
+  <tr>
+    <td>CVE-2015-9001</td>
+    <td>A-35445400**<br />
+        QC-CR#736083</td>
+    <td>重大</td>
+    <td>なし**</td>
+    <td>Qualcomm 社内</td>
+  </tr>
+  <tr>
+    <td>CVE-2015-9002</td>
+    <td>A-35442421**<br />
+        QC-CR#748428</td>
+    <td>重大</td>
+    <td>なし**</td>
+    <td>Qualcomm 社内</td>
+  </tr>
+  <tr>
+    <td>CVE-2015-9003</td>
+    <td>A-35440626**<br />
+        QC-CR#749215</td>
+    <td>重大</td>
+    <td>なし**</td>
+    <td>Qualcomm 社内</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-10242</td>
+    <td>A-35434643**<br />
+        QC-CR#985139</td>
+    <td>重大</td>
+    <td>なし**</td>
+    <td>Qualcomm 社内</td>
+  </tr>
+</tbody></table>
+<p>* この一連の問題の重大度はベンダーが決定したものです。</p>
+<p>* この問題に対するパッチは公開されていません。アップデートは <a href="https://developers.google.com/android/nexus/drivers">Google デベロッパー サイト</a>から入手できる Nexus 端末用最新バイナリ ドライバに含まれています。</p>
+<p>*** Android 7.0 以降が搭載されたサポート対象の Google 端末において、適用できるすべてのアップデートがインストールされている場合は、この脆弱性が悪用されることはありません。</p>
+
+<h2 id="common-questions-and-answers">一般的な質問と回答</h2>
+<p>上記の公開情報に対する一般的な質問について、以下で回答します。</p>
+<p><strong>1. 上記の問題に対処するように端末が更新されているかどうかをどのように判断すればよいですか？</strong></p>
+<p>端末のセキュリティ パッチ レベルを確認する方法については、<a href="https://support.google.com/pixelphone/answer/4457705#pixel_phones&nexus_devices">Pixel および Nexus のアップデート スケジュール</a>に記載されている手順をご覧ください。</p>
+<ul>
+  <li>セキュリティ パッチ レベル 2017-04-01 以降では、セキュリティ パッチ レベル 2017-04-01 に関連するすべての問題に対処しています。</li>
+  <li>セキュリティ パッチ レベル 2017-04-05 以降では、セキュリティ パッチ レベル 2017-04-05、およびそれ以前のすべてのパッチレベルに関連するすべての問題に対処しています。</li>
+</ul>
+<p>このアップデートを組み込んだ端末メーカーは、パッチレベル文字列を以下に設定する必要があります。</p>
+<ul>
+  <li>[ro.build.version.security_patch]:[2017-04-01]</li>
+  <li>[ro.build.version.security_patch]:[2017-04-05]</li>
+</ul>
+
+<p><strong>2. この公開情報に 2 つのセキュリティ パッチ レベルがあるのはなぜですか？</strong></p>
+<p>この公開情報では、2 つのセキュリティ パッチ レベルを定義しています。これは、すべての Android 搭載端末で同様の問題が発生する一部の脆弱性をサブセットとし、Android パートナーが迅速かつ柔軟に修正できるようにするためです。Android パートナーには、この公開情報に掲載されている問題をすべて修正し、最新のセキュリティ パッチ レベルを使用することが推奨されています。</p>
+<ul>
+  <li>2017 年 4 月 1 日のセキュリティ パッチ レベルを使用する端末には、そのセキュリティ パッチ レベルに関連するすべての問題と、それ以前のセキュリティに関する公開情報で報告されたすべての問題の修正を組み込む必要があります。</li>
+  <li>2017 年 4 月 5 日以降のセキュリティ パッチ レベルを使用する端末には、今回（およびそれ以前）のセキュリティに関する公開情報に掲載された、該当するすべてのパッチを組み込む必要があります。</li>
+</ul>
+<p>パートナーには、対処するすべての問題の修正を 1 つのアップデートにまとめて提供することが推奨されています。</p>
+<p><strong>3. 　各問題の影響を受ける Google 端末を判断するにはどうすればよいですか？</strong></p>
+<p><a href="#2017-04-01-details">2017-04-01</a> と <a href="#2017-04-05-details">2017-04-05</a> のセキュリティの脆弱性の詳細に関するセクションで、各表中の「更新対象の Google 端末<em></em>」列に、その問題の影響を受ける、更新対象の Google 端末の種類を記載しています。この列には次のいずれかが表示されています。</p>
+<ul>
+  <li><strong>すべての Google 端末</strong>: 問題がすべての端末と Pixel 端末に影響を与える場合、表の「更新対象の Google 端末<em></em>」列には「すべて」と記載されています。「すべて」には<a href="https://support.google.com/pixelphone/answer/4457705#pixel_phones&nexus_devices">サポート対象の端末</a>（Nexus 5X、Nexus 6、Nexus 6P、Nexus 7（2013）、Nexus 9、Android One、Nexus Player、Pixel C、Pixel、Pixel XL）が含まれます。</li>
+  <li><strong>一部の Google 端末</strong>: 問題が一部の Google 端末のみに影響する場合、「更新対象の Google 端末<em></em>」列には影響を受ける Google 端末が記載されています。</li>
+  <li><strong>影響を受ける Google 端末がない</strong>: Android 7.0 を搭載した Google 端末が問題の影響を受けない場合、表の「更新対象の Google 端末<em></em>」列には「なし」と記載されています。</li>
+</ul>
+<p><strong>4. 「参照」列の項目はどのような情報に関連付けられていますか？</strong></p>
+<p>脆弱性の詳細の表で「参照」列に記載した内容には、その参照番号が属す組織を示す接頭辞を含めている場合があります。<em></em>各接頭辞の意味は以下のとおりです。</p>
+<table>
+  <tbody><tr>
+   <th>接頭辞</th>
+   <th>参照</th>
+  </tr>
+  <tr>
+   <td>A-</td>
+   <td>Android バグ ID</td>
+  </tr>
+  <tr>
+   <td>QC-</td>
+   <td>Qualcomm の参照番号</td>
+  </tr>
+  <tr>
+   <td>M-</td>
+   <td>MediaTek の参照番号</td>
+  </tr>
+  <tr>
+   <td>N-</td>
+   <td>NVIDIA の参照番号</td>
+  </tr>
+  <tr>
+   <td>B-</td>
+   <td>Broadcom の参照番号</td>
+  </tr>
+</tbody></table>
+
+<h2 id="revisions">改訂</h2>
+<ul>
+  <li> 2017 年 4 月 3 日: 情報公開</li>
+  <li> 2017 年 4 月 5 日: 公開情報を改訂し AOSP リンクを追加</li>
+</ul>
+
+</body></html>

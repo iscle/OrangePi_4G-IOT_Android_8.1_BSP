@@ -1,0 +1,119 @@
+<html devsite><head>
+    <title>已知问题</title>
+    <meta name="project_path" value="/_project.yaml"/>
+    <meta name="book_path" value="/_book.yaml"/>
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+<p>尽管我们一直万分谨慎，但 Android 源代码有时还是会出现一些小问题。本页记录了使用 Android 源代码方面的已知问题。</p>
+
+<h2 id="build-issues">编译问题</h2>
+
+<h3 id="missing-cellbroadcastreceiver">在针对 toro 进行编译时缺少 CellBroadcastReceiver</h3>
+<p><strong>症状</strong></p>在针对 toro 进行 AOSP 编译时（最高为 Jelly Bean 4.2.1），CellBroadcastReceiver 无法添加到系统中。<p></p>
+
+<p><strong>原因：</strong></p><code>vendor/samsung/toro/device-partial.mk</code> 中存在拼写错误，<code>PRODUCT_PACKAGES</code> 将其中的 K 替换成了 H。<p><strong>解决方法</strong>：使用适用于 4.2.2 的最新程序包，或手动更正该拼写错误。</p>
+
+<h3 id="missing-cts-native-xml-generator">缺少 CTS 本机 XML 生成器</h3>
+<p><strong>症状</strong>：在对 IceCreamSandwich 及更高版本进行的一些编译中，编译初期显示以下警告：<code>/bin/bash: line 0: cd: cts/tools/cts-native-xml-generator/src/res: No
+such file or directory</code></p>
+<p><strong>原因</strong>：有些 Makefile 引用该路径，但该路径并不存在。</p>
+<p><strong>解决方法</strong>：无。这是一个无害的警告。</p>
+<h3 id="black-gingerbread-emulator">黑屏 Gingerbread 模拟器</h3>
+<p><strong>症状</strong>：从 Gingerbread 分支直接编译的模拟器无法启动，一直卡在黑屏状态。</p>
+<p><strong>原因</strong>：Gingerbread 分支使用的是 R7 版本的模拟器，该模拟器并不具备运行最近推出的一些 Gingerbread 版本所需的所有功能。</p>
+<p><strong>解决方法</strong>：使用 R12 版本的模拟器，以及与这些工具匹配的较新内核。无需进行清除编译。</p>
+<pre><code>$ repo forall platform/external/qemu -c git checkout aosp/tools_r12
+$ make
+$ emulator -kernel prebuilt/android-arm/kernel/kernel-qemu-armv7
+</code></pre>
+<h3 id="emulator-built-on-macos-107-lion-doesnt-work">在 MacOS 10.7 Lion 中编译的模拟器无法正常工作。</h3>
+<p><strong>症状</strong>：在 MacOS 10.7 Lion 和/或 XCode 4.x 中编译的模拟器（所有版本）无法启动。</p>
+<p><strong>原因</strong>：在开发环境中进行的某些更改导致系统在对模拟器进行编译时，采用的方式使模拟器无法正常工作。</p>
+<p><strong>解决方法</strong>：使用 SDK 中的模拟器二进制文件，该文件是通过 XCode 3 在 MacOS 10.6 中编译的，可在 MacOS 10.7 中正常工作。</p>
+
+<h3 id="partial-and-emulator-builds"><code>WITH_DEXPREOPT=true</code> 和模拟器编译。</h3>
+<p><strong>症状</strong>：在模拟器编译期间进行部分编译或同步（使系统没有任何依赖关系）时，生成的版本无法正常工作。</p>
+<p><strong>原因</strong>：默认情况下，所有模拟器编译操作现在都会在编译时运行 Dex 优化，这就需要遵循所有依赖关系，以便在框架每次发生更改时都重新优化应用。</p>
+<p><strong>解决方法</strong>：通过 <code>export WITH_DEXPREOPT=false</code> 在本地停用 Dex 优化，通过 <code>make installclean</code> 删除现有的已优化版本，然后运行完整编译以重新生成未优化的版本。完成上述操作后，部分编译将会正常工作。</p>
+<h3 id="permission-denied-during-builds">编译期间提示“权限遭拒”。</h3>
+<p><strong>症状</strong>：所有编译都会失败，并且系统会提示“权限遭拒”，可能还会显示防病毒警告。</p>
+<p><strong>原因</strong>：某些防病毒程序将 Android 源代码树中的一些源文件错误地识别为包含病毒的文件。</p>
+<p><strong>解决方法</strong>：确认实际上并未包含病毒之后，在 Android 树中停用防病毒程序。这还有助于减少编译次数。</p>
+<h3 id="build-errors-related-to-using-the-wrong-compiler">与使用错误编译器相关的编译错误。</h3>
+<p><strong>症状</strong>：编译会失败，而且症状各式各样。其中一种症状是 <code>cc1: error: unrecognized command line option "-m32"</code></p>
+<p><strong>原因</strong>：Android 编译系统使用路径中的默认编译器，并假设它是用于生成在主机上运行的二进制文件的合适编译器。其他情况（例如：使用 Android NDK，或编译内核）导致默认编译器不是主机编译器。</p>
+<p><strong>解决方法</strong>：使用一个“干净的”shell，其中没有任何先前操作可能更换了默认编译器。</p>
+<h3 id="build-errors-caused-by-non-default-tool-settings">由非默认工具设置导致的编译错误。</h3>
+<p><strong>症状</strong>：编译会失败，而且症状各式各样，并且系统可能会提示缺少文件或文件格式不正确。其中一种症状是 <code>member [...] in archive is not an object</code>。</p>
+<p><strong>原因</strong>：Android 编译系统倾向于使用多种主机工具并依赖其默认行为。有些设置会更改这些工具的行为，导致其行为方式干扰编译系统。导致此类问题的已知变量是 <code>CDPATH</code> 和 <code>GREP_OPTIONS</code>。</p>
+<p><strong>解决方法</strong>：在自定义设置尽可能少的环境中编译 Android。</p>
+<h3 id="build-error-with-40x-and-earlier-on-macos-107">在 MacOS 10.7 中编译 4.0.x 及更低版本时出现的错误。</h3>
+<p><strong>症状</strong>：在 MacOS 10.7 中编译 IceCreamSandwich 4.0.x（及更低版本）时会失败，并显示类似以下的错误：<code>Undefined symbols for architecture i386: "_SDL_Init"</code></p>
+<p><strong>原因</strong>：4.0.x 与 MacOS 10.7 不兼容。</p>
+<p><strong>解决方法</strong>：改用 MacOS 10.6，或使用可在 MacOS 10.7 中编译的 master 分支。</p>
+<pre><code>$ repo init -b master
+$ repo sync
+</code></pre>
+<h3 id="build-error-on-macos-with-xcode-43">在 MacOS 中使用 XCode 4.3 进行编译时出现的错误。</h3>
+<p><strong>症状</strong>：使用 XCode 4.3 时，所有编译都会失败。</p>
+<p><strong>原因</strong>：XCode 4.3 将默认编译器从 gcc 切换成了 llvm，而 llvm 拒绝接受之前 gcc 会接受的代码。</p>
+<p><strong>解决方法</strong>：使用 XCode 4.2。</p>
+<h3 id="build-error-with-40x-and-earlier-on-ubuntu-1110">在 Ubuntu 11.10 中编译 4.0.x 及更低版本时出现的错误。</h3>
+<p><strong>症状</strong>：在 Ubuntu 11.10 及更高版本中编译 IceCreamSandwich 4.0.x（及更低版本）时会失败，并显示类似以下的错误：<code>&lt;command-line&gt;:0:0: warning: "_FORTIFY_SOURCE" redefined [enabled by default]</code></p>
+<p><strong>原因</strong>：Ubuntu 11.10 使用的 gcc 版本中默认已定义该符号，而 Android 也会定义该符号，从而导致冲突。</p>
+<p><strong>解决方法</strong>：改用 Ubuntu 10.04，或使用可在 Ubuntu 11.10 及更高版本中编译的 master 分支。</p>
+<pre><code>$ repo init -b master
+$ repo sync
+</code></pre>
+
+<h2 id="source-sync">源代码同步问题</h2><h2>
+
+</h2><h3 id="difficulties-syncing-the-source-code-proxy-issues">同步源代码时遇到的问题（代理问题）。</h3>
+<p><strong>症状</strong>：<code>repo init</code> 或 <code>repo sync</code> 失败，并显示 HTTP 错误，通常为 403 或 500。</p>
+<p><strong>原因</strong>：有很多可能的原因，大多数情况下都与 HTTP 代理有关，这些代理无法顺利传输大量数据。</p>
+<p><strong>解决方法</strong>：虽然还没有通用的解决方法，但有人报告说使用 Python 2.7 以及明确使用 <code>repo sync -j1</code> 可以改善某些用户的情况。</p>
+<h3 id="difficulties-syncing-the-source-tree-virtualbox-ethernet-issues">同步源代码树时遇到的问题（VirtualBox 以太网问题）。</h3>
+<p><strong>症状</strong>：在某些 VirtualBox 安装过程中运行 <code>repo sync</code> 时，进程挂起或失败，而且症状各式各样。其中一种症状是 <code>DownloadError: HTTP 500 (Internal Server Error: Server got itself in trouble)</code>。</p>
+<p><strong>原因</strong>：VirtualBox 的默认网络行为是使用 NAT（网络地址转换）将客户系统连接到网络。在执行 repo sync 时的大量网络活动会触发 NAT 代码中的某些临界情况。</p>
+<p><strong>解决方法</strong>：将 VirtualBox 配置为使用桥接网络，而非 NAT。</p>
+<h3 id="difficulties-syncing-the-source-tree-dns-issues">同步源代码树时遇到的问题（DNS 问题）。</h3>
+<p><strong>症状</strong>：在运行 <code>repo sync</code> 时进程失败，并显示与无法识别主机名相关的各种错误。其中一种错误是 <code>&lt;urlopen error [Errno -2] Name or service not known&gt;</code>。</p>
+<p><strong>原因</strong>：有些 DNS 系统难以应对同步源代码树时涉及的大量查询（在最糟糕的情况下，可能会有数百条查询请求）。</p>
+<p><strong>解决方法</strong>：手动解析相关主机名，并在本地对解析结果进行硬编码。</p>
+<p>您可以使用 <code>nslookup</code> 命令解析主机名，该命令将为每个主机名指定一个数字 IP 地址（通常是在输出的“Address”（地址）部分）。</p>
+<pre><code>$ nslookup googlesource.com
+$ nslookup android.googlesource.com
+</code></pre>
+<p>然后，您可以在本地对它们进行硬编码，方法是修改 <code>/etc/hosts</code>，在该文件中添加两行内容，形式如下：</p>
+<pre><code>aaa.bbb.ccc.ddd googlesource.com
+eee.fff.ggg.hhh android.googlesource.com
+</code></pre>
+<p>请注意，这种方法只适用于服务器的地址不会更改的情况；如果服务器的地址发生更改，导致您无法连接，那么您必须重新解析这些主机名，并相应地修改 <code>etc/hosts</code>。</p>
+<h3 id="difficulties-syncing-the-source-tree-tcp-issues">同步源代码树时遇到的问题（TCP 问题）。</h3>
+<p><strong>症状</strong>：在同步时 <code>repo sync</code> 挂起，通常是在同步操作完成 99% 时出现这种情况。</p>
+<p><strong>原因</strong>：TCP/IP 堆栈中的某些设置在有些网络环境中会导致出现问题，使得 <code>repo sync</code> 既无法完成，也不会失败。</p>
+<p><strong>解决方法</strong>：在 Linux 中，请运行 <code>sysctl -w net.ipv4.tcp_window_scaling=0</code>。在 MacOS 中，请在网络设置部分停用 rfc1323 扩展程序。</p>
+
+<h2 id="runtime-issues">运行时问题</h2>
+<h3 id="camera-and-gps-dont-work-on-galaxy-nexus">摄像头和 GPS 在 Galaxy Nexus 上无法正常工作。</h3>
+<p><strong>症状</strong>：摄像头和 GPS 在 Galaxy Nexus 上无法正常工作。比如，摄像头应用一启动便会崩溃。</p>
+<p><strong>原因</strong>：Android 开放源代码项目中未提供这些硬件外围设备所需的专有库。</p>
+<p><strong>解决方法</strong>：无。</p>
+
+</body></html>

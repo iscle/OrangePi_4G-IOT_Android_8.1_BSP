@@ -1,0 +1,198 @@
+<html devsite>
+  <head>
+    <title>Gatekeeper</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<h2 id=overview>Overview</h2>
+
+<p>The Gatekeeper subsystem performs device pattern/password authentication in a
+Trusted Execution Environment (TEE). Gatekeeper enrolls and verifies passwords
+via an HMAC with a hardware-backed secret key. Additionally, Gatekeeper
+throttles consecutive failed verification attempts and must refuse to service
+requests based on a given timeout and a given number of consecutive failed
+attempts.</p>
+
+<p>When users verify their passwords, Gatekeeper uses the TEE-derived shared
+secret to sign an authentication attestation to
+send to the <a href="/security/keystore/index.html">hardware-backed Keystore</a>. That is, a
+Gatekeeper attestation notifies Keystore that authentication-bound keys (for
+example, keys that apps have created) can be released for use by apps.</p>
+
+<h2 id=architecture>Architecture</h2>
+
+<p>Gatekeeper involves three main components:</p>
+
+<ul>
+  <li><strong>gatekeeperd (Gatekeeper daemon)</strong>.
+  A C++ binder service containing platform-independent logic and corresponding
+to the <code>GateKeeperService</code> Java interface.
+  <li><strong>Gatekeeper Hardware Abstraction Layer (HAL)</strong>.
+  The HAL interface in <code>hardware/libhardware/include/hardware/gatekeeper.h</code>,
+  and the implementing module.
+  <li><strong>Gatekeeper (TEE)</strong>.
+  The TEE counterpart of <code>gatekeeperd</code>. A TEE-based implementation of Gatekeeper.
+</ul>
+
+<p>To implement Gatekeeper:</p>
+
+<ul>
+  <li>Implement the Gatekeeper HAL, specifically the functions in <code>gatekeeper.h</code>
+  (<code>hardware/libhardware/include/hardware/gatekeeper.h</code>).
+  See <a href="#hal_implementation">HAL Implementation</a>.
+  <li>Implement the TEE-specific Gatekeeper component, in part based on the following
+header file: <code>system/gatekeeper/include/gatekeeper/gatekeeper.h</code>. This
+header file includes pure virtual functions for creating and accessing
+keys, as well as for computing signatures.
+See <a href="#trusty_and_other_implementations">Trusty and other implementations</a>.
+</ul>
+
+<p>As shown in the following diagram, the <code>LockSettingsService</code> makes a request (via
+Binder) that reaches the <code>gatekeeperd</code> daemon in the Android OS.
+The <code>gatekeeperd</code>
+daemon makes a request that reaches its counterpart (Gatekeeper) in the TEE.</p>
+
+<img src="../images/gatekeeper-flow.png" alt="Gatekeeper flow" id="figure1" />
+<p class="img-caption"><strong>Figure 1.</strong> High-level data flow for authentication by GateKeeper</p>
+
+<p>The <code>gatekeeperd</code> daemon gives the Android framework APIs access to the HAL, and
+participates in reporting device <a href="index.html">authentications</a> to Keystore.
+The <code>gatekeeperd</code> daemon runs in its own process, separate from the system
+server.</p>
+
+<h2 id=hal_implementation>HAL Implementation</h2>
+
+<p>The <code>gatekeeperd</code> daemon uses the HAL to interact
+with the <code>gatekeeperd</code> daemon's TEE
+counterpart for password authentication. The HAL implementation must be able to
+sign (enroll) and verify blobs. All implementations are expected to adhere to
+the standard format for the authentication token (AuthToken) generated on each
+successful password verification. The contents and semantics of the AuthToken
+are described in <a href="index.html">Authentication</a>.</p>
+
+<p>Specifically, an implementation of the <code>gatekeeper.h</code> header file (in the
+<code>hardware/libhardware/include/hardware</code> folder) needs to implement the
+<code>enroll</code> and <code>verify</code> functions.</p>
+
+<p>The <code>enroll</code> function takes a password blob, signs it, and returns the signature
+as a handle. The returned blob (from a call to <code>enroll</code>) must have the structure
+shown in <code>system/gatekeeper/include/gatekeeper/password_handle.h</code>.</p>
+
+<p>The <code>verify</code> function needs to compare the signature produced
+by the provided password and
+ensure that it matches the enrolled password handle.</p>
+
+<p>The key used to enroll and verify must never change, and should be re-derivable
+at every device boot.</p>
+
+<h2 id=trusty_and_other_implementations>Trusty and other implementations</h2>
+
+<p>The <a href="/security/trusty/index.html">Trusty</a> operating system is
+Google's open source trusted OS for TEE
+environments. Trusty contains an approved implementation of GateKeeper. However,
+<strong>any TEE OS</strong> can be used for the implementation of Gatekeeper.
+The TEE <strong>must</strong> have access to a hardware-backed key as well as a secure,
+monotonic clock <strong>that ticks in suspend</strong>.</p>
+
+<p>Trusty uses an internal IPC system to communicate a shared secret directly
+between Keymaster and the Trusty implementation of Gatekeeper ("Trusty
+Gatekeeper"). This shared secret is used for signing AuthTokens that will be
+sent to Keystore, providing attestations of password verification. Trusty
+Gatekeeper requests the key from Keymaster for each use and does not persist
+or cache the value. Implementations are free to share this secret in any way
+that does not compromise security.</p>
+
+<p>The HMAC key, used to enroll and verify passwords, is derived and kept solely
+in GateKeeper.</p>
+
+<p>The Android tree provides a generic C++ implementation of GateKeeper, requiring
+only the addition of device-specific routines to be complete. To implement a
+TEE Gatekeeper with device-specific code for your TEE, please refer to the
+functions and comments in the following file:</p>
+<pre class="devsite-click-to-copy">
+system/gatekeeper/include/gatekeeper/gatekeeper.h
+</pre>
+
+<p>For the TEE GateKeeper, the primary responsibilities of a compliant
+implementation are:</p>
+
+<ul>
+  <li>Adherence to the Gatekeeper HAL
+  <li>Returned AuthTokens must be formatted according to the AuthToken specification
+(described in <a href="index.html">Authentication</a>)
+  <li>The TEE Gatekeeper must be able to share an HMAC key with Keymaster, either by
+requesting the key through a TEE IPC on demand or maintaining a valid cache of
+the value at all times
+</ul>
+
+<h2 id=user_sids>User SIDs</h2>
+
+<p>A User Secure ID (User SID) is the TEE representation of a user.
+The User SID has no strong connection to an Android user ID.</p>
+
+<p>A User SID is generated with a cryptographic
+PRNG whenever a user enrolls a new password without providing a previous one.
+This is known as an "untrusted" re-enroll.
+A "trusted" re-enroll occurs when a user provides a valid, previous password.
+In this case, the User SID is migrated to the new password handle,
+conserving the keys that were bound to it.
+The Android framework does not allow for an "untrusted" re-enroll under regular circumstances.</p>
+
+<p>The User SID is HMAC'ed along with the password in the password handle when the
+password is enrolled.</p>
+
+<p>User SIDs are written into the AuthToken returned by the <code>verify</code>
+function and associated to all authentication-bound Keystore keys. For
+information about the AuthToken format and Keystore, see
+<a href="index.html">Authentication</a>.
+Since an untrusted call to the <code>enroll</code> function
+will change the User SID, the call will render the keys bound to that password useless.</p>
+
+<p>Attackers can change the password for the device if they control the Android
+OS, but they will destroy root-protected, sensitive keys in the process.</p>
+
+<h2 id=request_throttling>Request throttling</h2>
+
+<p>GateKeeper must be able to securely throttle brute-force attempts on a user
+credential. As shown in the <code>gatekeeper.h</code>
+file (in <code>hardware/libhardware/include/hardware</code>),
+the HAL provides for returning a timeout in milliseconds. The timeout
+informs the client not to call GateKeeper again until after the timeout has
+elapsed. GateKeeper should not service requests if there is a pending timeout.</p>
+
+<p>GateKeeper must write a failure counter before verifying a user password. If
+the password verification succeeds, the failure counter should be cleared. This
+prevents attacks that prevent throttling by disabling the embedded MMC (eMMC)
+after issuing a <code>verify</code> call. The <code>enroll</code> function also verifies
+the user password (if provided) and so must be throttled in the same way.</p>
+
+<p>If supported by the device, it is highly recommended that the failure counter
+be written to secure storage. If the device does not support
+file-based encryption, or if secure storage is too slow, implementations may
+use RPMB directly.</p>
+
+
+
+
+
+  </body>
+</html>

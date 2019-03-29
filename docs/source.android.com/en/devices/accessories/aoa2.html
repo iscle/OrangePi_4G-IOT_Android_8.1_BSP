@@ -1,0 +1,288 @@
+<html devsite>
+  <head>
+    <title>Android Open Accessory Protocol 2.0</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+<p>This document describes changes in the Android Open Accessory (AOA) protocol
+since its initial release and supplements
+<a href="aoa.html">AOA 1.0 documentation</a>. AOAv2
+adds the following features:</p>
+
+<ul>
+<li>Audio output (from the Android device to the accessory).</li>
+<li>Support for the accessory acting as one or more Human Interface Devices
+(HID) to the Android device.</li>
+</ul>
+
+<p>Android SDK APIs available to Android application developers are unchanged.
+</p>
+
+
+<h2 id="detecting-android-open-accessory-20-support">Detecting AOAv2 support</h2>
+
+<p>To determine if a connected Android device supports accessories and the
+supported protocol version, an accessory must send a <code>getProtocol()</code>
+command and check the result. Android devices that support only the feautures
+in AOAv1 must return <code>1</code> as the protocol version; devices that
+support the additional feautres in AOAv2 must return <code>2</code> as the
+protocol version. AOAv2 is backward-compatible with AOAv1, so accessories
+designed for the original accessory protocol continue to work with newer Android
+devices.</p>
+
+<p>The following example from the Accessory Development Kit 2011
+<a href="http://developer.android.com/tools/adk/adk2.html#src-download">source code</a>
+(<code>&lt;adk-src&gt;/adk1/board/AndroidAccessory/AndroidAccessory.cpp</code>)
+library demonstrates this protocol check:</p>
+
+<pre class="devsite-click-to-copy">
+bool AndroidAccessory::switchDevice(byte addr)
+{
+    int protocol = getProtocol(addr);
+    if (protocol &gt;= 1) {
+        Serial.print("device supports protocol 1 or higher\n");
+    } else {
+        Serial.print("could not read device protocol version\n");
+        return false;
+    }
+
+    sendString(addr, ACCESSORY_STRING_MANUFACTURER, manufacturer);
+    sendString(addr, ACCESSORY_STRING_MODEL, model);
+    sendString(addr, ACCESSORY_STRING_DESCRIPTION, description);
+    sendString(addr, ACCESSORY_STRING_VERSION, version);
+    sendString(addr, ACCESSORY_STRING_URI, uri);
+    sendString(addr, ACCESSORY_STRING_SERIAL, serial);
+
+    usb.ctrlReq(addr, 0, USB_SETUP_HOST_TO_DEVICE | USB_SETUP_TYPE_VENDOR |
+                USB_SETUP_RECIPIENT_DEVICE, ACCESSORY_START, 0, 0, 0, 0, NULL);
+    return true;
+}
+</pre>
+
+<p>AOAv2 includes new USB product IDs for each combination of USB interfaces
+available in accessory mode:</p>
+
+<table id="AOA-version-comparison">
+<tbody>
+
+<tr>
+<th>Version</th>
+<th>Product ID</th>
+<th>Communication</th>
+<th>Description</th>
+</tr>
+
+<tr>
+<td rowspan="2">AOAv1</td>
+<td><code>0x2D00</code></td>
+<td>accessory</td>
+<td>Provides two bulk endpoints for communicating with an Android
+application.</td>
+</tr>
+
+<tr>
+<td><code>0x2D01</code></td>
+<td>accessory + adb</td>
+<td>For debugging purposes during accessory development. Available only if the
+user has enabled <em>USB Debugging</em> in the Android device settings.</td>
+</tr>
+
+<tr>
+<td rowspan="4">AOAv2</td>
+<td><code>0x2D02</code></td>
+<td>audio</td>
+<td>For streaming audio from an Android device to an accessory.</td>
+</tr>
+
+<tr>
+<td><code>0x2D03</code></td>
+<td>audio + adb</td>
+<td></td>
+</tr>
+
+<tr>
+<td><code>0x2D04</code></td>
+<td>accessory + audio</td>
+<td></td>
+</tr>
+
+<tr>
+<td><code>0x2D05</code></td>
+<td>accessory + audio + adb</td>
+<td></td>
+</tr>
+
+</tbody>
+</table>
+
+
+<p>Product IDs used in AOAv1 (<code>0x2D00</code> and <code>0x2D01</code>)
+continue to be supported in AOAv2.</p>
+
+<h2 id="audio-support">Audio support</h2>
+
+<p>AOAv2 includes support for audio output from an Android device to an
+accessory via a standard USB audio class interface capable of 2 channel, 16-bit
+PCM audio with a bit rate of 44100 Khz (additional audio modes may be added in
+the future).</p>
+
+<p>To enable audio support, the accessory must send a new USB control request:
+</p>
+
+<pre class="devsite-click-to-copy">
+**SET_AUDIO_MODE**
+requestType:    USB_DIR_OUT | USB_TYPE_VENDOR
+request:        58
+value:          0 for no audio (default),
+                1 for 2 channel, 16-bit PCM at 44100 KHz
+index:          0
+data            none
+</pre>
+
+<p>This command must be sent <em>before</em> sending the
+<code>ACCESSORY_START</code> command for entering accessory mode.</p>
+
+<h2 id="hid-support">HID support</h2>
+
+<p>AOAv2 allows accessories to register one or more USB Human Interface
+Devices (HID) with an Android device. This approach reverses the direction of
+communication for typical USB HID devices such as USB mice and keyboards.
+Normally, the HID device is a peripheral connected to a USB host (i.e. a
+personal computer), but in AOA the USB host can act as one or more input
+devices to a USB peripheral.</p>
+
+<p>HID support is a proxy for standard HID events; the
+implementation makes no assumptions about the content or type of events and
+simply passes it through to the input system, enabling an AOAv2 accessory to
+act as any HID device (mouse, keyboard, game controller, etc.). You can use HID
+support to provide basic functionality, such as a play/pause button on a media
+dock, or for advanced functionality such as a docking station with a mouse and
+full QWERTY keyboard.</p>
+
+<p>AOAv2 adds new USB control requests that allow the accessory to act as
+one or more HID input devices to the Android device. HID support is handled
+entirely through control requests on endpoint zero, so no new USB interface is
+needed. The four new control requests are:</p>
+
+<ul>
+<li><strong>ACCESSORY_REGISTER_HID</strong> registers a new HID device with the
+Android device. The accessory provides an ID used to identify the HID device for
+the other three calls. This ID is valid until USB disconnects or until the
+accessory sends <code>ACCESSORY_UNREGISTER_HID</code> to unregister the HID
+device.</li>
+<li><strong>ACCESSORY_UNREGISTER_HID</strong> unregisters a HID device
+previously registered with <code>ACCESSORY_REGISTER_HID</code>.</li>
+<li><strong>ACCESSORY_SET_HID_REPORT_DESC</strong> sends a report descriptor for
+a HID device to the Android device. This request is used to describe the
+capabilities of the HID device and must be sent before reporting any HID events
+to the Android device. If the report descriptor is larger than the maximum
+packet size for endpoint zero, multiple
+<code>ACCESSORY_SET_HID_REPORT_DESC</code> commands are sent to transfer the
+entire descriptor.</li>
+<li><strong>ACCESSORY_SEND_HID_EVENT</strong> sends input events from the
+accessory to the Android device.</li>
+</ul>
+
+<p>The code definitions for the new control requests are:</p>
+
+<pre class="devsite-click-to-copy">
+/* Control request for registering a HID device.
+ * Upon registering, a unique ID is sent by the accessory in the
+ * value parameter. This ID will be used for future commands for
+ * the device
+ *
+ *  requestType:    USB_DIR_OUT | USB_TYPE_VENDOR
+ *  request:        ACCESSORY_REGISTER_HID_DEVICE
+ *  value:          Accessory assigned ID for the HID device
+ *  index:          total length of the HID report descriptor
+ *  data            none
+ */
+#define ACCESSORY_REGISTER_HID         54
+
+/* Control request for unregistering a HID device.
+ *
+ *  requestType:    USB_DIR_OUT | USB_TYPE_VENDOR
+ *  request:        ACCESSORY_REGISTER_HID
+ *  value:          Accessory assigned ID for the HID device
+ *  index:          0
+ *  data            none
+ */
+#define ACCESSORY_UNREGISTER_HID         55
+
+/* Control request for sending the HID report descriptor.
+ * If the HID descriptor is longer than the endpoint zero max packet size,
+ * the descriptor will be sent in multiple ACCESSORY_SET_HID_REPORT_DESC
+ * commands. The data for the descriptor must be sent sequentially
+ * if multiple packets are needed.
+ *
+ *  requestType:    USB_DIR_OUT | USB_TYPE_VENDOR
+ *  request:        ACCESSORY_SET_HID_REPORT_DESC
+ *  value:          Accessory assigned ID for the HID device
+ *  index:          offset of data in descriptor
+ *                      (needed when HID descriptor is too big for one packet)
+ *  data            the HID report descriptor
+ */
+#define ACCESSORY_SET_HID_REPORT_DESC         56
+
+/* Control request for sending HID events.
+ *
+ *  requestType:    USB_DIR_OUT | USB_TYPE_VENDOR
+ *  request:        ACCESSORY_SEND_HID_EVENT
+ *  value:          Accessory assigned ID for the HID device
+ *  index:          0
+ *  data            the HID report for the event
+ */
+#define ACCESSORY_SEND_HID_EVENT         57
+</pre>
+
+<h2 id="interoperability-with-aoa-10-features">Interoperability with AOAv1</h2>
+
+<p>The original protocol (<a href="aoa.html">AOAv1</a>)
+provides support for an Android application to communicate directly with a USB
+host (accessory) over USB. AOAv2 continues this support and adds new features
+to allow the accessory to communicate with the Android operating system itself
+(specifically the audio and input systems). The design of AOAv2 makes it
+possible to build an accessory that uses the new audio and HID support
+in addition to the original feature set. Simply use the new features along with
+the original features.</p>
+
+<h2 id="connecting-aoa-20-without-an-android-app">Connecting AOAv2 without an
+Android app</h2>
+
+<p>You can design an accessory (such as an audio dock) that uses audio and HID
+support but does not communicate with an application on the Android device. For
+these accessories, users do not need to receive dialog prompts for finding and
+associating the newly attached accessory with an Android application that can
+communicate with it.</p>
+
+<p>To suppress such dialogs after an accessory connects, the
+accessory can choose not to send the manufacturer and model names to the Android
+device. When these strings are not provided to the Android device:</p>
+
+<ul>
+<li>The system does not attempt to find an application to communicate with the
+accessory.</li>
+<li>The accessory USB interface is not present in the Android device USB
+configuration after the device enters accessory mode.</li>
+</ul>
+
+  </body>
+</html>

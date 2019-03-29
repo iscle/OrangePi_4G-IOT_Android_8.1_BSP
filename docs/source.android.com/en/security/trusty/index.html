@@ -1,0 +1,159 @@
+<html devsite>
+  <head>
+    <title>Trusty TEE</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>Trusty is a set of software components supporting a Trusted Execution
+Environment (TEE) on mobile devices.</p>
+
+<p>Trusty consists of:</p>
+
+<ul>
+  <li>An operating system (the Trusty OS) that runs on a processor intended to
+provide a TEE
+  <li>Drivers for the Android kernel (Linux) to facilitate communication with
+applications running under the Trusty OS
+  <li>A set of libraries for Android systems software to facilitate communication
+with trusted applications executed within the Trusty OS using the kernel
+drivers
+</ul>
+
+<p><strong>Important</strong>: Trusty and the Trusty API are subject
+to change.</p>
+
+<p>For information about the Trusty API, see the <a
+href="trusty-ref.html">API Reference</a>.</p>
+
+<h2 id=uses_examples>Uses and examples</h2>
+
+<p>Any TEE OS (not just Trusty) can be used for TEE implementations.</p>
+
+<p>A TEE processor is typically a separate microprocessor in the system or a
+virtualized instance of the main processor. The TEE processor is isolated from
+the rest of the system using memory and I/O protection mechanisms supported by
+the hardware.</p>
+
+<p>TEE processors have become a mainstay in today's mobile devices. The main
+processor on these devices is considered "untrusted" and cannot access certain
+areas of RAM, hardware registers and fuses where secret data (such as
+device-specific cryptographic keys) is stored by the manufacturer. Software
+running on the main processor delegates any operations that require use of
+secret data to the TEE processor.</p>
+
+<p>The most widely known example of this in the Android ecosystem
+is the <a href="/devices/drm.html">DRM framework</a> for
+protected content. Software running on the TEE processor can access
+device-specific keys required to decrypt protected content. The main processor
+sees only the encrypted content, providing a high level of security and
+protection against software-based attacks.</p>
+
+<p>There are many other uses for a TEE such as mobile payments, secure banking,
+full-disk encryption, multi-factor authentication, device reset protection,
+replay-protected persistent storage, wireless display ("cast") of protected
+content, secure PIN and fingerprint processing, and even malware detection.</p>
+
+<p>Trusty provides APIs for developing two classes of applications:</p>
+
+<ul>
+  <li>Trusted applications or services that run on the TEE processor
+  <li>Normal/untrusted applications that run on the main processor and use services
+provided by Trusted applications
+</ul>
+
+<p>Software running on the main processor can use Trusty APIs to connect to
+trusted applications and exchange arbitrary messages with them, just like a
+network service over IP. It is up to the application to determine the data
+format and semantics of these messages using an app-level protocol. Reliable
+delivery of messages is guaranteed by the underlying Trusty infrastructure (in
+the form of drivers running on the main processor), and the communication is
+completely asynchronous.</p>
+
+<h2 id=trusted_applications_and_services>Trusted applications and services</h2>
+
+<p>Trusted applications run as isolated processes under the Trusty OS kernel. Each
+process runs in its own virtual memory sandbox utilizing the MMU capabilities
+of the TEE processor. The kernel schedules these processes using a
+priority-based, round-robin scheduler driven by a secure timer tick. In the
+current version of Trusty, all Trusty applications share the same priority.</p>
+
+<p>Applications for the Trusty OS can be written in C/C++ (C++ support is
+limited), and they have access to a small C library. The <code>main()</code>
+function currently does not take any arguments. System call stubs are provided
+in native assembly code as part of this library, so system calls can be
+accessed by name.</p>
+
+<h3 id=language_threading>Language and threading support</h3>
+
+<p>All Trusty applications are single-threaded; multithreading in Trusty userspace
+currently is unsupported.</p>
+
+<h3 id=application_structure>Application structure</h3>
+
+<p>Trusty applications initialize once during load and reside in memory until the
+TEE processor is reset. Trusty currently does not support dynamic loading and
+unloading of applications.</p>
+
+<p>Trusted applications are written as <strong>event-driven servers</strong>
+waiting for commands from other applications or from applications running on
+the main processor. Trusted applications can also be clients of other trusted
+server applications. Events described in the following API sections will be
+delivered to trusted applications by the Trusty kernel.</p>
+
+<h2 id=third-party_trusty_applications>Third-party Trusty applications</h2>
+
+<p>Currently all Trusty applications are developed by a single party and packaged
+with the Trusty kernel image. The entire image is signed and verified by the
+bootloader during boot. Third-party application development is not supported in
+this version of Trusty.</p>
+
+<p>Although the Trusty OS enables the development of new applications, doing so
+must be exercised with extreme care; each new application increases the area of
+the trusted computing base (TCB) of the system. Trusted applications can access
+device secrets and can perform computations or data transformations using them.</p>
+
+<p>The ability to develop new applications that run in the TEE opens up many
+possibilities for innovation. However, due to the very definition of TEE, these
+applications cannot be distributed without some form of <strong>trust</strong> attached.
+Typically this comes in the form of a digital signature by an entity
+trusted by the user of the product on which the application runs.</p>
+
+<h2 id=downloading_building>Downloading and building Trusty</h2>
+
+<p>You can find the Trusty implementation in the Android Open Source Project (AOSP) here:<br/>
+<a href="https://android-review.googlesource.com/#/admin/projects/?filter=trusty">https://android-review.googlesource.com/#/admin/projects/?filter=trusty</a></p>
+
+<p>The Trusty kernel branches on AOSP are here:<br/>
+<a href="https://android.googlesource.com/kernel/common/+/android-trusty-3.10">https://android.googlesource.com/kernel/common/+/android-trusty-3.10</a><br/>
+<a href="https://android.googlesource.com/kernel/common/+/android-trusty-3.18">https://android.googlesource.com/kernel/common/+/android-trusty-3.18</a></p>
+
+<p>To make Trusty, run the following commands (assuming the Android toolchain is already in the path):</p>
+<pre class="devsite-click-to-copy">
+<code class="devsite-terminal">repo init -u https://android.googlesource.com/trusty/manifest</code>
+<code class="devsite-terminal">repo sync</code>
+<code class="devsite-terminal">make -j24 generic-arm64</code>
+</pre>
+
+<p>You may select another supported build target from: <code>device/*/*/project/*</code></p>
+
+  </body>
+</html>

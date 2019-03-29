@@ -1,0 +1,223 @@
+<html devsite><head>
+    <title>APK 签名方案 v2</title>
+    <meta name="project_path" value="/_project.yaml"/>
+    <meta name="book_path" value="/_book.yaml"/>
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+<p>APK 签名方案 v2 是一种全文件签名方案，该方案能够发现对 APK 的受保护部分进行的所有更改，从而有助于加快验证速度并<a href="#integrity-protected-contents">增强完整性保证</a>。</p>
+
+<p>使用 APK 签名方案 v2 进行签名时，会在 APK 文件中插入一个 <a href="#apk-signing-block">APK 签名分块</a>，该分块位于“ZIP 中央目录”部分之前并紧邻该部分。在“APK 签名分块”内，v2 签名和签名者身份信息会存储在 <a href="#apk-signature-scheme-v2-block">APK 签名方案 v2 分块</a>中。
+</p>
+
+<p>
+  <img src="../images/apk-before-after-signing.png" alt="签名前和签名后的 APK" id="figure1"/>
+</p>
+<p class="img-caption"><strong>图 1.</strong> 签名前和签名后的 APK</p>
+
+<p>APK 签名方案 v2 是在 Android 7.0 (Nougat) 中引入的。为了使 APK 可在 Android 6.0 (Marshmallow) 及更低版本的设备上安装，应先使用 <a href="index.html#v1">JAR 签名</a>功能对 APK 进行签名，然后再使用 v2 方案对其进行签名。
+</p>
+
+<h2 id="apk-signing-block">APK 签名分块</h2>
+<p>为了保持与当前 APK 格式向后兼容，v2 及更高版本的 APK 签名会存储在“APK 签名分块”内，该分块是为了支持 APK 签名方案 v2 而引入的一个新容器。在 APK 文件中，“APK 签名分块”位于“ZIP 中央目录”（位于文件末尾）之前并紧邻该部分。
+</p>
+
+<p>该分块包含多个“ID-值”对，所采用的封装方式有助于更轻松地在 APK 中找到该分块。APK 的 v2 签名会存储为一个“ID-值”对，其中 ID 为 0x7109871a。
+</p>
+
+<h3 id="apk-signing-block-format">格式</h3>
+<p>“APK 签名分块”的格式如下（所有数字字段均采用小端字节序）：</p>
+
+<ul>
+  <li><code>size of block</code>，以字节数（不含此字段）计 (uint64)</li>
+  <li>带 uint64 长度前缀的“ID-值”对序列：<ul>
+      <li><code>ID</code> (uint32)</li>
+      <li><code>value</code>（可变长度：“ID-值”对的长度 - 4 个字节）</li>
+    </ul>
+  </li>
+  <li><code>size of block</code>，以字节数计 - 与第一个字段相同 (uint64)</li>
+  <li><code>magic</code> APK 签名分块 42（16 个字节）</li>
+</ul>
+
+<p>在解析 APK 时，首先要通过以下方法找到“ZIP 中央目录”的起始位置：在文件末尾找到“ZIP 中央目录结尾”记录，然后从该记录中读取“中央目录”的起始偏移量。通过 <code>magic</code> 值，可以快速确定“中央目录”前方可能是“APK 签名分块”。然后，通过 <code>size of
+block</code> 值，可以高效地找到该分块在文件中的起始位置。
+</p>
+
+<p>在解译该分块时，应忽略 ID 未知的“ID-值”对。
+</p>
+
+<h2 id="apk-signature-scheme-v2-block">APK 签名方案 v2 分块</h2>
+<p>APK 由一个或多个签名者/身份签名，每个签名者/身份均由一个签名密钥来表示。该信息会以“APK 签名方案 v2 分块”的形式存储。对于每个签名者，都会存储以下信息：</p>
+
+<ul>
+  <li>（签名算法、摘要、签名）元组。摘要会存储起来，以便将签名验证和 APK 内容完整性检查拆开进行。</li>
+  <li>表示签名者身份的 X.509 证书链。</li>
+  <li>采用键值对形式的其他属性。</li>
+</ul>
+
+<p>对于每位签名者，都会使用收到的列表中支持的签名来验证 APK。签名算法未知的签名会被忽略。如果遇到多个支持的签名，则由每个实现来选择使用哪个签名。这样一来，以后便能够以向后兼容的方式引入安全系数更高的签名方法。建议的方法是验证安全系数最高的签名。
+</p>
+
+<h3 id="apk-signature-scheme-v2-block-format">格式</h3>
+<p>“APK 签名方案 v2 分块”存储在“APK 签名分块”内，ID 为 <code>0x7109871a</code>。
+</p>
+
+<p>“APK 签名方案 v2 分块”的格式如下（所有数字值均采用小端字节序，所有带长度前缀的字段均使用 uint32 值表示长度）：</p>
+<ul>
+  <li>带长度前缀的 <code>signer</code>（带长度前缀）序列：<ul>
+      <li>带长度前缀的 <code>signed data</code>：<ul>
+          <li>带长度前缀的 <code>digests</code>（带长度前缀）序列：<ul>
+              <li><code>signature algorithm ID</code> (uint32)</li>
+              <li>（带长度前缀）<code>digest</code> - 请参阅<a href="#integrity-protected-contents">受完整性保护的内容</a></li>
+            </ul>
+          </li>
+          <li>带长度前缀的 X.509 <code>certificates</code> 序列：<ul>
+              <li>带长度前缀的 X.509 <code>certificate</code>（ASN.1 DER 形式）</li>
+            </ul>
+          </li>
+          <li>带长度前缀的 <code>additional attributes</code>（带长度前缀）序列：<ul>
+              <li><code>ID</code> (uint32)</li>
+              <li><code>value</code>（可变长度：附加属性的长度 - 4 个字节）</li>
+            </ul>
+          </li>
+        </ul>
+      </li>
+      <li>带长度前缀的 <code>signatures</code>（带长度前缀）序列：<ul>
+          <li><code>signature algorithm ID</code> (uint32)</li>
+          <li><code>signed data</code> 上带长度前缀的 <code>signature</code></li>
+        </ul>
+      </li>
+      <li>带长度前缀的 <code>public key</code>（SubjectPublicKeyInfo，ASN.1 DER 形式）</li>
+    </ul>
+  </li>
+</ul>
+
+<h4 id="signature-algorithm-ids">签名算法 ID</h4>
+<ul>
+  <li>0x0101 - 采用 SHA2-256 摘要、SHA2-256 MGF1、32 个字节的盐且尾部为 0xbc 的 RSASSA-PSS 算法</li>
+  <li>0x0102 - 采用 SHA2-512 摘要、SHA2-512 MGF1、64 个字节的盐且尾部为 0xbc 的 RSASSA-PSS 算法</li>
+  <li>0x0103 - 采用 SHA2-256 摘要的 RSASSA-PKCS1-v1_5 算法。此算法适用于需要确定性签名的编译系统。</li>
+  <li>0x0104 - 采用 SHA2-512 摘要的 RSASSA-PKCS1-v1_5 算法。此算法适用于需要确定性签名的编译系统。</li>
+  <li>0x0201 - 采用 SHA2-256 摘要的 ECDSA 算法</li>
+  <li>0x0202 - 采用 SHA2-512 摘要的 ECDSA 算法</li>
+  <li>0x0301 - 采用 SHA2-256 摘要的 DSA 算法</li>
+</ul>
+
+<p>Android 平台支持上述所有签名算法。签名工具可能只支持其中一部分算法。
+</p>
+
+<p>
+<strong>支持的密钥大小和 EC 曲线：</strong>
+</p>
+
+<ul>
+  <li>RSA：1024、2048、4096、8192、16384</li>
+  <li>EC：NIST P-256、P-384、P-521</li>
+  <li>DSA：1024、2048、3072</li>
+</ul>
+
+<h2 id="integrity-protected-contents">受完整性保护的内容</h2>
+
+<p>为了保护 APK 内容，APK 包含以下 4 个部分：</p>
+
+<ol>
+  <li>ZIP 条目的内容（从偏移量 0 处开始一直到“APK 签名分块”的起始位置）</li>
+  <li>APK 签名分块</li>
+  <li>ZIP 中央目录</li>
+  <li>ZIP 中央目录结尾</li>
+</ol>
+
+<p>
+  <img src="../images/apk-sections.png" alt="签名后的各个 APK 部分" id="figure2"/>
+</p>
+<p class="img-caption"><strong>图 2.</strong> 签名后的各个 APK 部分</p>
+
+<p>APK 签名方案 v2 负责保护第 1、3、4 部分的完整性，以及第 2 部分包含的“APK 签名方案 v2 分块”中的 <code>signed data</code> 分块的完整性。
+</p>
+
+<p>第 1、3 和 4 部分的完整性通过其内容的一个或多个摘要来保护，这些摘要存储在 <code>signed data</code> 分块中，而这些分块则通过一个或多个签名来保护。
+</p>
+
+<p>第 1、3 和 4 部分的摘要采用以下计算方式，类似于两级 <a href="https://en.wikipedia.org/wiki/Merkle_tree">Merkle 树</a>。每个部分都会被拆分成多个大小为 1 MB（2<sup>20</sup> 个字节）的连续块。每个部分的最后一个块可能会短一些。每个块的摘要均通过字节 <code>0xa5</code> 的连接、块的长度（采用小端字节序的 uint32 值，以字节数计）和块的内容进行计算。顶级摘要通过字节 <code>0x5a</code> 的连接、块数（采用小端字节序的 uint32 值）以及块的摘要的连接（按照块在 APK 中显示的顺序）进行计算。摘要以分块方式计算，以便通过并行处理来加快计算速度。
+</p>
+
+<p>
+  <img src="../images/apk-integrity-protection.png" alt="APK 摘要" id="figure3"/>
+</p>
+<p class="img-caption"><strong>图 3.</strong> APK 摘要</p>
+
+<p>由于第 4 部分（ZIP 中央目录结尾）包含“ZIP 中央目录”的偏移量，因此该部分的保护比较复杂。当“APK 签名分块”的大小发生变化（例如，添加了新签名）时，偏移量也会随之改变。因此，在通过“ZIP 中央目录结尾”计算摘要时，必须将包含“ZIP 中央目录”偏移量的字段视为包含“APK 签名分块”的偏移量。
+</p>
+
+<h2 id="rollback-protections">防回滚保护</h2>
+<p>攻击者可能会试图在支持对带 v2 签名的 APK 进行验证的 Android 平台上将带 v2 签名的 APK 作为带 v1 签名的 APK 进行验证。为了防范此类攻击，带 v2 签名的 APK 如果还带 v1 签名，其 META-INF/*.SF 文件的主要部分中必须包含 X-Android-APK-Signed 属性。该属性的值是一组以英文逗号分隔的 APK 签名方案 ID（v2 方案的 ID 为 2）。在验证 v1 签名时，对于此组中验证程序首选的 APK 签名方案（例如，v2 方案），如果 APK 没有相应的签名，APK 验证程序必须要拒绝这些 APK。此项保护依赖于内容 META-INF/*.SF 文件受 v1 签名保护这一事实。请参阅 <a href="#v1-verification">JAR 已签名的 APK 的验证</a>部分。
+</p>
+
+<p>攻击者可能会试图从“APK 签名方案 v2 分块”中删除安全系数较高的签名。为了防范此类攻击，对 APK 进行签名时使用的签名算法 ID 的列表会存储在通过各个签名保护的 <code>signed data</code> 分块中。
+</p>
+
+<h2 id="verification">验证</h2>
+
+<p>在 Android 7.0 中，可以根据 APK 签名方案 v2（v2 方案）或 JAR 签名（v1 方案）验证 APK。更低版本的平台会忽略 v2 签名，仅验证 v1 签名。
+</p>
+
+<p>
+  <img src="../images/apk-validation-process.png" alt="APK 签名验证过程" id="figure4"/>
+</p>
+<p class="img-caption"><strong>图 4.</strong> APK 签名验证过程（新步骤以红色显示）</p>
+
+<h3 id="v2-verification">APK 签名方案 v2 验证</h3>
+<ol>
+  <li>找到“APK 签名分块”并验证以下内容：<ol>
+      <li>“APK 签名分块”的两个大小字段包含相同的值。</li>
+      <li>“ZIP 中央目录”紧跟在“ZIP 中央目录结尾”记录后面。</li>
+      <li>“ZIP 中央目录结尾”之后没有任何数据。</li>
+    </ol>
+  </li>
+  <li>找到“APK 签名分块”中的第一个“APK 签名方案 v2 分块”。如果 v2 分块存在，则继续执行第 3 步。否则，回退至<a href="#v1-verification">使用 v1 方案</a>验证 APK。</li>
+  <li>对“APK 签名方案 v2 分块”中的每个 <code>signer</code> 执行以下操作：<ol>
+      <li>从 <code>signatures</code> 中选择安全系数最高的受支持 <code>signature algorithm ID</code>。安全系数排序取决于各个实现/平台版本。</li>
+      <li>使用 <code>public
+      key</code> 并对照 <code>signed data</code> 验证 <code>signatures</code> 中对应的 <code>signature</code>。（现在可以安全地解析 <code>signed data</code> 了。）</li>
+      <li>验证 <code>digests</code> 和 <code>signatures</code> 中的签名算法 ID 列表（有序列表）是否相同。（这是为了防止删除/添加签名。）</li>
+      <li>使用签名算法所用的同一种摘要算法<a href="#integrity-protected-contents">计算 APK 内容的摘要</a>。</li>
+      <li>验证计算出的摘要是否与 <code>digests</code> 中对应的 <code>digest</code> 相同。</li>
+      <li>验证 <code>certificates</code> 中第一个 <code>certificate</code> 的 SubjectPublicKeyInfo 是否与 <code>public key</code> 相同。</li>
+    </ol>
+  </li>
+  <li>如果找到了至少一个 <code>signer</code>，并且对于每个找到的 <code>signer</code>，第 3 步都取得了成功，APK 验证将会成功。</li>
+</ol>
+
+<p class="note"><strong>注意</strong>：如果第 3 步或第 4 步失败了，则不得使用 v1 方案验证 APK。
+</p>
+
+<h3 id="v1-verification">JAR 已签名的 APK 的验证（v1 方案）</h3>
+<p>JAR 已签名的 APK 是一种<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/jar/jar.html#Signed_JAR_File">标准的已签名 JAR</a>，其中包含的条目必须与 META-INF/MANIFEST.MF 中列出的条目完全相同，并且所有条目都必须已由同一组签名者签名。其完整性按照以下方式进行验证：</p>
+
+<ol>
+  <li>每个签名者均由一个包含 META-INF/&lt;signer&gt;.SF 和 META-INF/&lt;signer&gt;.(RSA|DSA|EC) 的 JAR 条目来表示。</li>
+  <li>&lt;signer&gt;.(RSA|DSA|EC) 是<a href="https://tools.ietf.org/html/rfc5652">具有 SignedData 结构的 PKCS #7 CMS ContentInfo</a>，其签名通过 &lt;signer&gt;.SF 文件进行验证。</li>
+  <li>&lt;signer&gt;.SF 文件包含 META-INF/MANIFEST.MF 的全文件摘要和 META-INF/MANIFEST.MF 各个部分的摘要。需要验证 MANIFEST.MF 的全文件摘要。如果该验证失败，则改为验证 MANIFEST.MF 各个部分的摘要。</li>
+  <li>对于每个受完整性保护的 JAR 条目，META-INF/MANIFEST.MF 都包含一个具有相应名称的部分，其中包含相应条目未压缩内容的摘要。所有这些摘要都需要验证。</li>
+  <li>如果 APK 包含未在 MANIFEST.MF 中列出且不属于 JAR 签名一部分的 JAR 条目，APK 验证将会失败。</li>
+</ol>
+
+<p>因此，保护链是每个受完整性保护的 JAR 条目的 &lt;signer&gt;.(RSA|DSA|EC) -&gt; &lt;signer&gt;.SF -&gt; MANIFEST.MF -&gt; 内容。
+</p>
+
+</body></html>

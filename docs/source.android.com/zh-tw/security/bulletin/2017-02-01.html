@@ -1,0 +1,1719 @@
+<html devsite>
+  <head>
+    <title>Android 安全性公告 — 2017 年 2 月</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p><em>發佈日期：2017 年 2 月 6 日 | 更新日期：2017 年 2 月 8 日</em></p>
+<p>Android 安全性公告羅列了會對 Android 裝置造成影響的安全性漏洞，並說明各項相關細節。在這篇公告發佈的同時，Google 已透過 OTA 更新機制發佈了 Google 裝置的安全性更新。此外，Google 韌體映像檔也已經發佈到 <a href="https://developers.google.com/android/nexus/images">Google Developers 網站</a>上。2017 年 2 月 5 日之後的安全修補等級已解決了這些已提及的所有問題。要瞭解如何查看裝置的安全修補等級，請參閱 <a href="https://support.google.com/pixelphone/answer/4457705#pixel_phones&amp;nexus_devices">Pixel 與 Nexus 更新時間表</a>。
+</p>
+<p>
+我們的合作夥伴在 2017 年 1 月 3 日當天或更早之前已收到公告中所述問題的相關通知。這些問題的原始碼修補程式已發佈到 Android 開放原始碼計劃 (AOSP) 存放區中，且公告中亦提供相關連結。此外，本公告也提供 AOSP 以外的修補程式連結。
+</p>
+<p>在這些問題中，最嚴重的就是「最高」等級的安全性漏洞。當系統執行媒體檔案時，遠端程式碼可利用這類漏洞，透過電子郵件、網頁瀏覽活動和多媒體訊息等方法，自動在受影響的裝置上執行。
+</p>
+<p>針對這些新發現的漏洞，我們目前尚未收到任何客戶回報相關的漏洞濫用案例。如果您想進一步瞭解 <a href="/security/enhancements/index.html">Android 安全性平台防護措施</a>和服務防護措施 (例如 <a href="https://developer.android.com/training/safetynet/index.html">SafetyNet</a>) 如何加強 Android 平台的安全性，請參閱 <a href="#mitigations">Android 和 Google 服務因應措施</a>一節。
+</p>
+<p>我們建議所有客戶接受這些裝置更新。
+</p>
+<h2 id="announcements">公告</h2>
+<ul>
+<li>本公告有兩個安全修補等級字串，讓 Android 合作夥伴能夠靈活運用，以快速修正某些發生在所有 Android 裝置上的類似漏洞。如需查詢其他相關資訊，請參閱<a href="#common-questions-and-answers">常見問題與解答</a>：
+  <ul>
+   <li><strong>2017-02-01</strong>：部分安全修補等級字串。這個安全修補等級字串表示所有與 2017-02-01 相關的問題 (以及所有先前的安全修補等級字串) 都已獲得解決。</li>
+   <li><strong>2017-02-05</strong>：完整安全修補等級字串。這個安全修補等級字串表示所有與 2017-02-01 和 2017-02-05 相關的問題 (以及所有先前的安全修補等級字串) 都已獲得解決。</li>
+  </ul>
+</li>
+<li>支援的 Google 裝置會收到一項 OTA 更新，安全修補等級為 2017 年 2 月 5 日。</li>
+</ul>
+<h2 id="security-vulnerability-summary">安全性漏洞摘要</h2>
+<p>
+下表列出各項安全性漏洞、常見弱點與漏洞 ID (CVE)、評定的嚴重程度及 Google 裝置是否會受到影響。<a href="/security/overview/updates-resources.html#severity">嚴重程度評定標準</a>是假設平台與服務的因應防護措施基於開發作業的需求而被停用，或是遭到有心人士破解，然後推算當有人惡意運用漏洞時，裝置會受到多大的影響，據此評定漏洞的嚴重程度。
+</p>
+<h3 id="2017-02-01-summary">2017-02-01 安全修補等級 — 資安漏洞摘要</h3>
+<p>
+2017-02-01 之後的安全修補等級必須解決下列問題。
+</p>
+<table>
+  <col width="55%">
+  <col width="20%">
+  <col width="13%">
+  <col width="12%">
+  <tr>
+   <th>問題</th>
+   <th>CVE</th>
+   <th>嚴重程度</th>
+   <th>是否影響 Google 裝置？</th>
+  </tr>
+  <tr>
+   <td>Surfaceflinger 中的遠端程式碼執行漏洞</td>
+   <td>CVE-2017-0405</td>
+   <td>最高</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>媒體伺服器中的遠端程式碼執行漏洞</td>
+   <td>CVE-2017-0406、CVE-2017-0407</td>
+   <td>最高</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>libgdx 中的遠端程式碼執行漏洞</td>
+   <td>CVE-2017-0408</td>
+   <td>高</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>libstagefright 中的遠端程式碼執行漏洞</td>
+   <td>CVE-2017-0409</td>
+   <td>高</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>Java.Net 中的權限升級漏洞</td>
+   <td>CVE-2016-5552</td>
+   <td>高</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>Framework API 中的權限升級漏洞</td>
+   <td>CVE-2017-0410、CVE-2017-0411、CVE-2017-0412</td>
+   <td>高</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>媒體伺服器中的權限升級漏洞</td>
+   <td>CVE-2017-0415</td>
+   <td>高</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>音訊伺服器中的權限升級漏洞</td>
+   <td>CVE-2017-0416、CVE-2017-0417、CVE-2017-0418、CVE-2017-0419</td>
+   <td>高</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>AOSP Mail 中的資訊外洩漏洞</td>
+   <td>CVE-2017-0420</td>
+   <td>高</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>AOSP Messaging 中的資訊外洩漏洞</td>
+   <td>CVE-2017-0413、CVE-2017-0414</td>
+   <td>高</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>Framework API 中的資訊外洩漏洞</td>
+   <td>CVE-2017-0421</td>
+   <td>高</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>Bionic DNS 中的拒絕服務漏洞</td>
+   <td>CVE-2017-0422</td>
+   <td>高</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>藍牙中的權限升級漏洞</td>
+   <td>CVE-2017-0423</td>
+   <td>中</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>AOSP Messaging 中的資訊外洩漏洞</td>
+   <td>CVE-2017-0424</td>
+   <td>中</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>音訊伺服器中的資訊外洩漏洞</td>
+   <td>CVE-2017-0425</td>
+   <td>中</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>檔案系統中的資訊外洩漏洞</td>
+   <td>CVE-2017-0426</td>
+   <td>中</td>
+   <td>是</td>
+  </tr>
+</table>
+<h3 id="2017-02-05-summary">2017-02-05 安全修補等級 — 資安漏洞摘要</h3>
+<p>2017-02-05 以後的安全修補等級必須解決 2017-02-01 的所有問題以及下列問題。</p>
+<table>
+  <col width="55%">
+  <col width="20%">
+  <col width="13%">
+  <col width="12%">
+  <tr>
+   <th>問題</th>
+   <th>CVE</th>
+   <th>嚴重程度</th>
+   <th>是否影響 Google 裝置？</th>
+  </tr>
+  <tr>
+   <td>Qualcomm 加密驅動程式中的遠端程式碼執行漏洞</td>
+   <td>CVE-2016-8418</td>
+   <td>最高</td>
+   <td>否*</td>
+  </tr>
+  <tr>
+   <td>核心檔案系統中的權限升級漏洞</td>
+   <td>CVE-2017-0427</td>
+   <td>最高</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>NVIDIA GPU 驅動程式中的權限升級漏洞</td>
+   <td>CVE-2017-0428、CVE-2017-0429</td>
+   <td>最高</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>核心網路子系統中的權限升級漏洞</td>
+   <td>CVE-2014-9914</td>
+   <td>最高</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>Broadcom Wi-Fi 驅動程式中的權限升級漏洞</td>
+   <td>CVE-2017-0430</td>
+   <td>最高</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>Qualcomm 元件中的漏洞</td>
+   <td>CVE-2017-0431</td>
+   <td>最高</td>
+   <td>否*</td>
+  </tr>
+  <tr>
+   <td>MediaTek 驅動程式中的權限升級漏洞</td>
+   <td>CVE-2017-0432</td>
+   <td>高</td>
+   <td>否*</td>
+  </tr>
+  <tr>
+   <td>Synaptics 觸控螢幕驅動程式中的權限升級漏洞</td>
+   <td>CVE-2017-0433、CVE-2017-0434</td>
+   <td>高</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>Qualcomm 安全執行環境通訊工具驅動程式中的權限升級漏洞</td>
+   <td>CVE-2016-8480</td>
+   <td>高</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>Qualcomm 音效驅動程式中的權限升級漏洞</td>
+   <td>CVE-2016-8481、CVE-2017-0435、CVE-2017-0436</td>
+   <td>高</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>Qualcomm Wi-Fi 驅動程式中的權限升級漏洞</td>
+   <td>CVE-2017-0437、CVE-2017-0438、CVE-2017-0439、CVE-2016-8419、CVE-2016-8420、CVE-2016-8421、CVE-2017-0440、CVE-2017-0441、CVE-2017-0442、CVE-2017-0443、CVE-2016-8476</td>
+   <td>高</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>Realtek 音效驅動程式中的權限升級漏洞</td>
+   <td>CVE-2017-0444</td>
+   <td>高</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>HTC 觸控螢幕驅動程式中的權限升級漏洞</td>
+   <td>CVE-2017-0445、CVE-2017-0446、CVE-2017-0447</td>
+   <td>高</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>NVIDIA 視訊驅動程式中的資訊外洩漏洞</td>
+   <td>CVE-2017-0448</td>
+   <td>高</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>Broadcom Wi-Fi 驅動程式中的權限升級漏洞</td>
+   <td>CVE-2017-0449</td>
+   <td>中</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>音訊伺服器中的權限升級漏洞</td>
+   <td>CVE-2017-0450</td>
+   <td>中</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>核心檔案系統中的權限升級漏洞</td>
+   <td>CVE-2016-10044</td>
+   <td>中</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>Qualcomm 安全執行環境通訊工具中的資訊外洩漏洞</td>
+   <td>CVE-2016-8414</td>
+   <td>中</td>
+   <td>是</td>
+  </tr>
+  <tr>
+   <td>Qualcomm 音效驅動程式中的資訊外洩漏洞</td>
+   <td>CVE-2017-0451</td>
+   <td>中</td>
+   <td>是</td>
+  </tr>
+</table>
+
+<p>* 如果是搭載 Android 7.0 以上版本的 Google 裝置 (必須是受支援的機型，且已安裝所有可用更新)，就不會受到這個漏洞所影響。</p>
+
+<h2 id="mitigations">Android 和 Google 服務問題因應措施</h2>
+<p>本節概述 <a href="/security/enhancements/index.html">Android 安全性平台</a>和 SafetyNet 等服務防護方案針對資安漏洞所提供的因應措施。這些措施可有效防範有心人士在 Android 系統上惡意運用安全性漏洞來達到特定目的。</p>
+<ul>
+  <li>由於 Android 平台藉由持續更新升級來強化安全性，因此有心人士越來越難找出 Android 系統的漏洞加以利用。我們建議所有使用者盡可能更新至最新版的 Android。</li>
+  <li>Android 安全性小組採用<a href="http://static.googleusercontent.com/media/source.android.com/en//security/reports/Google_Android_Security_2015_Report_Final.pdf">「驗證應用程式」和 SafetyNet</a> 主動監控濫用情形；這些功能的用途是在發現<a href="http://static.googleusercontent.com/media/source.android.com/en//security/reports/Google_Android_Security_PHA_classifications.pdf">可能有害的應用程式</a>時警告使用者。「驗證應用程式」在搭載 <a href="http://www.android.com/gms">Google 行動服務</a>的裝置上都會預設啟用，且對於要從 Google Play 以外來源安裝應用程式的使用者來說格外重要。Google Play 禁止發佈任何可用於獲取裝置 Root 權限的工具，但「驗證應用程式」會在使用者嘗試安裝已偵測到的 Root 權限獲取應用程式 (無論其來源為何) 時發出警告。此外，「驗證應用程式」會設法找出已知會利用權限升級漏洞的惡意應用程式，並封鎖這類應用程式的安裝作業。如果使用者已安裝這類應用程式，「驗證應用程式」會通知使用者並嘗試移除偵測到的應用程式。</li>
+  <li>在適用情況下，Google Hangouts 和 Messenger 應用程式不會自動將媒體內容傳送給媒體伺服器這類的處理程序。</li>
+</ul>
+<h2 id="acknowledgements">特別銘謝</h2>
+<p>感謝以下研究人員做出的貢獻：
+</p>
+<ul>
+  <li>Daniel Dakhno：CVE-2017-0420</li>
+  <li>Copperhead Security 的 Daniel Micay：CVE-2017-0410</li>
+  <li><a href="http://www.linkedin.com/in/dzima">Dzmitry Lukyanenka</a>：CVE-2017-0414</li>
+  <li>Google Chrome 成員 Frank Liberato：CVE-2017-0409</li>
+  <li>Google Project Zero 成員 Gal Beniamini：CVE-2017-0411、CVE-2017-0412</li>
+  <li>奇虎 360 IceSword 實驗室的 Gengjia Chen (<a href="https://twitter.com/chengjia4574">@chengjia4574</a>) 和 <a href="http://weibo.com/jfpan">pjf</a>：CVE-2017-0434、CVE-2017-0446、CVE-2017-0447、CVE-2017-0432</li>
+  <li><a href="http://www.360.com">奇虎 360 科技有限公司</a> Alpha 小組的 Guang Gong (龚广) (<a href="https://twitter.com/oldfresher">@oldfresher</a>)：CVE-2017-0415</li>
+  <li><a href="http://c0reteam.org">C0RE 小組</a>成員 <a href="mailto:arnow117@gmail.com">Hanxiang Wen</a>、<a href="mailto:vancouverdou@gmail.com">Wenke Dou</a>、Mingjian Zhou (<a href="https://twitter.com/Mingjian_Zhou">@Mingjian_Zhou</a>) 和 Xuxian Jiang：CVE-2017-0418</li>
+  <li>奇虎 360 科技有限公司 Alpha 小組的 Hao Chen 和 Guang Gong：CVE-2017-0437、CVE-2017-0438、CVE-2017-0439、CVE-2016-8419、CVE-2016-8420、CVE-2016-8421、CVE-2017-0441、CVE-2017-0442、CVE-2016-8476、CVE-2017-0443</li>
+  <li>Google 的 Jeff Sharkey：CVE-2017-0421、CVE-2017-0423</li>
+  <li>Jeff Trim：CVE-2017-0422</li>
+  <li>奇虎 360 IceSword 實驗室的 Jianqiang Zhao (<a href="https://twitter.com/jianqiangzhao">@jianqiangzhao</a>) 和 <a href="http://weibo.com/jfpan ">pjf</a>：CVE-2017-0445</li>
+  <li>LINE Corporation 的 ma.la 和 Nikolay Elenkov：CVE-2016-5552</li>
+  <li>Google 的 Max Spector：CVE-2017-0416</li>
+  <li><a href="http://c0reteam.org">C0RE 小組</a>成員 Mingjian Zhou (<a href="https://twitter.com/Mingjian_Zhou">@Mingjian_Zhou</a>)、Yuqi Lu (<a href="https://twitter.com/nikos233__">@nikos233</a>) 和 Xuxian Jiang：CVE-2017-0425</li>
+  <li>騰訊科恩實驗室的 Qidan He (何淇丹) (<a href="https://twitter.com/flanker_hqd">@flanker_hqd</a>) 和 Di Shen (申迪) (<a href="https://twitter.com/returnsme">@returnsme</a>)：CVE-2017-0427</li>
+  <li>IBM X-Force Research 的 Sagi Kedmi：CVE-2017-0433</li>
+  <li>Copperhead Security 的 Scott Bauer (<a href="http://twitter.com/ScottyBauer1">@ScottyBauer1</a>) 和 Daniel Micay：CVE-2017-0405</li>
+  <li>趨勢科技行動威脅研究小組成員 Seven Shen (<a href="https://twitter.com/lingtongshen">@lingtongshen</a>)：CVE-2017-0449、CVE-2016-8418</li>
+  <li><a href="http://c0reteam.org">C0RE 小組</a>成員 <a href="mailto:segfault5514@gmail.com">Tong Lin</a>、<a href="mailto:computernik@gmail.com">Yuan-Tsung Lo</a>、Chiachih Wu (<a href="https://twitter.com/chiachih_wu">@chiachih_wu</a>) 和 Xuxian Jiang：CVE-2017-0436、CVE-2016-8481、CVE-2017-0435</li>
+  <li><a href="http://www.trendmicro.com">趨勢科技</a><a href="http://blog.trendmicro.com/trendlabs-security-intelligence/category/mobile">行動威脅研究小組成員</a> V.E.O (<a href="https://twitter.com/vysea">@VYSEa</a>)：CVE-2017-0424</li>
+  <li>阿里巴巴的 Weichao Sun (<a href="https://twitter.com/sunblate">@sunblate</a>)：CVE-2017-0407</li>
+  <li><a href="http://c0reteam.org">C0RE 小組</a>成員 <a href="mailto:vancouverdou@gmail.com">Wenke Dou</a>、<a href="mailto:hlhan@bupt.edu.cn">Hongli Han</a>、Mingjian Zhou (<a href="https://twitter.com/Mingjian_Zhou">@Mingjian_Zhou</a>) 和 Xuxian Jiang：CVE-2017-0450</li>
+  <li><a href="http://c0reteam.org">C0RE 小組</a>成員 <a href="mailto:vancouverdou@gmail.com">Wenke Dou</a>、Yuqi Lu (<a href="https://twitter.com/nikos233__">@nikos233</a>)、Mingjian Zhou (<a href="https://twitter.com/Mingjian_Zhou">@Mingjian_Zhou</a>) 和 Xuxian Jiang：CVE-2017-0417</li>
+  <li>螞蟻金服光年安全實驗室 Wish Wu (<a href="https://twitter.com/wish_wu">@wish_wu</a>) (<a href="http://www.weibo.com/wishlinux">吴潍浠</a> 此彼)：CVE-2017-0408</li>
+  <li><a href="http://c0reteam.org">C0RE 小組</a>成員 <a href="mailto:yaojun8558363@gmail.com">Yao Jun</a>、<a href="mailto:computernik@gmail.com">Yuan-Tsung Lo</a>、Chiachih Wu (<a href="https://twitter.com/chiachih_wu">@chiachih_wu</a>) 和 Xuxian Jiang：CVE-2016-8480</li>
+  <li><a href="http://c0reteam.org">C0RE 小組</a>成員 <a href="mailto:computernik@gmail.com">Yuan-Tsung Lo</a>、Chiachih Wu (<a href="https://twitter.com/chiachih_wu">@chiachih_wu</a>) 和 Xuxian Jiang：CVE-2017-0444</li>
+  <li><a href="http://c0reteam.org">C0RE 小組</a>成員<a href="mailto:computernik@gmail.com"> Yuan-Tsung Lo</a>、<a href="mailto:segfault5514@gmail.com">Tong Lin</a>、Chiachih Wu (<a href="https://twitter.com/chiachih_wu">@chiachih_wu</a>) 和 Xuxian Jiang：CVE-2017-0428</li>
+  <li><a href="http://c0reteam.org">C0RE 小組</a>成員 <a href="mailto:computernik@gmail.com">Yuan-Tsung Lo</a>、<a href="mailto:wisedd@gmail.com">Xiaodong Wang</a>、Chiachih Wu (<a href="https://twitter.com/chiachih_wu">@chiachih_wu</a>) 和 Xuxian Jiang：CVE-2017-0448、CVE-2017-0429</li>
+  <li><a href="http://www.nsfocus.com">綠盟科技</a>的 <a href="mailto:zhouzhenster@gmail.com">Zhen Zhou</a> (<a href="https://twitter.com/henices">@henices</a>) 和 <a href="mailto:sundaywind2004@gmail.com">Zhixin Li</a>：CVE-2017-0406</li>
+</ul>
+<p>
+另外感謝以下人員對本公告相關問題做出的貢獻：</p><ul>
+<li>百度安全實驗室的 Pengfei Ding (丁鹏飞)、Chenfu Bao (包沉浮) 和 Lenx Wei (韦韬)</li>
+</ul>
+
+<h2 id="2017-02-01-details">2017-02-01 安全修補等級 — 資安漏洞詳情</h2>
+<p>
+下列各節針對上方 <a href="#2017-02-01-summary">2017-02-01 安全修補等級 — 資安漏洞摘要</a>中列出的各項安全性漏洞提供了詳細資訊，包括問題說明、嚴重程度評定原因，以及一份漏洞資訊表，顯示漏洞的 CVE、相關參考資料、嚴重程度、更新的 Google 裝置、更新的 AOSP 版本 (在適用情況下) 和回報日期。假如相關錯誤有公開變更，該錯誤 ID 會連結到相對應的變更 (例如 AOSP 變更清單)。如果單一錯誤有多項相關變更，其他參考資料可透過該錯誤 ID 後面的編號連結開啟。</p>
+
+
+<h3 id="rce-in-surfaceflinger">Surfaceflinger 中的遠端程式碼執行漏洞</h3>
+<p>在媒體檔案和資料的處理期間，Surfaceflinger 中的遠端程式碼執行漏洞可能會讓攻擊者能利用特製檔案造成記憶體出錯。由於這個問題可能會讓遠端程式碼在 Surfaceflinger 程序環境內執行，因此嚴重程度被評定為「最高」。
+</p>
+
+<table>
+  <col width="18%">
+  <col width="17%">
+  <col width="10%">
+  <col width="19%">
+  <col width="18%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>參考資料</th>
+    <th>嚴重程度</th>
+    <th>更新的 Google 裝置</th>
+    <th>更新的 AOSP 版本</th>
+    <th>回報日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0405</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/native/+/16110b86db164e8d2b6864fed58f0385fe7d0979">
+    A-31960359</a></td>
+    <td>最高</td>
+    <td>全部</td>
+    <td>7.0、7.1.1</td>
+    <td>2016 年 10 月 4 日</td>
+  </tr>
+</table>
+
+
+<h3 id="rce-in-mediaserver">媒體伺服器中的遠端程式碼執行漏洞</h3>
+<p>在媒體檔案和資料的處理期間，媒體伺服器中的遠端程式碼執行漏洞可能會讓攻擊者能利用特製檔案造成記憶體出錯。由於這個問題可能會讓遠端程式碼在媒體伺服器程序環境內執行，因此嚴重程度被評定為「最高」。
+</p>
+
+<table>
+  <col width="18%">
+  <col width="17%">
+  <col width="10%">
+  <col width="19%">
+  <col width="18%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>參考資料</th>
+    <th>嚴重程度</th>
+    <th>更新的 Google 裝置</th>
+    <th>更新的 AOSP 版本</th>
+    <th>回報日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0406</td>
+    <td><a href="https://android.googlesource.com/platform/external/libhevc/+/fed702734d86801cc86b4865a57e2f2028c4b575">
+    A-32915871</a>
+[<a href="https://android.googlesource.com/platform/external/libhevc/+/df7b56457184600e3d2b7cbac87ebe7001f7cb48">2</a>]</td>
+    <td>最高</td>
+    <td>全部</td>
+    <td>6.0、6.0.1、7.0、7.1.1</td>
+    <td>2016 年 11 月 14 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0407</td>
+    <td><a href="https://android.googlesource.com/platform/external/libhevc/+/7546c106004910a4583b2d7d03c6498ecf383da7">
+    A-32873375</a></td>
+    <td>最高</td>
+    <td>全部</td>
+    <td>6.0、6.0.1、7.0、7.1.1</td>
+    <td>2016 年 11 月 12 日</td>
+  </tr>
+</table>
+
+
+<h3 id="rce-in-libgdx">libgdx 中的遠端程式碼執行漏洞</h3>
+<p>
+libgdx 中的遠端程式碼執行漏洞可能會讓攻擊者能利用特製檔案在未獲授權程序的環境中執行任何指令。由於這個問題可能會讓遠端程式碼在使用這個程式庫的應用程式中執行，因此嚴重程度被評定為「高」。
+</p>
+
+<table>
+  <col width="18%">
+  <col width="17%">
+  <col width="10%">
+  <col width="19%">
+  <col width="18%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>參考資料</th>
+    <th>嚴重程度</th>
+    <th>更新的 Google 裝置</th>
+    <th>更新的 AOSP 版本</th>
+    <th>回報日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0408</td>
+    <td><a href="https://android.googlesource.com/platform/external/libgdx/+/e6da772e70c9754966aabf4ddac73bb99eb1742b">
+    A-32769670</a></td>
+    <td>高</td>
+    <td>全部</td>
+    <td>7.1.1</td>
+    <td>2016 年 11 月 9 日</td>
+  </tr>
+</table>
+
+
+<h3 id="rce-in-libstagefright">libstagefright 中的遠端程式碼執行漏洞</h3>
+<p>
+libstagefright 中的遠端程式碼執行漏洞可能會讓攻擊者能利用特製檔案在未獲授權程序的環境中執行任何指令。由於這個問題可能會讓遠端程式碼在使用這個程式庫的應用程式中執行，因此嚴重程度被評定為「高」。
+</p>
+
+<table>
+  <col width="18%">
+  <col width="17%">
+  <col width="10%">
+  <col width="19%">
+  <col width="18%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>參考資料</th>
+    <th>嚴重程度</th>
+    <th>更新的 Google 裝置</th>
+    <th>更新的 AOSP 版本</th>
+    <th>回報日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0409</td>
+    <td><a href="https://android.googlesource.com/platform/external/libavc/+/72886b6964f6539908c8e127cd13c3091d2e5a8b">
+    A-31999646</a></td>
+    <td>高</td>
+    <td>全部</td>
+    <td>6.0、6.0.1、7.0、7.1.1</td>
+    <td>Google 內部</td>
+  </tr>
+</table>
+
+
+<h3 id="eop-in-java.net">Java.Net 中的權限升級漏洞</h3>
+<p>
+Java.Net 程式庫中的權限升級漏洞可能會讓惡意網頁內容在未經許可的情況下，將使用者重新導向至另一個網站。由於這個問題可能會讓有心人士從遠端規避使用者互動要求，因此嚴重程度被評定為「高」。
+</p>
+
+<table>
+  <col width="18%">
+  <col width="17%">
+  <col width="10%">
+  <col width="19%">
+  <col width="18%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>參考資料</th>
+    <th>嚴重程度</th>
+    <th>更新的 Google 裝置</th>
+    <th>更新的 AOSP 版本</th>
+    <th>回報日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-5552</td>
+    <td><a href="https://android.googlesource.com/platform/libcore/+/4b3f2c6c5b84f80fae8eeeb46727811e055715ea">
+    A-31858037</a></td>
+    <td>高</td>
+    <td>全部</td>
+    <td>7.0、7.1.1</td>
+    <td>2016 年 9 月 30 日</td>
+  </tr>
+</table>
+
+
+<h3 id="eop-in-framework-apis">Framework API 中的權限升級漏洞</h3>
+<p>
+Framework API 中的權限升級漏洞可能會讓本機惡意應用程式在獲得授權的程序環境內執行任何指令。由於這個問題可用於取得某些進階功能的本機存取權，第三方應用程式通常無法存取這類功能，因此嚴重程度被評定為「高」。
+</p>
+
+<table>
+  <col width="18%">
+  <col width="17%">
+  <col width="10%">
+  <col width="19%">
+  <col width="18%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>參考資料</th>
+    <th>嚴重程度</th>
+    <th>更新的 Google 裝置</th>
+    <th>更新的 AOSP 版本</th>
+    <th>回報日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0410</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/native/+/b4d6b292bce7d82c93fd454078dedf5a1302b9fa">
+    A-31929765</a></td>
+    <td>高</td>
+    <td>全部</td>
+    <td>5.0.2、5.1.1、6.0、6.0.1、7.0、7.1.1</td>
+    <td>2016 年 10 月 2 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0411</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/base/+/203725e4d58e16334d84998c1483c374f541ed9f">
+    A-33042690</a>
+[<a href="https://android.googlesource.com/platform/frameworks/base/+/31a06019d13d7b00ca35fc8512191c643acb8e84">2</a>]</td>
+    <td>高</td>
+    <td>全部</td>
+    <td>7.0、7.1.1</td>
+    <td>2016 年 11 月 21 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0412</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/base/+/203725e4d58e16334d84998c1483c374f541ed9f">
+    A-33039926</a>
+[<a href="https://android.googlesource.com/platform/frameworks/base/+/31a06019d13d7b00ca35fc8512191c643acb8e84">2</a>]</td>
+    <td>高</td>
+    <td>全部</td>
+    <td>7.0、7.1.1</td>
+    <td>2016 年 11 月 21 日</td>
+  </tr>
+</table>
+
+<h3 id="eop-in-mediaserver">媒體伺服器中的權限升級漏洞</h3>
+<p>
+媒體伺服器中的權限升級漏洞可能會讓本機惡意應用程式在獲得授權的程序環境內執行任何指令。由於這個問題可用於取得某些進階功能的本機存取權，第三方應用程式通常無法存取這類功能，因此嚴重程度被評定為「高」。
+</p>
+
+<table>
+  <col width="18%">
+  <col width="17%">
+  <col width="10%">
+  <col width="19%">
+  <col width="18%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>參考資料</th>
+    <th>嚴重程度</th>
+    <th>更新的 Google 裝置</th>
+    <th>更新的 AOSP 版本</th>
+    <th>回報日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0415</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/native/+/2e16d5fac149dab3c3e8f1b2ca89f45cf55a7b34">
+    A-32706020</a></td>
+    <td>高</td>
+    <td>全部</td>
+    <td>6.0、6.0.1、7.0、7.1.1</td>
+    <td>2016 年 11 月 4 日</td>
+  </tr>
+</table>
+
+
+<h3 id="eop-in-audioserver">音訊伺服器中的權限升級漏洞</h3>
+<p>音訊伺服器中的權限升級漏洞可能會讓本機惡意應用程式在獲得授權的程序環境內執行任何指令。由於這個問題可用於取得某些進階功能的本機存取權，第三方應用程式通常無法存取這類功能，因此嚴重程度被評定為「高」。
+</p>
+
+<table>
+  <col width="18%">
+  <col width="17%">
+  <col width="10%">
+  <col width="19%">
+  <col width="18%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>參考資料</th>
+    <th>嚴重程度</th>
+    <th>更新的 Google 裝置</th>
+    <th>更新的 AOSP 版本</th>
+    <th>回報日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0416</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/av/+/b0bcddb44d992e74140a3f5eedc7177977ea8e34">
+    A-32886609</a>
+ [<a href="https://android.googlesource.com/platform/frameworks/av/+/321ea5257e37c8edb26e66fe4ee78cca4cd915fe">2</a>]</td>
+    <td>高</td>
+    <td>全部</td>
+    <td>4.4.4、5.0.2、5.1.1、6.0、6.0.1、7.0、7.1.1</td>
+    <td>Google 內部</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0417</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/av/+/b0bcddb44d992e74140a3f5eedc7177977ea8e34">
+    A-32705438</a></td>
+    <td>高</td>
+    <td>全部</td>
+    <td>4.4.4、5.0.2、5.1.1、6.0、6.0.1、7.0、7.1.1</td>
+    <td>2016 年 11 月 7 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0418</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/av/+/b0bcddb44d992e74140a3f5eedc7177977ea8e34">
+    A-32703959</a>
+[<a href="https://android.googlesource.com/platform/hardware/libhardware/+/534098cb29e1e4151ba2ed83d6a911d0b6f48522">2</a>]</td>
+    <td>高</td>
+    <td>全部</td>
+    <td>4.4.4、5.0.2、5.1.1、6.0、6.0.1、7.0、7.1.1</td>
+    <td>2016 年 11 月 7 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0419</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/av/+/a155de4d70e0b9ac8fc02b2bdcbb2e8e6cca46ff">
+    A-32220769</a></td>
+    <td>高</td>
+    <td>全部</td>
+    <td>4.4.4、5.0.2、5.1.1、6.0、6.0.1、7.0、7.1.1</td>
+    <td>2016 年 10 月 15 日</td>
+  </tr>
+</table>
+
+<h3 id="id-in-aosp-mail">AOSP Mail 中的資訊外洩漏洞</h3>
+<p>
+AOSP Mail 中的資訊外洩漏洞可能會讓本機惡意應用程式規避作業系統為了將應用程式資料與其他應用程式隔離而採取的防護措施。由於這個問題可用於取得某個應用程式無法存取的資料，因此嚴重程度被評定為「高」。
+</p>
+
+<table>
+  <col width="18%">
+  <col width="17%">
+  <col width="10%">
+  <col width="19%">
+  <col width="18%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>參考資料</th>
+    <th>嚴重程度</th>
+    <th>更新的 Google 裝置</th>
+    <th>更新的 AOSP 版本</th>
+    <th>回報日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0420</td>
+    <td><a href="https://android.googlesource.com/platform/packages/apps/UnifiedEmail/+/2073799a165e6aa15117f8ad76bb0c7618b13909">
+    A-32615212</a></td>
+    <td>高</td>
+    <td>全部</td>
+    <td>4.4.4、5.0.2、5.1.1、6.0、6.0.1、7.0、7.1.1</td>
+    <td>2016 年 9 月 12 日</td>
+  </tr>
+</table>
+
+
+<h3 id="id-in-aosp-messaging">AOSP Messaging 中的資訊外洩漏洞</h3>
+<p>
+AOSP Messaging 中的資訊外洩漏洞可能會讓本機惡意應用程式規避作業系統為了將應用程式資料與其他應用程式隔離而採取的防護措施。由於這個問題可用於取得某個應用程式無法存取的資料，因此嚴重程度被評定為「高」。
+</p>
+
+<table>
+  <col width="18%">
+  <col width="17%">
+  <col width="10%">
+  <col width="19%">
+  <col width="18%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>參考資料</th>
+    <th>嚴重程度</th>
+    <th>更新的 Google 裝置</th>
+    <th>更新的 AOSP 版本</th>
+    <th>回報日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0413</td>
+    <td><a href="https://android.googlesource.com/platform/packages/apps/Messaging/+/74059eb379ea07b9c7f46bf2112a60de8e4cfc8e">
+    A-32161610</a></td>
+    <td>高</td>
+    <td>全部</td>
+    <td>6.0、6.0.1、7.0、7.1.1</td>
+    <td>2016 年 10 月 13 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0414</td>
+    <td><a href="https://android.googlesource.com/platform/packages/apps/Messaging/+/30ab77f42d20c33c0aa9e6ffd2b164d096db32dd">
+    A-32807795</a></td>
+    <td>高</td>
+    <td>全部</td>
+    <td>6.0、6.0.1、7.0、7.1.1</td>
+    <td>2016 年 11 月 10 日</td>
+  </tr>
+</table>
+
+
+<h3 id="id-in-framework-apis">Framework API 中的資訊外洩漏洞</h3>
+<p>
+Framework API 中的資訊外洩漏洞可能會讓本機惡意應用程式規避作業系統為了將應用程式資料與其他應用程式隔離而採取的防護措施。由於這個問題可用於取得某個應用程式無法存取的資料，因此嚴重程度被評定為「高」。
+</p>
+
+<table>
+  <col width="18%">
+  <col width="17%">
+  <col width="10%">
+  <col width="19%">
+  <col width="18%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>參考資料</th>
+    <th>嚴重程度</th>
+    <th>更新的 Google 裝置</th>
+    <th>更新的 AOSP 版本</th>
+    <th>回報日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0421</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/base/+/858064e946dc8dbf76bff9387e847e211703e336">
+    A-32555637</a></td>
+    <td>高</td>
+    <td>全部</td>
+    <td>5.0.2、5.1.1、6.0、6.0.1、7.0、7.1.1</td>
+    <td>Google 內部</td>
+  </tr>
+</table>
+
+
+<h3 id="dos-in-bionic-dns">Bionic DNS 中的拒絕服務漏洞</h3>
+<p>
+Bionic DNS 中的拒絕服務漏洞可能會讓遠端攻擊者能利用特製網路封包造成裝置停止運作或重新開機。由於這個問題可能會造成遠端拒絕服務，因此嚴重程度被評定為「高」。
+
+</p>
+
+<table>
+  <col width="18%">
+  <col width="17%">
+  <col width="10%">
+  <col width="19%">
+  <col width="18%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>參考資料</th>
+    <th>嚴重程度</th>
+    <th>更新的 Google 裝置</th>
+    <th>更新的 AOSP 版本</th>
+    <th>回報日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0422</td>
+    <td><a href="https://android.googlesource.com/platform/bionic/+/dba3df609436d7697305735818f0a840a49f1a0d">
+    A-32322088</a></td>
+    <td>高</td>
+    <td>全部</td>
+    <td>4.4.4、5.0.2、5.1.1、6.0、6.0.1、7.0、7.1.1</td>
+    <td>2016 年 10 月 20 日</td>
+  </tr>
+</table>
+
+
+<h3 id="eop-in-bluetooth">藍牙中的權限升級漏洞</h3>
+<p>
+藍牙中的權限升級漏洞可能會讓鄰近的攻擊者管理裝置上的文件存取權。由於這種攻擊必須在發生另一個藍牙堆疊漏洞的攻擊行為後才能執行，因此這個問題的嚴重程度被評定為「中」。
+</p>
+
+<table>
+  <col width="18%">
+  <col width="17%">
+  <col width="10%">
+  <col width="19%">
+  <col width="18%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>參考資料</th>
+    <th>嚴重程度</th>
+    <th>更新的 Google 裝置</th>
+    <th>更新的 AOSP 版本</th>
+    <th>回報日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0423</td>
+    <td><a href="https://android.googlesource.com/platform/packages/apps/Bluetooth/+/4c1f39e1cf203cb9db7b85e75b5fc32ec7132083">
+    A-32612586</a></td>
+    <td>中</td>
+    <td>全部</td>
+    <td>5.0.2、5.1.1、6.0、6.0.1、7.0、7.1.1</td>
+    <td>2016 年 11 月 2 日</td>
+  </tr>
+</table>
+
+
+<h3 id="id-in-aosp-messaging-2">AOSP Messaging 中的資訊外洩漏洞</h3>
+<p>
+AOSP Messaging 中的資訊外洩漏洞可能會讓遠端攻擊者透過特製檔案存取其權限等級以外的資料。由於這個問題可能會讓有心人士在授權程序中規避一般的使用者層級深度防禦措施或防範攻擊技術，因此嚴重程度被評定為「中」。
+</p>
+
+<table>
+  <col width="18%">
+  <col width="17%">
+  <col width="10%">
+  <col width="19%">
+  <col width="18%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>參考資料</th>
+    <th>嚴重程度</th>
+    <th>更新的 Google 裝置</th>
+    <th>更新的 AOSP 版本</th>
+    <th>回報日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0424</td>
+    <td><a href="https://android.googlesource.com/platform/packages/apps/Messaging/+/e9b7e3a6b7a8886693d298401a20788816a5afdc">
+    A-32322450</a></td>
+    <td>中</td>
+    <td>全部</td>
+    <td>6.0、6.0.1、7.0、7.1.1</td>
+    <td>2016 年 10 月 20 日</td>
+  </tr>
+</table>
+
+
+<h3 id="id-in-audioserver">音訊伺服器中的資訊外洩漏洞</h3>
+<p>
+音訊伺服器中的資訊外洩漏洞可能會讓本機惡意應用程式存取其權限等級以外的資料。由於這個問題可能導致有心人士在未獲授權的情況下存取機密資料，因此嚴重程度被評定為「中」。
+</p>
+
+<table>
+  <col width="18%">
+  <col width="17%">
+  <col width="10%">
+  <col width="19%">
+  <col width="18%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>參考資料</th>
+    <th>嚴重程度</th>
+    <th>更新的 Google 裝置</th>
+    <th>更新的 AOSP 版本</th>
+    <th>回報日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0425</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/av/+/a155de4d70e0b9ac8fc02b2bdcbb2e8e6cca46ff">
+    A-32720785</a></td>
+    <td>中</td>
+    <td>全部</td>
+    <td>4.4.4、5.0.2、5.1.1、6.0、6.0.1、7.0、7.1.1</td>
+    <td>2016 年 11 月 7 日</td>
+  </tr>
+</table>
+
+
+<h3 id="id-in-filesystem">檔案系統中的資訊外洩漏洞</h3>
+<p>
+檔案系統中的資訊外洩漏洞可讓本機惡意應用程式存取其權限等級以外的資料。由於這個問題可能導致有心人士在未獲授權的情況下存取機密資料，因此嚴重程度被評定為「中」。
+</p>
+
+<table>
+  <col width="18%">
+  <col width="17%">
+  <col width="10%">
+  <col width="19%">
+  <col width="18%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>參考資料</th>
+    <th>嚴重程度</th>
+    <th>更新的 Google 裝置</th>
+    <th>更新的 AOSP 版本</th>
+    <th>回報日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0426</td>
+    <td><a href="https://android.googlesource.com/platform/system/sepolicy/+/ae46511bfa62b56938b3df824bb2ee737dceaa7a">
+    A-32799236</a>
+[<a href="https://android.googlesource.com/platform/system/core/+/0e7324e9095a209d4f06ba00812b2b2976fe2846">2</a>]</td>
+    <td>中</td>
+    <td>全部</td>
+    <td>7.0、7.1.1</td>
+    <td>Google 內部</td>
+  </tr>
+</table>
+
+
+<h2 id="2017-02-05-details">2017-02-05 安全修補等級 — 資安漏洞詳情</h2>
+<p>
+下列各節針對上方 <a href="#2017-02-05-summary">2017-02-05 安全修補等級 — 資安漏洞摘要</a>中列出的各項安全性漏洞提供了詳細資訊，包括問題說明、嚴重程度評定原因，以及一份漏洞資訊表，顯示漏洞的 CVE、相關參考資料、嚴重程度、更新的 Google 裝置、更新的 AOSP 版本 (在適用情況下) 和回報日期。假如相關錯誤有公開變更，該錯誤 ID 會連結到相對應的變更 (例如 AOSP 變更清單)。如果單一錯誤有多項相關變更，其他參考資料可透過該錯誤 ID 後面的編號連結開啟。</p>
+
+
+<h3 id="rce-in-qualcomm-crypto-driver">Qualcomm 加密驅動程式中的遠端程式碼執行漏洞</h3>
+<p>
+Qualcomm 加密驅動程式中的遠端程式碼執行漏洞可能會讓遠端攻擊者在核心環境內執行任何程式碼。由於這個問題可能會讓遠端程式碼在核心環境內執行，因此嚴重程度被評定為「最高」。
+</p>
+
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>參考資料</th>
+    <th>嚴重程度</th>
+    <th>更新的 Google 裝置</th>
+    <th>回報日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-8418</td>
+    <td>A-32652894<br>
+        <a href="https://source.codeaurora.org/quic/la/kernel/msm-3.18/commit/?id=8f8066581a8e575a7d57d27f36c4db63f91ca48f">
+QC-CR#1077457</a></td>
+    <td>最高</td>
+    <td>無*</td>
+    <td>2016 年 10 月 10 日</td>
+  </tr>
+</table>
+<p>
+* 如果是搭載 Android 7.0 以上版本的 Google 裝置 (必須是受支援的機型，且已安裝所有可用更新)，就不會受到這個漏洞所影響。
+</p>
+
+
+<h3 id="eop-in-kernel-file-system">核心檔案系統中的權限升級漏洞</h3>
+<p>
+核心檔案系統中的權限升級漏洞可能會讓本機惡意應用程式在核心環境內執行任何指令。由於這個問題可能導致本機裝置的安全性徹底被破壞，造成使用者必須以還原 (Re-flash) 作業系統的方式才能修復裝置，因此嚴重程度被評定為「最高」。
+</p>
+
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>參考資料</th>
+    <th>嚴重程度</th>
+    <th>更新的 Google 裝置</th>
+    <th>回報日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0427</td>
+    <td>A-31495866*</td>
+    <td>最高</td>
+    <td>Nexus 5X、Nexus 6、Nexus 6P、Nexus 9、Android One、Pixel C、Nexus Player、Pixel、Pixel XL</td>
+    <td>2016 年 9 月 13 日</td>
+  </tr>
+</table>
+<p>* 這個問題的修補程式並未開放給一般使用者下載，而是直接整合在最新的 Nexus 裝置專用驅動程式的安裝檔中。您可以前往 <a href="https://developers.google.com/android/nexus/drivers">Google Developers 網站</a>下載這些驅動程式。
+</p>
+
+
+<h3 id="eop-in-nvidia-gpu-driver">NVIDIA GPU 驅動程式中的權限升級漏洞</h3>
+<p>
+NVIDIA GPU 驅動程式中的權限升級漏洞可能會讓本機惡意應用程式在核心環境內執行任何指令。由於這個問題可能導致本機裝置的安全性徹底被破壞，造成使用者必須以還原 (Re-flash) 作業系統的方式才能修復裝置，因此嚴重程度被評定為「最高」。
+</p>
+
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>參考資料</th>
+    <th>嚴重程度</th>
+    <th>更新的 Google 裝置</th>
+    <th>回報日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0428</td>
+    <td>A-32401526*<br>
+        N-CVE-2017-0428</td>
+    <td>最高</td>
+    <td>Nexus 9</td>
+    <td>2016 年 10 月 25 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0429</td>
+    <td>A-32636619*<br>
+        N-CVE-2017-0429</td>
+    <td>最高</td>
+    <td>Nexus 9</td>
+    <td>2016 年 11 月 3 日</td>
+  </tr>
+</table>
+<p>* 這個問題的修補程式並未開放給一般使用者下載，而是直接整合在最新的 Nexus 裝置專用驅動程式的安裝檔中。您可以前往 <a href="https://developers.google.com/android/nexus/drivers">Google Developers 網站</a>下載這些驅動程式。
+</p>
+
+
+<h3 id="eop-in-kernel-networking-subsystem">核心網路子系統中的權限升級漏洞</h3>
+<p>
+核心網路子系統中的權限升級漏洞可能會讓本機惡意應用程式在核心環境內執行任何指令。由於這個問題可能導致本機裝置的安全性徹底被破壞，造成使用者必須以還原 (Re-flash) 作業系統的方式才能修復裝置，因此嚴重程度被評定為「最高」。
+</p>
+
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>參考資料</th>
+    <th>嚴重程度</th>
+    <th>更新的 Google 裝置</th>
+    <th>回報日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2014-9914</td>
+    <td>A-32882659<br>
+        <a href="http://git.kernel.org/cgit/linux/kernel/git/torvalds/linux.git/commit/?id=9709674e68646cee5a24e3000b3558d25412203a">
+上游程式庫核心</a></td>
+    <td>最高</td>
+    <td>Nexus 6、Nexus Player</td>
+    <td>2016 年 11 月 9 日</td>
+  </tr>
+</table>
+
+
+<h3 id="eop-in-broadcom-wi-fi-driver">Broadcom Wi-Fi 驅動程式中的權限升級漏洞</h3>
+<p>
+Broadcom Wi-Fi 驅動程式中的權限升級漏洞可能會讓本機惡意應用程式在核心環境內執行任何指令。由於這個問題可能導致本機裝置的安全性徹底被破壞，造成使用者必須以還原 (Re-flash) 作業系統的方式才能修復裝置，因此嚴重程度被評定為「最高」。
+</p>
+
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>參考資料</th>
+    <th>嚴重程度</th>
+    <th>更新的 Google 裝置</th>
+    <th>回報日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0430</td>
+    <td>A-32838767*<br>
+        B-RB#107459</td>
+    <td>最高</td>
+    <td>Nexus 6、Nexus 6P、Nexus 9、Pixel C、Nexus Player</td>
+    <td>Google 內部</td>
+  </tr>
+</table>
+<p>* 這個問題的修補程式並未開放給一般使用者下載，而是直接整合在最新的 Nexus 裝置專用驅動程式的安裝檔中。您可以前往 <a href="https://developers.google.com/android/nexus/drivers">Google Developers 網站</a>下載這些驅動程式。
+</p>
+
+
+<h3 id="vulnerabilities-in-qualcomm-components">Qualcomm 元件中的漏洞</h3>
+<p>
+以下列出會影響 Qualcomm 元件的安全性漏洞，詳情請參考 2016 年 9 月的 Qualcomm AMSS 安全性公告。
+</p>
+
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>參考資料</th>
+    <th>嚴重程度*</th>
+    <th>更新的 Google 裝置</th>
+    <th>回報日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0431</td>
+    <td>A-32573899**</td>
+    <td>最高</td>
+    <td>無***</td>
+    <td>Qualcomm 內部</td>
+  </tr>
+</table>
+<p>
+* 這些漏洞的嚴重程度是由廠商自行評定。
+</p>
+<p>
+** 這個問題的修補程式並未公開提供，而是直接整合在最新的 Nexus 裝置專用驅動程式的安裝檔中。您可以前往 <a href="https://developers.google.com/android/nexus/drivers">Google Developers 網站</a>下載這些驅動程式。
+</p>
+<p>
+*** 如果是搭載 Android 7.0 以上版本的 Google 裝置 (必須是受支援的機型，且已安裝所有可用更新)，就不會受到這個漏洞所影響。
+</p>
+
+
+<h3 id="eop-in-mediatek-driver">MediaTek 驅動程式中的權限升級漏洞</h3>
+<p>
+MediaTek 驅動程式中的權限升級漏洞可能會讓本機惡意應用程式在核心環境內執行任何指令。由於這種攻擊必須先破壞特定獲授權的程序才能執行，因此這個問題的嚴重程度被評定為「高」。
+</p>
+
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>參考資料</th>
+    <th>嚴重程度</th>
+    <th>更新的 Google 裝置</th>
+    <th>回報日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0432</td>
+    <td>A-28332719*<br>
+        M-ALPS02708925</td>
+    <td>高</td>
+    <td>無**</td>
+    <td>2016 年 4 月 21 日</td>
+  </tr>
+</table>
+<p>* 這個問題的修補程式並未開放給一般使用者下載，而是直接整合在最新的 Nexus 裝置專用驅動程式的安裝檔中。您可以前往 <a href="https://developers.google.com/android/nexus/drivers">Google Developers 網站</a>下載這些驅動程式。
+</p>
+<p>
+** 如果是搭載 Android 7.0 以上版本的 Google 裝置 (必須是受支援的機型，且已安裝所有可用更新)，就不會受到這個漏洞所影響。
+</p>
+
+
+<h3 id="eop-in-synaptics-touchscreen-driver">Synaptics 觸控螢幕驅動程式中的權限升級漏洞</h3>
+<p>
+Synaptics 觸控螢幕驅動程式中的權限升級漏洞可能會讓本機惡意應用程式在觸控螢幕晶片組環境內執行任何指令。由於這種攻擊必須先破壞特定獲授權的程序才能執行，因此這個問題的嚴重程度被評定為「高」。
+</p>
+
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>參考資料</th>
+    <th>嚴重程度</th>
+    <th>更新的 Google 裝置</th>
+    <th>回報日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0433</td>
+    <td>A-31913571*</td>
+    <td>高</td>
+    <td>Nexus 6P、Nexus 9、Android One、Pixel、Pixel XL</td>
+    <td>2016 年 9 月 8 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0434</td>
+    <td>A-33001936*</td>
+    <td>高</td>
+    <td>Pixel、Pixel XL</td>
+    <td>2016 年 11 月 18 日</td>
+  </tr>
+</table>
+<p>* 這個問題的修補程式並未開放給一般使用者下載，而是直接整合在最新的 Nexus 裝置專用驅動程式的安裝檔中。您可以前往 <a href="https://developers.google.com/android/nexus/drivers">Google Developers 網站</a>下載這些驅動程式。
+</p>
+
+
+<h3 id="eop-in-qualcomm-secure-execution-environment-communicator-driver">Qualcomm 安全執行環境通訊工具驅動程式中的權限升級漏洞</h3>
+<p>
+Qualcomm 安全執行環境通訊工具驅動程式中的權限升級漏洞可能會讓本機惡意應用程式在核心環境內執行任何指令。由於這種攻擊必須先破壞特定獲授權的程序才能執行，因此這個問題的嚴重程度被評定為「高」。
+</p>
+
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>參考資料</th>
+    <th>嚴重程度</th>
+    <th>更新的 Google 裝置</th>
+    <th>回報日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-8480</td>
+    <td>A-31804432<br>
+        <a href="https://source.codeaurora.org/quic/la/kernel/msm-3.10/commit/?id=0ed0f061bcd71940ed65de2ba46e37e709e31471">
+QC-CR#1086186</a>
+[<a href="https://source.codeaurora.org/quic/la/kernel/msm-3.18/commit/?id=cd70f6025a7bbce89af7a7abf4c40a219fdea406">2</a>]</td>
+    <td>高</td>
+    <td>Nexus 5X、Nexus 6、Nexus 6P、Android One、Pixel、Pixel XL</td>
+    <td>2016 年 9 月 28 日</td>
+  </tr>
+</table>
+
+
+<h3 id="eop-in-qualcomm-sound-driver">Qualcomm 音效驅動程式中的權限升級漏洞</h3>
+<p>
+Qualcomm 音效驅動程式中的權限升級漏洞可能會讓本機惡意應用程式在核心環境內執行任何指令。由於這種攻擊必須先破壞特定獲授權的程序才能執行，因此這個問題的嚴重程度被評定為「高」。
+</p>
+
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>參考資料</th>
+    <th>嚴重程度</th>
+    <th>更新的 Google 裝置</th>
+    <th>回報日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-8481</td>
+    <td>A-31906415*<br>
+        QC-CR#1078000</td>
+    <td>高</td>
+    <td>Nexus 5X、Nexus 6P、Pixel、Pixel XL</td>
+    <td>2016 年 10 月 1 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0435</td>
+    <td>A-31906657*<br>
+        QC-CR#1078000</td>
+    <td>高</td>
+    <td>Nexus 5X、Nexus 6P、Pixel、Pixel XL</td>
+    <td>2016 年 10 月 1 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0436</td>
+    <td>A-32624661*<br>
+        QC-CR#1078000</td>
+    <td>高</td>
+    <td>Nexus 5X、Nexus 6P、Pixel、Pixel XL</td>
+    <td>2016 年 11 月 2 日</td>
+  </tr>
+</table>
+<p>* 這個問題的修補程式並未開放給一般使用者下載，而是直接整合在最新的 Nexus 裝置專用驅動程式的安裝檔中。您可以前往 <a href="https://developers.google.com/android/nexus/drivers">Google Developers 網站</a>下載這些驅動程式。
+</p>
+
+
+<h3 id="eop-in-qualcomm-wi-fi-driver">Qualcomm Wi-Fi 驅動程式中的權限升級漏洞</h3>
+<p>
+Qualcomm Wi-Fi 驅動程式中的權限升級漏洞可能會讓本機惡意應用程式在核心環境內執行任何指令。由於這種攻擊必須先破壞特定獲授權的程序才能執行，因此這個問題的嚴重程度被評定為「高」。
+</p>
+
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>參考資料</th>
+    <th>嚴重程度</th>
+    <th>更新的 Google 裝置</th>
+    <th>回報日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0437</td>
+    <td>A-32402310<br>
+        <a href="https://source.codeaurora.org/quic/la/platform/vendor/qcom-opensource/wlan/qcacld-2.0/commit/?id=1f0b036dc74ccb6e9f0a03a540efdb0876f5ca77">
+QC-CR#1092497</a></td>
+    <td>高</td>
+    <td>Nexus 5X、Pixel、Pixel XL</td>
+    <td>2016 年 10 月 25 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0438</td>
+    <td>A-32402604<br>
+        <a href="https://source.codeaurora.org/quic/la/platform/vendor/qcom-opensource/wlan/qcacld-2.0/commit/?id=1f0b036dc74ccb6e9f0a03a540efdb0876f5ca77">
+QC-CR#1092497</a></td>
+    <td>高</td>
+    <td>Nexus 5X、Pixel、Pixel XL</td>
+    <td>2016 年 10 月 25 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0439</td>
+    <td>A-32450647<br>
+        <a href="https://source.codeaurora.org/quic/la/platform/vendor/qcom-opensource/wlan/qcacld-2.0/commit/?id=81b6b5538d3227ed4b925fcceedb109abb2a4c61">
+QC-CR#1092059</a></td>
+    <td>高</td>
+    <td>Nexus 5X、Pixel、Pixel XL</td>
+    <td>2016 年 10 月 25 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-8419</td>
+    <td>A-32454494<br>
+        <a href="https://source.codeaurora.org/quic/la/platform/vendor/qcom-opensource/wlan/qcacld-2.0/commit/?id=9ba50d536227666a5b6abd51f2b122675d950488">
+QC-CR#1087209</a></td>
+    <td>高</td>
+    <td>Nexus 5X、Pixel、Pixel XL</td>
+    <td>2016 年 10 月 26 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-8420</td>
+    <td>A-32451171<br>
+        <a href="https://source.codeaurora.org/quic/la/platform/vendor/qcom-opensource/wlan/qcacld-2.0/commit/?id=c6597e015a7ce5ee71d3725fc55e64fc50923f4e">
+QC-CR#1087807</a></td>
+    <td>高</td>
+    <td>Nexus 5X、Pixel、Pixel XL</td>
+    <td>2016 年 10 月 26 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-8421</td>
+    <td>A-32451104<br>
+        <a href="https://source.codeaurora.org/quic/la/platform/vendor/qcom-opensource/wlan/qcacld-2.0/commit/?id=61a5cdb9adc96645583f528ac923e6e59f3abbcb">
+QC-CR#1087797</a></td>
+    <td>高</td>
+    <td>Nexus 5X、Pixel、Pixel XL</td>
+    <td>2016 年 10 月 26 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0440</td>
+    <td>A-33252788<br>
+        <a href="https://source.codeaurora.org/quic/la/platform/vendor/qcom-opensource/wlan/qcacld-2.0/commit/?id=10f0051f7b3b9a7635b0762a8cf102f595f7a268">
+QC-CR#1095770</a></td>
+    <td>高</td>
+    <td>Nexus 5X、Pixel、Pixel XL</td>
+    <td>2016 年 11 月 11 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0441</td>
+    <td>A-32872662<br>
+        <a href="https://source.codeaurora.org/quic/la/platform/vendor/qcom-opensource/wlan/qcacld-2.0/commit/?id=da87131740351b833f17f05dfa859977bc1e7684">
+QC-CR#1095009</a></td>
+    <td>高</td>
+    <td>Nexus 5X、Pixel、Pixel XL</td>
+    <td>2016 年 11 月 11 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0442</td>
+    <td>A-32871330<br>
+        <a href="https://source.codeaurora.org/quic/la/platform/vendor/qcom-opensource/wlan/qcacld-2.0/commit/?id=1f0b036dc74ccb6e9f0a03a540efdb0876f5ca77">
+QC-CR#1092497</a></td>
+    <td>高</td>
+    <td>Nexus 5X、Pixel、Pixel XL</td>
+    <td>2016 年 11 月 13 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0443</td>
+    <td>A-32877494<br>
+        <a href="https://source.codeaurora.org/quic/la/platform/vendor/qcom-opensource/wlan/qcacld-2.0/commit/?id=1f0b036dc74ccb6e9f0a03a540efdb0876f5ca77">
+QC-CR#1092497</a></td>
+    <td>高</td>
+    <td>Nexus 5X、Pixel、Pixel XL</td>
+    <td>2016 年 11 月 13 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2016-8476</td>
+    <td>A-32879283<br>
+        <a href="https://source.codeaurora.org/quic/la/platform/vendor/qcom-opensource/wlan/qcacld-2.0/commit/?id=bfe8035bce6fec72ed1d064b94529fce8fb09799">
+QC-CR#1091940</a></td>
+    <td>高</td>
+    <td>Nexus 5X、Pixel、Pixel XL</td>
+    <td>2016 年 11 月 14 日</td>
+  </tr>
+</table>
+
+
+<h3 id="eop-in-realtek-sound-driver">Realtek 音效驅動程式中的權限升級漏洞</h3>
+<p>
+Realtek 音效驅動程式中的權限升級漏洞可能會讓本機惡意應用程式在核心環境內執行任何指令。由於這種攻擊必須先破壞特定獲授權的程序才能執行，因此這個問題的嚴重程度被評定為「高」。
+</p>
+
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>參考資料</th>
+    <th>嚴重程度</th>
+    <th>更新的 Google 裝置</th>
+    <th>回報日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0444</td>
+    <td>A-32705232*</td>
+    <td>高</td>
+    <td>Nexus 9</td>
+    <td>2016 年 11 月 7 日</td>
+  </tr>
+</table>
+<p>* 這個問題的修補程式並未開放給一般使用者下載，而是直接整合在最新的 Nexus 裝置專用驅動程式的安裝檔中。您可以前往 <a href="https://developers.google.com/android/nexus/drivers">Google Developers 網站</a>下載這些驅動程式。
+</p>
+
+
+<h3 id="eop-in-htc-touchscreen-driver">HTC 觸控螢幕驅動程式中的權限升級漏洞</h3>
+<p>
+HTC 觸控螢幕驅動程式中的權限升級漏洞可能會讓本機惡意應用程式在核心環境內執行任何指令。由於這種攻擊必須先破壞特定獲授權的程序才能執行，因此這個問題的嚴重程度被評定為「高」。
+</p>
+
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>參考資料</th>
+    <th>嚴重程度</th>
+    <th>更新的 Google 裝置</th>
+    <th>回報日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0445</td>
+    <td>A-32769717*</td>
+    <td>高</td>
+    <td>Pixel、Pixel XL</td>
+    <td>2016 年 11 月 9 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0446</td>
+    <td>A-32917445*</td>
+    <td>高</td>
+    <td>Pixel、Pixel XL</td>
+    <td>2016 年 11 月 15 日</td>
+  </tr>
+  <tr>
+    <td>CVE-2017-0447</td>
+    <td>A-32919560*</td>
+    <td>高</td>
+    <td>Pixel、Pixel XL</td>
+    <td>2016 年 11 月 15 日</td>
+  </tr>
+</table>
+<p>* 這個問題的修補程式並未開放給一般使用者下載，而是直接整合在最新的 Nexus 裝置專用驅動程式的安裝檔中。您可以前往 <a href="https://developers.google.com/android/nexus/drivers">Google Developers 網站</a>下載這些驅動程式。
+</p>
+
+
+<h3 id="id-in-nvidia-video-driver">NVIDIA 視訊驅動程式中的資訊外洩漏洞</h3>
+<p>
+NVIDIA 視訊驅動程式中的資訊外洩漏洞可能會讓本機惡意應用程式存取其權限等級以外的資料。由於這個問題可用於在未獲使用者明確授權的情況下存取機密資料，因此嚴重程度被評定為「高」。
+</p>
+
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>參考資料</th>
+    <th>嚴重程度</th>
+    <th>更新的 Google 裝置</th>
+    <th>回報日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0448</td>
+    <td>A-32721029*<br>
+        N-CVE-2017-0448</td>
+    <td>高</td>
+    <td>Nexus 9</td>
+    <td>2016 年 11 月 7 日</td>
+  </tr>
+</table>
+<p>* 這個問題的修補程式並未開放給一般使用者下載，而是直接整合在最新的 Nexus 裝置專用驅動程式的安裝檔中。您可以前往 <a href="https://developers.google.com/android/nexus/drivers">Google Developers 網站</a>下載這些驅動程式。
+</p>
+
+
+<h3 id="eop-in-broadcom-wi-fi-driver-2">Broadcom Wi-Fi 驅動程式中的權限升級漏洞</h3>
+<p>
+Broadcom Wi-Fi 驅動程式中的權限升級漏洞可能會讓本機惡意應用程式在核心環境內執行任何指令。由於這種攻擊必須先破壞特定獲授權的程序才能執行，而目前平台的設定可進行防範，因此這個問題的嚴重程度被評定為「中」。
+</p>
+
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>參考資料</th>
+    <th>嚴重程度</th>
+    <th>更新的 Google 裝置</th>
+    <th>回報日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0449</td>
+    <td>A-31707909*<br>
+        B-RB#32094</td>
+    <td>中</td>
+    <td>Nexus 6、Nexus 6P</td>
+    <td>2016 年 9 月 23 日</td>
+  </tr>
+</table>
+<p>* 這個問題的修補程式並未開放給一般使用者下載，而是直接整合在最新的 Nexus 裝置專用驅動程式的安裝檔中。您可以前往 <a href="https://developers.google.com/android/nexus/drivers">Google Developers 網站</a>下載這些驅動程式。
+</p>
+
+
+<h3 id="eop-in-audioserver-2">音訊伺服器中的權限升級漏洞</h3>
+<p>音訊伺服器中的權限升級漏洞可能會讓本機惡意應用程式在獲得授權的程序環境內執行任何指令。由於目前平台的設定可防範這種攻擊，因此這個問題的嚴重程度被評定為「中」。
+</p>
+
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>參考資料</th>
+    <th>嚴重程度</th>
+    <th>更新的 Google 裝置</th>
+    <th>回報日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0450</td>
+    <td>A-32917432*</td>
+    <td>中</td>
+    <td>Nexus 9</td>
+    <td>2016 年 11 月 15 日</td>
+  </tr>
+</table>
+<p>* 這個問題的修補程式並未開放給一般使用者下載，而是直接整合在最新的 Nexus 裝置專用驅動程式的安裝檔中。您可以前往 <a href="https://developers.google.com/android/nexus/drivers">Google Developers 網站</a>下載這些驅動程式。
+</p>
+
+
+<h3 id="eop-in-kernel-file-system-2">核心檔案系統中的權限升級漏洞</h3>
+<p>
+核心檔案系統中的權限升級漏洞可能會讓本機惡意應用程式規避系統為了防止權限升級而採取的防護措施。由於這個問題可能會讓有心人士規避一般的使用者層級深度防禦措施或防範攻擊技術，因此嚴重程度被評定為「中」。
+</p>
+
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>參考資料</th>
+    <th>嚴重程度</th>
+    <th>更新的 Google 裝置</th>
+    <th>回報日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-10044</td>
+    <td>A-31711619*</td>
+    <td>中</td>
+    <td>Nexus 5X、Nexus 6、Nexus 6P、Nexus 9、Android One、Pixel C、Nexus Player、Pixel、Pixel XL</td>
+    <td>Google 內部</td>
+  </tr>
+</table>
+<p>* 這個問題的修補程式並未開放給一般使用者下載，而是直接整合在最新的 Nexus 裝置專用驅動程式的安裝檔中。您可以前往 <a href="https://developers.google.com/android/nexus/drivers">Google Developers 網站</a>下載這些驅動程式。
+</p>
+
+
+<h3 id="id-in-qualcomm-secure-execution-environment-communicator">Qualcomm 安全執行環境通訊工具中的資訊外洩漏洞</h3>
+<p>
+Qualcomm 安全執行環境通訊工具中的資訊外洩漏洞可能會讓本機惡意應用程式存取其權限等級以外的資料。由於這種攻擊必須先破壞特定獲授權的程序才能執行，因此這個問題的嚴重程度被評定為「中」。
+</p>
+
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>參考資料</th>
+    <th>嚴重程度</th>
+    <th>更新的 Google 裝置</th>
+    <th>回報日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2016-8414</td>
+    <td>A-31704078<br>
+        <a href="https://source.codeaurora.org/quic/la/kernel/msm-3.10/commit/?id=320970d3da9b091e96746424c44649a91852a846">
+QC-CR#1076407</a></td>
+    <td>中</td>
+    <td>Nexus 5X、Nexus 6P、Android One、Pixel、Pixel XL</td>
+    <td>2016 年 9 月 23 日</td>
+  </tr>
+</table>
+
+
+<h3 id="id-in-qualcomm-sound-driver">Qualcomm 音效驅動程式中的資訊外洩漏洞</h3>
+<p>
+Qualcomm 音效驅動程式中的資訊外洩漏洞可能會讓本機惡意應用程式存取其權限等級以外的資料。由於這種攻擊必須先破壞特定獲授權的程序才能執行，因此這個問題的嚴重程度被評定為「中」。
+</p>
+
+<table>
+  <col width="19%">
+  <col width="20%">
+  <col width="10%">
+  <col width="23%">
+  <col width="17%">
+  <tr>
+    <th>CVE</th>
+    <th>參考資料</th>
+    <th>嚴重程度</th>
+    <th>更新的 Google 裝置</th>
+    <th>回報日期</th>
+  </tr>
+  <tr>
+    <td>CVE-2017-0451</td>
+    <td>A-31796345<br>
+        <a href="https://source.codeaurora.org/quic/la/kernel/msm-3.10/commit/?id=59f55cd40b5f44941afc78b78e5bf81ad3dd723e">
+QC-CR#1073129</a>
+[<a href="https://source.codeaurora.org/quic/la/kernel/msm-3.10/commit/?id=35346beb2d8882115f698ab22a96803552b5c57e">2</a>]</td>
+    <td>中</td>
+    <td>Nexus 5X、Nexus 6P、Android One、Pixel、Pixel XL</td>
+    <td>2016 年 9 月 27 日</td>
+  </tr>
+</table>
+
+<h2 id="common-questions-and-answers">常見問題與解答</h2>
+<p>如果您在閱讀這篇公告後有任何疑問，可參考本節的常見問答。</p>
+<p><strong>1. 如何判斷我目前的裝置軟體版本是否已修正這些問題？</strong></p>
+<p>要瞭解如何查看裝置的安全修補等級，請詳讀 <a href="https://support.google.com/pixelphone/answer/4457705#pixel_phones&amp;nexus_devices">Pixel 和 Nexus 更新時間表</a>中的操作說明。</p>
+<ul>
+  <li>2017 年 2 月 1 日之後的安全修補等級已解決了所有與 2017-02-01 安全修補等級相關的問題。</li>
+  <li>2017 年 2 月 5 日之後的安全修補等級完全解決了與 2017-02-05 安全修補等級及所有先前修補等級相關的問題。
+  </li>
+</ul>
+<p>提供這些更新的裝置製造商應將修補程式字串等級設定為：</p>
+<ul>
+<li><code>[ro.build.version.security_patch]:[2017-02-01]</code></li>
+<li><code>[ro.build.version.security_patch]:[2017-02-05]</code></li>
+</ul>
+
+<p><strong>2. 為什麼這篇公告有兩種安全修補等級？</strong></p>
+
+<p>本公告有兩種安全修補等級，讓 Android 合作夥伴能夠靈活運用，以快速修正某些發生在所有 Android 裝置上的類似漏洞。我們建議 Android 合作夥伴修正本公告所列的所有問題，並使用最新的安全修補等級。</p>
+<ul>
+  <li>安全修補等級為 2017 年 1 月 1 日的裝置必須納入所有與該安全修補等級相關的問題，以及在之前安全性公告中回報的所有問題適用的修正程式。</li>
+  <li>如果裝置的安全修補等級在 2017 年 1 月 5 日之後，就必須加入本安全性公告 (以及之前公告) 中的所有適用修補程式。</li>
+</ul>
+<p>我們建議合作夥伴將所要解決的所有問題適用修補程式包裝在單一更新中。</p>
+<p><strong>3. 如何判斷哪些 Google 裝置會受到哪種問題的影響？</strong></p>
+<p>在 <a href="#2017-02-01-details">2017-02-01</a> 和 <a href="#2017-02-05-details">2017-02-05</a> 安全性漏洞詳情的章節中，每個表格都包含「更新的 Google 裝置」<em></em>欄，當中列出已針對各個問題進行更新的受影響 Google 裝置範圍。此欄中的選項包括：</p>
+<ul>
+  <li><strong>所有 Google 裝置</strong>：如果問題會影響到「全部」和 Pixel 裝置，表格內「更新的 Google 裝置」<em></em>欄中就會顯示「全部」字樣。「全部」包含下列<a href="https://support.google.com/pixelphone/answer/4457705#pixel_phones&amp;nexus_devices">支援的裝置</a>：Nexus 5X、Nexus 6、Nexus 6P、Nexus 7 (2013)、Nexus 9、Android One、Nexus Player、Pixel C、Pixel 和 Pixel XL。</li>
+  <li><strong>部分 Google 裝置</strong>：如果問題並未影響到所有 Google 裝置，則「更新的 Google 裝置」<em></em>欄中會列出受影響的 Google 裝置。</li>
+  <li><strong>無 Google 裝置</strong>：如果問題不會影響到任何搭載 Android 7.0 的 Google 裝置，「更新的 Google 裝置」<em></em>欄中就會顯示「無」字樣。</li>
+</ul>
+<p><strong>4. 參考資料欄中的項目會對應到什麼？</strong></p>
+<p>資安漏洞詳情表格中「參考資料」<em></em>欄底下的項目可能會包含一個前置字串，用以表示該參考資料值所屬的公司。這些前置字元代表的意義如下：</p>
+<table>
+  <tr>
+   <th>前置字元</th>
+   <th>參考資料</th>
+  </tr>
+  <tr>
+   <td>A-</td>
+   <td>Android 錯誤 ID</td>
+  </tr>
+  <tr>
+   <td>QC-</td>
+   <td>Qualcomm 參考編號</td>
+  </tr>
+  <tr>
+   <td>M-</td>
+   <td>MediaTek 參考編號</td>
+  </tr>
+  <tr>
+   <td>N-</td>
+   <td>NVIDIA 參考編號</td>
+  </tr>
+  <tr>
+   <td>B-</td>
+   <td>Broadcom 參考編號</td>
+  </tr>
+</table>
+
+<h2 id="revisions">修訂版本</h2>
+<ul>
+  <li>2017 年 2 月 6 日：發佈公告。</li>
+  <li>2017 年 2 月 8 日：在公告中加入 AOSP 連結。</li>
+</ul>
+
+  </body>
+</html>

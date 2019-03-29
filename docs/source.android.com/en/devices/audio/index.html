@@ -1,0 +1,131 @@
+<html devsite>
+  <head>
+    <title>Audio</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<img style="float: right; margin: 0px 15px 15px 15px;"
+src="images/ape_fwk_hal_audio.png" alt="Android Audio HAL icon"/>
+
+<p>
+Android's audio Hardware Abstraction Layer (HAL) connects the higher-level,
+audio-specific framework APIs in <a href="http://developer.android.com/reference/android/media/package-summary.html">android.media</a> to the underlying audio driver and
+hardware. This section includes implementation instructions and tips for
+improving performance.
+</p>
+
+<h2 id="Architecture">Audio Architecture</h2>
+<p>
+Android audio architecture defines how audio functionality is implemented and
+points to the relevant source code involved in the implementation.
+</p>
+
+<img src="images/ape_fwk_audio.png" alt="Audio architecture" id="figure1" />
+
+<p class="img-caption">
+<strong>Figure 1.</strong> Android audio architecture
+</p>
+
+<dl>
+
+<dt>
+Application framework
+</dt>
+<dd>
+The application framework includes the app code, which uses the <a href="http://developer.android.com/reference/android/media/package-summary.html">android.media</a> APIs to
+interact with audio hardware. Internally, this code calls corresponding JNI glue
+classes to access the native code that interacts with audio hardware.
+</dd>
+
+<dt>
+JNI
+</dt>
+<dd>
+The JNI code associated with <a href="http://developer.android.com/reference/android/media/package-summary.html">android.media</a> calls lower level native code to access audio
+hardware. JNI is located in <code>frameworks/base/core/jni/</code> and
+<code>frameworks/base/media/jni</code>.
+</dd>
+
+<dt>
+Native framework
+</dt>
+<dd>
+The native framework provides a native equivalent to the <a href="http://developer.android.com/reference/android/media/package-summary.html">android.media</a> package, calling
+Binder IPC proxies to access the audio-specific services of the media server.
+Native framework code is located in <code>frameworks/av/media/libmedia</code>.
+</dd>
+
+<dt>
+Binder IPC
+</dt>
+<dd>
+Binder IPC proxies facilitate communication over process boundaries. Proxies are
+located in <code>frameworks/av/media/libmedia</code> and begin with the letter
+"I".
+</dd>
+
+<dt>
+Media server
+</dt>
+<dd>
+The media server contains audio services, which are the actual code that
+interacts with your HAL implementations. The media server is located in
+<code>frameworks/av/services/audioflinger</code>.
+</dd>
+
+<dt>
+HAL
+</dt>
+<dd>
+The HAL defines the standard interface that audio services call into and that
+you must implement for your audio hardware to function correctly. The audio HAL
+interfaces are located in <code>hardware/libhardware/include/hardware</code>.
+For details, see <a
+href="https://android.googlesource.com/platform/hardware/libhardware/+/master/include/hardware/audio.h">audio.h</a>.
+</dd>
+
+<dt>
+Kernel driver
+</dt>
+<dd>
+The audio driver interacts with your hardware and HAL implementation. You can
+use Advanced Linux Sound Architecture (ALSA), Open Sound System (OSS), or a
+custom driver (HAL is driver-agnostic).
+<p class="note"><strong>Note</strong>: If you use ALSA, we recommend
+<code>external/tinyalsa</code> for the user portion of the driver because of its
+compatible licensing (the standard user-mode library is GPL-licensed).</p>
+</dd>
+
+<dt>
+Android native audio based on Open SL ES <em>(not shown)</em>
+</dt>
+<dd>
+This API is exposed as part of
+<a href="https://developer.android.com/tools/sdk/ndk/index.html">Android NDK</a>
+and is at the same architecture level as
+<a href="http://developer.android.com/reference/android/media/package-summary.html">android.media</a>.
+</dd>
+
+</dl>
+
+  </body>
+</html>

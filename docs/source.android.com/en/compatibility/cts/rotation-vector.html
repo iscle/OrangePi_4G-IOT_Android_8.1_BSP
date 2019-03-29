@@ -1,0 +1,166 @@
+<html devsite>
+  <head>
+    <title>Rotation Vector CV Crosscheck</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+<div class="attempt-right" style="width:214px">
+  <img src="images/acircles_pattern_reduced.png" alt="Test pattern thumbnail" height="166" />
+  <p class="img-caption">
+    <strong>Figure 1.</strong> Thumbnail of test pattern. Download the
+full-resolution image linked above.
+  </p>
+</div>
+<p>This page provides the steps to properly test the compatibility of your <a
+href="https://source.android.com/devices/sensors/sensor-types.html#rotation_vector">rotation
+vector sensor</a> implementation. This test should be run when the device declares
+the TYPE_ROTATION_VECTOR composite sensor feature. See this <a
+href="https://www.youtube.com/watch?v=MsDVmsH1PaI">video tutorial</a> for
+additional details.</p>
+
+<h2 id=testing>Testing</h2>
+
+<ol>
+  <li>Install OpenCV Manager on the Android device being tested.
+  <li>Download the <code>OpenCV-3.0.0-android-sdk.zip</code> package from <a
+href="https://sourceforge.net/projects/opencvlibrary/files/opencv-android/3.0.0">SourceForge.net</a>.
+  <li>Find the APK
+from the <code>apk</code> folder inside the downloaded archive. Consult <a
+href="http://developer.android.com/tools/help/adb.html#move">installing an
+application</a> for the command to load APKs onto the Android device from
+computer.
+  <li>If there is active account logged into Google Play, also locate
+OpenCV Manager in Google Play and disable <em>Auto-update</em> in the context menu
+(the popup menu from the "..." button).
+  <img src="images/openvc-play.png" alt="Disable OpenCV Manager Auto-updates" height="533" id="disable-opencv" />
+  <p class="img-caption">
+    <strong>Figure 2.</strong> Disabling Auto-update in Google Play.
+  </p>
+  <li>Print out the linked <a href="images/acircles_pattern.pdf">test pattern</a>,
+disabling any scaling options when printing. The pattern should fit US
+Letter paper in landscape or anything bigger.
+<p class="note"><strong>Note:</strong> The inline picture above is low
+resolution and just for illustration. Please do not directly print it as your
+pattern.</p>
+  <li>Place the pattern on a horizontal surface.
+  <li>Start the <strong>Rotation Vector CV Crosscheck</strong> in the CTS Verifier
+app. Follow the guide to turn on airplane mode, turn off auto rotate, and
+adjust adaptive brightness and location if these changes have
+not been made.<br />
+  <img src="images/RVCVXCheck_start.png" alt="Test initiation" height="533" id="test-start" />
+  <p class="img-caption">
+    <strong>Figure 3.</strong> Initiating the test.
+  </p>
+  <li>When the video preview appears, place the phone three feet (or one meter) over
+the pattern so the main camera is facing the pattern with yellow marker on the
+screen and yellow marker on the pattern aligned at the same corner.<br />
+<img src="images/RVCVXCheck_down.png" alt="Test pattern placement" height="207" id="test-pattern-placement" />
+  <p class="img-caption">
+    <strong>Figure 4.</strong> Placing the test pattern.
+  </p>
+  <li>While keeping the pattern entirely in the camera view, rotate the Android
+device under test (DUT) around the pattern in three different directions, one
+by one (1, 2 and then 3 illustrated in picture below) as prompted by the
+rotation range indicator. Keep movement smooth and steady for the best result.<br />
+  <img src="images/RVCVXCheck_flow.png" alt="Device movement" height="426" id="device-movement" />
+  <p class="img-caption">
+    <strong>Figure 5.</strong> Manipulating the device under test.
+  </p>
+  <li>After the capture, the camera preview will disappear and the analysis process
+will start. Wait patiently for analysis to finish; it usually takes one to five
+minutes depending on the phone performance. The phone will sound and vibrate at
+analysis completion. A numerical result will be presented on screen if the
+analysis is successful.<br />
+  <img src="images/RVCVXCheck_next.png" alt="Test completion" height="533" id="test-complete"/>
+  <p class="img-caption">
+    <strong>Figure 6.</strong> Finishing the test.
+  </p>
+  <li>Click <strong>next</strong> to proceed to the pass/fail screen and review the result.<br />
+  <img src="images/RVCVXCheck_pass.png" alt="Test success" height="533" id="test-success" />
+  <p class="img-caption">
+    <strong>Figure 7.</strong> Passing the test.
+  </p>
+<li>Follow these tips for best results:
+  <ol>
+    <li>Since this is a manual test with complexity, you may want to try it a few times
+for the best results.
+    <li>Accelerometer, gyroscope, and magnetometer should be calibrated before testing
+for good results.
+    <li>See this <a href="https://www.youtube.com/watch?v=MsDVmsH1PaI">video
+tutorial</a> for additional details.
+  </ol>
+</ol>
+
+<h2 id=troubleshooting>Troubleshooting</h2>
+  <ol>
+    <li>Symptom: Test crashed when starting test case or immediately after finishing video recording.<br>
+	Cause: Likely an OpenCV Manager compatibility issue. Check
+        <code>logcat</code> to confirm. If confirmed, check version and arch of the
+        installed OpenCV Manager.
+    <li>Symptom: Test fails frequently due to "Too many invalid frame" errors.<br>
+        Cause: Likely due to video quality. Confirm the following conditions:
+      <ol>
+        <li>There is enough ambient lighting for the test. Natural light
+            usually gives the best result. However, when it is not available, abundant
+            light from multiple angles that does not form obvious shadows works, as well.
+            Avoid low angle lighting to reduce glare.
+        <li>The motion during video taking is smooth. Jerky movement causes
+            blur and confuses the computer vision software.
+        <li>The pattern should always be entirely in video preview frame and
+            located around the center. The pattern should be 1/4 ~ 1/2 the size of the
+            video preview window. If the pattern is too small, the accuracy is reduced.
+            If the pattern is too big, lens distortion is more obvious, and it is more
+            difficult to keep the pattern always inside video recording frame.
+        <li>The camera is able to focus well. Some devices have trouble in
+            focusing during video recording. This is usually due to there is too few
+            variations in the scene, e.g. solid color smooth floor surface. Moving test
+            pattern to a place with textured surface or introducing objects around the test
+            pattern usually helps.
+        <li>Image stabilization is turned off.
+      </ol>
+    <li>Symptom: The pitch and roll test works fine, but the yaw test regularly fails.<br>
+	Cause: First, make sure the magnetic field sensor is well calibrated.
+        Rotation vector does not function well if magnetic field sensor is not
+        calibrated.<br>
+        It is also possible that yaw axis fails due to video taking. Hold the
+        device steady and walk/move around the test pattern for the yaw section of
+        test. It is hard to maintain the quality of video while rotating device in
+        hand.
+  </ol>
+
+<h2 id=reporting>Reporting feedback</h2>
+
+<p>If the steps above do not help, please make sure to follow the feedback steps below to report your issue.</p>
+
+<p>Please gather the following information when reporting a bug:</p>
+  <ol>
+    <li>Android bugreport
+    <li>Screenshot if there is any error message on screen.
+    <li>Contents of <code>/sdcard/RVCVRecData/</code>. This folder contains
+        video files and thus can be quite large if the test has already been taken
+        multiple times. Clearing the folder and performing the test again will
+        help reduce size. Inspect video files inside to find obvious issues in
+        recording.
+    <li>Screenshot of the OpenCV Manager app.
+  </ol>
+
+  </body>
+</html>

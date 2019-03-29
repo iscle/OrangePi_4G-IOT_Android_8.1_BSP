@@ -1,0 +1,335 @@
+<html devsite>
+  <head>
+    <title>Nexus Security Bulletin - September 2015</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p><em>Published September 9, 2015</em></p>
+
+<p>We have released a security update to Nexus devices through an over-the-air
+(OTA) update as part of our Android Security Bulletin Monthly Release process
+(Build LMY48M). The updates for Nexus devices and source code patches for these
+issues have also been released to the Android Open Source Project (AOSP) source
+repository. The most severe of these issues is a Critical security
+vulnerability that could enable remote code execution on an affected device.</p>
+
+<p>The Nexus firmware images have also been released to the <a href="https://developers.google.com/android/nexus/images">Google Developer site</a>.
+Builds LMY48M or later address these issues. Partners were notified about
+these issues on August 13, 2015 or earlier.</p>
+
+<p>We have not detected customer exploitation of the newly reported issues. The
+exception is the existing issue (CVE-2015-3636). Refer to the <a href="#mitigations">Mitigations</a> section for details on the
+<a href="/security/enhancements/index.html">Android security platform protections,</a> and service protections such as SafetyNet, which reduce the likelihood that
+security vulnerabilities can be successfully exploited on Android.</p>
+
+<p>Please note that both Critical security updates (CVE-2015-3864 and
+CVE-2015-3686) address already disclosed vulnerabilities. There are no newly
+disclosed Critical security vulnerabilities in this update. The
+<a href="/security/overview/updates-resources.html#severity">severity
+assessment</a> is based on the effect that exploiting the vulnerability would
+possibly have on an affected device, assuming the platform and service
+mitigations are disabled for development purposes or if successfully bypassed.</p>
+
+<p>We encourage all customers to accept these updates to their devices.</p>
+
+<h2 id=mitigations>Mitigations</h2>
+
+
+<p>This is a summary of the mitigations provided by the <a href="/security/enhancements">Android security platform</a> and service protections such as SafetyNet. These capabilities reduce the
+likelihood that security vulnerabilities can be successfully exploited on
+Android.</p>
+
+<ul>
+  <li> Exploitation for many issues on Android is made more difficult by enhancements
+in newer versions of the Android platform. We encourage all users to update to
+the latest version of Android where possible.
+  <li> The Android Security team is actively monitoring for abuse with Verify Apps and
+SafetyNet which will warn about potentially harmful applications about to be
+installed. Device rooting tools are prohibited within Google Play. To protect
+users who install applications from outside of Google Play, Verify Apps is
+enabled by default and will warn users about known rooting applications. Verify
+Apps attempts to identify and block installation of known malicious
+applications that exploit a privilege escalation vulnerability. If such an
+application has already been installed, Verify Apps will notify the user and
+attempt to remove any such applications.
+  <li> As appropriate, Google Hangouts and Messenger applications do not automatically
+pass media to processes such as mediaserver.
+</ul>
+
+<h2 id=acknowledgements>Acknowledgements</h2>
+
+
+<p>We would like to thank these researchers for their contributions:</p>
+
+<ul>
+  <li> Jordan Gruskovnjak of Exodus Intelligence (@jgrusko): CVE-2015-3864
+  <li> Michał Bednarski: CVE-2015-3845
+  <li> Guang Gong of Qihoo 360 Technology Co. Ltd (@oldfresher): CVE-2015-1528,
+       CVE-2015-3849
+  <li> Brennan Lautner: CVE-2015-3863
+  <li> jgor (@indiecom): CVE-2015-3860
+  <li> Wish Wu of Trend Micro Inc. (@wish_wu): CVE-2015-3861
+</ul>
+
+<h2 id=security_vulnerability_details>Security Vulnerability Details</h2>
+
+
+<p>In the sections below, we provide details for each of the security
+vulnerabilities in this bulletin. There is a description of the issue, a severity rationale, and a table
+with the CVE, associated bug, severity, affected versions, and date reported.
+Where available, we’ve linked the AOSP change that addressed the issue to the
+bug ID. When multiple changes relate to a single bug, additional AOSP
+references are linked to numbers following the bug ID.</p>
+
+<h3 id=remote_code_execution_vulnerability_in_mediaserver>Remote Code Execution Vulnerability in Mediaserver</h3>
+
+
+<p>During media file and data processing of a specially crafted file,
+vulnerabilities in mediaserver could allow an attacker to cause memory
+corruption and remote code execution as the mediaserver process.</p>
+
+<p>The affected functionality is provided as a core part of the operating system
+and there are multiple applications that allow it to be reached with remote
+content, most notably MMS and browser playback of media.</p>
+
+<p>This issue is rated as a Critical severity due to the possibility of remote
+code execution within the context of the mediaserver service. The mediaserver
+service has access to audio and video streams as well as access to privileges
+that third-party apps cannot normally access.</p>
+
+<p>This issue is related to the already reported CVE-2015-3824 (ANDROID-20923261).
+ The original security update was not sufficient to address a variant of this
+originally reported issue.</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>Bug with AOSP links</th>
+    <th>Severity</th>
+    <th>Affected Versions</th>
+ </tr>
+ <tr>
+    <td>CVE-2015-3864</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/av/+/6fe85f7e15203e48df2cc3e8e1c4bc6ad49dc968">ANDROID-23034759</a></td>
+    <td>Critical</td>
+    <td> 5.1 and below</td>
+ </tr>
+</table>
+
+
+<h3 id=elevation_privilege_vulnerability_in_kernel>Elevation Privilege Vulnerability in Kernel</h3>
+
+
+<p>An elevation of privilege vulnerability in the Linux kernel's handling of ping
+sockets could allow a malicious application to execute arbitrary code in
+context of the kernel.</p>
+
+<p>This issue is rated as a Critical severity due to the possibility of code
+execution in a privileged service that can bypass device protections,
+potentially leading to permanent compromise (i.e., requiring re-flashing the
+system partition) on some devices.</p>
+
+<p>This issue was first publicly identified on May 01, 2015. An exploit of this
+vulnerability has been included in a number of “rooting” tools that may be used
+by the device owner to modify the firmware on their device.</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>Bug(s) with AOSP links</th>
+    <th>Severity</th>
+    <th>Affected Versions</th>
+ </tr>
+ <tr>
+    <td>CVE-2015-3636 </td>
+    <td><a href="https://github.com/torvalds/linux/commit/a134f083e79f">ANDROID-20770158</a></td>
+    <td>Critical</td>
+    <td>5.1 and below</td>
+ </tr>
+</table>
+
+
+<h3 id=elevation_of_privilege_vulnerability_in_binder>Elevation of Privilege Vulnerability in Binder </h3>
+
+
+<p>An elevation of privilege vulnerability in Binder could allow a malicious
+application to execute arbitrary code within the context of the another app’s
+process.</p>
+
+<p>This issue is rated as High severity because it allows a malicious application
+to gain privileges not accessible to a third-party application.</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>Bug(s) with AOSP links</th>
+    <th>Severity</th>
+    <th>Affected Versions</th>
+ </tr>
+ <tr>
+    <td>CVE-2015-3845</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/native/+/e68cbc3e9e66df4231e70efa3e9c41abc12aea20">ANDROID-17312693</a></td>
+    <td>High</td>
+    <td>5.1 and below</td>
+ </tr>
+ <tr>
+    <td>CVE-2015-1528</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/native/+/7dcd0ec9c91688cfa3f679804ba6e132f9811254">ANDROID-19334482</a> [<a href="https://android.googlesource.com/platform/system/core/+/e8c62fb484151f76ab88b1d5130f38de24ac8c14">2</a>]</td>
+    <td>High</td>
+    <td>5.1 and below</td>
+ </tr>
+</table>
+
+
+<h3 id=elevation_of_privilege_vulnerability_in_keystore>Elevation of Privilege Vulnerability in Keystore</h3>
+
+
+<p>A elevation of privilege vulnerability in Keystore could allow a malicious
+application to execute arbitrary code within the context of the keystore
+service. This could allow unauthorized use of keys stored by Keystore,
+including hardware-backed keys.</p>
+
+<p>This issue is rated as High severity because it can be used to gain privileges
+not accessible to a third-party application.</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>Bug(s) with AOSP links</th>
+    <th>Severity</th>
+    <th>Affected Versions</th>
+ </tr>
+ <tr>
+    <td>CVE-2015-3863</td>
+    <td><a href="https://android.googlesource.com/platform/system/security/+/bb9f4392c2f1b11be3acdc1737828274ff1ec55b">ANDROID-22802399</a></td>
+    <td>High</td>
+    <td>5.1 and below</td>
+ </tr>
+</table>
+
+
+<h3 id=elevation_of_privilege_vulnerability_in_region>Elevation of Privilege Vulnerability in Region </h3>
+
+
+<p>An elevation of privilege vulnerability in Region could, through creation of a
+malicious message to a service, allow a malicious application to execute
+arbitrary code within the context of the target service.</p>
+
+<p>This issue is rated as High severity because it can be used to gain privileges
+not accessible to a third-party application.</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>Bug(s) with AOSP links</th>
+    <th>Severity</th>
+    <th>Affected Versions</th>
+ </tr>
+ <tr>
+    <td>CVE-2015-3849</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/base/+/4cff1f49ff95d990d6c2614da5d5a23d02145885">ANDROID-20883006</a> [<a href="https://android.googlesource.com/platform/frameworks/base/+/1e72dc7a3074cd0b44d89afbf39bbf5000ef7cc3">2</a>]</td>
+    <td>High</td>
+    <td>5.1 and below</td>
+ </tr>
+</table>
+
+
+<h3 id=elevation_of_privilege_vulnerability_in_sms_enables_notification_bypass>Elevation of Privilege vulnerability in SMS enables notification bypass </h3>
+
+
+<p>A elevation of privilege vulnerability in the way that Android processes SMS
+messages could enable a malicious application to send an SMS message that
+bypasses the premium-rate SMS warning notification.</p>
+
+<p>This issue is rated as High severity because it can be used to gain privileges
+not accessible to a third-party application.</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>Bug(s) with AOSP links</th>
+    <th>Severity</th>
+    <th>Affected Versions</th>
+ </tr>
+ <tr>
+    <td>CVE-2015-3858</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/opt/telephony/+/df31d37d285dde9911b699837c351aed2320b586">ANDROID-22314646</a></td>
+    <td>High</td>
+    <td>5.1 and below</td>
+ </tr>
+</table>
+
+
+<h3 id=elevation_of_privilege_vulnerability_in_lockscreen>Elevation of Privilege Vulnerability in Lockscreen</h3>
+
+
+<p>An elevation of privilege vulnerability in Lockscreen could allow a malicious
+user to bypass the lockscreen by causing it to crash. This issue is classified
+as a vulnerability only on Android 5.0 and 5.1. While it's possible to cause
+the System UI to crash from the lockscreen in a similar way on 4.4, the home
+screen cannot be accessed and the device must be rebooted to recover.</p>
+
+<p>This issue is rated as a Moderate severity because it potentially allows
+someone with physical access to a device to install third-party apps without
+the device's owner approving the permissions. It can also allow the attacker to
+view contact data, phone logs, SMS messages, and other data that is normally
+protected with a "dangerous" level permission.</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>Bug(s) with AOSP links</th>
+    <th>Severity</th>
+    <th>Affected Versions</th>
+ </tr>
+ <tr>
+    <td>CVE-2015-3860</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/base/+/8fba7e6931245a17215e0e740e78b45f6b66d590">ANDROID-22214934</a></td>
+    <td>Moderate</td>
+    <td>5.1 and 5.0</td>
+ </tr>
+</table>
+
+
+<h3 id=denial_of_service_vulnerability_in_mediaserver>Denial of Service Vulnerability in Mediaserver</h3>
+
+
+<p>A denial of service vulnerability in mediaserver could allow a local attacker
+to temporarily block access to an affected device.</p>
+
+<p>This issue is rated as a Low severity because a user could reboot into safe
+mode to remove a malicious application that is exploiting this issue. It is
+also possible to cause mediaserver to process the malicious file remotely
+through the web or over MMS, in that case the mediaserver process crashes and
+the device remains usable.</p>
+<table>
+ <tr>
+    <th>CVE</th>
+    <th>Bug(s) with AOSP links</th>
+    <th>Severity</th>
+    <th>Affected Versions</th>
+ </tr>
+ <tr>
+    <td>CVE-2015-3861</td>
+    <td><a href="https://android.googlesource.com/platform/frameworks/av/+/304ef91624e12661e7e35c2c0c235da84a73e9c0">ANDROID-21296336</a></td>
+    <td>Low</td>
+    <td>5.1 and below</td>
+ </tr>
+</table>
+
+
+
+  </body>
+</html>

@@ -1,0 +1,268 @@
+<html devsite>
+  <head>
+    <title>MIDI Test Procedure</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>These tests may be used to validate the MIDI feature on Android devices.
+Successful execution of these tests is a prerequisite to
+<a href="midi.html#claim-feature">claim the MIDI feature</a>.
+</p>
+
+<h2 id="preparation">Preparation</h2>
+
+
+<h3 id="hardware">Hardware</h3>
+
+<p>
+The following hardware is needed for the tests.
+</p>
+
+<ul>
+  <li> MIDI keyboard with USB connector, e.g. the <a href="http://www.akaipro.com/product/lpk25">Akai LPK25</a></li>
+  <li> MIDI keyboard with Bluetooth Low Energy (BLE) support, e.g. the <a href="http://miselu.com/">Miselu C.24</a></li>
+  <li> USB cables</li>
+  <li> USB On-The-Go (OTG) adapter to convert a female USB-A to male micro-USB or USB-C</li>
+  <li> Android device running Android 6.0 Marshmallow or later release</li>
+  <li> Optional: desktop computer</li>
+</ul>
+
+<h3 id="apps">Apps</h3>
+
+<p>
+Several apps are used by this test procedure.
+The apps are available in source code on GitHub project
+<a href="https://github.com/philburk/android-midisuite">android-midisuite</a>,
+and via <em>Google Play</em>&trade; at links in the following table.
+</p>
+
+<table>
+<tr>
+  <th>Source code</th>
+  <th>Google&nbsp;Play&trade;</th>
+  <th>Description</th>
+</tr>
+<tr>
+  <td><a href="https://github.com/philburk/android-midisuite/tree/master/MidiScope">MidiScope</a> or
+    <a href="https://github.com/googlesamples/android-MidiScope">MidiScope</a></td>
+  <td><a href="https://play.google.com/store/apps/details?id=com.mobileer.example.midiscope">MIDI Scope</a></td>
+  <td>displays MIDI messages on-screen</td>
+</tr>
+<tr>
+  <td><a href="https://github.com/philburk/android-midisuite/tree/master/MidiKeyboard">MidiKeyboard</a></td>
+  <td><a href="https://play.google.com/store/apps/details?id=com.mobileer.midikeyboard">MIDI Keyboard</a></td>
+  <td>sends MIDI messages by pressing an on-screen music keyboard</td>
+</tr>
+<tr>
+  <td><a href="https://github.com/philburk/android-midisuite/tree/master/MidiSynthExample">MidiSynthExample</a> or
+    <br /><a href="https://github.com/googlesamples/android-MidiSynth">MidiSynth</a></td>
+  <td><a href="https://play.google.com/store/apps/details?id=com.mobileer.midisynthexample">MIDI Synth Ex</a></td>
+  <td>simple MIDI synthesizer that uses sawtooth oscillators</td>
+</tr>
+<tr>
+  <td><a href="https://github.com/philburk/android-midisuite/tree/master/MidiBtlePairing">MidiBtlePairing</a></td>
+  <td><a href="https://play.google.com/store/apps/details?id=com.mobileer.example.midibtlepairing">MIDI BLE Connect</a></td>
+  <td>pairs an Android device with a BLE peripheral</td>
+</tr>
+<tr>
+  <td><a href="https://github.com/philburk/android-midisuite/tree/master/MidiTools">MidiTools</a></td>
+  <td></td>
+  <td>library dependency of the above apps</td>
+</tr>
+</table>
+
+<p>
+If you choose to work from source code rather than install via <em>Google Play</em>&trade;,
+first build the app using the supplied <em>Android.mk</em>.
+Then install the app using
+<a href="http://developer.android.com/tools/help/adb.html">Android Debug Bridge</a> (ADB).
+For example, to install the <em>MidiScope</em> app:</p>
+
+<ol>
+  <li> Use a workstation with ADB installed.</li>
+  <li> Connect a USB cable from the workstation to the Android device.</li>
+  <li> You may need to allow the USB connection on the Android device; see <a href="midi.html#usb-peripheral">USB peripheral mode</a></li>
+  <li> On the workstation, enter:</li>
+</ol>
+
+<pre class="devsite-click-to-copy">
+<code class="devsite-terminal">cd <var>THIS_FOLDER</var></code>
+<code class="devsite-terminal">adb install -r MidiScope.apk</code>
+</pre>
+
+
+<h2 id="virtual_synth_tests">Virtual synth tests</h2>
+
+
+<p>Note that a MIDI input port can have only one connection. So if another app is
+already using an input port, that port will not be available. If you cannot connect to
+an input port then try closing other apps.</p>
+
+<p>Hardware needed: Android device under test</p>
+
+<h3 id="simple_connection">Simple connection</h3>
+
+
+<p>Apps needed: <em>MidiKeyboard</em>, <em>MidiSynthExample</em></p>
+
+<p>This tests device enumeration, virtual devices, port connections, and message
+sending.</p>
+
+<ol>
+  <li> Adjust volume on Android device to about halfway.</li>
+  <li> Orient phone in landscape mode.</li>
+  <li> Launch <em>MidiKeyboard</em> app.</li>
+  <li> Select <strong>SynthExample</strong> from the spinner menu.</li>
+  <li> Play keys. You should hear notes being played in the <em>SynthExample</em> app.</li>
+  <li> Exit the application by pressing the <strong>Back</strong> button so that the port will be
+closed.</li>
+</ol>
+
+<h2 id="host_mode">USB test: host mode</h2>
+
+
+<p>Hardware needed: USB MIDI keyboard, USB cable, OTG adapter</p>
+
+<p>Repeat these tests several times. We have seen the USB stack crash hard on some
+prototype devices if devices were plugged in and unplugged a few times.</p>
+
+<h3 id="keyboard_already_plugged_in">Keyboard already plugged in</h3>
+
+
+<p>Apps needed: <em>MidiSynthExample</em> or <em>MidiScope</em></p>
+
+<p>This tests USB MIDI in host mode.</p>
+
+<ol>
+  <li> Adjust volume on Android device to about halfway.</li>
+  <li> Plug in USB keyboard using the OTG adapter.</li>
+  <li> Launch <em>SynthExample</em> app or the <em>MidiScope</em> app.</li>
+  <li> From the menu select  the USB keyboard. It will display the brand.</li>
+  <li> Play notes on the keyboard. If you ran <em>SynthExample</em> then you should hear notes
+being played on the phone. If you ran <em>MidiScope</em> then you should see <em>NoteOn</em> and
+<em>NoteOff</em> messages on-screen.</li>
+  <li> Unplug the keyboard. The <em>Sender for Synth</em> menu should display <em>- - - - -</em>.</li>
+  <li> Exit the application by pressing the <strong>Back</strong> button.</li>
+</ol>
+
+<h3 id="hot_plug_usb_keyboard">Hot-plug USB keyboard</h3>
+
+
+<p>Apps needed: <em>MidiSynthExample</em> or <em>MidiScope</em></p>
+
+<p>This tests USB MIDI in host mode.</p>
+
+<ol>
+  <li> Adjust volume on Android device to about halfway.</li>
+  <li> Make sure there is not a USB MIDI keyboard plugged in.</li>
+  <li> Launch <em>SynthExample</em> app.</li>
+  <li> At middle, next to <em>Sender for Synth</em>, look in menu. You should not see the USB
+keyboard listed.</li>
+  <li> Plug in USB keyboard using the OTG adapter.</li>
+  <li> At middle, next to <em>Sender for Synth</em>, select the USB keyboard. It will display
+the brand.</li>
+  <li> Play notes on the keyboard. You should hear notes being played on the phone.</li>
+  <li> At middle, next to <em>Sender for Synth</em>, select <strong>- - - - -</strong>.</li>
+  <li> Play notes on the keyboard. You should hear nothing.</li>
+  <li> At middle, next to <em>Sender for Synth</em>, select the USB keyboard. It will display
+the brand.</li>
+  <li> Play notes on the keyboard. You should hear notes being played on the phone.</li>
+  <li> Unplug the synthesizer. The <em>Sender for Synth</em> menu should display <em>- - - - -</em>.</li>
+  <li>  Exit the application by pressing the <strong>Back</strong> button.</li>
+</ol>
+
+<h2 id="peripheral_mode">USB test: peripheral mode</h2>
+
+
+<p>Hardware needed: USB cable, OTG adapter</p>
+
+<h3 id="android_to_android">Android-to-Android</h3>
+
+
+<p>Apps needed: <em>MidiKeyboard</em> on Android device under test, <em>MidiScope</em> on another
+Android device.</p>
+
+<p>Use Android devices as a peripheral controller for another Android device. To help test
+this mode, use another Android device running in host mode. Note that
+you could modify the test to work with a desktop computer running Digital Audio Workstation (DAW)
+software such as
+GarageBand.</p>
+
+<ol>
+  <li> Connect the USB cable to the Android device under test (Android device <strong>A</strong>).</li>
+  <li> Use an OTG adapter to connect the other end of the cable to a second Android
+device <strong>B</strong> that operates in host mode.</li>
+  <li> On Android device A:
+  <ol>
+    <li> Drag finger down from top of screen.</li>
+    <li> Select <strong>USB for Charging</strong> icon.</li>
+    <li> Select <strong>MIDI</strong>.</li>
+    <li> Launch <em>MidiKeyboard</em> app.</li>
+    <li> Select <strong>Android USB Peripheral Port</strong> from <em>Receiver for Keys</em> menu at top.</li>
+  </ol>
+  </li>
+  <li> On Android device B:
+  <ol>
+    <li> Launch <em>MidiScope</em> app.</li>
+    <li> Select the other Android device as the source.</li>
+  </ol>
+  </li>
+  <li> On Android device A:
+  <ol>
+    <li> Play notes on the keyboard and look for <em>NoteOn</em> and <em>NoteOff</em> on Android device B.</li>
+  </ol>
+  </li>
+  </ol>
+
+<h2 id="bluetooth_le_test">BLE test</h2>
+
+
+<p>Hardware needed: MIDI keyboard supporting BLE</p>
+
+<h3 id="basic_pairing_and_playing">Basic pairing and playing</h3>
+
+
+<p>Apps needed: <em>MidiBtlePairing</em>, <em>MidiSynthExample</em></p>
+
+<p>Test a keyboard connected to Android over BLE.</p>
+
+<ol>
+  <li> Reboot the Android device.</li>
+  <li> Power on the BLE keyboard.<br />
+       (The Miselu C.24 keyboard is powered on by pushing the button near the back so
+that it pops open. The power button on the C.24 pulses blue when in pairing
+mode.)</li>
+  <li> Launch the <em>MidiBtlePairing</em> app. It has a <em>MIDI+BTLE</em> icon.</li>
+  <li> Press the <strong>Bluetooth Scan</strong> button.</li>
+  <li> Select desired BLE peripheral.</li>
+  <li> The app should return to the main page, and you should see the peripheral listed. If
+you are using a C.24, then you will notice that the light should turn green on
+the C.24 to indicate paired mode.</li>
+  <li> Exit the app by pressing the <strong>Home</strong> button, not the <strong>Back</strong> button.</li>
+  <li> Launch the SynthExample app.</li>
+  <li> Select the BLE keyboard as the sender from the menu.</li>
+  <li> You should be able to press keys on the BLE keyboard and hear notes on
+Android.</li>
+</ol>
+
+  </body>
+</html>

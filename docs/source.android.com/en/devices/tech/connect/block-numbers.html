@@ -1,0 +1,255 @@
+<html devsite>
+  <head>
+    <title>Implementing Block Phone Numbers</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>
+Because telephony is such an open communications channel - anyone may call or
+text any number at any time - Android users need the ability to easily block
+unwanted calls and texts.
+</p>
+
+<p>
+Before N, Android users had to rely on downloaded apps to restrict calls and
+texts from bothersome phone numbers. Many of those apps either do not work as
+desired or provide a less-than ideal experience because there are no proper APIs
+for blocking calls and messages.
+</p>
+
+<p>
+Some manufacturers might ship their own blocking solutions out-of-the-box, but
+if users switch devices, they may lose the blocked list completely due to lack
+of interoperability. Finally, even if users are employing dialing apps and
+messaging clients that provide such functionality, they likely still have to
+perform the block action in each app for the block to take effect for both
+calling and texting.
+</p>
+
+<h2 id="features">Features</h2>
+
+<p>
+The Android 7.0 release introduces a <code>BlockedNumberProvider</code> content
+provider that stores a list of phone numbers the user has specified should not
+be able to contact them via telephony communications (calls, SMS, MMS). The
+system will respect the numbers in the blocked list by restricting calls and
+texts from those numbers. Android 7.0 displays the list of blocked numbers and
+allows the user to add and remove numbers.
+</p>
+
+<p>
+Further, the number-blocking feature enables the system and the relevant apps on
+the platform to work together to help protect the user and to simplify the
+experience. The default dialer, default messaging client, UICC-privileged app,
+and apps with the same signature as the system can all directly read from and
+write to the blocked list. Because the blocked numbers are stored on the system,
+no matter what dialing or messaging apps the user employs, the numbers stay
+blocked. Finally, the blocked numbers list may be restored on any new device,
+regardless of the manufacturer.
+</p>
+
+<ul>
+<li>User will be guaranteed to have a blocking feature that works out-of-the-box
+and will not lose their block list when they switch apps or get a new phone. All
+relevant apps on the system can share the same list to provide the user with the
+most streamlined experience.
+<li>App developers do not need to develop their own way to manage a block list
+and the calls and messages that come in. They can simply use the
+platform-provided feature.
+<li>Dialer / messenger apps that are selected as the default by the user can
+read and write to the provider. Other apps can launch the block list management
+user interface by using <code>createManageBlockedNumbersIntent()</code>
+<li>OEMs can use platform provided feature to ship a blocking feature
+out-of-the-box. OEMs can rest assured that when users switch from another OEM’s
+device that they have a better onboarding experience because the block list will
+be transferred as well.
+<li>If carrier has their own dialer or messenger app, they can reuse platform
+feature for allowing the user to maintain a block list. They can rest assured
+that the user’s block list can stay with the users, even when they get a new
+device. Finally, all carrier-privileged apps can read the block list, so if the
+carrier wants to provide some additional more powerful blocking for the user
+based on the block list, that is now possible with this feature.</li></ul>
+
+<h2 id="data-flow">Data flow</h2>
+
+<img src="/devices/tech/connect/images/block-numbers-flow.png" alt="block numbers data flow" id="block-numbers-flow" />
+<p class="img-caption">
+  <strong>Figure 1.</strong> Block phone numbers data flow
+</p>
+
+<h2 id="examples-and-source">Examples and source</h2>
+
+<p>
+Here are example calls using the number-blocking new feature:
+</p>
+
+<h3 id="launch-from-app">Launch blocked number manager from app</h3>
+
+<pre class="prettyprint">
+Context.startActivity(telecomManager.createManageBlockedNumbersIntent(), null);
+</pre>
+
+<h3 id="query-blocked-numbers">Query blocked numbers</h3>
+
+<pre class="prettyprint">
+Cursor c = getContentResolver().query(BlockedNumbers.CONTENT_URI,
+         new String[]{BlockedNumbers.COLUMN_ID,
+         BlockedNumbers.COLUMN_ORIGINAL_NUMBER,
+         BlockedNumbers.COLUMN_E164_NUMBER}, null, null, null);
+</pre>
+
+<h3 id="put-blocked-number">Put blocked number</h3>
+
+<pre class="prettyprint">
+ContentValues values = new ContentValues();
+values.put(BlockedNumbers.COLUMN_ORIGINAL_NUMBER, "1234567890");
+Uri uri = getContentResolver().insert(BlockedNumbers.CONTENT_URI, values);
+</pre>
+
+<h3 id="delete-blocked-number">Delete blocked number</h3>
+
+<pre class="prettyprint">
+ContentValues values = new ContentValues();
+values.put(BlockedNumbers.COLUMN_ORIGINAL_NUMBER, "1234567890");
+Uri uri = getContentResolver().insert(BlockedNumbers.CONTENT_URI, values);
+getContentResolver().delete(uri, null, null);
+</pre>
+
+<h2 id="implementation">Implementation</h2>
+
+<p>
+These are the high-level tasks that must be completed to put the number-blocking
+feature to use:
+</p>
+
+<ul>
+<li>OEMs implement call/message-restriction features on their devices by using
+<code>BlockedNumberProvider</code>
+<li>If carrier has dialer or messenger application, implement call/message
+restriction features by using <code>BlockedNumberProvider</code>
+<li>Third-party dialer and messenger app vendors use
+<code>BlockedNumberProvider</code> for their blocking features</li>
+</ul>
+
+<h3 id="recommendations-for-oems">Recommendations for OEMs</h3>
+
+<p>
+If the device had previously never shipped with any additional call/message
+restriction features, use the number-blocking feature in the Android Open Source
+Project (AOSP) on all such devices. It is recommended that reasonable entry
+points for blocking are supported, such as blocking a number right from the call
+log or within a message thread.
+</p>
+
+<p>
+If the device had previously shipped with call/message restriction features,
+adapt the features so all <em>strict-match phone numbers</em> that are blocked
+are stored in the <code>BlockedNumberProvider,</code> and that the behavior
+around the provider satisfy the requirements for this feature outlined in the
+Android Compatibility Definition Document (CDD).
+</p>
+
+<p>
+Any other advanced feature can be implemented via custom providers and custom UI
+/ controls, as long as the CDD requirements are satisfied with regards to
+blocking strict-match phone numbers. It is recommended that those other features
+be labeled as “advanced” features to avoid confusion with the basic
+number-blocking feature.
+</p>
+
+<h3 id="apis">APIs</h3>
+
+<p>
+Here are the APIs in use:
+</p>
+<ul>
+<li><code><a
+href="http://developer.android.com/reference/android/telecom/TelecomManager.html">TelecomManager</a>
+API</code>
+  <ul>
+ <li><code>Intent createManageBlockedNumbersIntent()</code>
+  </ul>
+</li>
+<li><code><a
+href="http://developer.android.com/reference/android/telephony/CarrierConfigManager.html">Carrier
+Config</a></code>
+  <ul>
+ <li><code>KEY_DURATION_BLOCKING_DISABLED_AFTER_EMERGENCY_INT</code>
+  </ul>
+</li>
+<li>Please refer to  <code>BlockedNumberContract</code>
+  <ul>
+ <li>APIs provided by <code><a
+ href="https://developer.android.com/reference/android/provider/BlockedNumberContract.html">BlockedNumberContract</a></code></li>
+ <li><code>boolean isBlocked(Context context, String phoneNumber)</code></li>
+ <li><code>int unblock(Context context, String phoneNumber)</code></li>
+ <li><code>boolean canCurrentUserBlockNumbers(Context context)</code></li>
+  </ul>
+ </li>
+</ul>
+
+<h3 id="user-interface">User interface</h3>
+<p>
+The BlockedNumbersActivity.java user interface provided in AOSP can be used as
+is. Device implementers may also implement their own version of the UI, as long as it
+satisfies related CDD requirements.
+</p>
+
+<p>
+Please note, the partner’s PC application for backup and restore may be needed
+to implement restoration of the block list by using
+<code>BlockedNumberProvider</code>. See the images below for the blocked
+numbers interface supplied in AOSP.
+</p>
+
+<img src="images/block-numbers-ui.png" alt="block numbers user interface" width="665" id="block-numbers-ui" />
+<p class="img-caption">
+  <strong>Figure 2.</strong> Block phone numbers user interface
+</p>
+
+<h2 id="validation">Validation</h2>
+
+<p>
+Implementers can ensure their version of the feature works as intended by
+running the following CTS tests:
+</p>
+
+<pre class="devsite-click-to-copy">
+android.provider.cts.BlockedNumberContractTest
+com.android.cts.numberblocking.hostside.NumberBlockingTest
+android.telecom.cts.ExtendedInCallServiceTest#testIncomingCallFromBlockedNumber_IsRejected
+android.telephony.cts.SmsManagerTest#testSmsBlocking
+</pre>
+
+<p>
+The <code>BlockedNumberProvider</code> can be manipulated using <code>adb</code> commands
+after running <code>$ adb root</code>. For example:
+</p>
+<pre class="devsite-click-to-copy">
+<code class="devsite-terminal">adb root</code>
+<code class="devsite-terminal">adb shell content query --uri content://com.android.blockednumber/blocked</code>
+<code class="devsite-terminal">adb shell content insert --uri / content://com.android.blockednumber/blocked --bind / original_number:s:'6501002000'</code>
+<code class="devsite-terminal">adb shell content delete --uri / content://com.android.blockednumber/blocked/1</code>
+</pre>
+
+  </body>
+</html>

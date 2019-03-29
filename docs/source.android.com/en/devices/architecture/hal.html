@@ -1,0 +1,140 @@
+<html devsite>
+  <head>
+    <title>Hardware Abstraction Layer (HAL)</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<p>A HAL defines a standard interface for hardware vendors to implement,
+which enables Android to be agnostic about lower-level driver implementations.
+Using a HAL allows you to implement functionality without affecting or modifying
+the higher level system. HAL implementations are packaged into modules and
+loaded by the Android system at the appropriate time.</p>
+
+<img src="../images/ape_fwk_hal.png">
+
+<p class="img-caption"><strong>Figure 1.</strong> HAL components</p>
+
+<p>You must implement the corresponding HAL (and driver) for the specific
+hardware your product provides. HAL implementations are typically built into
+shared library modules (<code>.so</code> files), but as Android does not mandate
+a standard interaction between a HAL implementation and device drivers, you can
+do what is best for your situation. However, to enable the Android system to
+correctly interact with your hardware, you <strong>must</strong> abide by the
+contract defined in each hardware-specific HAL interface.</p>
+
+<p>To guarantee that HALs have a predictable structure, each hardware-specific
+HAL interface has properties defined in
+<code>hardware/libhardware/include/hardware/hardware.h</code>. This interface
+allows the Android system to load correct versions of your HAL modules in a
+consistent way. A HAL interface consists of two components: modules and devices.
+</p>
+
+<h2 id="hal-module">HAL modules</h2>
+<p>A module represents your packaged HAL implementation, which is stored as a
+shared library (<code>.so file</code>). The
+<code>hardware/libhardware/include/hardware/hardware.h</code> header file
+defines a struct (<code>hw_module_t</code>) that represents a module and
+contains metadata such as the version, name, and author of the module. Android
+uses this metadata to find and load the HAL module correctly.</p>
+
+<p>In addition, the <code>hw_module_t</code> struct contains a pointer to
+another struct, <code>hw_module_methods_t</code>, that contains a pointer to
+an open function for the module. This open function is used to initiate
+communication with the hardware for which the HAL is serving as an abstraction.
+Each hardware-specific HAL usually extends the generic <code>hw_module_t</code>
+struct with additional information for that specific piece of hardware. For
+example, in the camera HAL, the <code>camera_module_t</code> struct contains a
+<code>hw_module_t</code> struct along with other camera-specific function
+pointers:</p>
+
+<pre class="devsite-click-to-copy">
+typedef struct camera_module {
+    hw_module_t common;
+    int (*get_number_of_cameras)(void);
+    int (*get_camera_info)(int camera_id, struct camera_info *info);
+} camera_module_t;
+</pre>
+
+<p>When you implement a HAL and create the module struct, you must name it
+<code>HAL_MODULE_INFO_SYM</code>. Example from the Nexus 9 audio HAL:</p>
+
+<pre class="devsite-click-to-copy">
+struct audio_module HAL_MODULE_INFO_SYM = {
+    .common = {
+        .tag = HARDWARE_MODULE_TAG,
+        .module_api_version = AUDIO_MODULE_API_VERSION_0_1,
+        .hal_api_version = HARDWARE_HAL_API_VERSION,
+        .id = AUDIO_HARDWARE_MODULE_ID,
+        .name = "NVIDIA Tegra Audio HAL",
+        .author = "The Android Open Source Project",
+        .methods = &hal_module_methods,
+    },
+};
+</pre>
+
+<h2 id="hal-device">HAL devices</h2>
+<p>A device abstracts the hardware of your product. For example, an audio
+module can contain a primary audio device, a USB audio device, or a Bluetooth
+A2DP audio device.</p>
+
+<p>A device is represented by the <code>hw_device_t</code> struct. Similar to a
+module, each type of device defines a detailed version of the generic
+<code>hw_device_t</code> that contains function pointers for specific features
+of the hardware. For example, the <code>audio_hw_device_t</code> struct type
+contains function pointers to audio device operations:</p>
+
+<pre class="devsite-click-to-copy">
+struct audio_hw_device {
+    struct hw_device_t common;
+
+    /**
+     * used by audio flinger to enumerate what devices are supported by
+     * each audio_hw_device implementation.
+     *
+     * Return value is a bitmask of 1 or more values of audio_devices_t
+     */
+    uint32_t (*get_supported_devices)(const struct audio_hw_device *dev);
+  ...
+};
+typedef struct audio_hw_device audio_hw_device_t;
+</pre>
+
+<p>In addition to these standard properties, each hardware-specific HAL
+interface can define more of its own features and requirements. For details,
+see the <a href="/reference/hal/">HAL reference documentation</a> as well as
+the individual instructions for each HAL.</p>
+
+<h2 id="hal-building">Building HAL modules</h2>
+<p>HAL implementations are built into modules (<code>.so</code>) files and are
+dynamically linked by Android when appropriate. You can build your modules by
+creating <code>Android.mk</code> files for each of your HAL implementations
+and pointing to your source files. In general, your shared libraries must be
+named in a specific format so they can be found and loaded properly. The naming
+scheme varies slightly from module to module, but follows the general pattern
+of: <code>&lt;module_type&gt;.&lt;device_name&gt;</code>.
+</p>
+
+<p>For details on setting up the build for each HAL, see the HAL-specific
+documentation through the Porting section of this website.</p>
+
+  </body>
+</html>

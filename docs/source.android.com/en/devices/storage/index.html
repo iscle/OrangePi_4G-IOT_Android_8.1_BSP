@@ -1,0 +1,84 @@
+<html devsite>
+  <head>
+    <title>Storage</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+<img style="float: right; margin: 0px 15px 15px 15px;" src="images/ape_fwk_hal_extstor.png" alt="Android external storage HAL icon"/>
+<p>Android has evolved over time to support a wide variety of storage device types
+and features. All versions of Android support devices with <a href="/devices/storage/traditional.html">traditional storage</a>,
+which includes portable and emulated storage. <em>Portable</em> storage can be provided by physical media, like an SD card or USB, that is for
+temporary data transfer/ file storage. The physical media may remain with the
+device for an extended period of time, but is not tied to the device and may be
+removed. SD cards have been available as portable storage since Android 1.0;
+Android 6.0 added USB support. <em>Emulated</em> storage is provided by exposing a portion of internal storage through an
+emulation layer and has been available since Android 3.0.</p>
+
+<p>Starting in Android 6.0, Android supports <a href="/devices/storage/adoptable.html"><em>adoptable</em> storage</a>, which is provided by physical media, like an SD card or USB, that is
+encrypted and formatted to behave like internal storage. Adoptable storage can
+store all types of application data. </p>
+
+<h2 id=permissions>Permissions</h2>
+<p>Access to external storage is protected by various Android
+permissions. Starting in Android 1.0, write access is protected with the
+<code>WRITE_EXTERNAL_STORAGE</code> permission. Starting in Android 4.1,
+read access is protected with the <code>READ_EXTERNAL_STORAGE</code>
+permission.</p>
+<p>Starting in Android 4.4, the owner, group and modes of files on external
+storage devices are now synthesized based on directory structure. This
+enables apps to manage their package-specific directories on external
+storage without requiring they hold the broad
+<code>WRITE_EXTERNAL_STORAGE</code> permission. For example, the app with
+package name <code>com.example.foo</code> can now freely access
+<code>Android/data/com.example.foo/</code> on external storage devices with
+no permissions. These synthesized permissions are accomplished by wrapping
+raw storage devices in a FUSE daemon.</p>
+
+<h3 id=runtime_permissions>Runtime permissions</h3>
+
+
+<p>Android 6.0 introduces a new <a href="/devices/tech/config/runtime_perms.html">runtime permissions</a> model where apps request
+capabilities when needed at runtime. Because the new model includes the <code>READ/WRITE_EXTERNAL_STORAGE</code> permissions, the platform needs to dynamically grant storage access without
+killing or restarting already-running apps. It does this by maintaining three
+distinct views of all mounted storage devices:</p>
+
+<ul>
+  <li><code>/mnt/runtime/default</code> is shown to apps with no special storage permissions, and to the root
+namespace where <code>adbd</code> and other system components live.
+  <li><code>/mnt/runtime/read</code> is shown to apps with <code>READ_EXTERNAL_STORAGE</code>
+  <li><code>/mnt/runtime/write</code> is shown to apps with <code>WRITE_EXTERNAL_STORAGE</code>
+</ul>
+
+<p>At Zygote fork time, we create a mount namespace for each running app and bind
+mount the appropriate initial view into place. Later, when runtime permissions
+are granted, <code>vold</code> jumps into the mount namespace of already-running apps and bind mounts the
+upgraded view into place. Note that permission downgrades always result in the
+app being killed.</p>
+
+<p>The <code>setns()</code> functionality used to implement this feature requires at least Linux 3.8, but
+patches have been backported successfully to Linux 3.4. The <code>PermissionsHostTest</code> CTS test can be used to verify correct kernel behavior.</p>
+
+<p>In Android 6.0,  third-party apps don’t have access to the <code>sdcard_r</code> and <code>sdcard_rw</code> GIDs. Instead, access is controlled by mounting only the appropriate runtime
+view in place for that app. Cross-user interactions are blocked using the <code>everybody</code> GID.</p>
+
+  </body>
+</html>

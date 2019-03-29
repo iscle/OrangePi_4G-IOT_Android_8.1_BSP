@@ -1,0 +1,620 @@
+<html devsite>
+  <head>
+    <title>Nexus 安全公告 - 2015 年 9 月</title>
+    <meta name="project_path" value="/_project.yaml" />
+    <meta name="book_path" value="/_book.yaml" />
+  </head>
+  <body>
+  <!--
+      Copyright 2017 The Android Open Source Project
+
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+      See the License for the specific language governing permissions and
+      limitations under the License.
+  -->
+
+
+
+  <p>
+   <em>
+    发布时间：2015 年 9 月 9 日
+   </em>
+  </p>
+  <p>
+   在本月发布 Android 安全公告的过程中，我们通过无线 (OTA) 更新的方式发布了针对 Nexus 设备的安全更新（版本号为 LMY48M）。我们已在 Android 开放源代码项目 (AOSP) 代码库中发布了针对相关问题的源代码补丁程序。这些问题中危险性最高的是一个严重程度为“严重”的安全漏洞，它可用于在受影响的设备上执行远程代码。
+  </p>
+  <p>
+   我们还在
+   <a href="https://developers.google.com/android/nexus/images">
+    Google Developers 网站
+   </a>
+   上发布了 Nexus 固件映像。LMY48M 或更高版本的系统已解决本文所列的安全问题。我们的合作伙伴在 2015 年 8 月 13 日或之前就已收到这些问题的相关通知。
+  </p>
+  <p>
+   我们尚未检测到用户因这些新报告的问题而遭到攻击的情况。不过，现有问题 CVE-2015-3636 属于例外情况。请参阅
+   <a href="http://source.android.com/security/bulletin/2015-09-01.html#mitigations">
+    缓解措施
+   </a>
+   部分，详细了解
+   <a href="http://source.android.com/security/enhancements/index.html">
+    Android 安全平台防护
+   </a>
+   和服务防护功能（如 SafetyNet）。这些功能可降低 Android 上的安全漏洞被成功利用的可能性。
+  </p>
+  <p>
+   请注意，针对 CVE-2015-3864 和 CVE-2015-3686 这两个“严重”漏洞的安全更新可解决所披露的漏洞。此次更新中没有新披露的“严重”安全漏洞。我们建议所有用户在自己的设备上接受这些更新。
+  </p>
+  <h2 id="security_vulnerability_summary" style="margin-bottom:0px">
+   安全漏洞摘要
+  </h2>
+  <hr/>
+  <p>
+   下表列出了安全漏洞、对应的 CVE（常见漏洞和风险识别码）以及评估得出的严重程度。
+   <a href="http://source.android.com/security/overview/updates-resources.html#severity">
+    严重程度评估
+   </a>
+   的依据是漏洞被利用后对受影响设备造成的影响大小（假设相关平台和服务缓解措施被成功规避或出于开发目的而被停用）。
+  </p>
+  <table>
+   <tbody>
+    <tr>
+     <th>
+      问题
+     </th>
+     <th>
+      CVE
+     </th>
+     <th>
+      严重程度
+     </th>
+    </tr>
+    <tr>
+     <td>
+      Mediaserver 中的远程代码执行漏洞
+     </td>
+     <td>
+      CVE-2015-3864
+     </td>
+     <td>
+      严重
+     </td>
+    </tr>
+    <tr>
+     <td>
+      内核中的提权漏洞
+     </td>
+     <td>
+      CVE-2015-3636
+     </td>
+     <td>
+      严重
+     </td>
+    </tr>
+    <tr>
+     <td>
+      Binder 中的提权漏洞
+     </td>
+     <td>
+      CVE-2015-3845
+      <br/>
+      CVE-2015-1528
+     </td>
+     <td>
+      高
+     </td>
+    </tr>
+    <tr>
+     <td>
+      Keystore 中的提权漏洞
+     </td>
+     <td>
+      CVE-2015-3863
+     </td>
+     <td>
+      高
+     </td>
+    </tr>
+    <tr>
+     <td>
+      Region 中的提权漏洞
+     </td>
+     <td>
+      CVE-2015-3849
+     </td>
+     <td>
+      高
+     </td>
+    </tr>
+    <tr>
+     <td>
+      短信中的提权漏洞允许短信绕过通知
+     </td>
+     <td>
+      CVE-2015-3858
+     </td>
+     <td>
+      高
+     </td>
+    </tr>
+    <tr>
+     <td>
+      锁定屏幕中的提权漏洞
+     </td>
+     <td>
+      CVE-2015-3860
+     </td>
+     <td>
+      中
+     </td>
+    </tr>
+    <tr>
+     <td>
+      Mediaserver 中的拒绝服务漏洞
+     </td>
+     <td>
+      CVE-2015-3861
+     </td>
+     <td>
+      低
+     </td>
+    </tr>
+   </tbody>
+  </table>
+  <h2 id="mitigations" style="margin-bottom:0px">
+   缓解措施
+  </h2>
+  <hr/>
+  <p>
+   本部分概括总结了
+   <a href="http://source.android.com/security/enhancements">
+    Android 安全平台
+   </a>
+   和服务防护功能（如 SafetyNet）提供的缓解措施。这些功能可降低 Android 上的安全漏洞被成功利用的可能性。
+  </p>
+  <ul>
+   <li>
+    新版 Android 平台中的增强功能让攻击者更加难以利用 Android 上存在的许多问题。我们建议所有用户都尽可能更新到最新版 Android。
+   </li>
+   <li>
+    Android 安全团队会积极利用“验证应用”功能和 SafetyNet 来监控滥用行为，这些功能会在用户即将安装可能有害的应用时发出警告。Google Play 中禁止提供会获取设备 Root 权限的工具。为了保护从 Google Play 之外的来源安装应用的用户，“验证应用”功能在默认情况下将处于启用状态，并在发现已知会获取 Root 权限的应用时警告用户。“验证应用”功能会尝试识别并阻止用户安装会利用提权漏洞的已知恶意应用。如果用户已安装此类应用，那么“验证应用”功能将会通知用户并尝试移除所有此类应用。
+   </li>
+   <li>
+    由于已做了适当更新，因此 Google 环聊和 Messenger 应用不会自动将媒体内容传递给 mediaserver 这类进程。
+   </li>
+  </ul>
+  <h2 id="acknowledgements" style="margin-bottom:0px">
+   致谢
+  </h2>
+  <hr/>
+  <p>
+   非常感谢以下研究人员做出的贡献：
+  </p>
+  <ul>
+   <li>
+    Exodus Intelligence 的 Jordan Gruskovnjak (@jgrusko)：CVE-2015-3864
+   </li>
+   <li>
+    Michał Bednarski：CVE-2015-3845
+   </li>
+   <li>
+    奇虎 360 科技有限公司的龚广：CVE-2015-1528
+   </li>
+   <li>
+    Brennan Lautner：CVE-2015-3863
+   </li>
+   <li>
+    jgor (@indiecom)：CVE-2015-3860
+   </li>
+   <li>
+    趋势科技 (Trend Micro Inc.) 的吴潍浠 (@wish_wu)：CVE-2015-3861
+   </li>
+  </ul>
+  <h2 id="security_vulnerability_details" style="margin-bottom:0px">
+   安全漏洞详情
+  </h2>
+  <hr/>
+  <p>
+   我们在下面提供了上述
+   <a href="http://source.android.com/security/bulletin/2015-09-01.html#security_vulnerability_summary">
+    安全漏洞摘要
+   </a>
+   中列出的每个安全漏洞的详细信息，其中包括问题描述、严重程度阐述以及一个包含 CVE、相关 Bug、严重程度、受影响版本及报告日期的表格。如果有解决 Bug ID 所对应问题的 AOSP 代码提交记录，我们也提供了相应链接。如果某个 Bug 有多条相关的代码更改记录，我们还通过 Bug ID 后面的数字链接到了更多 AOSP 参考信息。
+  </p>
+  <h3 id="remote_code_execution_vulnerability_in_mediaserver">
+   Mediaserver 中的远程代码执行漏洞
+  </h3>
+  <p>
+   对于特制的文件，系统在处理其媒体文件和数据时，攻击者可通过 mediaserver 中的漏洞破坏内存并通过 mediaserver 进程执行远程代码。
+  </p>
+  <p>
+   受影响的功能是操作系统的核心部分，有多个应用允许通过远程内容（最主要是彩信和浏览器媒体播放）使用该功能。
+  </p>
+  <p>
+   由于该漏洞可用于通过 mediaserver 服务执行远程代码，因此我们将其严重程度评为“严重”。mediaserver 服务可以访问音频和视频流，还可以获取第三方应用通常无法获取的权限。
+  </p>
+  <p>
+   该漏洞与已报告的 CVE-2015-3824 (ANDROID-20923261) 相关。前者是后者的变体，而原来的安全更新不足以解决新的漏洞。
+  </p>
+  <table>
+   <tbody>
+    <tr>
+     <th>
+      CVE
+     </th>
+     <th>
+      Bug（附 AOSP 链接）
+     </th>
+     <th>
+      严重程度
+     </th>
+     <th>
+      受影响的版本
+     </th>
+    </tr>
+    <tr>
+     <td>
+      CVE-2015-3864
+     </td>
+     <td>
+      <a href="https://android.googlesource.com/platform/frameworks/av/+/6fe85f7e15203e48df2cc3e8e1c4bc6ad49dc968">
+       ANDROID-23034759
+      </a>
+     </td>
+     <td>
+      严重
+     </td>
+     <td>
+      5.1 及更低版本
+     </td>
+    </tr>
+   </tbody>
+  </table>
+  <h3 id="elevation_privilege_vulnerability_in_kernel">
+   内核中的提权漏洞
+  </h3>
+  <p>
+   Linux 内核处理 ping Socket 过程中的提权漏洞可让恶意应用在内核中执行任意代码。
+  </p>
+  <p>
+   由于该漏洞可绕过设备防护功能在特许服务中执行代码，从而有可能在某些设备上造成永久损坏（需要重写系统分区），因此我们将其严重程度评为“严重”。
+  </p>
+  <p>
+   该漏洞在 2015 年 5 月 1 日首次得到公开认定。有许多会获取 Root 权限的工具都利用了这个漏洞，而设备所有者可使用这类工具来修改设备上的固件。
+  </p>
+  <table>
+   <tbody>
+    <tr>
+     <th>
+      CVE
+     </th>
+     <th>
+      Bug（附 AOSP 链接）
+     </th>
+     <th>
+      严重程度
+     </th>
+     <th>
+      受影响的版本
+     </th>
+    </tr>
+    <tr>
+     <td>
+      CVE-2015-3636
+     </td>
+     <td>
+      <a href="https://github.com/torvalds/linux/commit/a134f083e79f">
+       ANDROID-20770158
+      </a>
+     </td>
+     <td>
+      严重
+     </td>
+     <td>
+      5.1 及更低版本
+     </td>
+    </tr>
+   </tbody>
+  </table>
+  <h3 id="elevation_of_privilege_vulnerability_in_binder">
+   Binder 中的提权漏洞
+  </h3>
+  <p>
+   Binder 中的提权漏洞可让恶意应用在其他应用的进程中执行任意代码。
+  </p>
+  <p>
+   由于该漏洞可让恶意应用获取第三方应用通常无法获取的权限，因此我们将其严重程度评为“高”。
+  </p>
+  <table>
+   <tbody>
+    <tr>
+     <th>
+      CVE
+     </th>
+     <th>
+      Bug（附 AOSP 链接）
+     </th>
+     <th>
+      严重程度
+     </th>
+     <th>
+      受影响的版本
+     </th>
+    </tr>
+    <tr>
+     <td>
+      CVE-2015-3845
+     </td>
+     <td>
+      <a href="https://android.googlesource.com/platform/frameworks/native/+/e68cbc3e9e66df4231e70efa3e9c41abc12aea20">
+       ANDROID-17312693
+      </a>
+     </td>
+     <td>
+      高
+     </td>
+     <td>
+      5.1 及更低版本
+     </td>
+    </tr>
+    <tr>
+     <td>
+      CVE-2015-1528
+     </td>
+     <td>
+      <a href="https://android.googlesource.com/platform/frameworks/native/+/7dcd0ec9c91688cfa3f679804ba6e132f9811254">
+       ANDROID-19334482
+      </a>
+      [
+      <a href="https://android.googlesource.com/platform/system/core/+/e8c62fb484151f76ab88b1d5130f38de24ac8c14">
+       2
+      </a>
+      ]
+     </td>
+     <td>
+      高
+     </td>
+     <td>
+      5.1 及更低版本
+     </td>
+    </tr>
+   </tbody>
+  </table>
+  <h3 id="elevation_of_privilege_vulnerability_in_keystore">
+   Keystore 中的提权漏洞
+  </h3>
+  <p>
+   Keystore 中的提权漏洞可让恶意应用通过 Keystore 服务执行任意代码。该漏洞可让攻击者在未经授权的情况下使用 Keystore 储存的密钥（包括硬件支持的密钥）。
+  </p>
+  <p>
+   由于该漏洞可用于获取第三方应用通常无法获取的权限，因此我们将其严重程度评为“高”。
+  </p>
+  <table>
+   <tbody>
+    <tr>
+     <th>
+      CVE
+     </th>
+     <th>
+      Bug（附 AOSP 链接）
+     </th>
+     <th>
+      严重程度
+     </th>
+     <th>
+      受影响的版本
+     </th>
+    </tr>
+    <tr>
+     <td>
+      CVE-2015-3863
+     </td>
+     <td>
+      <a href="https://android.googlesource.com/platform/system/security/+/bb9f4392c2f1b11be3acdc1737828274ff1ec55b">
+       ANDROID-22802399
+      </a>
+     </td>
+     <td>
+      高
+     </td>
+     <td>
+      5.1 及更低版本
+     </td>
+    </tr>
+   </tbody>
+  </table>
+  <h3 id="elevation_of_privilege_vulnerability_in_region">
+   Region 中的提权漏洞
+  </h3>
+  <p>
+   Region 中的提权漏洞可用于创建针对某项服务的恶意信息，进而让恶意应用通过目标服务执行任意代码。
+  </p>
+  <p>
+   由于该漏洞可用于获取第三方应用通常无法获取的权限，因此我们将其严重程度评为“高”。
+  </p>
+  <table>
+   <tbody>
+    <tr>
+     <th>
+      CVE
+     </th>
+     <th>
+      Bug（附 AOSP 链接）
+     </th>
+     <th>
+      严重程度
+     </th>
+     <th>
+      受影响的版本
+     </th>
+    </tr>
+    <tr>
+     <td>
+      CVE-2015-3849
+     </td>
+     <td>
+      <a href="https://android.googlesource.com/platform/frameworks/base/+/4cff1f49ff95d990d6c2614da5d5a23d02145885">
+       ANDROID-20883006
+      </a>
+      [
+      <a href="https://android.googlesource.com/platform/frameworks/base/+/1e72dc7a3074cd0b44d89afbf39bbf5000ef7cc3">
+       2
+      </a>
+      ]
+     </td>
+     <td>
+      高
+     </td>
+     <td>
+      5.1 及更低版本
+     </td>
+    </tr>
+   </tbody>
+  </table>
+  <h3 id="elevation_of_privilege_vulnerability_in_sms_enables_notification_bypass">
+   短信中的提权漏洞允许短信绕过通知
+  </h3>
+  <p>
+   Android 处理短信的过程中存在提权漏洞，可让恶意应用发送可绕过付费短信警告通知的短信。
+  </p>
+  <p>
+   由于该漏洞可用于获取第三方应用通常无法获取的权限，因此我们将其严重程度评为“高”。
+  </p>
+  <table>
+   <tbody>
+    <tr>
+     <th>
+      CVE
+     </th>
+     <th>
+      Bug（附 AOSP 链接）
+     </th>
+     <th>
+      严重程度
+     </th>
+     <th>
+      受影响的版本
+     </th>
+    </tr>
+    <tr>
+     <td>
+      CVE-2015-3858
+     </td>
+     <td>
+      <a href="https://android.googlesource.com/platform/frameworks/opt/telephony/+/df31d37d285dde9911b699837c351aed2320b586">
+       ANDROID-22314646
+      </a>
+     </td>
+     <td>
+      高
+     </td>
+     <td>
+      5.1 及更低版本
+     </td>
+    </tr>
+   </tbody>
+  </table>
+  <h3 id="elevation_of_privilege_vulnerability_in_lockscreen">
+   锁定屏幕中的提权漏洞
+  </h3>
+  <p>
+   锁定屏幕中的提权漏洞可让恶意用户让锁定屏幕组件崩溃，以此绕过锁定屏幕。我们仅在 Android 5.0 和 5.1 中将该问题归类为“漏洞”。在 4.4 版本中，恶意用户可采取类似方式在锁定屏幕中使系统界面组件崩溃，从而导致用户无法使用主屏幕，且必须重新启动设备才能使设备恢复正常。
+  </p>
+  <p>
+   由于该漏洞可让实际拿到设备的人在未经机主允许的情况下安装第三方应用，因此我们将其严重程度评为“中”。此外，该漏洞还可让攻击者查看机主的联系人数据、通话记录、短信以及通常由“危险”级别的权限保护的其他数据。
+  </p>
+  <table>
+   <tbody>
+    <tr>
+     <th>
+      CVE
+     </th>
+     <th>
+      Bug（附 AOSP 链接）
+     </th>
+     <th>
+      严重程度
+     </th>
+     <th>
+      受影响的版本
+     </th>
+    </tr>
+    <tr>
+     <td>
+      CVE-2015-3860
+     </td>
+     <td>
+      <a href="https://android.googlesource.com/platform/frameworks/base/+/8fba7e6931245a17215e0e740e78b45f6b66d590">
+       ANDROID-22214934
+      </a>
+     </td>
+     <td>
+      中
+     </td>
+     <td>
+      5.1 及 5.0
+     </td>
+    </tr>
+   </tbody>
+  </table>
+  <h3 id="denial_of_service_vulnerability_in_mediaserver">
+   Mediaserver 中的拒绝服务漏洞
+  </h3>
+  <p>
+   Mediaserver 中的拒绝服务漏洞可让本地攻击者暂时阻碍用户使用受影响的设备。
+  </p>
+  <p>
+   由于用户可通过重启设备并进入安全模式来移除利用该漏洞的恶意应用，因此我们将其严重程度评为“低”。该漏洞还可能导致 mediaserver 通过网页或彩信远程处理恶意文件，在这种情况下，mediaserver 进程将会崩溃，但设备仍可用。
+  </p>
+  <table>
+   <tbody>
+    <tr>
+     <th>
+      CVE
+     </th>
+     <th>
+      Bug（附 AOSP 链接）
+     </th>
+     <th>
+      严重程度
+     </th>
+     <th>
+      受影响的版本
+     </th>
+    </tr>
+    <tr>
+     <td>
+      CVE-2015-3861
+     </td>
+     <td>
+      <a href="https://android.googlesource.com/platform/frameworks/av/+/304ef91624e12661e7e35c2c0c235da84a73e9c0">
+       ANDROID-21296336
+      </a>
+     </td>
+     <td>
+      低
+     </td>
+     <td>
+      5.1 及更低版本
+     </td>
+    </tr>
+   </tbody>
+  </table>
+ </div>
+ <div class="content-footer-sac" itemscope="" itemtype="http://schema.org/SiteNavigationElement">
+  <div class="layout-content-col col-9" style="padding-top:4px">
+  </div>
+  <div class="paging-links layout-content-col col-4">
+  </div>
+ </div>
+</div>
+
+  </body>
+</html>
