@@ -1,0 +1,21 @@
+#!/bin/bash
+
+#md32-elf-readelf -l "$1"
+
+md32-elf-readelf -l "$1" | grep '^\s*LOAD' \
+	| awk ' \
+	{ \
+		if ($0 ~ /.*E.*/) { \
+			printf "monitor md32 mem_select pm\n"; \
+		} else { \
+			printf "monitor md32 mem_select dm\n"; \
+		}\
+		_START=strtonum($2); \
+		_END=strtonum($2) + strtonum($5); \
+		_BIAS=strtonum($3) - strtonum($2); \
+		printf "restore '$1' binary %ld %ld %ld\n", _BIAS, _START, _END; \
+	}'
+
+md32-elf-readelf -h "$1" | grep 'Entry point address' \
+	| awk -F' ' '{ print "set $pc =", $(NF) }'
+

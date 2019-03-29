@@ -1,0 +1,239 @@
+#!/usr/bin/perl -w
+# elf2xxx.pl
+
+use strict;
+use Getopt::Long;
+use File::Basename;
+
+my $debug;
+my $auther      = "Zyson Wu, DM6/DP/DT";
+my $maintainer  = "Bixiong Cui, DM3/DP/DT Tel: 83561";
+my $description = "The program is used to split MD32 ELF file into
+1) FPGA PMb/DMb format (*.bin)
+2) VLOG PMb/DMb format (*.hex)
+";
+my $history     = "Revison History
+-----------------------------------------------------------------------
+ v1.0  2014/08/20  Initial build
+-----------------------------------------------------------------------
+";
+
+#######################################################################
+# System Variables
+#######################################################################
+my $ELF;
+my %options;
+
+&usage() if ($#ARGV == -1);
+
+GetOptions(\%options, "bin",
+                      "hex",
+                      'map=s',
+                      "help", "history")
+or die "\e[5;31mError! Invalid Option!\e[0m \n";
+
+#######################################################################
+# Main Code
+#######################################################################
+&usage() if defined($options{"help"});
+&history() if defined($options{"history"});
+
+$ELF = $ARGV[$#ARGV];
+
+if (! -e $ELF) {
+  print "\e[5;31mError! $ELF doesn't exist!\e[0m \n";
+  exit;
+}
+
+if (defined($options{"map"})) {
+  &parse_map($ELF, 0, $options{"map"}) if !defined($options{"hex"});
+  &parse_map($ELF, 1, $options{"map"}) if defined($options{"hex"});
+} else {
+  &gen_bin($ELF, 0, "", "") if !defined($options{"hex"});
+  &gen_bin($ELF, 1, "", "") if defined($options{"hex"});
+}
+
+
+#######################################################################
+# User Subroutines
+#######################################################################
+sub usage {
+  print "\e[32m$description\e[0m
+\e[31mUsage: $0 [Options] \$ELF \e[0m
+Options:
+  -bin       : Generate FPGA PMb/DMb format (*.bin)
+  -hex       : Generate VLOG PMb/DMb format (*.hex)
+  -map       : specify the output file name and contents
+  -help      : Show detail usage
+  -history   : Show version history
+
+For bug reporting, please contact
+
+maintainer:
+$maintainer
+\n";
+  exit;
+}
+
+
+sub history {
+  print "$history \n";
+  exit;
+}
+
+sub parse_map {
+
+  my ($elf, $hex, $map) = @_;
+  my $elf_dir = dirname($elf);
+
+  system("md32-elf-readelf -S -W $elf | grep PROGBITS | awk -F '] ' '{print \$2}' > $elf_dir/section.log");
+  system("md32-elf-readelf -l $elf | grep LOAD | awk '{ if (\$0 ~ /.*E.*/) {print \$3 > \"$elf.pm.addr\";} else { print \$3 > \"$elf.dm.addr\";}}'");
+
+  open map_file, $map or die $!;
+  my $output_file;
+  while (my $ln = <map_file>) {
+    chomp $ln;
+    $ln=~ s/\s//g;
+    my @array = split(/:/, $ln);
+    $output_file = $array[0];
+    my @output_file_sections = split(/,/, $array[1]);
+
+    &gen_bin_one($elf, $hex, $output_file, @output_file_sections);
+    if ($hex) {
+      my $output_file_dir = dirname($output_file);
+      system("rm -f $output_file");
+      system("rm -f $output_file_dir/*.hex.tmp");
+    }
+  }
+
+  system("rm -f $elf_dir/section.log");
+
+  if ($hex) {
+    system("rm -f $elf_dir/*.addr");
+    system("rm -f $elf_dir/*.hex.tmp");
+  }
+
+  close map_file;
+}
+
+# Translate ELF file to generate PMb/DMb binary format
+# ---------------------------------------------------------------------
+sub gen_bin {
+
+  my ($elf, $hex, $output_file, @output_sections) = @_;
+  my $elf_dir = dirname($elf);
+
+  system("md32-elf-readelf -S -W $elf | grep PROGBITS | awk -F '] ' '{print \$2}' > $elf_dir/section.log");
+  system("md32-elf-readelf -l $elf | grep LOAD | awk '{ if (\$0 ~ /.*E.*/) {print \$3 > \"$elf.pm.addr\";} else { print \$3 > \"$elf.dm.addr\";}}'");
+
+  open SECTION, "$elf_dir/section.log" or die $!;
+
+  my @pm_sections;
+  my @dm_sections;
+
+  while (my $ln = <SECTION>) {
+    chomp $ln;
+    my @array = split(/\s+/, $ln);
+    my $Name  = $array[0];
+    my $Flg   = $array[6];
+
+    if ($Flg =~ /[WAXMS]+/) {
+      if ($Flg =~ /[X]/){
+        push(@pm_sections, $Name);
+      } else {
+        push(@dm_sections, $Name);
+      }
+    }
+  }
+
+  close SECTION;
+
+  # generate PM/DM bin file
+  print "@pm_sections\n\n" if defined($debug);
+  &gen_bin_one($elf, $hex, "$elf.pm", @pm_sections);
+  print "@dm_sections\n\n" if defined($debug);
+  &gen_bin_one($elf, $hex, "$elf.dm", @dm_sections);
+
+  system("rm -f $elf_dir/section.log");
+  system("rm -f $elf_dir/*.hex.tmp");
+
+  if ($hex) {
+    system("rm -f $output_file");
+    system("rm -f $elf.pm");
+    system("rm -f $elf.dm");
+    system("rm -f $elf_dir/*.addr");
+  }
+}
+
+sub gen_bin_one {
+
+  my ($elf, $hex, $output_file, @output_sections) = @_;
+  my $elf_dir = dirname($elf);
+
+  open SECTION, "$elf_dir/section.log" or die $!;
+
+  my $sections;
+  my $sections_max = 0;
+
+  my @array;
+  my $Name;
+  my $Addr;
+  my $Size;
+  my $Flg;
+  my $EndAddr;
+
+  if (@output_sections) {
+    while (my $ln = <SECTION>) {
+      chomp $ln;
+      @array = split(/\s+/, $ln);
+      $Name  = $array[0];
+      $Addr  = $array[2];
+      $Size  = $array[4];
+      $EndAddr = hex($Addr) + hex($Size);
+
+      foreach my $output_section (@output_sections) {
+        if ($output_section eq $Name) {
+          $Flg   = $array[6];
+          $sections .= "-j $output_section --change-section-lma $output_section=0x$Addr ";
+          $sections_max = $EndAddr if ($EndAddr > $sections_max);
+        }
+      }
+
+      # Pad the last section up to max address
+      my $sections_mod = $sections_max % 4;
+
+      $sections_max += (4-$sections_mod) if ($sections_mod != 0);
+    }
+
+    # generate bin file
+    print "==============================\n" if defined ($debug);
+    print "$elf\n" if defined ($debug);
+    print "$output_file\n" if defined ($debug);
+    print "$sections_max\n" if defined ($debug) ;
+    print "$sections\n" if defined ($debug);
+    print "==============================\n" if defined ($debug);
+
+    system("md32-elf-objcopy -S --gap-fill=0x00 --pad-to=$sections_max $sections $elf -O binary $output_file");
+
+    if ($hex) {
+      my $buf;
+
+      if ($Flg =~ /[X]/) {
+        print "PM\n" if defined($debug);
+        $buf = `cat ./$elf.pm.addr | head -n 1`;
+        $buf =~ /^(0x\w+)\s*/;
+        my $pm_load_addr=hex($1);
+        system("hexdump -v -e '1/1 \"@%06_ax %02x\n\"' $output_file > $output_file.hex.tmp");
+        system("cat $output_file.hex.tmp | awk -F'@|[ ]+' '{ \$2=strtonum(\"0x\"\$2) } { \$2+=$pm_load_addr } { printf(\"\@%06x %s\\n\", \$2, \$3) }' > $output_file.hex");
+      } else {
+        print "DM\n" if defined($debug);
+        $buf = `cat ./$elf.dm.addr | head -n 1`;
+        $buf =~ /^(0x\w+)\s*/;
+        my $dm_load_addr=hex($1);
+        system("hexdump -v -e '1/1 \"@%06_ax %02x\n\"' $output_file > $output_file.hex.tmp");
+        system("cat $output_file.hex.tmp | awk -F'@|[ ]+' '{ \$2=strtonum(\"0x\"\$2) } { \$2+=$dm_load_addr } { printf(\"\@%06x %s\\n\", \$2, \$3) }' > $output_file.hex");
+      }
+    }
+    close SECTION;
+  }
+}

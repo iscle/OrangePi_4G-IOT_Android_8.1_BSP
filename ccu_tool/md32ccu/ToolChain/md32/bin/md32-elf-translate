@@ -1,0 +1,117 @@
+#!/usr/bin/perl -w
+
+use strict;
+use Getopt::Long;
+
+my $debug;
+my $auther      = "Zyson Wu, DM6/DP/DT";
+my $maintainer  = "Bixiong Cui, DM3/DP/DT Tel: 83561";
+my $description = "The program is used to convert MD32 ELF 
+";
+my $history     = "Revison History
+-----------------------------------------------------------------------
+ v1.0  2014/12/12  Initial build
+-----------------------------------------------------------------------
+";
+
+#######################################################################
+# System Variables
+#######################################################################
+my %options;
+my $format = "codeline";
+my $help = 0;
+my $vlogfile;
+my $elf;
+my %h_inst;
+
+&usage() if ($#ARGV == -1);
+
+GetOptions (\%options,
+            "vlog=s"  => \$vlogfile,
+            "help", "history")
+or die "\e[5;31mError! Invalid Option!\e[0m \n";
+
+
+#######################################################################
+# Main Code
+#######################################################################
+&usage() if defined($options{"help"});
+&history() if defined($options{"history"});
+
+my $ELF = $ARGV[$#ARGV];
+
+&parse_asm();
+&parse_rtl_vlog();
+
+
+#######################################################################
+# User Subroutines
+#######################################################################
+sub usage{
+  print "\e[32m$description\e[0m
+\e[31mUsage: $0 [Options] \$ELF \e[0m
+options:
+  -vlog     : rtl simulation log
+  -help     : print detail usage
+  -history  : print version history
+
+For bug reporting, please contact
+
+maintainer:
+$maintainer
+\n";
+  exit;
+}
+
+sub history {
+  print "$history \n";
+  exit;
+}
+
+sub parse_asm {
+  system("md32-elf-objdump -d $ELF > $ELF.asm.tmp");
+  system("sed 's/\t;.*//g' $ELF.asm.tmp | grep '^ ' > $ELF.asm");
+
+  open DIS, "$ELF.asm" or die "Error! Can't Open \$DIS File! \n$!";
+
+  while (my $ln = <DIS>) {
+    chomp $ln;
+    if  ($format eq "codeline") {
+      if ($ln =~ /([0-9a-f]+):\t((.. ){2,4})\s+(.+)/) {
+        my $pc = hex($1);
+        my $inst = $4;
+        $h_inst{$pc} = $inst;
+        print "PC = %8d, INST = %s \n", $pc, $inst if $debug;
+      }
+    }
+    else {
+      if ($ln =~ /(\d+)    ((0x.. ){2,4}) +(.+)/) {
+        my $pc = $1;
+        my $inst = $4;
+        $h_inst{$pc} = $inst;
+        print "PC = %8d, INST = %s \n", $pc, $inst if $debug;
+      }
+    }
+  }
+  close DIS;
+  system("rm -rf $ELF.asm.tmp");
+  system("rm -rf $ELF.asm");
+}
+
+sub parse_rtl_vlog {
+  open VLOG, $vlogfile or die "Error! Can't Open \$VLOG FILE! \n$!";
+  while (my $ln = <VLOG>) {
+    chomp $ln;
+    if ($ln =~ /(\d+)# PC: +(\d+)/) {
+      my $cyc = $1;
+      my $pc = $2;
+      printf "%8d# PC:%8d  %s \n", $cyc, $pc, $h_inst{$pc};
+    }
+
+    if ($ln =~ / +\[R..\] 0x......./) {
+      my $head = "" x 10;
+      printf "%s %s \n", $head, $ln;
+    }
+  }
+  close VLOG;
+}

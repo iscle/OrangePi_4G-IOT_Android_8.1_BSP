@@ -1,0 +1,78 @@
+#!/bin/bash
+set -- $@ --end--
+proc=MD32
+si_revision=0.5
+linker_script=
+no_std_lib=
+obj_files=
+while [ a$1 != a--end-- ] ; do
+  if [ a$1 = a-proc ] ; then
+    shift
+    proc=$1
+    shift
+  elif [ a$1 = a-si-revision ] ; then
+    shift
+    si_revision=$1
+    shift
+  elif [ a$1 = a-v ] ; then
+    verbose=1
+    shift
+  elif [ a$1 = a-T ] ; then
+    shift
+    linker_script=$1
+    shift
+  elif [[ a$1 == a*.o ]] ; then
+    obj_files="${obj_files} $1"
+    shift
+  elif [ a$1 = a-MD__NO_STD_LIB ] ; then
+    no_std_lib=1
+    shift
+  else
+    set -- $@ $1
+    shift
+  fi
+done
+shift
+
+if [ a$md32_DIR = a ] ; then
+  DSPTK=$(dirname $0)/..
+  case $proc in
+    MS15E30-GNU|MS15E30-NLIB)
+             export md32_DIR=$DSPTK/nml/s15r30_md32_v$si_revision/lib;;
+    *)       echo "$0: Unknown processor $proc" >&2
+             exit 1;;
+  esac
+fi
+
+if [ a$linker_script = a ] ; then
+  if [[ a$proc == a*NLIB ]] ; then
+    #linker_script=${md32_DIR}/../nlib/md32-split.sc
+    linker_script=${md32_DIR}/../nlib/sensor.sc
+  else
+    linker_script=${md32_DIR}/md32.sc
+  fi
+fi
+
+
+verbose_run() {
+  if [ a$verbose = a1 ] ; then
+    echo $@
+  fi
+  $@
+}
+
+target_name=md32
+
+if [ a$no_std_lib = a1 ] ; then
+  verbose_run "${target_name}-elf-ld -T ${linker_script} ${obj_files} $@"
+else
+  if [[ a$proc == a*NLIB ]] ; then
+    verbose_run "${target_name}-elf-ld -T ${linker_script}
+    -L ${md32_DIR}/Release -L ${md32_DIR}/../nlib/lib -L ${md32_DIR}/softfloat/lib/Release
+    ${obj_files} ${md32_DIR}/../nlib/lib/crt0.o $@ -lm -lc -lmd32_gnu -lsoftfloat_gnu -lgloss --no-check-sections"
+  else
+    verbose_run "${target_name}-elf-ld -T ${linker_script}
+    -L ${md32_DIR}/Release -L ${md32_DIR}/runtime/lib/Release -L ${md32_DIR}/softfloat/lib/Release
+    ${obj_files} $@ -lm_gnu -lc_gnu -lmd32_gnu -lsoftfloat_gnu"
+  fi
+fi

@@ -1,0 +1,40 @@
+#!/bin/bash
+set -- $@ --end--
+while [ a"$1" != a--end-- ] ; do
+  if [ a"$1" = a-T ] ; then
+    shift
+  elif [ a"$1" = a-t ] ; then
+    shift
+  elif [[ a"$1" == a*".tcl" ]] ; then
+    shift
+  else
+    set -- "$@" "$1"
+    shift
+  fi
+done
+shift
+
+verbose_run() {
+  echo "$@"
+  $@
+}
+
+# Use explict gnu_sim path instead of searching it in $PATH
+# Combine $gnusim_DIR and relative path of GNU assembler to
+# obtain the explicit path of gnu_sim for a specific PROC.
+gnu_sim=
+gnu_as=`which md32-elf-as 2>/dev/null`
+if [ a"$gnu_as" = a"" ] ; then
+  gnu_as=`which md32sc-elf-as 2>/dev/null`
+fi
+if [ a"$gnu_as" != a"" ] ; then
+  sim_PATH=$(dirname "$gnu_as")/../../md32_sim_creator/creator
+  gnu_sim=$sim_PATH/$gnusim_DIR/gnu_sim
+fi
+
+if [ ! -f $gnu_sim ]; then
+  echo "Error: no gnu_sim in $sim_PATH/$gnusim_DIR"
+  exit 1
+fi
+
+verbose_run "$gnu_sim $@"

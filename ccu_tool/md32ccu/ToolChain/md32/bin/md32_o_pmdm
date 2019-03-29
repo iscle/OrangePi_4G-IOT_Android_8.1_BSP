@@ -1,0 +1,31 @@
+#!/bin/bash
+
+#md32-elf-objdump -h "$1"
+
+md32-elf-objdump -h "$1" | \
+	awk '\
+	{ \
+		if ($0 ~ /Idx Name/) { \
+			_DECODE_START = 1; \
+		} \
+		if (_DECODE_START != 0) { \
+			if ($0 ~/\s*[0-9]+/) { \
+				_SIZE = strtonum("0x"$3); \
+				_VMA = strtonum("0x"$4); \
+				_FILE_OFF = strtonum("0x"$6); \
+			} else { \
+				if (($0 ~ /LOAD,/) && (_SIZE != 0)) { \
+					_START=_FILE_OFF; \
+					_END=_FILE_OFF + _SIZE; \
+					_BIAS=_VMA - _FILE_OFF; \
+					if ($0 ~ /CODE/) { \
+						printf "monitor md32 mem_select pm\n"; \
+					} else { \
+						printf "monitor md32 mem_select dm\n"; \
+					} \
+					printf "restore '$1' binary %ld %ld %ld\n", _BIAS, _START, _END; \
+				} \
+			} \
+		} \
+	}'
+

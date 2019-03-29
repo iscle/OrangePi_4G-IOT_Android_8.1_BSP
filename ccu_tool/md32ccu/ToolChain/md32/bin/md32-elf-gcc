@@ -1,0 +1,279 @@
+#!/bin/sh
+# This is a wrapper for converting gcc command lines into something
+# that Bril compiler, ccmd32, can understand. This wrapper
+# will also attempt to filter out the terminal messages from the
+# compiler so that dejagnu isn't confused by all the verbosity.
+
+#MD32_NAME="ms10_E3_0"
+#MD32_NEWLIB_HOME=/proj/mtk03895/Templates/MD32/git/MD32_toolchain/md32/md32-elf
+
+if [ "$MD32_NAME" = "" ]; then
+	echo
+	echo
+	echo 'Please set the MD32 version: $MD32_NAME'
+	echo "Warn: This md32-elf-gcc is only for CodeLine/CoreTracer testing"
+	echo "      User should use ccmd32"
+	echo
+	exit 1
+fi
+
+MD32_NEWLIB_LIB="$MD32_NEWLIB_HOME/$MD32_NAME/lib"
+MD32_NEWLIB_INC="$MD32_NEWLIB_HOME/$MD32_NAME/include"
+
+check_result ()
+{
+    result=0
+    while read line
+    do
+      if [ ${show_all_output} -ne 0 ]
+    then
+    echo "${line}"
+      fi
+
+      case "${line}" in
+          warning:*)
+              # ignore warnings
+              ;;
+          *error:* | "Fatal error:"*)
+        if [ ${show_all_output} -eq 0 ]
+              then
+                  echo "${line}"
+              fi
+            result=2
+              ;;
+          *)
+              ;;
+      esac
+    done
+
+    return ${result}
+}
+
+# This is just a stub function. You can use this to simulate
+# gcc's --print-multi-lib option or set it in your board
+# config file (set_board_info multitop).
+print_multi_libs ()
+{
+    echo ".;"
+}
+
+TEMP="/tmp/md32-output"
+bin_path=`dirname $0`
+
+lib_path="$MD32_NEWLIB_LIB"
+add_include_path="-I$MD32_NEWLIB_INC"
+
+args="$add_include_path"
+#bril_options="-cmode -no-annotate -S"
+#bril_options="-cmode -S +no_us"
+bril_options="-cmode -S"
+srcs=""
+asms=""
+pre_asms=""
+pre_asms_options="$add_include_path"
+objs=""
+elf_output="a.out"
+elf_output_path="."
+preprocess_only=0
+assemble=1
+link=1
+as_args=""
+ld_args=""
+nostdlib=0
+show_all_output=0
+system_dir=""
+user_set_linker_script=0
+linker_script="$bin_path/md32.sc"
+split=0
+
+while test $# -gt 0
+do
+  case "$1" in
+      -m32) ;;
+      -o) shift
+  elf_output="$1"
+  elf_output_path=`dirname $1`
+  if [ "$elf_output_path" = "." ]; then
+    elf_output_path=`pwd`
+  fi
+          ;;
+      -Os) args="${args} -Os" ;;
+      -O*) args="${args} -O" ;;
+      -g*) args="${args} -g" ;;
+      -I*)
+  pre_asms_options="${pre_asms_options} $1"
+  args="${args} $1"
+  ;;
+      -isystem) shift
+  system_dir="${system_dir} $1"
+  ;;
+      -D*)
+  arg=`echo $1 | sed 's/[[:space:]]//g'`
+  arg=`echo $arg | sed 's/\\\\//g'`
+  args="${args} ${arg}"
+  pre_asms_options="${pre_asms_options} ${arg}"
+  ;;
+      -E) preprocess_only=1
+  args="${args} -E"
+  ;;
+      -c) link=0
+  ;;
+      -S) assemble=0
+  link=0
+  ;;
+      -L*)
+        args="${args} $1"
+        ld_args="${ld_args} $1"
+        ;;
+      -lm) ;;
+      -w)  ;;
+      -fstack-check) ;;
+      --print-multi-lib)
+  print_multi_libs
+  exit 0
+  ;;
+      -static) ld_args="${ld_args} -static" ;;
+      -Wl,*)
+  ld_arg=`echo $1 | sed 's/-Wl,\(\w*\)/\1/g' | sed 's/,/=/g'`
+  ld_args="${ld_args} ${ld_arg}"
+  ;;
+      -T) shift
+  user_set_linker_script=1
+  linker_script="$1"
+  ;;
+      -ffunction-sections)
+  args="$args -ffunction-sections"
+  ;;
+      -fdata-sections)
+  args="$args -fdata-sections"
+  ;;
+      -fshort-enums) ;;
+      -fno-tree-loop-distribute-patterns) ;;
+      -fno-builtin) ;;
+      -B*)
+  arg=`echo $1 | sed 's/-B\(\w*\)/\1/g'`
+  args="${args} -L${arg}"
+  system_dir="${system_dir} ${arg}include"
+  ;;
+      -m64) ;;
+      -Winline) ;;
+      -nostdlib)
+  nostdlib=1
+  ld_args="${ld_args} -nostdlib"
+  ;;
+      *.c) srcs="${srcs} $1" ;;
+      *.s) asms="${asms} $1" ;;
+      *.S) pre_asms="${pre_asms} $1" ;;
+      *.o) objs="${objs} $1" ;;
+      *.so) objs="${objs} $1" ;;
+      *) echo "unsupported: $1" ;;
+  esac
+  shift
+done
+
+bril_lib_path=""
+as_args="$as_args -mcpu=$MD32_NAME"
+if [ "$MD32_NAME" = "MS15E30-GNU" ]; then
+  split=1
+  bril_lib_path=$MD32_S10_GNU_LIB
+  bril_options="$bril_options -proc S10-GNU"
+else
+  bril_options="$bril_options -proc $MD32_NAME"
+  split=1
+fi
+
+
+if [ $preprocess_only = "1" ]; then
+  for src in ${srcs}
+  do
+    pp ${src}
+  done
+
+  exit 0
+fi
+
+for sdir in ${system_dir}
+do
+  args="${args} -I${sdir}"
+done
+
+for src in ${srcs}
+do
+  if [ $elf_output = "a.out" ] || [ $assemble = "1" ]; then
+    asm=`basename ${src} | sed 's/\(\w*\)\.c/\1.s/g'`
+  else
+    asm=`basename $elf_output`
+  fi
+
+  ccmd32 $bril_options $args ${src} -o $elf_output_path/$asm 2>&1 | tee ${TEMP} > /dev/null
+  #echo ccmd32 $bril_options $args ${src} -o $elf_output_path/$asm
+
+  asms="${asms} $elf_output_path/${asm}"
+
+  cat ${TEMP} | check_result
+  result=$?
+  rm ${TEMP}
+done
+
+if [ $assemble = "1" ]; then
+  # Preprocess assembly code
+  for pre_asm in ${pre_asms}
+  do
+    asm=`basename ${pre_asm} | sed 's/\(\w*\)\.S/\1.s/g'`
+
+    pp $pre_asms_options $pre_asm > $elf_output_path/$asm
+
+    asms="${asms} $elf_output_path/$asm"
+  done
+
+  # Assemble
+  for asm in ${asms}
+  do
+    if [ "$elf_output" = "a.out" ] || [ $link = "1" ]; then
+      obj=`basename ${asm} | sed 's/\(\w*\)\.s/\1.o/g'`
+    else
+      if [ "$assemble" = "1" ] && [ "$link" = "0" ]; then  # assemble only
+        obj=`basename $elf_output`
+      else
+        obj=`basename $elf_output`".o"
+      fi
+    fi
+
+    md32-elf-as $as_args $asm -o $elf_output_path/$obj
+    #echo md32-elf-as $as_args $asm -o $elf_output_path/$obj
+
+    objs="${objs} $elf_output_path/${obj}"
+  done
+fi
+
+library_path=""
+library_lib=""
+library_crt0=""
+
+library_path="$lib_path"
+library_lib="-lc -lsoftfloat_gnu -lgloss -lm"
+library_crt0="$lib_path/crt0.o"
+
+if [ $split = "1" ]; then
+  if [ $user_set_linker_script = "0" ]; then
+    #linker_script="$bin_path/md32-split.sc"
+    linker_script="$bin_path/sensor.sc"
+  fi
+  ld_args="$ld_args --no-check-sections"
+fi
+
+if [ $link = "1" ]; then
+  stdlib=""
+  crt0=""
+
+  if [ "$nostdlib" -eq "0" ]; then
+    stdlib="-L$library_path -L$bril_lib_path $library_lib"
+    crt0="$library_crt0"
+    ld_args="${ld_args} @$bin_path/link.opt"
+  fi
+
+  md32-elf-ld $ld_args $crt0 $objs $stdlib -o $elf_output -T $linker_script
+  #echo md32-elf-ld $ld_args $crt0 $objs $stdlib -o $elf_output -T $linker_script
+fi
+
+exit ${result}
