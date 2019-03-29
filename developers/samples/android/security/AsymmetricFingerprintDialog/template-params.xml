@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ Copyright 2015 The Android Open Source Project
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+<!-- TODO(thagikura) Add tests for Activity and Fragment once InstrumentationTests can be run
+     on an emulator or a device.
+     At this moment, due to the different API between the image and the SDK, they can't be launched.
+     E.g. Skipping device 'Nexus 5 - MNC', due to different API preview 'MNC' and 'android-MNC'
+     -->
+<sample>
+    <name>AsymmetricFingerprintDialog</name>
+    <group>Security</group>
+    <package>com.example.android.asymmetricfingerprintdialog</package>
+
+    <minSdk>23</minSdk>
+
+    <dependency>com.squareup.dagger:dagger:1.2.2</dependency>
+    <dependency>com.squareup.dagger:dagger-compiler:1.2.2</dependency>
+
+    <!-- TODO(thagikura) These dependencies should be created as testCompile instead of compile but
+         the template system doesn't allow androidTestCompile dependencies. Change it once fixed.
+    -->
+    <dependency>junit:junit:4.12</dependency>
+    <dependency>org.mockito:mockito-core:1.10.19</dependency>
+
+    <strings>
+        <intro>
+            <![CDATA[
+This sample demonstrates how you can use registered fingerprints to authenticate the user
+before proceeding some actions such as purchasing an item. This version uses asymmetric keys.
+            ]]>
+        </intro>
+    </strings>
+
+    <template src="base" />
+
+    <metadata>
+        <!-- Values: {DRAFT | PUBLISHED | INTERNAL | DEPRECATED | SUPERCEDED} -->
+        <status>PUBLISHED</status>
+        <categories>security</categories>
+        <technologies>Android</technologies>
+        <languages>Java</languages>
+        <solutions>Mobile</solutions>
+        <level>INTERMEDIATE</level>
+        <icon>screenshots/big-icon.png</icon>
+        <screenshots>
+            <img>screenshots/1-purchase-screen.png</img>
+            <img>screenshots/2-fingerprint-dialog.png</img>
+            <img>screenshots/3-fingerprint-authenticated.png</img>
+            <img>screenshots/4-new-fingerprint-enrolled.png</img>
+        </screenshots>
+
+        <api_refs>
+            <android>android.hardware.fingerprint.FingerprintManager</android>
+            <android>android.hardware.fingerprint.FingerprintManager.AuthenticationCallback</android>
+            <android>android.hardware.fingerprint.FingerprintManager.CryptoObject</android>
+            <android>android.security.KeyGenParameterSpec</android>
+            <android>java.security.KeyStore</android>
+            <android>java.security.Signature</android>
+            <android>java.security.KeyPairGenerator</android>
+        </api_refs>
+
+        <description>
+<![CDATA[
+A sample that demonstrates to use registered fingerprints to authenticate the user in your app
+]]>
+        </description>
+
+        <intro>
+<![CDATA[
+This sample demonstrates how you can use registered fingerprints in your app to authenticate the
+user before proceeding some actions such as purchasing an item.
+
+First you need to create an asymmetric key pair in the Android Key Store using [KeyPairGenerator][1]
+in the way that its private key can only be used after the user has authenticated with fingerprint
+and transmit the public key to your backend with the user verified password (In a real world, the
+app should show proper UIs).
+
+By setting [KeyGenParameterSpec.Builder.setUserAuthenticationRequired][2] to true, you can permit the
+use of the key only after the user authenticate it including when authenticated with the user's
+fingerprint.
+
+Then start listening to a fingerprint on the fingerprint sensor by calling
+[FingerprintManager.authenticate][3] with a [Signature][4] initialized with the asymmetric key pair
+created. Or alternatively you can fall back to server-side verified password as an authenticator.
+
+Once the fingerprint (or password) is verified, the
+[FingerprintManager.AuthenticationCallback#onAuthenticationSucceeded()][5] callback is called.
+
+Then you can verify the purchase transaction on server side with the public key passed from the
+client, by verifying the piece of data signed by the Signature.
+
+[1]: https://developer.android.com/reference/java/security/KeyPairGenerator.html
+[2]: https://developer.android.com/reference/android/security/keystore/KeyGenParameterSpec.Builder.html#setUserAuthenticationRequired%28boolean%29
+[3]: https://developer.android.com/reference/android/hardware/fingerprint/FingerprintManager.html#authenticate%28android.hardware.fingerprint.FingerprintManager.CryptoObject,%20android.os.CancellationSignal,%20int,%20android.hardware.fingerprint.FingerprintManager.AuthenticationCallback,%20android.os.Handler%29
+[4]: https://developer.android.com/reference/java/security/Signature.html
+[5]: https://developer.android.com/reference/android/hardware/fingerprint/FingerprintManager.AuthenticationCallback.html#onAuthenticationSucceeded%28android.hardware.fingerprint.FingerprintManager.AuthenticationResult%29
+]]>
+        </intro>
+    </metadata>
+</sample>
