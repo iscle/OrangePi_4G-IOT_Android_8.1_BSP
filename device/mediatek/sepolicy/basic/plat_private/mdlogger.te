@@ -1,0 +1,55 @@
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+
+# New added for move to /system
+type mdlogger_exec , exec_type, file_type;
+typeattribute mdlogger coredomain;
+
+init_daemon_domain(mdlogger)
+
+binder_use(mdlogger)
+
+binder_service(mdlogger)
+
+# modem logger socket access
+allow mdlogger init:unix_stream_socket connectto;
+allow mdlogger property_socket:sock_file write;
+allow mdlogger platform_app:unix_stream_socket connectto;
+allow mdlogger shell_exec:file { rx_file_perms };
+allow mdlogger system_file:file x_file_perms;
+allow mdlogger zygote_exec:file { r_file_perms };
+allow mdlogger node:tcp_socket node_bind;
+allow mdlogger port:tcp_socket name_bind;
+allow mdlogger self:tcp_socket { create_stream_socket_perms };
+
+#modem logger SD logging in factory mode
+allow mdlogger vfat:dir create_dir_perms;
+allow mdlogger vfat:file create_file_perms;
+
+#mdlogger for read /sdcard
+#allow mdlogger log_device:chr_file w_file_perms;
+allow mdlogger tmpfs:lnk_file read;
+allow mdlogger storage_file:lnk_file rw_file_perms;
+allow mdlogger mnt_user_file:dir search;
+allow mdlogger mnt_user_file:lnk_file rw_file_perms;
+allow mdlogger sdcard_type:file create_file_perms;
+allow mdlogger sdcard_type:dir { create_dir_perms };
+
+# purpose: allow mdlogger to access storage in new version
+allow mdlogger media_rw_data_file:file  { create_file_perms };
+allow mdlogger media_rw_data_file:dir { create_dir_perms };
+
+allow mdlogger storage_file:dir { create_dir_perms };
+allow mdlogger storage_file:file { create_file_perms };
+
+## purpose: avc: denied { read } for name="plat_file_contexts"
+allow mdlogger file_contexts_file:file { read getattr open };
+
+#permission for read boot mode
+#avc: denied { open }  path="/sys/devices/virtual/BOOT/BOOT/boot/boot_mode" dev="sysfs"
+allow mdlogger sysfs:file { read open };
+
+# Allow read avc: denied { read } for name="mddb" dev="mmcblk0p25" ino=681 
+# scontext=u:r:mdlogger:s0 tcontext=u:object_r:system_file:s0 tclass=dir permissive=0
+allow mdlogger system_file:dir read;

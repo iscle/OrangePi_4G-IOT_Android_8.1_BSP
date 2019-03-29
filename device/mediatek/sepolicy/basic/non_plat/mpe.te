@@ -1,0 +1,65 @@
+# ==============================================
+# Policy File of /vendor/bin/MPED Executable File
+
+# ==============================================
+# Type Declaration
+# ==============================================
+type MPED, domain;
+type MPED_exec, exec_type, file_type, vendor_file_type;
+
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+# Date : WK15.29
+# Operation : Feature Developing
+# Purpose : Sensor Aiding GPS
+# ==============================================
+init_daemon_domain(MPED)
+net_domain(MPED)
+
+# Date : WK15.29
+# Operation : Feature Developing
+# Purpose : Setup Connection with GPS for sensor aiding data exchange
+allow MPED sdcard_type:file create_file_perms;
+allow MPED sdcard_type:dir create_dir_perms;
+allow MPED init:unix_stream_socket connectto;
+allow MPED init:udp_socket rw_socket_perms;
+allow MPED self:capability { fsetid dac_override };
+allow MPED sysfs:file rw_file_perms;
+allow MPED tmpfs:lnk_file create_file_perms;
+# TODO::mtk work around and will fix it later
+# allow MPED system_server:unix_dgram_socket sendto;
+# allow MPED system_server:unix_stream_socket rw_socket_perms;
+# allow MPED system_server:binder call;
+
+# Date : WK15.30
+# Operation : Feature Developing
+# Purpose : Setup Connection with sensormanager to obtain mems sensor data for the calculation of dead reckoning algorithm
+# binder_use(MPED)
+# TODO::mtk work around and will fix it later
+# binder_call(MPED,binderservicedomain)
+# allow MPED servicemanager:dir search;
+# allow MPED servicemanager:file r_file_perms;
+
+# Create data/mtk_mpe_server as mpe socket
+type_transition MPED system_data_file:sock_file MPED_socket "mtk_mpe_server";
+allow MPED MPED_socket:sock_file { create_file_perms link };
+# allow MPED system_data_file:dir remove_name;
+# allow MPED system_data_file:sock_file create_file_perms;
+
+# All others under /data get MPED_data_file
+file_type_auto_trans(MPED, system_data_file, MPED_data_file);
+allow MPED MPED_data_file:dir w_dir_perms;
+allow MPED MPED_data_file:file create_file_perms;
+
+# Date : WK15.33
+# Operation : Feature Developing
+# Purpose : Add permission for mped socket
+allow MPED MPED_socket:sock_file setattr;
+
+# Date : WK15.40
+# Operation : Feature Developing
+# Purpose : Add sensorservice registration permission to obtain sensor data from sensor listener
+# TODO::mtk work around and will fix it later
+# allow MPED sensorservice_service:service_manager find;
+

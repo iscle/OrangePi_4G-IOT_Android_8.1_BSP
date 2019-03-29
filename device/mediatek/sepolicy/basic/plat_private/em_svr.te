@@ -1,0 +1,90 @@
+# ==============================================
+# Policy File of /system/bin/em_svr Executable File
+
+
+# ==============================================
+# Type Declaration
+# ==============================================
+
+type em_svr_exec , exec_type, file_type;
+typeattribute em_svr coredomain;
+
+# ==============================================
+# Android Policy Rule
+# ==============================================
+
+# ==============================================
+# NSA Policy Rule
+# ==============================================
+
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+
+init_daemon_domain(em_svr)
+
+# Date: W14.38 2014/09/17
+# Operation : Migration
+# Purpose : for em_svr
+allow em_svr proc:file write;
+allow em_svr sysfs:file write;
+allow em_svr shell_exec:file { read execute open getattr execute_no_trans };
+allow em_svr system_file:file execute_no_trans;
+allow em_svr block_device:dir search;
+allow em_svr graphics_device:chr_file { read write open ioctl};
+allow em_svr graphics_device:dir search;
+allow em_svr radio_data_file:dir { search write add_name create };
+allow em_svr radio_data_file:file { create write open read };
+allow em_svr sysfs_devices_system_cpu:file write;
+allow em_svr self:capability { dac_override sys_nice fowner chown fsetid };
+allow em_svr self:process execmem;
+allow em_svr system_data_file:dir { write remove_name add_name relabelfrom create open };
+allow em_svr kernel:system module_request;
+allow em_svr sdcard_type:dir create_dir_perms;
+allow em_svr sdcard_type:file create_file_perms;
+
+
+# Date: 2015/08/09
+# Operation : M Migration
+# Purpose : set policy for surfaceflinger_service
+allow em_svr surfaceflinger_service:service_manager find;
+
+# Date: 2015/08/21
+# Operation : M Migration
+# Purpose : set policy for sysfs:dir
+allow em_svr sysfs:dir write;
+
+# for use binder
+binder_use(em_svr)
+binder_call(em_svr, surfaceflinger)
+
+# Date: 2017/07/19
+# Operation : O Migration
+# Purpose : add policy for desense/Power/Memory access system file
+allow em_svr toolbox_exec:file { getattr execute read open execute_no_trans };
+allow em_svr vendor_toolbox_exec:file { getattr };
+allow em_svr proc:file { open read };
+allow em_svr sysfs:file { read };
+
+# Date: 2017/07/19
+# Operation : O Migration
+# Purpose : add policy for PSensorThreshold/PSensorData read nvram file
+allow em_svr system_data_file:lnk_file { read };
+
+# Date: 2015/09/16
+# Operation : M Migration
+# Purpose : add policy for system data file access
+allow em_svr system_data_file:file open;
+
+
+# Date: 2017/07/13
+# Operation: O Migration
+# Purpose: add policy for backlight file access
+allow em_svr sysfs_leds:dir search;
+allow em_svr sysfs_leds:lnk_file read;
+allow em_svr sysfs:file open;
+
+# Date: WK1742
+# Purpose: add em_svr to access md log filter in sdcard
+allow em_svr media_rw_data_file:dir { read write search open add_name };
+allow em_svr media_rw_data_file:file { write create open };

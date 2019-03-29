@@ -1,0 +1,250 @@
+type mtk_hal_audio, domain;
+hal_server_domain(mtk_hal_audio, hal_audio)
+
+type mtk_hal_audio_exec, exec_type, vendor_file_type, file_type;
+init_daemon_domain(mtk_hal_audio)
+
+hal_client_domain(mtk_hal_audio, hal_allocator)
+
+hwbinder_use(mtk_hal_audio)
+
+allow mtk_hal_audio ion_device:chr_file r_file_perms;
+
+allow mtk_hal_audio system_file:dir { open read };
+
+userdebug_or_eng(`
+  # used for pcm capture for debug.
+  allow mtk_hal_audio audiohal_data_file:dir create_dir_perms;
+  allow mtk_hal_audio audiohal_data_file:file create_file_perms;
+')
+
+r_dir_file(mtk_hal_audio, proc)
+allow mtk_hal_audio audio_device:dir r_dir_perms;
+allow mtk_hal_audio audio_device:chr_file rw_file_perms;
+
+###
+### neverallow rules
+###
+
+# mtk_hal_audio should never execute any executable without
+# a domain transition
+neverallow mtk_hal_audio { file_type fs_type }:file execute_no_trans;
+
+# mtk_hal_audio should never need network access.
+# Disallow network sockets.
+neverallow mtk_hal_audio domain:{ tcp_socket udp_socket rawip_socket } *;
+
+# Date : WK14.32
+# Operation : Migration
+# Purpose : Set audio driver permission to access SD card for debug purpose and accss NVRam.
+allow mtk_hal_audio sdcard_type:dir { w_dir_perms create };
+allow mtk_hal_audio sdcard_type:file create;
+allow mtk_hal_audio nvram_data_file:dir w_dir_perms;
+allow mtk_hal_audio nvram_data_file:file create_file_perms;
+allow mtk_hal_audio nvram_data_file:lnk_file read;
+allow mtk_hal_audio nvdata_file:lnk_file read;
+allow mtk_hal_audio nvdata_file:dir w_dir_perms;
+allow mtk_hal_audio nvdata_file:file create_file_perms;
+allow mtk_hal_audio sdcard_type:dir remove_name;
+allow mtk_hal_audio sdcard_type:file unlink;
+allow mtk_hal_audio system_data_file:lnk_file read;
+
+# Date : WK14.34
+# Operation : Migration
+# Purpose : nvram access (dumchar case for nand and legacy chip)
+allow mtk_hal_audio nvram_device:chr_file rw_file_perms;
+allow mtk_hal_audio self:netlink_kobject_uevent_socket { create setopt bind };
+#allow mtk_hal_audio self:capability { net_admin };
+
+# Date : WK14.34
+# Operation : Migration
+# Purpose : Smartcard Service
+allow mtk_hal_audio self:netlink_kobject_uevent_socket read;
+allow mtk_hal_audio system_data_file:file open;
+
+# Date : WK14.36
+# Operation : Migration
+# Purpose : media server and bt process communication for A2DP data.and other control flow
+#allow mtk_hal_audio bluetooth:unix_dgram_socket sendto;
+allow mtk_hal_audio bt_a2dp_stream_socket:sock_file write;
+allow mtk_hal_audio bt_int_adp_socket:sock_file write;
+
+# Date : WK14.36
+# Operation : Migration
+# Purpose :  access nvram, otp, ccci cdoec devices.
+allow mtk_hal_audio MtkCodecService:binder call;
+allow mtk_hal_audio ccci_device:chr_file rw_file_perms;
+allow mtk_hal_audio eemcs_device:chr_file rw_file_perms;
+allow mtk_hal_audio devmap_device:chr_file r_file_perms;
+allow mtk_hal_audio ebc_device:chr_file rw_file_perms;
+allow mtk_hal_audio nvram_device:blk_file rw_file_perms;
+
+# Date : WK14.38
+# Operation : Migration
+# Purpose : NVRam access
+allow mtk_hal_audio block_device:dir { write search };
+
+# Date : WK14.38
+# Operation : Migration
+# Purpose : FM driver access
+allow mtk_hal_audio fm_device:chr_file rw_file_perms;
+
+# Data : WK14.38
+# Operation : Migration
+# Purpose : dump for debug
+allow mtk_hal_audio sdcard_type:file append;
+
+# Data : WK14.39
+# Operation : Migration
+# Purpose : dump for debug
+allow mtk_hal_audio audiohal_prop:property_service set;
+
+# Date : WK14.40
+# Operation : Migration
+# Purpose : HDMI driver access
+allow mtk_hal_audio graphics_device:chr_file rw_file_perms;
+
+# Date : WK14.40
+# Operation : Migration
+# Purpose : Smartpa
+allow mtk_hal_audio smartpa_device:chr_file rw_file_perms;
+
+# Date : WK14.41
+# Operation : Migration
+# Purpose : Lossless BT audio
+#allow mtk_hal_audio shell_exec:file { read open execute execute_no_trans };
+#allow mtk_hal_audio system_file:file execute_no_trans;
+#allow mtk_hal_audio zygote_exec:file execute_no_trans;
+
+# Date : WK14.41
+# Operation : Migration
+# Purpose : WFD HID Driver
+allow mtk_hal_audio uhid_device:chr_file rw_file_perms;
+
+# Date : WK14.43
+# Operation : Migration
+# Purpose : VOW
+allow mtk_hal_audio vow_device:chr_file rw_file_perms;
+
+# Date: WK14.44
+# Operation : Migration
+# Purpose : EVDO
+allow mtk_hal_audio rpc_socket:sock_file write;
+allow mtk_hal_audio ttySDIO_device:chr_file rw_file_perms;
+
+# Data: WK14.44
+# Operation : Migration
+# Purpose : for low SD card latency issue
+allow mtk_hal_audio sysfs_lowmemorykiller:file { read open };
+
+# Data: WK14.45
+# Operation : Migration
+# Purpose : for change thermal policy when needed
+allow mtk_hal_audio proc_mtkcooler:dir search;
+allow mtk_hal_audio proc_mtktz:dir search;
+allow mtk_hal_audio proc_thermal:dir search;
+allow mtk_hal_audio thermal_manager_data_file:file create_file_perms;
+allow mtk_hal_audio thermal_manager_data_file:dir { rw_dir_perms setattr };
+
+# Data : WK14.46
+# Operation : Migration
+# Purpose : for SMS app
+allow mtk_hal_audio radio_data_file:dir search;
+allow mtk_hal_audio radio_data_file:file open;
+
+# Data : WK14.47
+# Operation : Audio playback
+# Purpose : Music as ringtone
+allow mtk_hal_audio radio:dir { search read };
+allow mtk_hal_audio radio:file r_file_perms;
+
+# Data : WK14.47
+# Operation : CTS
+# Purpose : cts search strange app
+allow mtk_hal_audio untrusted_app:dir search;
+
+# Date : WK15.03
+# Operation : Migration
+# Purpose : offloadservice
+allow mtk_hal_audio offloadservice_device:chr_file rw_file_perms;
+
+# Date : WK15.34
+# Operation : Migration
+# Purpose: for camera middleware dump image buffer to sdcard & audio frameworks dump
+allow mtk_hal_audio system_data_file:dir write;
+allow mtk_hal_audio storage_file:dir search;
+allow mtk_hal_audio storage_file:lnk_file {read write};
+allow mtk_hal_audio mnt_user_file:dir {write read search};
+allow mtk_hal_audio mnt_user_file:lnk_file {read write};
+
+# Date : WK16.17
+# Operation : Migration
+# Purpose: read/open sysfs node
+allow mtk_hal_audio sysfs_ccci:file r_file_perms;
+
+# Date : WK16.18
+# Operation : Migration
+# Purpose: research root dir "/"
+allow mtk_hal_audio tmpfs:dir search;
+
+# Date : WK16.18
+# Operation : Migration
+# Purpose: access sysfs node
+allow mtk_hal_audio sysfs:file { open read write };
+allow mtk_hal_audio sysfs_ccci:dir search;
+# Purpose: Dump debug info
+allow mtk_hal_audio debugfs_binder:dir search;
+allow mtk_hal_audio kmsg_device:chr_file { open write };
+allow mtk_hal_audio property_socket:sock_file write;
+allow mtk_hal_audio media_rw_data_file:dir { create_dir_perms };
+allow mtk_hal_audio fuse:file rw_file_perms;
+allow mtk_hal_audio init:unix_stream_socket connectto;
+
+# Date : WK16.27
+# Operation : Migration
+# Purpose: tunning tool update parameters
+binder_call(mtk_hal_audio,radio)
+allow mtk_hal_audio mtk_audiohal_data_file:dir create_dir_perms;
+allow mtk_hal_audio mtk_audiohal_data_file:file create_file_perms;
+
+# Date : WK16.28
+# Operation : Migration
+# Purpose: Write audio dump files to external SDCard.
+allow mtk_hal_audio sdcard_type:file { create_file_perms };
+
+# Date : WK16.33
+# Purpose: Allow to access ged for gralloc_extra functions
+allow mtk_hal_audio proc_ged:file {open read write ioctl getattr};
+
+set_prop(mtk_hal_audio,hwservicemanager_prop);
+allow mtk_hal_audio storage_file:dir search;
+
+# Date : W18.01
+# Add for turn on SElinux in enforcing mode
+allow mtk_hal_audio system_data_file:lnk_file r_file_perms;
+
+# Fix bootup violation
+allow mtk_hal_audio fuse:dir read;
+
+# for usb phone call, allow sys_nice
+allow mtk_hal_audio self:capability sys_nice;
+
+# Date : W17.29
+# Boot for opening trace file: Permission denied (13)
+allow mtk_hal_audio debugfs_tracing:file { write open };
+
+# for usb phone call, allow sys_nice
+allow mtk_hal_audio self:capability sys_nice;
+
+# Audio Tuning Tool Android O porting
+binder_call(mtk_hal_audio,audiocmdservice_atci);
+
+# audio dump
+allow mtk_hal_audio media_rw_data_file:file { create read write open append getattr };
+
+# Add for control PowerHAL
+allow mtk_hal_audio mtk_hal_power_hwservice:hwservice_manager find;
+binder_call(mtk_hal_audio, mtk_hal_power)
+binder_call(mtk_hal_audio, merged_hal_service)
+# cm4 smartpa
+allow mtk_hal_audio audio_ipi_device:chr_file { read write ioctl open };

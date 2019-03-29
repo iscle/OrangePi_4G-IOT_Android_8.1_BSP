@@ -1,0 +1,85 @@
+# ==============================================
+# MTK Policy Rule 
+# ==============================================
+
+typeattribute platform_app mlstrustedsubject;
+
+# Date : 2017/07/03
+# Operation : Migration
+# Purpose : get/set agps configuration via mtk_hal_lbs
+hal_client_domain(platform_app, mtk_hal_lbs)
+
+
+# Date : 2014/08/21
+# Operation : Migration
+# Purpose : FMRadio enable driver access permission for fmradio hardware device
+# Package: com.mediatek.fmradio
+allow platform_app fm_device:chr_file rw_file_perms;
+
+# Date : 2014/09/11
+# Operation : Migration
+# Purpose : MTKLogger need setup local socket with native daemon:mobile_logd,
+# netdialog,mdlogger,emdlogger,cmddumper
+# Package: com.mediatek.mtklogger
+allow platform_app mobile_log_d:unix_stream_socket connectto;
+allow platform_app mdlogger:unix_stream_socket connectto;
+allow platform_app emdlogger:unix_stream_socket connectto;
+allow platform_app cmddumper:unix_stream_socket connectto;
+unix_socket_connect(platform_app, netdiag, netdiag)
+
+# Date : 2014/10/17
+# Operation : Migration
+# Purpose :Make MTKLogger or VIASaber apk can Access TTYSDIO_device
+# Package: com.mediatek.mtklogger
+allow platform_app ttySDIO_device:chr_file rw_file_perms;
+
+# Date : 2014/10/17
+# Operation : Migration
+# Purpose :Make MTKLogger or VIASaber apk can Access storage
+# Package: com.mediatek.mtklogger
+allow platform_app sdcard_type:file create_file_perms;
+allow platform_app sdcard_type:dir create_dir_perms;
+
+# Date : 2014/11/12
+# Operation : Migration
+# Purpose : MTKLogger need copy exception db from data folder
+# Package: com.mediatek.mtklogger
+allow platform_app aee_exp_data_file:file r_file_perms;
+allow platform_app aee_exp_data_file:dir r_dir_perms;
+
+# Date : 2014/11/14
+# Operation : Migration
+# Purpose : MTKLogger need update md config file in data for mode changed
+# Package: com.mediatek.mtklogger
+allow platform_app mdlog_data_file:file rw_file_perms;
+allow platform_app mdlog_data_file:dir rw_dir_perms;
+
+# Date : 2015/01/13
+# Operation : New feature for GPS Log
+# Purpose : MTKLogger need setup local socket with mnld
+# Package: com.mediatek.mtklogger
+# TODO:: MTK need to remove later
+not_full_treble(`
+	allow platform_app mnld:unix_stream_socket connectto;
+')
+
+# Date : 2015/11/18
+# Operation : label aee_aed sockets
+# Purpose : Engineering mode need access for aee commmand
+# Package: MTKLogger/Debugutils
+allow platform_app aee_aed:unix_stream_socket connectto;
+
+# Date : WK17.31
+# Operation : O Migration
+# Purpose : m4u Driver
+allow platform_app proc:file r_file_perms;
+
+# Date : WK17.44
+# Operation : O Migration
+# Purpose : allow LocationEM to set mnld property
+set_prop(platform_app, mnld_prop)
+
+# Date : WK17.46
+# Operation : Migration
+# Purpose : allow MTKLogger to read KE DB
+allow platform_app aee_dumpsys_data_file:file r_file_perms;

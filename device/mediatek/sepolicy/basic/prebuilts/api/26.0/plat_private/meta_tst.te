@@ -1,0 +1,48 @@
+# ==============================================
+# Policy File of /system/bin/meta_tst Executable File
+
+
+# ==============================================
+# Type Declaration
+# ==============================================
+
+type meta_tst_exec , exec_type, file_type;
+typeattribute meta_tst coredomain;
+
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+
+init_daemon_domain(meta_tst)
+
+# Date : WK16.12
+# Operation : Migration
+# Purpose : for meta mode driver module operation
+#============= meta_tst =========================
+
+allow meta_tst port:tcp_socket { name_connect name_bind };
+allow meta_tst self:capability { net_raw chown fsetid sys_nice net_admin fowner dac_override sys_admin };
+allow meta_tst self:tcp_socket { create connect setopt bind };
+allow meta_tst self:tcp_socket { bind setopt listen accept read write };
+allow meta_tst self:udp_socket { create ioctl };
+allow meta_tst self:capability { sys_boot ipc_lock };
+allow meta_tst sysfs_wake_lock:file rw_file_perms;
+#allow meta_tst sysfs:file write;
+allow meta_tst property_socket:sock_file w_file_perms;
+allow meta_tst vold_socket:sock_file w_file_perms;
+allow meta_tst init:unix_stream_socket connectto;
+allow meta_tst kisd:unix_stream_socket connectto;
+allow meta_tst vold:unix_stream_socket connectto;
+allow meta_tst node:tcp_socket node_bind;
+allow meta_tst labeledfs:filesystem unmount;
+allow meta_tst shell_exec:file execute;
+set_prop(meta_tst, powerctl_prop);
+
+# Date: WK16.12
+# Operation : Migration
+# Purpose : for meta mode file system
+allow meta_tst system_data_file:sock_file create_file_perms;
+allow meta_tst system_file:file x_file_perms;
+allow meta_tst system_data_file:dir w_dir_perms;
+allow meta_tst block_device:dir search;
+allow meta_tst rootfs:file entrypoint;

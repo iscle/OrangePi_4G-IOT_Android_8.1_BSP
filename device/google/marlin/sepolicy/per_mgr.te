@@ -1,0 +1,27 @@
+# Policy for /vendor/bin/pm-service
+type per_mgr, domain;
+type per_mgr_exec, exec_type, vendor_file_type, file_type;
+
+allow per_mgr self:capability net_bind_service;
+
+init_daemon_domain(per_mgr)
+
+add_service(per_mgr, per_mgr_service)
+
+vndbinder_use(per_mgr)
+binder_call(per_mgr, rild)
+binder_call(per_mgr, per_proxy)
+
+allow per_mgr firmware_file:dir search;
+allow per_mgr firmware_file:file r_file_perms;
+allow per_mgr self:socket create_socket_perms;
+allowxperm per_mgr self:socket ioctl msm_sock_ipc_ioctls;
+allow per_mgr ssr_device:chr_file { open read };
+
+allow per_mgr sysfs:dir r_dir_perms;
+
+r_dir_file(per_mgr, sysfs_msm_subsys)
+
+userdebug_or_eng(`
+  allow rild ssr_device:chr_file { open read };
+')

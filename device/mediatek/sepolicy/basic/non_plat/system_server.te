@@ -1,0 +1,218 @@
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+# Access devices.
+allow system_server touch_device:chr_file rw_file_perms;
+allow system_server stpant_device:chr_file rw_file_perms;
+allow system_server devmap_device:chr_file r_file_perms;
+allow system_server irtx_device:chr_file rw_file_perms;
+allow system_server qemu_pipe_device:chr_file rw_file_perms;
+allow system_server wmtWifi_device:chr_file w_file_perms;
+
+# Access mtk gps devices.
+#allow system_server gps_data_file:file create_file_perms;
+#allow system_server gps_data_file:dir rw_dir_perms;
+
+# /proc access.
+allow system_server proc:file w_file_perms;
+
+# /data/dontpanic access.
+allow system_server dontpanic_data_file:dir search;
+
+# /data/agps_supl access.
+allow system_server agpsd_data_file:dir r_dir_perms;
+
+# /data/core access.
+allow system_server aee_core_data_file:dir r_dir_perms;
+
+# /sys/kernel/debug/ion/clients access
+allow system_server debugfs:dir r_dir_perms;
+
+# Perform Binder IPC.
+allow system_server zygote:binder impersonate;
+
+# Property service.
+allow system_server ctl_bootanim_prop:property_service set;
+
+# After connected to DHCPv6, enabled 6to4 IPv6 AP to get property.
+allow system_server proc_net:file w_file_perms;
+r_dir_file(system_server, wide_dhcpv6_data_file)
+
+# For dumpsys.
+allow system_server aee_dumpsys_data_file:file w_file_perms;
+allow system_server aee_exp_data_file:file w_file_perms;
+
+# Dump native process backtrace.
+allow system_server exec_type:file r_file_perms;
+
+# Querying zygote socket.
+allow system_server zygote:unix_stream_socket { getopt getattr };
+
+# Communicate over a socket created by mnld process.
+
+# TODO:: MTK need to remove later
+not_full_treble(`
+	allow system_server mnld_data_file:sock_file create_file_perms;
+	allow system_server mnld_data_file:sock_file rw_file_perms;
+')
+
+allow system_server mnld_data_file:dir create_file_perms;
+allow system_server mnld_data_file:dir rw_dir_perms;
+
+# TODO:: MTK need to remove later
+not_full_treble(`
+	allow system_server mnld:unix_dgram_socket sendto;
+')
+
+# Allow system_server to read /sys/kernel/debug/wakeup_sources
+allow system_server debugfs_wakeup_sources:file r_file_perms;
+
+# Allow system_server to read/write /sys/power/dcm_state
+allow system_server sysfs_dcm:file rw_file_perms;
+
+# Date : WK16.33
+# Purpose: Allow to access ged for gralloc_extra functions
+allow system_server proc_ged:file {open read write ioctl getattr};
+
+# Date : WK16.36
+# Purpose: Allow to set property log.tag.WifiHW to control log level of WifiHW
+allow system_server log_tag_prop:property_service set;
+
+# Data : WK16.42
+# Operator: Whitney bring up
+# Purpose: call surfaceflinger due to powervr
+allow system_server surfaceflinger:fifo_file rw_file_perms;
+
+# Date : W16.42
+# Operation : Integration
+# Purpose : DRM / DRI GPU driver required
+allow system_server gpu_device:dir search;
+allow system_server debugfs_gpu_img:dir search;
+
+# Date : W16.43
+# Operation : Integration
+# Purpose : DRM / DRI GPU driver required
+allow system_server sw_sync_device:chr_file { read write getattr open ioctl };
+
+# Date : WK16.44
+# Purpose: Allow to access UART1 ttyMT1
+allow system_server ttyMT_device:chr_file rw_file_perms;
+
+# Date : WK16.44
+# Purpose: Allow to access gpsonly driver
+#allow system_server gps_device:chr_file rw_file_perms;
+
+# Date:W16.46
+# Operation : thermal hal Feature developing
+# Purpose : thermal hal interface permission
+allow system_server proc_mtktz:dir search;
+allow system_server proc_mtktz:file r_file_perms;
+
+# Date : WK16.46
+# Operation: PowerManager set persist.meta.connecttype property
+# Purpose: Reboot target to meta mode,
+# and set persist.meta.connecttype as "wifi" or "usb".
+allow system_server meta_connecttype_prop:property_service set;
+
+# Date:W17.02
+# Operation : audio hal developing
+# Purpose : audio hal interface permission
+allow system_server mtk_hal_audio:process { getsched setsched };
+
+# Date:W17.07
+# Operation : bt hal
+# Purpose : bt hal interface permission
+binder_call(system_server, mtk_hal_bluetooth)
+
+# Date:W17.08
+# Operation : sensors hal developing
+# Purpose : sensors hal interface permission
+binder_call(system_server, mtk_hal_sensors)
+
+# Operation : light hal developing
+# Purpose : light hal interface permission
+binder_call(system_server, mtk_hal_light)
+
+# Date:W17.21
+# Operation : gnss hal
+# Purpose : gnss hal interface permission
+hal_client_domain(system_server, hal_gnss)
+
+# Date : W18.01
+# Add for turn on SElinux in enforcing mode
+allow system_server vendor_framework_file:dir r_file_perms;
+
+# Fix bootup violation
+allow system_server vendor_framework_file:file getattr;
+allow system_server wifi_prop:file { read getattr open };
+
+# Date:W17.22
+# Operation : add aee_aed socket rule
+# Purpose : type=1400 audit(0.0:134519): avc: denied { connectto }
+#           for comm=4572726F722064756D703A20737973
+#           path=00636F6D2E6D746B2E6165652E6165645F3634
+#           scontext=u:r:system_server:s0 tcontext=u:r:aee_aed:s0
+#           tclass=unix_stream_socket permissive=0
+allow system_server aee_aed:unix_stream_socket connectto;
+
+#Dat: 2017/02/14
+#Purpose: allow set telephony Sensitive property
+set_prop(system_server, mtk_telephony_sensitive_prop)
+
+# Date: W17.22
+# Operation : New Feature
+# Purpose : Add for A/B system
+allow system_server debugfs_wakeup_sources:file { read getattr open };
+
+# Date:W17.26
+# Operation : mtk hostapd hal
+# Purpose : mtk hostapd hal interface permission
+hal_client_domain(system_server, mtk_hal_wifi_hostapd)
+
+# Date:W17.26
+# Operation : imsa hal
+# Purpose : imsa hal interface permission
+binder_call(system_server, mtk_hal_imsa)
+
+# Date:W17.28
+# Operation : camera hal developing
+# Purpose : camera hal binder_call permission
+binder_call(system_server, mtk_hal_camera)
+
+# Date:W17.31
+# Operation : mpe sensor hidl developing
+# Purpose : mpe sensor hidl permission
+binder_call(system_server, mnld)
+
+# Date : WK17.32
+# Operation : Migration
+# Purpose : for network log dumpsys setting/netd information
+#           audit(0.0:914): avc: denied { write } for path="pipe:[46088]"
+#           dev="pipefs" ino=46088 scontext=u:r:system_server:s0
+#           tcontext=u:r:netdiag:s0 tclass=fifo_file permissive=1
+allow system_server netdiag:fifo_file write;
+
+# Date : WK17.32
+# Operation : Migration
+# Purpose : for DHCP Client ip recover functionality
+allow system_server dhcp_data_file:dir search;
+allow system_server dhcp_data_file:dir rw_dir_perms;
+allow system_server dhcp_data_file:file create_file_perms;
+
+# Date:W17.35
+# Operation : lbs hal
+# Purpose : lbs hidl interface permission
+hal_client_domain(system_server, mtk_hal_lbs)
+
+
+# Date : WK17.12
+# Operation : MT6799 SQC
+# Purpose : Change thermal config
+allow system_server mtk_thermal_config_prop:file { getattr open read };
+allow system_server mtk_thermal_config_prop:property_service set;
+
+# Date : WK17.43
+# Operation : Migration
+# Purpose : perfmgr permission
+allow system_server proc_perfmgr:dir {read search};
+allow system_server proc_perfmgr:file {open read ioctl};

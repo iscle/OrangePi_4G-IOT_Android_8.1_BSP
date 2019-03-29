@@ -1,0 +1,41 @@
+# in addition to ioctl commands granted to domain allow system_server to use:
+allowxperm system_server self:udp_socket ioctl priv_sock_ioctls;
+
+# At a minimum, used for GPS (b/32290392)
+allow system_server self:socket ioctl; # create already in core policy
+allowxperm system_server self:socket ioctl msm_sock_ipc_ioctls;
+
+# /dev/uhid
+allow system_server uhid_device:chr_file rw_file_perms;
+
+# TODO(b/36613917): Remove this once system_server no longer communicates with netmgrd over sockets.
+typeattribute netmgrd socket_between_core_and_vendor_violators;
+allow system_server netmgrd_socket:dir search;
+unix_socket_connect(system_server, netmgrd, netmgrd)
+
+binder_call(system_server, hal_camera_default)
+binder_call(system_server, location)
+
+# files in /sys
+r_dir_file(system_server, sysfs_type)
+
+# interact with thermal_config
+set_prop(system_server, thermal_prop)
+
+# rpm
+r_dir_file(system_server, debugfs_rpm)
+
+# /vendor/usr/keylayout
+r_dir_file(system_server, idc_file)
+# /vendor/usr/idc
+r_dir_file(system_server, keylayout_file)
+
+# kgsl
+allow system_server debugfs_kgsl:file { open read getattr };
+
+userdebug_or_eng(`
+  allow system_server diag_device:chr_file rw_file_perms;
+')
+
+# allow system server to set sched fifo for sensor hal main thread to achieve right performance
+allow system_server hal_sensors_default:process setsched;

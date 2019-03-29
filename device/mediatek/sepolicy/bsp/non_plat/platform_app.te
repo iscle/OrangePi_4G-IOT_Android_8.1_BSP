@@ -1,0 +1,82 @@
+# ==============================================
+# MTK Policy Rule 
+# ==============================================
+
+# Date : 2014/11/14
+# Operation: SQC
+# Purpose: [ALPS01824827][SystemUI] [RenderThread][open device file failed]
+# Package: com.android.systemui
+allow platform_app proc_secmem:file r_file_perms;
+
+# Date : 2014/12/30
+# Operation : TUI Migration
+# Purpose : TUI service need to access tui device driver
+# Package: com.trustonic.tuiservice.TuiService
+allow platform_app mobicore_tui_device:chr_file { read open ioctl };
+allow platform_app mobicore_user_device:chr_file rw_file_perms;
+
+# TODO:: MTK need to remove later
+not_full_treble(`
+	allow platform_app mobicore:unix_stream_socket connectto;
+')
+
+allow platform_app mobicore_data_file:file r_file_perms;
+allow platform_app mobicore_data_file:dir search;
+allow platform_app self:netlink_kobject_uevent_socket {create bind read setopt};
+
+# Date: 2014/09/05
+# Operation: FullUT
+# Purpose: [SystemUI] [Bind to guiext-server for updating view][path:hardware/gui_ext/]
+# Package: com.android.systemui
+allow platform_app guiext-server:binder { transfer call };
+
+# Date : 2015/09/12
+# Operation : SQC
+# Purpose : allow settings get file of ntfs device
+# Package: com.android.settings
+allow platform_app fuseblk:dir create_dir_perms;
+
+# Date : 2015/10/15
+# Operation : jg_jinchuanqin
+# Purpose :[ALPS02350168]allow Settings get file of ntfs device
+# Package: com.android.settings
+allow platform_app fuseblk:file create_file_perms;
+
+#Date : 2016/03/03
+# Operator : DM_agent_binder policy review
+# Purpose : Move DM agent binder policy to BSP from BASIC
+# Package : dm_agent_binder.bin
+allow platform_app dm_agent_binder_service:service_manager find;
+
+allow platform_app guiext-server_service:service_manager find;
+
+# Date : 2017/06/01
+# Operation : Migration
+# Purpose : Allow camera app to find advcam servive
+allow platform_app mtk_advcamserver_service:service_manager find;
+
+# Date: 2017/08/24
+# Stage: Migration
+# Purpose: Allow to use lomo effect
+# Package: com.mediatek.camera
+allow platform_app hal_camera_hwservice:hwservice_manager find;
+allow platform_app mtk_hal_camera:binder call;
+
+# Date: 2017/06/29
+# Operation: Migration
+# Purpose : Allow UICC terminal to find phoneEx service
+# Package: org.simalliance.openmobileapi
+allow platform_app mtk_radio_service:service_manager find;
+
+# Date : 2017/10/02
+# Stage: O Migration, SQC
+# Purpose: Allow to use HAL PQ
+hal_client_domain(platform_app, hal_pq)
+
+# Date : 2017/10/02
+# Stage: O Migration, SQC
+# Purpose: Allow to use shared memory for HAL PQ
+hal_client_domain(platform_app, hal_allocator)
+
+#============= platform_app ==============
+allow platform_app debugfs_ion:dir search;

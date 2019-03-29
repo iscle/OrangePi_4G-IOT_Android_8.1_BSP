@@ -1,0 +1,359 @@
+# ==============================================
+# Policy File of /vendor/bin/aee_aedv Executable File
+
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+
+
+# Date : WK14.32
+# Operation : AEE UT
+# Purpose : for AEE module
+allow aee_aedv aed_device:chr_file rw_file_perms;
+allow aee_aedv expdb_device:chr_file rw_file_perms;
+allow aee_aedv expdb_block_device:blk_file rw_file_perms;
+allow aee_aedv bootdevice_block_device:blk_file rw_file_perms;
+allow aee_aedv etb_device:chr_file rw_file_perms;
+
+# AED start: /dev/block/expdb
+allow aee_aedv block_device:dir search;
+
+# open/dev/mtd/mtd12 failed(expdb)
+allow aee_aedv mtd_device:dir create_dir_perms;
+allow aee_aedv mtd_device:chr_file rw_file_perms;
+
+#allow aee_aedv userdata_block_device:blk_file create_file_perms; # neverallow
+# NE flow: /dev/RT_Monitor
+allow aee_aedv RT_Monitor_device:chr_file r_file_perms;
+
+# aee db dir and db files
+allow aee_aedv sdcard_type:dir create_dir_perms;
+allow aee_aedv sdcard_type:file create_file_perms;
+
+#data/anr
+allow aee_aedv anr_data_file:dir create_dir_perms;
+allow aee_aedv anr_data_file:file create_file_perms;
+
+#data/aee_exp
+allow aee_aedv aee_exp_data_file:dir create_dir_perms;
+allow aee_aedv aee_exp_data_file:file create_file_perms;
+
+#data/dumpsys
+allow aee_aedv aee_dumpsys_data_file:dir create_dir_perms;
+allow aee_aedv aee_dumpsys_data_file:file create_file_perms;
+
+#/data/core
+allow aee_aedv aee_core_data_file:dir create_dir_perms;
+allow aee_aedv aee_core_data_file:file create_file_perms;
+
+# /data/data_tmpfs_log
+allow aee_aedv data_tmpfs_log_file:dir create_dir_perms;
+allow aee_aedv data_tmpfs_log_file:file create_file_perms;
+
+allow aee_aedv domain:process { sigkill getattr getsched};
+allow aee_aedv domain:lnk_file getattr;
+
+#core-pattern
+allow aee_aedv usermodehelper:file r_file_perms;
+
+#suid_dumpable
+# allow aee_aedv proc_security:file r_file_perms; neverallow
+
+#property
+allow aee_aedv init:unix_stream_socket connectto;
+allow aee_aedv property_socket:sock_file write;
+
+#allow aee_aedv call binaries labeled "system_file" under /system/bin/
+# allow aee_aedv system_file:file execute_no_trans;
+
+allow aee_aedv init:process getsched;
+allow aee_aedv kernel:process getsched;
+
+# Date: W15.34
+# Operation: Migration
+# Purpose: For pagemap & pageflags information in NE DB
+userdebug_or_eng(`allow aee_aedv self:capability sys_admin;')
+
+# Date: W16.17
+# Operation: N0 Migeration
+# Purpose: creat dir "aee_exp" under /data
+allow aee_aedv system_data_file:dir { write create add_name };
+
+# Purpose: aee_aedv set property
+set_prop(aee_aedv, persist_mtk_aee_prop);
+set_prop(aee_aedv, persist_aee_prop);
+set_prop(aee_aedv, debug_mtk_aee_prop);
+
+# Purpose: allow aee_aedv to access toolbox
+# allow aee_aedv toolbox_exec:file { execute execute_no_trans };
+
+# purpose: allow aee_aedv to access storage on N version
+allow aee_aedv media_rw_data_file:file  { create_file_perms };
+allow aee_aedv media_rw_data_file:dir { create_dir_perms };
+
+# Purpose: mnt/user/*
+allow aee_aedv mnt_user_file:dir search;
+allow aee_aedv mnt_user_file:lnk_file read;
+
+allow aee_aedv storage_file:dir search;
+allow aee_aedv storage_file:lnk_file read;
+
+# Date : WK17.09
+# Operation : AEE UT for Android O
+# Purpose : for AEE module to dump files
+# domain_auto_trans(aee_aedv, dumpstate_exec, dumpstate)
+
+# Purpose : aee_aedv communicate with aee_core_forwarder
+# allow aee_aedv aee_core_forwarder:dir search;
+# allow aee_aedv aee_core_forwarder:file { read getattr open };
+
+userdebug_or_eng(`
+  allow aee_aedv su:dir {search read open };
+  allow aee_aedv su:file { read getattr open };
+')
+
+# /data/vendor/tombstone
+allow aee_aedv aee_tombstone_data_file:dir w_dir_perms;
+allow aee_aedv aee_tombstone_data_file:file create_file_perms;
+
+# /proc/pid/
+allow aee_aedv self:capability { fowner chown dac_override fsetid sys_nice sys_resource net_admin sys_module};
+
+# PROCESS_FILE_STATE
+allow aee_aedv dumpstate:unix_stream_socket { read write ioctl };
+allow aee_aedv dumpstate:dir search;
+allow aee_aedv dumpstate:file r_file_perms;
+
+allow aee_aedv proc:file rw_file_perms;
+allow aee_aedv logdr_socket:sock_file write;
+allow aee_aedv logd:unix_stream_socket connectto;
+# allow aee_aedv system_ndebug_socket:sock_file write; mask for never allow rule
+
+# vibrator
+allow aee_aedv sysfs_vibrator:file w_file_perms;
+
+# /proc/lk_env
+allow aee_aedv proc_lk_env:file rw_file_perms;
+
+# Data : 2017/03/22
+# Operation : add NE flow rule for Android O
+# Purpose : make aee_aedv can get specific process NE info
+allow aee_aedv domain:dir r_dir_perms;
+allow aee_aedv domain:{ file lnk_file } r_file_perms;
+allow aee_aedv {
+  domain
+  -logd
+  -keystore
+  -init
+}:process ptrace;
+allow aee_aedv dalvikcache_data_file:dir r_dir_perms;
+allow aee_aedv zygote_exec:file r_file_perms;
+allow aee_aedv init_exec:file r_file_perms;
+
+# Data : 2017/04/06
+# Operation : add selinux rule for crash_dump notify aee_aedv
+# Purpose : make aee_aedv can get notify from crash_dump
+allow aee_aedv crash_dump:dir search;
+allow aee_aedv crash_dump:file r_file_perms;
+
+# Date : 20170512
+# Operation : fix aee_archive can't execute issue
+# Purpose : type=1400 audit(0.0:97916): avc: denied { execute_no_trans } for
+#           path="/system/vendor/bin/aee_archive" dev="mmcblk0p26" ino=2355
+#           scontext=u:r:aee_aedv:s0 tcontext=u:object_r:vendor_file:s0
+#           tclass=file permissive=0
+allow aee_aedv vendor_file:file execute_no_trans;
+
+# Purpose: debugfs files
+allow aee_aedv debugfs:lnk_file read;
+allow aee_aedv debugfs_binder:dir { read open };
+allow aee_aedv debugfs_binder:file { read open };
+allow aee_aedv debugfs_blockio:file { read open };
+allow aee_aedv debugfs_fb:dir search;
+allow aee_aedv debugfs_fb:file { read open };
+allow aee_aedv debugfs_fuseio:dir search;
+allow aee_aedv debugfs_fuseio:file { read open };
+allow aee_aedv debugfs_ged:dir search;
+allow aee_aedv debugfs_ged:file { read open };
+allow aee_aedv debugfs_rcu:dir search;
+allow aee_aedv debugfs_shrinker_debug:file { read open };
+allow aee_aedv debugfs_wakeup_sources:file { read open };
+allow aee_aedv debugfs_dmlog_debug:file { read open };
+allow aee_aedv debugfs_page_owner_slim_debug:file { read open };
+allow aee_aedv debugfs_ion_mm_heap:dir search;
+allow aee_aedv debugfs_ion_mm_heap:file { read open };
+allow aee_aedv debugfs_ion_mm_heap:lnk_file read;
+allow aee_aedv debugfs_ion_mm_heap:lnk_file read;
+allow aee_aedv debugfs_cpuhvfs:dir search;
+allow aee_aedv debugfs_cpuhvfs:file { read open };
+allow aee_aedv debugfs_emi_mbw_buf:file { read open };
+
+# Purpose:
+# 01-01 00:02:46.390  3315  3315 W aee_dumpstatev: type=1400 audit(0.0:4728):
+# avc: denied { read } for name="interrupts" dev="proc" ino=4026533608 scontext=
+# u:r:aee_aedv:s0 tcontext=u:object_r:proc_interrupts:s0 tclass=file permissive=0
+allow aee_aedv proc_interrupts:file read;
+
+# Purpose:
+# 01-01 17:59:14.440  7664  7664 I aee_dumpstate: type=1400 audit(0.0:63497):
+# avc: denied { open } for path="/sys/kernel/debug/tracing/tracing_on" dev=
+# "debugfs" ino=2087 scontext=u:r:dumpstate:s0 tcontext=u:object_r:
+# tracing_shell_writable:s0 tclass=file permissive=1
+allow aee_aedv debugfs_tracing:file { write read open };
+
+# Purpose:
+# 01-01 00:05:16.730  3566  3566 W dmesg   : type=1400 audit(0.0:5173): avc:
+# denied { read } for name="kmsg" dev="tmpfs" ino=12292 scontext=u:r:aee_aedv:
+# s0 tcontext=u:object_r:kmsg_device:s0 tclass=chr_file permissive=0
+allow aee_aedv kmsg_device:chr_file read;
+
+# Purpose:
+# 01-01 00:05:17.720  3567  3567 W ps      : type=1400 audit(0.0:5192): avc:
+# denied { getattr } for path="/proc/3421" dev="proc" ino=78975 scontext=u:r:
+# aee_aedv:s0 tcontext=u:r:platform_app:s0:c512,c768 tclass=dir permissive=0
+allow aee_aedv platform_app:dir r_dir_perms;
+allow aee_aedv platform_app:file r_file_perms;
+
+# Purpose:
+# 01-01 00:05:17.750  3567  3567 W ps      : type=1400 audit(0.0:5193): avc:
+# denied { getattr } for path="/proc/3461" dev="proc" ino=11013 scontext=u:r:
+# aee_aedv:s0 tcontext=u:r:untrusted_app_25:s0:c512,c768 tclass=dir permissive=0
+allow aee_aedv untrusted_app_25:dir getattr;
+
+# Purpose:
+# 01-01 00:05:17.650  3567  3567 W ps      : type=1400 audit(0.0:5179): avc:
+# denied { getattr } for path="/proc/2712" dev="proc" ino=65757 scontext=u:r:
+# aee_aedv:s0 tcontext=u:r:untrusted_app:s0:c512,c768 tclass=dir permissive=0
+allow aee_aedv untrusted_app:dir getattr;
+
+# Purpose:
+# 01-01 00:05:17.650  3567  3567 W ps      : type=1400 audit(0.0:5180): avc:
+# denied { getattr } for path="/proc/2747" dev="proc" ino=66659 scontext=u:r:
+# aee_aedv:s0 tcontext=u:r:priv_app:s0:c512,c768 tclass=dir permissive=0
+allow aee_aedv priv_app:dir getattr;
+
+# Purpose:
+# 01-01 00:05:16.270  3554  3554 W aee_dumpstatev: type=1400 audit(0.0:5153):
+# avc: denied { open } for path="/proc/interrupts" dev="proc" ino=4026533608
+# scontext=u:r:aee_aedv:s0 tcontext=u:object_r:proc_interrupts:s0 tclass=file
+# permissive=0
+allow aee_aedv proc_interrupts:file r_file_perms;
+
+# Purpose:
+# 01-01 00:05:16.620  3554  3554 W aee_dumpstatev: type=1400 audit(0.0:5171):
+# avc: denied { read } for name="route" dev="proc" ino=4026533633 scontext=u:r:
+# aee_aedv:s0 tcontext=u:object_r:proc_net:s0 tclass=file permissive=0
+allow aee_aedv proc_net:file read;
+
+# Purpose:
+# 01-01 00:05:16.610  3554  3554 W aee_dumpstatev: type=1400 audit(0.0:5168):
+# avc: denied { read } for name="zoneinfo" dev="proc" ino=4026533664 scontext=
+# u:r:aee_aedv:s0 tcontext=u:object_r:proc_zoneinfo:s0 tclass=file permissive=0
+allow aee_aedv proc_zoneinfo:file read;
+
+# Purpose:
+# 01-01 00:05:17.840  3554  3554 W aee_dumpstatev: type=1400 audit(0.0:5200):
+# avc: denied { search } for name="leds" dev="sysfs" ino=6217 scontext=u:r:
+# aee_aedv:s0 tcontext=u:object_r:sysfs_leds:s0 tclass=dir permissive=0
+allow aee_aedv sysfs_leds:dir search;
+allow aee_aedv sysfs_leds:file r_file_perms;
+
+# Purpose:
+# 01-01 00:03:45.790  3651  3651 I aee_dumpstatev: type=1400 audit(0.0:5592): avc: denied
+# { search } for name="ccci" dev="sysfs" ino=6026 scontext=u:r:aee_aedv:s0 tcontext=u:object_r:
+# sysfs_ccci:s0 tclass=dir permissive=1
+# 01-01 00:03:45.790  3651  3651 I aee_dumpstatev: type=1400 audit(0.0:5593): avc: denied { read }
+# for name="md_chn" dev="sysfs" ino=6035 scontext=u:r:aee_aedv:s0 tcontext=u:object_r:sysfs_ccci:s0
+# tclass=file permissive=1
+# 01-01 00:03:45.790  3651  3651 I aee_dumpstatev: type=1400 audit(0.0:5594): avc: denied { open }
+# for path="/sys/kernel/ccci/md_chn" dev="sysfs" ino=6035 scontext=u:r:aee_aedv:s0 tcontext=u:
+# object_r:sysfs_ccci:s0 tclass=file permissive=1
+allow aee_aedv sysfs_ccci:dir search;
+allow aee_aedv sysfs_ccci:file r_file_perms;
+
+allow aee_aedv system_data_file:dir getattr;
+allow aee_aedv system_data_file:file open;
+
+# Purpose:
+# 01-01 00:03:44.330  3658  3658 I aee_dumpstatev: type=1400 audit(0.0:5411): avc: denied
+# { execute_no_trans } for path="/vendor/bin/toybox_vendor" dev="mmcblk0p26" ino=250 scontext=u:r:
+# aee_aedv:s0 tcontext=u:object_r:vendor_toolbox_exec:s0 tclass=file permissive=1
+allow aee_aedv vendor_toolbox_exec:file rx_file_perms;
+
+# Purpose:
+# 01-01 00:12:06.320000  4145  4145 W dmesg   : type=1400 audit(0.0:826): avc: denied { open } for
+# path="/dev/kmsg" dev="tmpfs" ino=10875 scontext=u:r:aee_aedv:s0 tcontext=u:object_r:kmsg_device:
+# s0 tclass=chr_file permissive=0
+# 01-01 00:42:33.070000  4171  4171 W dmesg   : type=1400 audit(0.0:1343): avc: denied
+# { syslog_read } for scontext=u:r:aee_aedv:s0 tcontext=u:r:kernel:s0 tclass=system permissive=0
+allow aee_aedv kmsg_device:chr_file r_file_perms;
+allow aee_aedv kernel:system syslog_read;
+
+# Purpose:
+# 01-01 00:12:37.890000  4162  4162 W aee_dumpstatev: type=1400 audit(0.0:914): avc: denied
+# { read } for name="meminfo" dev="proc" ino=4026533612 scontext=u:r:aee_aedv:s0 tcontext=u:
+# object_r:proc_meminfo:s0 tclass=file permissive=0
+allow aee_aedv proc_meminfo:file r_file_perms;
+
+# Purpose:
+# 01-01 00:08:39.900000  3833  3833 W aee_dumpstatev: type=1400 audit(0.0:371): avc: denied
+# { open } for path="/proc/3833/net/route" dev="proc" ino=4026533632 scontext=u:r:aee_aedv:s0
+# tcontext=u:object_r:proc_net:s0 tclass=file permissive=0
+allow aee_aedv proc_net:file r_file_perms;
+
+# Purpose:
+# 01-01 00:08:39.880000  3833  3833 W aee_dumpstatev: type=1400 audit(0.0:370): avc: denied
+# { open } for path="/proc/zoneinfo" dev="proc" ino=4026533663 scontext=u:r:aee_aedv:s0 tcontext=
+# u:object_r:proc_zoneinfo:s0 tclass=file permissive=0
+allow aee_aedv proc_zoneinfo:file r_file_perms;
+
+# Purpose:
+# 01-01 00:33:27.750000   338   338 W aee_aedv: type=1400 audit(0.0:98): avc: denied { read }
+# for name="fstab.mt6755" dev="rootfs" ino=1082 scontext=u:r:aee_aedv:s0 tcontext=u:object_r:
+# rootfs:s0 tclass=file permissive=0
+allow aee_aedv rootfs:file r_file_perms;
+
+# Purpose:
+# 01-01 00:33:28.340000   338   338 W aee_aedv: type=1400 audit(0.0:104): avc: denied { search }
+# for name="dynamic_debug" dev="debugfs" ino=8182 scontext=u:r:aee_aedv:s0 tcontext=u:object_r:
+# debugfs_dynamic_debug:s0 tclass=dir permissive=0
+allow aee_aedv debugfs_dynamic_debug:dir search;
+allow aee_aedv debugfs_dynamic_debug:file r_file_perms;
+
+# Purpose:
+# [ 241.001976] <1>.(1)[209:logd.auditd]type=1400 audit(1262304586.172:515): avc: denied { read }
+# for pid=1978 comm="aee_aedv64" name="atag,devinfo" dev="sysfs" ino=2349 scontext=u:r:aee_aedv:s0
+# tcontext=u:object_r:sysfs:s0 tclass=file permissive=0
+allow aee_aedv sysfs:file { r_file_perms write };
+
+# Purpose: Allow aee_aedv to use HwBinder IPC.
+hwbinder_use(aee_aedv)
+allow aee_aedv hwservicemanager_prop:file { read open getattr };
+
+# Purpose: Allow aee_aedv access to vendor/bin/mtkcam-debug, which in turn invokes ICameraProvider
+# - avc: denied { find } for interface=android.hardware.camera.provider::ICameraProvider pid=2956
+#   scontext=u:r:aee_aedv:s0 tcontext=u:object_r:hal_camera_hwservice:s0 tclass=hwservice_manager
+# - Transaction error in ICameraProvider::debug: Status(EX_TRANSACTION_FAILED)
+allow aee_aedv hal_camera_hwservice:hwservice_manager { find };
+binder_call(aee_aedv, mtk_hal_camera)
+
+# Purpose: allow aee to read /sys/fs/selinux/enforce to get selinux status
+allow aee_aedv selinuxfs:file r_file_perms;
+
+# Purpose: Allow aee_aedv to read /proc/pid/exe
+allow aee_aedv exec_type:file r_file_perms;
+
+# Purpose: mrdump pre-allocation: immutable and userdata
+# - avc: denied { linux_immutable } for capability=9 scontext=u:r:aee_aedv:s0
+#   tcontext=u:r:aee_aedv:s0 tclass=capability permissive=0
+allow aee_aedv self:capability linux_immutable;
+allow aee_aedv userdata_block_device:blk_file { read write open };
+
+# Purpose: allow vendor aee read lowmemorykiller logs
+# file path: /sys/module/lowmemorykiller/parameters/
+allow aee_aedv sysfs_lowmemorykiller:dir search;
+allow aee_aedv sysfs_lowmemorykiller:file r_file_perms;
+
+# Purpose: Allow aee read /sys/class/misc/scp/scp_dump
+allow aee_aedv sysfs_scp:dir r_dir_perms;
+allow aee_aedv sysfs_scp:file r_file_perms;

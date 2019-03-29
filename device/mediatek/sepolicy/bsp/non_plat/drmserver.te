@@ -1,0 +1,164 @@
+# ==============================================
+# MTK Policy Rule
+# ============
+
+#Add by rui.hu
+
+# Date : WK14.30
+# Operation : DRM UT
+# Purpose : To pass DRM UT
+
+allow drmserver nvram_agent_binder:binder call;
+allow drmserver platform_app:dir search;
+allow drmserver platform_app:file { read getattr open };
+allow drmserver property_socket:sock_file write;
+allow drmserver radio_data_file:file { read getattr open };
+allow drmserver sdcard_type:file open;
+#allow drmserver tmpfs:lnk_file read;
+
+#Add by rui.hu
+# Date : WK14.36
+# Operation : DRM UT
+# Purpose : Make drmserver and binder read /proc/pid/cmdline to get process name
+#system app to drmserver
+allow drmserver system_app:dir search;
+allow drmserver system_app:file { read open getattr };
+#Mediaserver to drmserver
+allow drmserver mediaserver:dir search;
+allow drmserver mediaserver:file { read open getattr };
+
+#Add by rui.hu
+# Date : WK14.36.5
+# Operation : DRM UT
+# Purpose : Make widevine mediacodec mode work
+allow drmserver untrusted_app:dir search;
+allow drmserver untrusted_app:file { read open getattr };
+
+#Add by rui.hu
+# Date : WK14.40.1
+# Operation : DRM SQC - play OMA DRM audio file failed
+# Purpose : Make OMA DRM audio file can be played
+allow drmserver radio_data_file:dir search;
+
+#Add by rui.hu
+# Date : WK14.44.2
+# Operation : DRM SQC - view image failed
+# Purpose : To fix ALPS01790300
+allow drmserver surfaceflinger:fd use;
+
+#Add by rui.hu
+# Date : WK14.44.3
+# Operation : MTBF test fail
+# Purpose : To fix ALPS01793801
+allow drmserver mediaserver:fifo_file read;
+
+#Add by rui.hu
+# Date : WK14.46.4
+# Operation : DRM SQC - view image failed
+# Purpose : To fix ALPS01822176
+allow drmserver mediaserver:fifo_file write;
+
+# Date : WK15.15
+# Operation : GMS APP SQC
+# Purpose : Let Drive app can work
+allow drmserver app_data_file:dir search;
+allow drmserver app_data_file:file open;
+
+# Date : WK15.30
+# Operation : Migration
+# Purpose : for device bring up, not to block early migration/sanity
+allow drmserver system_app:process getattr;
+
+# Date : WK15.34
+# Operation : Play Ready IT
+# Purpose : Allow access to link file; Such as play ready will request
+#           drmserver to access /mnt/sdcard/xxx, which links to /sdcard/xxx.
+allow drmserver mnt_user_file:dir search;
+allow drmserver mnt_user_file:lnk_file read;
+allow drmserver storage_file:lnk_file read;
+
+# Add by : Jackie
+# Date : WK15.34
+# Operation : Migration
+# Purpose : Allow drmserver to access some system_server opreration on M
+#           and allow drmserver access file stored in sdcard
+use_drmservice(system_server)
+allow drmserver system_server:file getattr;
+allow system_server drmserver:drmservice openDecryptSession;
+allow drmserver nvram_agent_service:service_manager find;
+
+
+# Date : WK15.35
+# Operation : Migration
+# Purpose : Allow reador path="/data/data/com.mediatek.voicecommand/training
+# /unlock/passwordfile/0.dat"
+allow drmserver system_app_data_file:file read;
+
+# Add by : Jackie
+# Date : WK15.35
+# Operation : Migration
+# Purpose : allow drmserver access file stored in sdcard like /mnt/media_rw/
+allow drmserver vfat:file open;
+allow drmserver mnt_media_rw_file:dir search;
+
+# Add by : Jackie
+# Date : WK15.44
+# Operation : Migration
+# Purpose : allow drmserver access nfc process info, because drmserver need
+# check whether calling process is granted process, it need get process name
+# with calling pid
+allow drmserver nfc:dir search;
+allow drmserver nfc:file { read getattr open };
+
+# Add by : Jackie
+# Date : WK16.17
+# Operation : Bug Fixed
+# Purpose : allow drmserver access internal storage which mounted by sdcard, on Android M,
+# google add new feature which can format sdcard as internal storage. MediaScanner will use
+# .maybeTranslateEmulatedPathToInternal to translate emulate storage path(/storage/emulated/0)
+#  to internal storage path(/mnt/expand/edf477fd-9470-450e-882a-7ecda941edf6/media/0), this
+# need add policy to grand permission.
+allow drmserver mnt_expand_file:dir search;
+
+# Add by : Jackie
+# Date : WK16.25
+# Operation : New Feature
+# Purpose : allow drmserver get AMS to start renew/expire/secure time invalid dialog
+allow drmserver activity_service:service_manager find;
+
+# Add by : Jackie
+# Date : WK16.26
+# Operation : Migration
+# Purpose : allow drmserver access priv app(such as wallpaper) info, because
+# drmserver need check whether calling process is granted process, it need
+# get process name with calling pid
+allow drmserver priv_app:dir search;
+allow drmserver priv_app:file { read getattr open };
+
+# Add by : Bo
+# Date : WK16.27
+# Operation : Migration
+# Purpose : allow drmserver encrypt file
+allow drmserver media_rw_data_file:file write;
+
+# Add by : Jackie
+# Date : WK16.34
+# Operation : Migration
+# Purpose : allow drmserver access ringtone file, so that it can play
+# FL cached ringtone in /data/system_de/0/ringtones/ringtone_cache
+allow drmserver ringtone_file:file read;
+
+# Fix boot violation
+allow drmserver proc:file r_file_perms;
+
+# Add by : sheetal.garg
+# Operation : Migration issue
+allow drmserver mediaextractor:dir search;
+allow drmserver mediaextractor:file { read open getattr };
+#============= drmserver ==============
+allow drmserver untrusted_app_25:dir search;
+allow drmserver untrusted_app_25:file { getattr open read };
+
+#============= drmserver ==============
+allow drmserver proc:file read;
+allow drmserver sdcardfs:file open;

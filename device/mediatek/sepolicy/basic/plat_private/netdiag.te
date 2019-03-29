@@ -1,0 +1,94 @@
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+
+# New added for move to /system
+type netdiag_exec , exec_type, file_type;
+typeattribute netdiag coredomain;
+
+init_daemon_domain(netdiag)
+
+# Purpose : for access storage file
+allow netdiag sdcard_type:dir create_dir_perms;
+allow netdiag sdcard_type:file create_file_perms;
+allow netdiag domain:dir search;
+allow netdiag domain:file { read open };
+allow netdiag net_data_file:file r_file_perms;
+allow netdiag net_data_file:dir search;
+allow netdiag storage_file:dir search;
+allow netdiag storage_file:lnk_file read;
+allow netdiag mnt_user_file:dir search;
+allow netdiag mnt_user_file:lnk_file read;
+allow netdiag platform_app:dir search;
+allow netdiag untrusted_app:dir search;
+allow netdiag mnt_media_rw_file:dir search;
+allow netdiag vfat:dir create_dir_perms;
+allow netdiag vfat:file create_file_perms;
+allow netdiag tmpfs:lnk_file read;
+allow netdiag system_file:file rx_file_perms;
+
+# Purpose : for shell, set uid and gid
+allow netdiag self:capability { net_admin setuid net_raw setgid};
+allow netdiag shell_exec:file rx_file_perms;
+
+#/proc/3523/net/xt_qtaguid/ctrl & /proc
+allow netdiag qtaguid_proc:file r_file_perms;
+
+#access /proc/318/net/psched
+allow netdiag proc_net:file r_file_perms;
+
+# Purpose : for ping
+allow netdiag dnsproxyd_socket:sock_file write;
+allow netdiag fwmarkd_socket:sock_file write;
+allow netdiag netd:unix_stream_socket connectto;
+allow netdiag self:udp_socket connect;
+
+
+# Purpose : for service permission
+typeattribute netdiag mlstrustedsubject;
+allow netdiag connectivity_service:service_manager find;
+allow netdiag netstats_service:service_manager find;
+allow netdiag system_server:binder call;
+allow system_server netdiag:fd use;
+allow netdiag servicemanager:binder call;
+binder_use(netdiag)
+
+# Purpose : for dumpsys permission
+allow netdiag connmetrics_service:service_manager find;
+allow netdiag netpolicy_service:service_manager find;
+allow netdiag network_management_service:service_manager find;
+allow netdiag settings_service:service_manager find;
+
+
+
+# Purpose : for socket with MTKLogger
+### TBD, neverallowxperm on line 177 of system/sepolicy/public/domain.te
+#allow netdiag self:socket_class_set { create_socket_perms };
+#allow netdiag self:netlink_route_socket { create_socket_perms nlmsg_read };
+
+# Purpose : for acess /system/bin/toybox, mmc_prop,proc_net and safemode_prop
+allow netdiag device_logging_prop:file { getattr open };
+allow netdiag mmc_prop:file { getattr open };
+allow netdiag proc_net:dir { read open };
+allow netdiag safemode_prop:file { getattr open };
+allow netdiag toolbox_exec:file rx_file_perms;
+
+# purpose: allow netdiag to access storage in new version
+allow netdiag media_rw_data_file:file  { create_file_perms };
+allow netdiag media_rw_data_file:dir { create_dir_perms };
+
+# Purpose : for ip spec output
+allow netdiag self:netlink_xfrm_socket { write getattr setopt read bind create nlmsg_read };
+
+# Purpose: for socket error of tcpdump
+allow netdiag self:packet_socket { read getopt create setopt };
+allowxperm netdiag self:packet_socket ioctl {SIOCGIFINDEX SIOCGSTAMP};
+allow netdiag self:packet_socket { write ioctl };
+
+# Purpose: for ip
+allow netdiag self:netlink_route_socket { write getattr setopt read bind create nlmsg_read };
+
+# Purpose: for iptables
+allow netdiag kernel:system module_request;
+allow netdiag self:rawip_socket { getopt create };
+allow netdiag self:udp_socket { ioctl create };

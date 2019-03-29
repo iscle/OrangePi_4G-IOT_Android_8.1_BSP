@@ -1,0 +1,98 @@
+# ==============================================
+# Policy File of /vendor/bin/mnld Executable File
+
+# ==============================================
+# Type Declaration
+# ==============================================
+type mnld, domain;
+type mnld_exec, exec_type, file_type, vendor_file_type;
+typeattribute mnld mlstrustedsubject;
+
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+# STOPSHIP: Permissive is not allowed. CTS violation!
+init_daemon_domain(mnld)
+
+net_domain(mnld)
+# Purpose : For communicate with AGPSD by socket
+allow mnld agpsd_data_file:dir create_dir_perms;
+allow mnld agpsd_data_file:sock_file create_file_perms;
+allow mnld mtk_agpsd:unix_dgram_socket sendto;
+allow mnld sysfs:file rw_file_perms;
+allow mnld sysfs_wake_lock:file rw_file_perms;
+# Purpose : For access NVRAM data
+allow mnld nvram_data_file:dir create_dir_perms;
+allow mnld nvram_data_file:file create_file_perms;
+allow mnld nvram_data_file:lnk_file read;
+allow mnld nvdata_file:lnk_file read;
+allow mnld nvram_device:blk_file rw_file_perms;
+allow mnld nvram_device:chr_file rw_file_perms;
+allow mnld nvdata_file:dir create_dir_perms;
+allow mnld nvdata_file:file create_file_perms;
+# Purpose : For access kernel device
+allow mnld mnld_data_file:dir rw_dir_perms;
+allow mnld mnld_data_file:sock_file create_file_perms;
+allow mnld mnld_device:chr_file rw_file_perms;
+allow mnld mnld_data_file:file rw_file_perms;
+allow mnld mnld_data_file:file create_file_perms;
+allow mnld mnld_data_file:fifo_file create_file_perms;
+#allow mnld gps_device:chr_file rw_file_perms;
+# Purpose : For init process
+allow mnld init:unix_stream_socket connectto;
+allow mnld init:udp_socket { read write };
+
+# Send the message to the LBS HIDL Service to forward to applications
+allow mnld lbs_hidl_service:unix_dgram_socket sendto;
+
+# Send the message to the merged hal Service to forward to applications
+allow mnld merged_hal_service:unix_dgram_socket sendto;
+
+# Purpose : For access system data
+allow mnld system_data_file:dir { write add_name };
+allow mnld system_data_file:lnk_file read;
+allow mnld bootdevice_block_device:blk_file rw_file_perms;
+allow mnld block_device:dir search;
+allow mnld mnld_prop:property_service set;
+allow mnld property_socket:sock_file write;
+allow mnld mdlog_device:chr_file { read write };
+allow mnld self:capability { fsetid dac_override };
+allow mnld stpbt_device:chr_file { read write };
+allow mnld ttyGS_device:chr_file { read write };
+# Purpose : For file system operations
+allow mnld sdcard_type:dir search;
+allow mnld sdcard_type:dir write;
+allow mnld sdcard_type:dir add_name;
+allow mnld sdcard_type:file create;
+allow mnld sdcard_type:file rw_file_perms;
+allow mnld sdcard_type:file create_file_perms;
+allow mnld sdcard_type:dir { read remove_name create open };
+allow mnld tmpfs:lnk_file { read create open };
+allow mnld mtd_device:dir search;
+allow mnld mnt_user_file:lnk_file read;
+allow mnld mnt_user_file:dir search;
+allow mnld gps_data_file:dir { write add_name search remove_name unlink};
+allow mnld gps_data_file:file { read write open create getattr append setattr unlink lock rename };
+allow mnld gps_data_file:lnk_file read;
+
+allow mnld storage_file:lnk_file read;
+allow mnld nvcfg_file:dir search;
+allow mnld media_rw_data_file:dir { search create read open write add_name remove_name getattr };
+allow mnld media_rw_data_file:file create;
+allow mnld media_rw_data_file:file rw_file_perms;
+allow mnld media_rw_data_file:file create_file_perms;
+
+# Date : WK15.30
+# Operation : Migration
+# Purpose : for device bring up, not to block early migration/sanity
+allow mnld proc_lk_env:file rw_file_perms;
+
+# For HIDL, communicate mtk_hal_gnss instead of system_server
+allow mnld mtk_hal_gnss:unix_dgram_socket sendto;
+
+# Purpose : MPE sensor HIDL policy
+hwbinder_use(mnld);
+binder_call(mnld, system_server)
+allow mnld fwk_sensor_hwservice:hwservice_manager find;
+allow mnld hwservicemanager_prop:file { read open getattr };
+allow mnld debugfs_tracing:file { open write };

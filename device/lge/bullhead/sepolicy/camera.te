@@ -1,0 +1,43 @@
+# Qualcomm MSM camera
+type camera, domain, device_domain_deprecated;
+type camera_exec, exec_type, file_type;
+
+init_daemon_domain(camera)
+
+binder_use(camera)
+binder_call(camera, system_server)
+
+allow camera self:capability { sys_nice };
+
+allow camera system_server:unix_stream_socket { read write };
+
+# Interact with other media devices
+allow camera camera_device:chr_file rw_file_perms;
+allow camera gpu_device:chr_file rw_file_perms;
+allow camera video_device:chr_file rw_file_perms;
+allow camera { audioserver cameraserver mediaserver surfaceflinger }:fd use;
+hal_client_domain(camera, hal_graphics_allocator)
+
+allow camera hal_renderscript_hwservice:hwservice_manager find;
+
+# Create camera socket
+allow camera camera_data_file:sock_file { create unlink };
+
+# read/write to /data/misc/camera
+allow camera camera_data_file:dir w_dir_perms;
+allow camera camera_data_file:file create_file_perms;
+
+# write to /sys/kernel/range/enable_ps_sensor
+allow camera sysfs_camera:file rw_file_perms;
+
+# Read to /dev/input
+allow camera input_device:dir r_dir_perms;
+allow camera input_device:chr_file r_file_perms;
+
+# Find sensorservice
+allow camera sensorservice_service:service_manager find;
+
+# Read persist_camera_file
+allow camera persist_file:dir search;
+allow camera persist_camera_file:dir search;
+allow camera persist_camera_file:file r_file_perms;

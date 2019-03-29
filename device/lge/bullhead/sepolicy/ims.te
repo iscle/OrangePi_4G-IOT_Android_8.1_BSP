@@ -1,0 +1,39 @@
+# For IP Multimedia Subsystem(IMS) functionality
+type ims, domain, device_domain_deprecated;
+type ims_exec, exec_type, file_type;
+
+# Started by init
+init_daemon_domain(ims)
+
+allow ims self:capability { net_raw net_admin };
+
+# Allow ims to create and use socket to communicate between ims processes.
+allow ims self:socket create_socket_perms;
+allowxperm ims self:socket ioctl msm_sock_ipc_ioctls;
+
+# Allow ims to tell init to start the ims data service via property=sys.ims.QMI_DAEMON_STATUS
+set_prop(ims, qcom_ims_prop);
+
+# Allow ims to write to ims_socket
+allow ims ims_socket:sock_file write;
+
+# talk to connectivity engine observer interface daemon (cnd)
+unix_socket_connect(ims, cnd, cnd)
+# talk to netd
+unix_socket_connect(ims, netd, netd)
+# talk to qmux
+qmux_socket(ims)
+# communicate with the network driver
+allow ims self:udp_socket { create ioctl };
+allowxperm ims self:udp_socket ioctl SIOCDEVPRIVATE_D;
+
+# Runs /system/bin/sh for executing ndc commands via popen
+allow ims shell_exec:file rx_file_perms;
+
+# Runs /system/bin/ndc
+allow ims system_file:file rx_file_perms;
+allow ims vendor_file_type:file rx_file_perms;
+
+# address qualcomm proprietary binary denials
+allow ims self:netlink_socket create_socket_perms_no_ioctl;
+allow ims self:netlink_route_socket { create_socket_perms_no_ioctl nlmsg_write nlmsg_read };

@@ -1,0 +1,165 @@
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+
+# Date : WK14.36
+# Operation : Migration
+# Purpose : guiext service for VP
+allow mediaserver guiext-server:binder { transfer call };
+
+# Data : 2014/11/26
+# Operation : Camera display client
+# Purpose : for SVP secure memory allocation
+allow mediaserver proc_secmem:file { read write open};
+
+# Date : WK14.52
+# Operation : WVL1 IT
+# Purpose : SVP module operates secmem driver
+allow mediaserver mobicore_data_file:file getattr;
+allow mediaserver proc_secmem:file ioctl;
+allow mediaserver mobicore_data_file:file getattr;
+
+# Date: WK14.45
+# Operation : Migration
+# Purpose : HDCP
+
+#TODO:: MTK need to remove later
+not_full_treble(`
+    allow mediaserver mobicore:unix_stream_socket connectto;
+')
+
+allow mediaserver mobicore_data_file:dir search;
+allow mediaserver mobicore_data_file:file { getattr read open lock};
+allow mediaserver mobicore_user_device:chr_file { read write open ioctl};
+
+# Date: WK14.45
+# Operation : Migration
+# Purpose : HDCP
+allow mediaserver persist_data_file:dir { create write add_name search};
+allow mediaserver persist_data_file:file { read write create open getattr };
+
+# Date: WK14.44
+# Operation : Migration
+# Purpose : EVDO
+
+#TODO:: MTK need to remove later
+not_full_treble(`
+    allow mediaserver statusd:unix_stream_socket connectto;
+')
+
+# Date : WK15.03
+# Operation : Migration
+# Purpose : offloadservice
+allow mediaserver offloadservice_device:chr_file { read write ioctl open };
+
+# Date : WK15.32
+# Operation : Migration
+# Purpose : for control CPU during camera working flow
+allow mediaserver mtk_perf_service:service_manager find;
+
+# Data : WK14.38
+# Operation : Migration
+# Purpose : WFD
+allow mediaserver surfaceflinger:dir search;
+allow mediaserver surfaceflinger:file { read open };
+
+# Data : WK14.47
+# Operation : Migration
+# Purpose : for WFD looper
+allow mediaserver custom_file:dir search;
+
+# Date : WK14.49
+# Operation : WFD
+# Purpose : WFD notifies its status to thermal module
+allow mediaserver proc_thermal:file { write getattr open };
+#allow mediaserver thermal_manager_exec:file { x_file_perms read open };
+allow mediaserver proc_mtkcooler:file { read write open };
+allow mediaserver proc_mtktz:file { read write open };
+allow mediaserver proc_thermal:file { read write open };
+allow mediaserver thermal_manager_data_file:file setattr;
+
+# Date : WK15.11
+# Operation : SRS
+# Purpose : SRS
+#allow mediaserver system_data_file:file { w_file_perms };
+
+# Date : WK15.44
+# Operation : Migration
+# Purpose : ancservice
+allow mediaserver ancservice_device:chr_file { read write ioctl open };
+
+# Date : WK14.36
+# Operation : Migration
+# Purpose : guiext service for VP
+binder_call(mediaserver, guiext-server)
+
+# Date : WK16.29
+# Operation : Migration
+# Purpose : Add permission for gpu access
+allow mediaserver dri_device:chr_file { read write open ioctl };
+allow mediaserver gas_srv_service:service_manager find;
+
+# Date : WK17.07
+# Operation : N Migration
+# Purpose: For engineermode setting video log
+allow mediaserver mtk_em_video_log_acodec_prop:file r_file_perms;
+allow mediaserver mtk_em_video_log_sf_postbuffer_prop:file r_file_perms;
+allow mediaserver mtk_em_video_log_omx_prop:file r_file_perms;
+allow mediaserver mtk_em_video_log_vdec_prop:file r_file_perms;
+allow mediaserver mtk_em_video_log_svp_prop:file r_file_perms;
+allow mediaserver mtk_em_video_log_mjc_prop:file r_file_perms;
+allow mediaserver mtk_em_video_venc_h264_prop:file r_file_perms;
+
+# Date : WK17.23
+# Stage: O Migration, SQC
+# Purpose: Allow to use HAL PQ
+hal_client_domain(mediaserver, hal_pq)
+
+# Date : WK17.23
+# Stage: O Migration, SQC
+# Purpose: Allow to use shared memory for HAL PQ
+hal_client_domain(mediaserver, hal_allocator)
+
+# Date : WK17.31
+# Stage: O Migration, SQC
+# Purpose: Allow to use ape decoder
+hal_client_domain(mediaserver, hal_mtkcodecservice)
+
+# Date : WK17.31
+# Operation : ViLTE
+# Purpose : for ViLTE - set VTservice has permission to access me
+allow mediaserver vtservice:binder { transfer call };
+allow mediaserver vtservice:fd use;
+
+
+# Date : WK17.43
+# Operation : OMA DRM
+# Purpose : Allow mediaserver to read processname to pass OMA DRM permisson check
+allow mediaserver platform_app:dir search;
+allow mediaserver platform_app:file { read open };
+
+# Date : WK17.43
+# Operation : O1 Migration
+# Purpose: Allow to access debugfs ged
+allow mediaserver debugfs_ged:dir search;
+allow mediaserver debugfs_ged:file { getattr open write };
+
+# Date : WK17.47
+# Operation : SQC
+# Purpose : Allow mediaserver to read processname of DeskClock to pass OMA DRM permisson check
+allow mediaserver mediaprovider:dir search;
+allow mediaserver platform_app:file getattr;
+allow mediaserver system_app:dir search;
+allow mediaserver system_app:file read;
+allow mediaserver system_app:file open;
+
+# Date : WK17.49
+# Operation : VOW
+# Purpose: Allow read and getattr path="/data/data/com.mediatek.voicecommand/training
+# /anyone/passwordfile/0.dat"
+allow mediaserver system_app_data_file:file { read getattr };
+
+# Date : WK17.50
+# Operation : CMCC
+# Purpose: Allow set property to notify rtsp server timeout
+set_prop(mediaserver,system_prop)

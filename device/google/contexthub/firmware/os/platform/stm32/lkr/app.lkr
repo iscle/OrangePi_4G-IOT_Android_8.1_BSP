@@ -1,0 +1,143 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
+    These addresses are fake, but in a particular way that mesh with our expectations.
+    - ".flash" will contain all parts of the app that go into actual flash
+      *app header
+      * code
+      * RO data
+      * initial contents of RW data
+      * initial contents of the GOT
+      * list of relocs
+      * list of symbols
+    - ".ram" will contain all data that uses ram (and is not part of the flash image)
+      * RW data in its actua location
+      * BSS
+      * the GOT
+    - ".trash" contains sections taht GCC simply feel like it MUST produce (link error otherwise) but we have no use for. it will be tripped
+
+    After this image is produced a nonoapp_postprocess unitily will process relocs and symbols and compress them to a small reloc table
+    while also modifying the app code itself potentially to adjust for new reloc format. This shrinks relocs a lot. GCC produces relocs at 8
+    bytes per reloc and symbols at 16 bytes per symbol. We remove all symbol infos (as we do not need them) and compress the relevant data
+    from there into relocs and app image itself, generating 4 bytes per reloc of "nano reloc data"
+
+    Our format allows apps that are up to 256MB of flash and 256MB of ram in size.
+*/
+
+MEMORY
+{
+    flash   : ORIGIN = 0x10000000,  LENGTH = 256K /* we write this to flash */
+    ram     : ORIGIN = 0x80000000,  LENGTH = 128K /* we allocate this in ram */
+    trash   : ORIGIN = 0xF0000000,  LENGTH = 256K /* we throw this away soon after linking */
+}
+
+SECTIONS
+{
+    .flash : {
+        /***** start of struct BinHdr [see nanohub/nanohub.h] *****/
+        /* binary format marker: 'NBIN' (LE) */
+        LONG(0x4E49424E)
+
+        /* version */
+        KEEP(*(.app_version));
+
+        /* things we need to load app */
+        LONG(__data_start)
+        LONG(__data_end)
+        LONG(LOADADDR(.data))
+
+        LONG(__bss_start)
+        LONG(__bss_end)
+
+        /* things we need to run it */
+        LONG(__got_start)
+        LONG(__got_end)
+        LONG(__rel_start)
+        LONG(__rel_end)
+
+        KEEP(*(.app_init));
+        /***** end of struct BinHdr [see nanohub/nanohub.h] *****/
+
+        /* code */
+        *(.text) *(.text.*) ;
+        *(.rodata) *(.rodata.*) ;
+        . = ALIGN(4);
+    } > flash = 0xff
+
+    .data : {
+        . = ALIGN(4);
+        __data_start = ABSOLUTE(.);
+        __dso_handle = ABSOLUTE(__data_start);
+        *(.data);
+        *(.data.*);
+        . = ALIGN(4);
+        __data_end = ABSOLUTE(.);
+
+        . = ALIGN(4);
+        __init_array_start = ABSOLUTE(.);
+        KEEP(*(SORT(.init_array.*)))
+        KEEP(*(.init_array))
+        __init_array_end = ABSOLUTE(.);
+
+        . = ALIGN(4);
+        __fini_array_start = ABSOLUTE(.);
+        KEEP(*(SORT(.fini_array.*)))
+        KEEP(*(.fini_array))
+        __fini_array_end = ABSOLUTE(.);
+        LONG(0) /* size in 32-bit words, to add to bss section for dynamic destructor registration */
+
+        . = ALIGN(4);
+        __got_start = ABSOLUTE(.);
+        *(.got) *(.got.*) ;
+        __got_end = ABSOLUTE(.);
+
+    } > ram AT > flash
+
+    .relocs : {
+        . = ALIGN(4);
+        /* relocs */
+        __rel_start = ABSOLUTE(.);
+        *(.rel) *(.rel.*) *(.rel.data.rel.local)
+        __rel_end = ABSOLUTE(.);
+        . = ALIGN(4);
+
+    } > flash = 0xff
+
+    .dynsym : {
+        *(.dynsym); *(.dynsym.*);
+    } > flash = 0xff
+
+    .bss : {
+        . = ALIGN(4);
+        __bss_start = ABSOLUTE(.);
+        *(.bss) *(.bss.*) *(COMMON);
+        . = ALIGN(4);
+        __bss_end = ABSOLUTE(.);
+    } > ram
+
+    __data_data = LOADADDR(.data);
+
+    .dynstr : {
+        *(.dynstr); *(.dynstr.*);
+    } > trash
+    .hash : {
+        *(.hash); *(.hash.*);
+    } > trash
+    .dynamic : {
+        *(.dynamic); *(.dynamic.*);
+    } > trash
+}

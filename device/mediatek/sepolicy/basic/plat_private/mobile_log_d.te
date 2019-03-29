@@ -1,0 +1,76 @@
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+
+# New added for moving to /system
+type mobile_log_d_exec , exec_type, file_type;
+typeattribute mobile_log_d coredomain;
+
+init_daemon_domain(mobile_log_d)
+
+#syslog module
+allow mobile_log_d kernel:system syslog_mod;
+
+#GMO project
+dontaudit mobile_log_d untrusted_app:fd use;
+dontaudit mobile_log_d isolated_app:fd use;
+
+#debug property set
+set_prop(mobile_log_d, debug_prop)
+
+#socket connect and write
+unix_socket_connect(mobile_log_d, logdr, logd);
+
+#capability
+allow mobile_log_d self:capability { setuid setgid chown dac_read_search dac_override fowner fsetid };
+allow mobile_log_d self:capability2 syslog;
+
+#aee mode switch
+allow mobile_log_d system_file:file execute_no_trans;
+
+#shell command
+allow mobile_log_d shell_exec:file rx_file_perms;
+
+#general storage access
+allow mobile_log_d storage_file:dir create_dir_perms;
+allow mobile_log_d storage_file:file create_file_perms;
+allow mobile_log_d storage_file:lnk_file create_file_perms;
+allow mobile_log_d mnt_user_file:dir create_dir_perms;
+allow mobile_log_d mnt_user_file:lnk_file create_file_perms;
+allow mobile_log_d sdcard_type:dir create_dir_perms;
+allow mobile_log_d sdcard_type:file create_file_perms;
+
+#factory mode vfat access
+allow mobile_log_d vfat:dir create_dir_perms;
+allow mobile_log_d vfat:file create_file_perms;
+
+#chiptest mode storage access
+allow mobile_log_d mnt_media_rw_file:dir create_dir_perms;
+allow mobile_log_d mnt_media_rw_file:lnk_file create_file_perms;
+
+#system/bin/toybox for using 'sh' command
+allow mobile_log_d toolbox_exec:file rx_file_perms;
+
+#selinux_version access
+allow mobile_log_d rootfs:file r_file_perms;
+
+#dev/__properties__ access
+allow mobile_log_d device_logging_prop:file { getattr open };
+allow mobile_log_d mmc_prop:file { getattr open };
+allow mobile_log_d safemode_prop:file { getattr open };
+
+#proc/ access
+allow mobile_log_d proc:file r_file_perms;
+
+# boot_mdoe file access
+allow mobile_log_d sysfs:file { open read };
+
+# purpose: allow MobileLog to access storage in N version
+allow mobile_log_d media_rw_data_file:file  create_file_perms;
+allow mobile_log_d media_rw_data_file:dir create_dir_perms;
+
+# access debugfs/tracing/instances/
+allow mobile_log_d debugfs_tracing:dir create_dir_perms;
+allow mobile_log_d debugfs_tracing:file create_file_perms;
+allow mobile_log_d debugfs_tracing_instances:dir create_dir_perms;
+allow mobile_log_d debugfs_tracing_instances:file create_file_perms;

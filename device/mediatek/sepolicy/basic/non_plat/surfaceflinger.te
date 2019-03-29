@@ -1,0 +1,66 @@
+# ==============================================
+# MTK Policy Rule
+# ============
+
+# Data : WK14.42
+# Operation : Migration
+# Purpose : Video playback
+allow surfaceflinger sw_sync_device:chr_file { rw_file_perms };
+allow surfaceflinger debug_prop:property_service set;
+
+# Date : WK16.33
+# Purpose: Allow to access ged for gralloc_extra functions
+allow surfaceflinger proc_ged:file {open read write ioctl getattr};
+
+# Date : W16.42
+# Operation : Integration
+# Purpose : DRM / DRI GPU driver required
+
+allow surfaceflinger gpu_device:dir search;
+
+# Date : WK17.12
+# Purpose: Fix bootup fail
+allow surfaceflinger proc:file r_file_perms;
+
+#============= surfaceflinger ==============
+allow surfaceflinger debugfs_ion:dir search;
+
+#============= surfaceflinger ==============
+allow surfaceflinger debugfs_tracing:file write;
+
+#============= surfaceflinger ==============
+allow surfaceflinger debugfs_tracing:file open;
+
+# Date : WK17.30
+# Operation : O Migration
+# Purpose: Allow to access cmdq driver
+allow surfaceflinger mtk_cmdq_device:chr_file { read ioctl open };
+
+# Date : WK17.32
+# Operation : O Migration
+# Purpose: Allow to access property
+get_prop(surfaceflinger, graphics_config_prop)
+
+# Date : W17.39
+# Perform Binder IPC.
+binder_use(surfaceflinger)
+binder_call(surfaceflinger, binderservicedomain)
+binder_call(surfaceflinger, appdomain)
+binder_call(surfaceflinger, mtkbootanimation)
+binder_service(surfaceflinger)
+
+allow surfaceflinger mtkbootanimation:dir search;
+allow surfaceflinger mtkbootanimation:file { read getattr open };
+
+# Date : W17.43
+# Operation : Migration
+# Purpose: Allow to access perfmgr
+allow surfaceflinger proc_perfmgr:dir {read search};
+allow surfaceflinger proc_perfmgr:file {open read ioctl};
+
+# Date : WK17.43
+# Operation : Debug
+# Purpose: Allow to dump HWC backtrace
+get_prop(surfaceflinger, graphics_hwc_pid_prop)
+allow surfaceflinger hal_graphics_composer_default:dir search;
+allow surfaceflinger hal_graphics_composer_default:lnk_file read;

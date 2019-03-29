@@ -1,0 +1,34 @@
+# ==============================================
+# MTK Policy Rule
+# ============
+
+# Date : 2016/06/01
+# Operation: TEEI integration
+# Purpose: Microtrust service
+type init_thh_service, domain;
+type init_thh_service_exec, exec_type, file_type, vendor_file_type;
+
+allow init_thh_service teei_config_device:chr_file rw_file_perms;
+allow init_thh_service teei_client_device:chr_file { create setattr unlink rw_file_perms };
+allow init_thh_service teei_data_file:dir create_dir_perms;
+allow init_thh_service teei_data_file:file rw_file_perms;
+allow init_thh_service teei_data_file:file create_file_perms;
+allow init_thh_service self:capability dac_override;
+allow init_thh_service device:dir rw_dir_perms;
+
+#enable access android property
+allow init_thh_service property_socket:sock_file {read write};
+allow init_thh_service init:unix_stream_socket {connectto};
+allow init_thh_service soter_teei_prop:property_service {set};
+allow init_thh_service self:process execmem;
+allow init_thh_service teei_thh_data_file:dir { search write };
+allow init_thh_service teei_thh_data_file:file create_file_perms;
+allow init_thh_service teei_thh_data_file:file rw_file_perms;
+#allow system_server default_prop:property_service {get};
+
+#set up domain
+init_daemon_domain(init_thh_service)
+
+#for debug only
+#write_klog(init_thh_service)
+

@@ -1,0 +1,52 @@
+# ==============================================
+# Policy File of /system/bin/thermal_manager Executable File
+
+# ==============================================
+# Type Declaration
+# ==============================================
+type thermal_manager_exec , exec_type, file_type, vendor_file_type;
+type thermal_manager ,domain;
+
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+init_daemon_domain(thermal_manager)
+
+allow thermal_manager proc_mtkcooler:dir search;
+allow thermal_manager proc_mtktz:dir search;
+allow thermal_manager proc_thermal:dir search;
+allow thermal_manager proc_mtkcooler:file rw_file_perms;
+allow thermal_manager proc_mtktz:file rw_file_perms;
+allow thermal_manager proc_thermal:file rw_file_perms;
+allow thermal_manager system_data_file:dir { write add_name };
+allow thermal_manager self:capability { fowner chown fsetid dac_override };
+
+# Date : WK15.30
+# Operation : Migration
+# Purpose : Use file_type_auto_trans to specify label to avoid violated(never allow)
+#allow thermal_manager thermal_manager_data_file:file { create write read open setattr write lock};
+allow thermal_manager thermal_manager_data_file:dir { rw_dir_perms setattr };
+
+allow thermal_manager mediaserver:fd use;
+allow thermal_manager mediaserver:fifo_file { read write };
+#allow thermal_manager pq:fd use;
+allow thermal_manager mediaserver:tcp_socket { read write };
+
+
+# Date : WK16.30
+# Operation : Migration
+# Purpose : Use file_type_auto_trans to specify label to avoid violated(never allow)
+allow thermal_manager camera_isp_device:chr_file { read write };
+allow thermal_manager cameraserver:fd use;
+allow thermal_manager kd_camera_hw_device:chr_file { read write };
+allow thermal_manager MTK_SMI_device:chr_file read;
+allow thermal_manager property_socket:sock_file write;
+allow thermal_manager surfaceflinger:fd use;
+allow thermal_manager init:unix_stream_socket connectto;
+allow thermal_manager sysfs:file write;
+
+# Date : WK17.12
+# Operation : Migration
+# Purpose : Allow thermal_manager to notify SPA.
+allow thermal_manager mtk_thermal_config_prop:file { getattr open read };
+allow thermal_manager mtk_thermal_config_prop:property_service set;

@@ -1,0 +1,113 @@
+# ==============================================
+# Policy File of /vendor/bin/aee_core_forwarder Executable File
+
+# ==============================================
+# Type Declaration
+# ==============================================
+type aee_core_forwarder_exec, exec_type, file_type, vendor_file_type;
+type aee_core_forwarder, domain;
+
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+init_daemon_domain(aee_core_forwarder)
+
+#/data/core/zcorexxx.zip
+allow aee_core_forwarder aee_core_data_file:dir relabelto;
+allow aee_core_forwarder aee_core_data_file:dir create_dir_perms;
+allow aee_core_forwarder aee_core_data_file:file create_file_perms;
+allow aee_core_forwarder system_data_file:dir { write relabelfrom create add_name };
+
+#mkdir /sdcard/mtklog/aee_exp and write /sdcard/mtklog/aee_exp/zcorexxx.zip
+allow aee_core_forwarder sdcard_type:dir create_dir_perms;
+allow aee_core_forwarder sdcard_type:file create_file_perms;
+allow aee_core_forwarder self:capability fsetid;
+allow aee_core_forwarder aee_exp_data_file:dir create_dir_perms;
+allow aee_core_forwarder aee_exp_data_file:file create_file_perms;
+
+#mkdir(path, mode)
+allow aee_core_forwarder self:capability dac_override;
+
+#read STDIN_FILENO
+allow aee_core_forwarder kernel:fifo_file read;
+
+#read /proc/<pid>/cmdline
+allow aee_core_forwarder domain:dir r_dir_perms;
+allow aee_core_forwarder domain:file r_file_perms;
+
+#get wake_lock to avoid system suspend when coredump is generating
+allow aee_core_forwarder sysfs_wake_lock:file rw_file_perms;
+
+# Date : 2015/07/11
+# Operation : Migration
+# Purpose : for mtk debug mechanism
+allow aee_core_forwarder self:capability2 block_suspend;
+
+# Date : 2015/07/21
+# Operation : Migration
+# Purpose : for generating core dump on sdcard
+allow aee_core_forwarder mnt_user_file:dir search;
+allow aee_core_forwarder mnt_user_file:lnk_file read;
+allow aee_core_forwarder storage_file:dir search;
+allow aee_core_forwarder storage_file:lnk_file read;
+
+# Date : 2016/03/05
+# Operation : selinux waring fix
+# Purpose : avc:  denied  { search } for  pid=15909 comm="aee_core_forwar"
+#                 name="15493" dev="proc" ino=112310 scontext=u:r:aee_core_forwarder:s0
+#                 tcontext=u:r:untrusted_app:s0:c512,c768 tclass=dir permissive=0
+dontaudit aee_core_forwarder untrusted_app:dir search;
+
+# Date : 2016/04/18
+# Operation : N0 Migration
+# Purpose : access for pipefs
+allow aee_core_forwarder kernel:fd use;
+# Purpose : read AEE persist property
+allow aee_core_forwarder persist_aee_prop:file r_file_perms;
+# Purpose: search root dir "/"
+allow aee_core_forwarder tmpfs:dir search;
+# Purpose : read /selinux_version
+allow aee_core_forwarder rootfs:file r_file_perms;
+
+# Data : 2016/06/13
+# Operation : fix sys_ptrace selinux warning
+# Purpose : type=1400 audit(1420070409.080:177): avc: denied { sys_ptrace } for pid=3136
+#           comm="aee_core_forwar" capability=19 scontext=u:r:aee_core_forwarder:s0
+#           tcontext=u:r:aee_core_forwarder:s0  tclass=capability permissive=0
+dontaudit aee_core_forwarder self:capability sys_ptrace;
+
+# Data : 2016/06/24
+# Operation : fix media_rw_data_file access selinux warning
+# Purpose :
+# type=1400 audit(0.0:6511): avc: denied { search } for name="db.p08JgF"
+# dev="dm-0" ino=540948 scontext=u:r:aee_core_forwarder:s0
+# tcontext=u:object_r:media_rw_data_file:s0 tclass=dir permissive=1
+# type=1400 audit(0.0:6512): avc: denied { write } for name="db.p08JgF"
+# dev="dm-0" ino=540948 scontext=u:r:aee_core_forwarder:s0
+# tcontext=u:object_r:media_rw_data_file:s0 tclass=dir permissive=1
+# type=1400 audit(0.0:6513): avc: denied { add_name } for name="CURRENT.dbg"
+# scontext=u:r:aee_core_forwarder:s0 tcontext=u:object_r:media_rw_data_file:s0
+# tclass=dir permissive=1
+# type=1400 audit(0.0:6514): avc: denied { create } for name="CURRENT.dbg"
+# scontext=u:r:aee_core_forwarder:s0 tcontext=u:object_r:media_rw_data_file:s0
+# tclass=file permissive=1
+# type=1400 audit(0.0:6515): avc: denied { write open } for
+# path="/data/media/0/mtklog/aee_exp/temp/db.p08JgF/CURRENT.dbg" dev="dm-0"
+# ino=540952 scontext=u:r:aee_core_forwarder:s0 tcontext=u:object_r:media_rw_data_file:s0
+# tclass=file permissive=1
+allow aee_core_forwarder media_rw_data_file:dir w_dir_perms;
+allow aee_core_forwarder media_rw_data_file:file { create open write };
+
+# Data : 2017/03/08
+# Operation : fix aee_core_forwarder connect to aee_aedv
+# Purpose : type=1400 audit(0.0:6594): avc: denied { connectto } for
+#           path=00616E64726F69643A6165655F616564 scontext=u:r:aee_core_forwarder:s0
+#           tcontext=u:r:aee_aedv:s0 tclass=unix_stream_socket permissive=0
+allow aee_core_forwarder aee_aedv:unix_stream_socket connectto;
+
+# Data : 2017/08/04
+# Operation : fix sys_nice selinux warning
+# Purpose : type=1400 audit(0.0:50): avc: denied { sys_nice } for capability=23
+#           scontext=u:r:aee_core_forwarder:s0 tcontext=u:r:aee_core_forwarder:s0
+#           tclass=capability permissive=0
+allow aee_core_forwarder self:capability sys_nice;

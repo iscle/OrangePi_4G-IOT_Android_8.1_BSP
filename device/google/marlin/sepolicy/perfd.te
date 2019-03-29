@@ -1,0 +1,36 @@
+type perfd, domain;
+type perfd_exec, exec_type, vendor_file_type, file_type;
+
+init_daemon_domain(perfd)
+
+allow perfd cgroup:file r_file_perms;
+
+allow perfd cameraserver:process signull;
+
+# files in /data/misc/perfd and /data/system/perfd
+allow perfd perfd_data_file:dir create_dir_perms;
+allow perfd perfd_data_file:{ file sock_file } create_file_perms;
+
+allow perfd proc_kernel_sched:file r_file_perms;
+
+# read access /sys
+r_dir_file(perfd, sysfs_type)
+# normally write is not granted to the default "sysfs" label.
+# In this case, perfd needs access to files in /sys that are
+# commonly created and destroyed. When the kernel creates them,
+# they are created with the default label "sysfs". For robustness,
+# allow perfd to write to "sysfs" to ensure it can optimally
+# tune the power/cpu settings.
+allow perfd sysfs:file write;
+allow perfd sysfs_perf:file write;
+allow perfd sysfs_msm_subsys:file write;
+allow perfd sysfs_devices_system_cpu:file write;
+allow perfd sysfs_power_management:file write;
+
+allow perfd proc_kernel_sched:file w_file_perms;
+allow perfd gpu_device:chr_file rw_file_perms;
+
+# perfd uses kill(pid, 0) to determine if a process exists.
+# Determining if a process exists does not require the kill capability
+# since a permission denied indicates the process exists.
+dontaudit perfd self:capability kill;

@@ -1,0 +1,41 @@
+# HwBinder IPC from client to server
+binder_call(mtk_hal_wifi_hostapd_client, mtk_hal_wifi_hostapd_server)
+binder_call(mtk_hal_wifi_hostapd_server, mtk_hal_wifi_hostapd_client)
+
+add_hwservice(mtk_hal_wifi_hostapd_server, mtk_hal_wifi_hostapd_hwservice)
+allow mtk_hal_wifi_hostapd_client mtk_hal_wifi_hostapd_hwservice:hwservice_manager find;
+
+# in addition to ioctls whitelisted for all domains, grant mtk_hal_wifi_hostapd priv_sock_ioctls.
+allowxperm mtk_hal_wifi_hostapd self:udp_socket ioctl priv_sock_ioctls;
+
+r_dir_file(mtk_hal_wifi_hostapd, sysfs_type)
+r_dir_file(mtk_hal_wifi_hostapd, proc_net)
+
+allow mtk_hal_wifi_hostapd kernel:system module_request;
+allow mtk_hal_wifi_hostapd self:capability { setuid net_admin setgid net_raw };
+allow mtk_hal_wifi_hostapd cgroup:dir create_dir_perms;
+allow mtk_hal_wifi_hostapd self:netlink_route_socket nlmsg_write;
+allow mtk_hal_wifi_hostapd self:netlink_socket create_socket_perms_no_ioctl;
+allow mtk_hal_wifi_hostapd self:netlink_generic_socket create_socket_perms_no_ioctl;
+allow mtk_hal_wifi_hostapd self:packet_socket create_socket_perms;
+allowxperm mtk_hal_wifi_hostapd self:packet_socket ioctl { unpriv_sock_ioctls priv_sock_ioctls unpriv_tty_ioctls };
+allow mtk_hal_wifi_hostapd wifi_data_file:dir create_dir_perms;
+allow mtk_hal_wifi_hostapd wifi_data_file:file create_file_perms;
+
+# Create a socket for receiving info from wpa
+allow mtk_hal_wifi_hostapd wpa_socket:dir create_dir_perms;
+allow mtk_hal_wifi_hostapd wpa_socket:sock_file create_file_perms;
+
+# Allow hostapd_cli to work. hostapd_cli creates a socket in
+# /data/misc/wifi/sockets which mtk_hal_wifi_hostapd hostapd communicates with.
+userdebug_or_eng(`
+  unix_socket_send(mtk_hal_wifi_hostapd, wpa, su)
+')
+
+###
+### neverallow rules
+###
+
+# hostapd should not trust any data from sdcards
+neverallow mtk_hal_wifi_hostapd_server sdcard_type:dir ~getattr;
+neverallow mtk_hal_wifi_hostapd_server sdcard_type:file *;

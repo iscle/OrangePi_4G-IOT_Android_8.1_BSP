@@ -1,0 +1,43 @@
+type cnd, domain, vendor_executes_system_violators;
+type cnd_exec, exec_type, vendor_file_type, file_type;
+
+# cnd creates /dev/socket/nims
+file_type_auto_trans(cnd, socket_device, cnd_socket);
+allow cnd socket_device:dir remove_name;
+
+init_daemon_domain(cnd)
+net_domain(cnd)
+wakelock_use(cnd)
+
+# TODO(b/36576126): Remove this one cnd stops accessing /dev/binder
+typeattribute cnd binder_in_vendor_violators;
+
+# do not grant net_raw, net_admin, or dac_override
+allow cnd self:capability { chown fsetid setgid setuid net_bind_service};
+
+# Grant access to Qualcomm MSM Interface (QMI) radio sockets
+qmux_socket(cnd)
+
+set_prop(cnd, system_prop)
+
+allow cnd proc_meminfo:file r_file_perms;
+allow cnd self:netlink_tcpdiag_socket create_socket_perms_no_ioctl;
+allow cnd self:socket create_socket_perms;
+allowxperm cnd self:socket ioctl msm_sock_ipc_ioctls;
+
+r_dir_file(cnd, sysfs_type)
+
+userdebug_or_eng(`
+  allow cnd diag_device:chr_file rw_file_perms;
+')
+userbuild(`
+  dontaudit cnd diag_device:chr_file rw_file_perms;
+')
+
+# use for mobile hostspot
+allow cnd shell_exec:file rx_file_perms;
+allow cnd system_file:file rx_file_perms;
+
+# TODO(b/36613996): Remove this once qcneservice no longer communicates over sockets with cnd
+# or once qcneservice becomes a vendor service
+typeattribute cnd socket_between_core_and_vendor_violators;

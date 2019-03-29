@@ -1,0 +1,29 @@
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+
+# volume manager
+
+# Date : WK16.19
+# Operation : Migration
+# Purpose : unmount /mnt/cd-rom. It causes by unmountAll() when VolumeManager starts
+allow vold iso9660:filesystem unmount;
+
+# Date : WK16.19
+# Operation : Migration
+# Purpose : dotrim for the mountpoints in fstab
+allow vold nvdata_file:dir r_dir_perms;
+allow vold protect_f_data_file:dir r_dir_perms;
+allow vold protect_s_data_file:dir r_dir_perms;
+
+# Date : WK16.19
+# Operation : Migration
+# Purpose : vold will traverse /proc when remountUid().
+#           It will trigger violation if mtk customize some label in /proc.
+#           However, we should ignore the violation if the processes never access the storage.
+dontaudit vold proc_battery_cmd:dir { read open };
+dontaudit vold proc_mtkcooler:dir { read open };
+dontaudit vold proc_mtktz:dir { read open };
+dontaudit vold proc_thermal:dir { read open };
+
+allow vold mtd_device:blk_file rw_file_perms;

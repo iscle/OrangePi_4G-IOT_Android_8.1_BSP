@@ -1,0 +1,52 @@
+# ==============================================================================
+# Type Declaration
+# ==============================================================================
+type mtk_hal_sensors, domain;
+type mtk_hal_sensors_exec, exec_type, file_type, vendor_file_type;
+
+# hwbinder access
+init_daemon_domain(mtk_hal_sensors)
+hwbinder_use(mtk_hal_sensors)
+
+# call into system_server process (callbacks)
+binder_call(mtk_hal_sensors, system_server)
+
+# system file
+allow mtk_hal_sensors system_file:dir read;
+allow mtk_hal_sensors system_file:dir open;
+
+# sensors input rw access
+allow mtk_hal_sensors sysfs:file rw_file_perms;
+
+# hal sensor for chr_file
+allow mtk_hal_sensors hwmsensor_device:chr_file r_file_perms;
+allow mtk_hal_sensors hwservicemanager_prop:file r_file_perms;
+
+#hwservicemanager
+hal_server_domain(mtk_hal_sensors, hal_sensors);
+
+#allow mtk_hal_sensors hal_sensors_hwservice:hwservice_manager { add find };
+#allow mtk_hal_sensors hidl_base_hwservice:hwservice_manager add;
+
+# Access sensor bio devices
+allow mtk_hal_sensors m_acc_misc_device:chr_file rw_file_perms;
+allow mtk_hal_sensors m_als_misc_device:chr_file rw_file_perms;
+allow mtk_hal_sensors m_ps_misc_device:chr_file rw_file_perms;
+allow mtk_hal_sensors m_mag_misc_device:chr_file rw_file_perms;
+allow mtk_hal_sensors m_gyro_misc_device:chr_file rw_file_perms;
+allow mtk_hal_sensors m_baro_misc_device:chr_file rw_file_perms;
+allow mtk_hal_sensors m_hmdy_misc_device:chr_file rw_file_perms;
+allow mtk_hal_sensors m_act_misc_device:chr_file rw_file_perms;
+allow mtk_hal_sensors m_pedo_misc_device:chr_file rw_file_perms;
+allow mtk_hal_sensors m_situ_misc_device:chr_file rw_file_perms;
+allow mtk_hal_sensors m_step_c_misc_device:chr_file rw_file_perms;
+allow mtk_hal_sensors m_fusion_misc_device:chr_file rw_file_perms;
+allow mtk_hal_sensors m_bio_misc_device:chr_file rw_file_perms;
+
+# Access mtk sensor setting and calibration node.
+# for data
+allow mtk_hal_sensors sensor_data_file:file create_file_perms;
+allow mtk_hal_sensors sensor_data_file:dir create_dir_perms;
+# for nvcfg
+allow mtk_hal_sensors nvcfg_file:file create_file_perms;
+allow mtk_hal_sensors nvcfg_file:dir create_dir_perms;

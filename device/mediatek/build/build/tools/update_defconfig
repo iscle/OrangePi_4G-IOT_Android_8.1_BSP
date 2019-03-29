@@ -1,0 +1,49 @@
+#!/bin/bash
+
+TMPDIR=oo-$$
+KERNEL_BASE=kernel-3.10
+CONFIG_DIR=$KERNEL_BASE/arch/arm/configs
+CONFIG64_DIR=$KERNEL_BASE/arch/arm64/configs
+
+if [ ! -d device/mediatek/build/config -o ! -d $CONFIG_DIR ]; then
+    echo Must in AOSP ALPS dir.
+    exit 1
+fi
+
+# For arm32
+CONFIGS=`cd ${CONFIG_DIR} ; ls mt* k2* k7* k8* k9* aubest* aux82* avago82* d209* demo92* demo95* evb65* evb67* hero2* muse* ratch* rio5* stella* tb65* tinno82*`
+for i in $CONFIGS ; do
+    pushd $KERNEL_BASE
+    mkdir $TMPDIR
+    TARGET_ARCH=arm make $i O=$TMPDIR
+
+    cmp $TMPDIR/.config arch/arm/configs/$i
+    RET=$?
+    if [ $RET != 0 ]; then
+        echo Update $i
+        cp -f $TMPDIR/.config arch/arm/configs/$i
+        p4 edit arch/arm/configs/$i
+    fi
+    popd
+done
+
+
+# For arm64
+CONFIGS64=`cd ${CONFIG64_DIR} ; ls k2* evb* fpga* aubest*`
+for i in $CONFIGS64 ; do
+    pushd $KERNEL_BASE
+    mkdir $TMPDIR
+    TARGET_ARCH=arm64 make $i O=$TMPDIR
+
+    cmp $TMPDIR/.config arch/arm64/configs/$i
+    RET=$?
+    if [ $RET != 0 ]; then
+        echo Update $i
+        cp -f $TMPDIR/.config arch/arm64/configs/$i
+        p4 edit arch/arm64/configs/$i
+    fi
+    popd
+done
+
+rm -rf $KERNEL_BASE/$TMPDIR
+

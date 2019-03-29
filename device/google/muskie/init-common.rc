@@ -1,0 +1,44 @@
+on late-fs
+    # boot time fs tune
+    write /sys/block/sda/queue/iostats 0
+    write /sys/block/sda/queue/scheduler cfq
+    write /sys/block/sda/queue/iosched/slice_idle 0
+    write /sys/block/sda/queue/read_ahead_kb 2048
+    write /sys/block/sda/queue/nr_requests 256
+    write /sys/block/dm-0/queue/read_ahead_kb 2048
+    write /sys/block/dm-1/queue/read_ahead_kb 2048
+
+on property:sys.boot_completed=1
+    # end boot time fs tune
+    write /sys/block/sda/queue/read_ahead_kb 1024
+    write /sys/block/sda/queue/nr_requests 128
+    write /sys/block/sda/queue/iostats 1
+    write /sys/block/dm-0/queue/read_ahead_kb 512
+    write /sys/block/dm-1/queue/read_ahead_kb 512
+
+on property:sys.boot_completed=1 && property:ro.build.type=user
+    write /proc/sys/kernel/modules_disabled 1
+
+on init && property:ro.boot.revision=EVM
+    setprop ro.boot.hardware.revision 0.5
+
+on init && property:ro.boot.revision=EVT0
+    setprop ro.boot.hardware.revision 0.6
+
+on init && property:ro.boot.revision=EVT1
+    setprop ro.boot.hardware.revision 0.7
+
+on init && property:ro.boot.revision=EVT2
+    setprop ro.boot.hardware.revision 0.8
+
+on init && property:ro.boot.revision=DVT
+    setprop ro.boot.hardware.revision 1.0
+
+on init && property:ro.boot.revision=MP0 # PVT
+    setprop ro.boot.hardware.revision 1.0
+
+on init && property:ro.boot.revision=MP1
+    setprop ro.boot.hardware.revision 1.0
+
+on boot && property:ro.build.type=userdebug
+   write /sys/class/uio/uio1/device/rtel/rtel 1

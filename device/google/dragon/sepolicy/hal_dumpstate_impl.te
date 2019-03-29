@@ -1,0 +1,26 @@
+type hal_dumpstate_impl, domain;
+hal_server_domain(hal_dumpstate_impl, hal_dumpstate)
+
+type hal_dumpstate_impl_exec, exec_type, file_type;
+init_daemon_domain(hal_dumpstate_impl)
+
+# hal_dumstate_impl sets the debug.bq25892 property
+# to trigger the charger chip register dump as root by init
+set_prop(hal_dumpstate_impl, debug_bq25892_prop)
+
+# allow hal_dumstate_impl to execute fwtool in its own domain
+allow hal_dumpstate_impl fwtool_exec:file rx_file_perms;
+
+# read /data/misc/fw_logs/bq25892.txt log file
+allow hal_dumpstate_impl fw_logs_data_file:file r_file_perms;
+allow hal_dumpstate_impl fw_logs_data_file:dir  r_dir_perms;
+
+# read /data/misc/touchfwup/rmi4update.txt log file
+allow hal_dumpstate_impl touch_fw_update_log_file:dir r_dir_perms;
+allow hal_dumpstate_impl touch_fw_update_log_file:file r_file_perms;
+
+allow hal_dumpstate_impl host1x_device:chr_file rw_file_perms;
+
+allow hal_dumpstate_impl debugfs_ion:file r_file_perms;
+allow hal_dumpstate_impl shell_data_file:file getattr;
+allow hal_dumpstate_impl sysfs:file { getattr open read };

@@ -1,0 +1,69 @@
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+
+# Date : WK14.36
+# Operation : Migration
+# Purpose : guiext service for VP
+allow mediacodec guiext-server:binder { transfer call };
+
+# Data : WK16.25
+# Operation : Camera display client
+# Purpose : for SVP secure memory allocation
+allow mediacodec proc_secmem:file { read write open};
+
+# Date : WK16.25
+# Operation : WVL1 IT
+# Purpose : SVP module operates secmem driver
+allow mediacodec init:unix_stream_socket connectto;
+allow mediacodec mobicore_data_file:file { read open getattr};
+allow mediacodec mobicore_user_device:chr_file { read write ioctl open };
+allow mediacodec proc:file { read ioctl open };
+allow mediacodec property_socket:sock_file write;
+allow mediacodec mobicore:unix_stream_socket connectto;
+allow mediacodec proc_secmem:file { read write ioctl open};
+allow mediacodec mobicore_data_file:dir search;
+allow mediacodec persist_data_file:file { read getattr open };
+allow mediacodec persist_data_file:dir search;
+
+# Date : WK16.28
+# Operation : video codec driver
+# Purpose : for performance profiling and timing issue tracking during video playback
+allow mediacodec debugfs_fb:dir search;
+
+# Date : WK16.29
+# Operation : Migration
+# Purpose : Add permission for gpu access
+allow mediacodec dri_device:chr_file { read write open ioctl };
+
+# Date : WK16.50
+# Operation : video codec driver
+# Purpose : Add permission for thermal function access
+allow mediacodec proc_mtktz:dir search;
+allow mediacodec proc_mtktz:file { read open };
+
+# Date : WK17.07
+# Operation : N Migration
+# Purpose: For engineermode setting video log
+allow mediacodec mtk_em_video_log_acodec_prop:file r_file_perms;
+allow mediacodec mtk_em_video_log_sf_postbuffer_prop:file r_file_perms;
+allow mediacodec mtk_em_video_log_omx_prop:file r_file_perms;
+allow mediacodec mtk_em_video_log_vdec_prop:file r_file_perms;
+allow mediacodec mtk_em_video_log_svp_prop:file r_file_perms;
+allow mediacodec mtk_em_video_log_mjc_prop:file r_file_perms;
+allow mediacodec mtk_em_video_venc_h264_prop:file r_file_perms;
+
+# Date : WK17.23
+# Stage: O Migration, SQC
+# Purpose: Allow to use HAL PQ
+hal_client_domain(mediacodec, hal_pq)
+
+# Date : WK17.23
+# Stage: O Migration, SQC
+# Purpose: Allow to use shared memory for HAL PQ
+hal_client_domain(mediacodec, hal_allocator)
+
+# Date : WK17.31
+# Stage: O Migration, SQC
+# Purpose: Allow to use ape decoder
+hal_client_domain(mediacodec, hal_mtkcodecservice)

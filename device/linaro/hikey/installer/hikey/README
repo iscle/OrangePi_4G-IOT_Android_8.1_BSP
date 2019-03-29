@@ -1,0 +1,38 @@
+These instruction should help you in flashing the bootloader
+and AOSP images built from sources.
+Detailed instructions on how to setup the Board can be found
+here:
+https://github.com/96boards/documentation/wiki/HiKeyGettingStarted
+
+For flashing the bootloader, the top two links should be installed
+(closed) and the 3rd link should be removed (open):
+
+---------------------------------------------------------
+|	Name 		|	Link 	|	State 	|
+| Auto Power up 	|     Link 1-2 	|      closed 	|
+| Boot Select 		|     Link 3-4 	|      closed 	|
+| GPIO3-1      		|     Link 5-6 	| 	open 	|
+---------------------------------------------------------
+
+Link 1-2 causes HiKey to auto-power up when power is installed. Link
+3-4 causes the HiKey SoC internal ROM to start up in at a special
+"install bootloader" mode which will install a supplied bootloader
+from the microUSB OTG port into RAM, and will present itself to a
+connected PC as a ttyUSB device.
+
+Note: The HiKey board will remain in USB load mode for 90 seconds
+from power up. If you take longer than 90 seconds to start the install
+then power cycle the board before trying again.
+
+Wait about 5 seconds and then check that the HiKey board has been
+recognized by your Linux PC:
+$ ls /dev/ttyUSB*
+or
+$ dmesg
+
+
+Run the flash-all.sh script after building AOSP for hikey with the right
+right UART recognised in the above command:
+$ ./flash-all.sh /dev/ttyUSBX [4g]
+
+Remove the link 3-4 and power on the board.

@@ -1,0 +1,58 @@
+In the interest of a clean and concise codebase that looks readable, it is hereby established that the code will follow these guidelines.
+Finding an example that does not obey these guidelines is not a cause for also disobeying them (it is a cause for fixing it, however)
+
+
+ 0. Code will not be wrapped to 80 characters. We all have 24+ inch high-res displays. Let's use them.
+    That being said, this is not an endorsement of 500-character lines. Be reasonable.
+ 1. File names shall be camel case and descriptive. Keep them short too. Eg: spi.h is better than
+    spiInterfaceDriver.h.
+ 2. All function names shall be camel-case, beginning with a lowercase letter.
+ 3. All functions that are visibile in the global scope (outside their C file) shall begin with the
+    name of their module (gpio, pwm, os).
+ 4. All functions not visible in the global scope shall be declared static.
+ 5. Functions taking no parameters shall be declated as (void) and not as ().
+ 6. All type names shall be camel-case, beginning with a capital letter.
+ 7. All types in the global scope shall begin with their module name. (GpioPullType, SpiDeviceHandle)
+ 8. There should be *NO* globally-visible variables. All non-stack variables shall be declared
+    "static" and reside in one C file.
+ 9. All global variables in a given C file shall begin with "m" and then be in camel case. This is to
+    make it easier to identify them.
+10. All variables shall be declared in the beginning of the block where they reside. This facilitates
+    easily looking over code and estimating memory use.
+11. typedef is forbidden except for function pointer types. Do not typedef structs or unions. Use full
+    names - makes it easy to appreciate the cost (struct GpioHandle, union PwmDeviceData).
+12. Do not use short. char is allowed for actual printable strings only. Use uint8_t/uint16_t/
+    uint32_t/uint64_t for clarity of intentions and clear delineation of size needed.
+13. int/unsigned int is allowed only for simple loop iterators only (or, if you must, as a return type
+    when you wish to return more than one error class). Do not assume ints are 32 bits. Or 64. Or 16.
+14. Do not use uint16_t/uint8_t for function parameters/return types. Gcc generates very bad code for
+    those cases and you will lose. However, uint8_t/uint16_t are ok to use in structs/unions.
+15. All structures shall be packed to avoid space waste, as the compiler is not allowed to pack them for
+    you. If you are not sure how to, sort members by size (uint64_t members first, then uint32_t
+    members, etc).
+16. Do not ever return structs or unions from functions. Pass a pointer and fill it in. Gcc will
+    optimize this better and it is better C.
+17. All definitions/defines/structs/unions that are only used by one source file belong in that C
+    file. There is never a need for "myModule_priv.h" unless the module is made of a few C files.
+18. Absolutely no "double" types are allowed. Absolutely no passing of "float" vars through var-args
+    (it converts to double).
+19. Absolutely no inline assembly unless you're in a folder under "cpu" or "variant". Allowed in
+    "platform" only if platform only supports one CPU type.
+20. You may use whatever comment style suits your heart, as long as the compiler can live with it.
+21. You may not change compiler flags in order to remove warnings or errors. They are there for a
+    reason, listen to them and fix the code instead.
+22. Whenever possible, hide struct definitions from global scope. Eg: gpio funcs return
+    "struct Gpio*". Actual struct Gpio definition is not public. Not only does this help with clean
+    code, it will warn you if you accidentally try to dereference it, or on purpose try to access
+    internal private state. Also this allows platform-independence to continue.
+23. commit messages shall begin with module they touch and a colon, eg "spi: fix spi-dma on stm64".
+24. Do not divide 64-bit values. If you simply must, only do so by a constant, and use cpuMath.h.
+    This will be enforced at compile time and will fail your build. This is intentional as the power
+    and speed costs are substantial.
+25. Do not cast floats to 64-bit values or back, this is slow. Use floatRt.h. This will be enforced
+    at compile time and will fail your build. This is intentional as the power and speed costs are
+    substantial.
+26. Do not use types with uncertain sizes. NO size_t, ssize_t, etc. use uintXX_t or uintptr_t.
+
+
+99. These guidelines will be kept updated as things come up/are decided.

@@ -1,0 +1,65 @@
+# ==============================================
+# Policy File of /system/bin/hdmi Executable File 
+
+# ==============================================
+# Type Declaration
+# ==============================================
+
+type hdmi_exec, exec_type, file_type;
+typeattribute hdmi coredomain;
+
+# ==============================================
+# Android Policy Rule
+# ==============================================
+
+# ==============================================
+# NSA Policy Rule
+# ==============================================
+
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+
+#permissive hdmi
+init_daemon_domain(hdmi)
+
+# for supporting hdmi
+allow hdmi mtk_hdmi_service:service_manager add;
+#allow hdmi system_server_service:service_manager add;
+allow hdmi block_device:dir search;
+allow hdmi kisd:unix_stream_socket connectto;
+
+allow hdmi servicemanager:binder call;
+allow hdmi servicemanager:binder { transfer call };
+
+allow servicemanager hdmi:dir search;
+allow servicemanager hdmi:file { read open };
+allow servicemanager hdmi:process getattr;
+
+#for hdmi ioctl
+allow hdmi graphics_device:chr_file { read ioctl open write};
+
+#for hdmi uevent
+allow hdmi self:netlink_kobject_uevent_socket { read bind create setopt };
+
+#for app call
+allow system_app hdmi:binder call;
+
+#group add net_admin,for setsockopt failed
+allow hdmi self:capability net_admin;
+
+#setprop
+allow hdmi property_socket:sock_file write;
+allow hdmi init:unix_stream_socket connectto;
+allow hdmi system_prop:property_service set;
+
+#for hdmi uevent in java
+allow system_app self:netlink_kobject_uevent_socket {read bind create setopt };
+
+#============= hdmi ==============
+allow hdmi system_app:binder call;
+
+#============= system_app ==============
+allow system_app hdmi:binder transfer;
+
+

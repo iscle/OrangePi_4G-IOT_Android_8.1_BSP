@@ -1,0 +1,79 @@
+# ==============================================
+# Policy File of /system/bin/program_binary_service Executable File
+
+# ==============================================
+# Type Declaration
+# ==============================================
+type program_binary_exec, exec_type, file_type;
+typeattribute program_binary coredomain;
+
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+# permissive program_binary;
+init_daemon_domain(program_binary)
+
+# Date : 2015/1/6
+# Operation : New
+# Purpose : Cache program binaries for HWUI usage.
+binder_service(program_binary)
+binder_use(program_binary)
+binder_call({domain -init -netd -installd -vndservicemanager}, program_binary)
+
+# Date : 2015/1/6
+# Operation : New
+# Purpose : To manipulate GPU.
+allow program_binary gpu_device:chr_file { open read write ioctl };
+allow program_binary gpu_device:chr_file getattr;
+
+# Date : 2015/1/6
+# Operation : New
+# Purpose : To be a service.
+allow program_binary program_binary_service:service_manager add;
+
+# Date : 2015/1/6
+# Operation : New
+# Purpose : To allow binder call to system server.
+allow program_binary system_server:binder call;
+
+# Date : 2015/3/19
+# Operation : New
+# Purpose : To allow write system property.
+allow program_binary property_socket:sock_file write;
+allow program_binary init:unix_stream_socket connectto;
+
+# Date : 2015/7/23
+# Operation : New
+# Purpose : [M] To allow applications use find operation for service_manager.
+allow system_server program_binary_service:service_manager find;
+
+# Date: 2015/9/23
+# Operation: Program binary service
+# Purpose : Add permission for program binary service find from ServiceManager.
+allow program_binary program_binary_service:service_manager find;
+
+# Date : 2016/1/26
+# Operation : New
+# Purpose : To allow program binary service to execute another binary file.
+allow program_binary system_file:file execute_no_trans;
+
+# Date : W16.42
+# Operation : Integration
+# Purpose : DRM / DRI GPU driver required
+
+# Date: 2015/9/23
+# Operation: Program binary service
+# Purpose : Add permission for program binary service find from ServiceManager.
+allow priv_app program_binary_service:service_manager find;
+allow system_app program_binary_service:service_manager find;
+allow untrusted_app_all program_binary_service:service_manager find;
+allow platform_app program_binary_service:service_manager find;
+
+allow program_binary gpu_device:dir search;
+allow program_binary ion_device:chr_file read;
+allow program_binary system_file:dir read;
+allow program_binary ion_device:chr_file open;
+allow program_binary system_file:dir open;
+
+get_prop(program_binary, hwservicemanager_prop)
+

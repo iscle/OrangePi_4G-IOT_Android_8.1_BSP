@@ -1,0 +1,27 @@
+#Allow access to nanohub device
+allow hal_sensors sensors_device:chr_file rw_file_perms;
+
+# Allow acess to uinput for lidstate determination
+allow hal_sensors uhid_device:chr_file rw_file_perms;
+
+# Allow access to persistent partition for calibration data
+allow hal_sensors persist_file:dir search;
+allow hal_sensors sensors_cal_file:dir create_dir_perms;
+allow hal_sensors sensors_cal_file:file create_file_perms;
+
+# Allow access to saved settings file and nanohub_lock dir/file
+allow hal_sensors sensor_vendor_data_file:dir create_dir_perms;
+allow hal_sensors sensor_vendor_data_file:file create_file_perms;
+
+# Allow access to sensor properties
+set_prop(hal_sensors, sensors_prop)
+
+# Allow access to gralloc shared memory (ion), for sensor direct report
+allow hal_sensors ion_device:chr_file { open read ioctl };
+allow hal_sensors hal_graphics_allocator:fd use;
+
+# allow sensor hal to call scheduling policy service in system server
+allow hal_sensors_default system_server:binder call;
+
+# allow access to detect change in /dev folder
+allow hal_sensors_default device:dir { open read };

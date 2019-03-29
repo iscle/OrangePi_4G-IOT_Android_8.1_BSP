@@ -1,0 +1,30 @@
+# ==============================================
+# Policy File of /system/bin/md_ctrl Executable File 
+
+# ==============================================
+# Type Declaration
+# ==============================================
+type md_ctrl, domain;
+type md_ctrl_exec, exec_type, file_type, vendor_file_type;
+
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+# Date : WK14.46
+# Operation : Migration
+# Purpose : Start md_ctrl
+
+init_daemon_domain(md_ctrl)
+allow md_ctrl ccci_device:chr_file { rw_file_perms };
+allow md_ctrl devpts:chr_file { rw_file_perms };
+allow md_ctrl self:capability dac_override;
+allow md_ctrl muxreport_exec:file rx_file_perms;
+allow md_ctrl emd_device:chr_file { rw_file_perms };
+allow md_ctrl eemcs_device:chr_file { rw_file_perms  };
+
+# Needed to set vold.encryption.type
+set_prop(md_ctrl, vold_prop)
+
+# Allow read to sys/kernel/ccci/* files
+allow md_ctrl sysfs_ccci:dir search;
+allow md_ctrl sysfs_ccci:file r_file_perms;

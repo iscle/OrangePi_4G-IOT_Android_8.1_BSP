@@ -1,0 +1,21 @@
+type cnd, domain, device_domain_deprecated;
+type cnd_exec, exec_type, file_type;
+
+# Started by init
+init_daemon_domain(cnd)
+
+userdebug_or_eng(`
+    allow cnd shared_log_device:chr_file rw_file_perms;
+')
+
+allow cnd self:capability { setuid setgid net_raw };
+
+allow cnd self:socket create_socket_perms;
+allowxperm cnd self:socket ioctl msm_sock_ipc_ioctls;
+allow cnd self:udp_socket create_socket_perms;
+
+allow cnd sysfs_msm_subsys:dir r_dir_perms;
+allow cnd sysfs_msm_subsys:lnk_file rw_file_perms;
+
+qmux_socket(cnd)
+wakelock_use(cnd)

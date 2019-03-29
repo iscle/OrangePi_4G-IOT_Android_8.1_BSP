@@ -1,0 +1,67 @@
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+
+# Date: WK16.26
+# Operation: Migration
+# Purpose: Need to obtain permission to access GPU
+allow cameraserver sw_sync_device:chr_file {open read write ioctl getattr};
+
+# Date : WK15.35
+# Operation : Migration
+# Purpose: Allow reador andgetattr path="/data/data/com.mediatek.voicecommand/training
+# /unlock/passwordfile/0.dat"
+allow cameraserver system_app_data_file:file { read getattr };
+
+# Add by jackie.lin
+# Date : WK16.10
+# Operation : Move these sepolicy from basic to tk(full) which OMA DRM need
+# Purpose : Allow cameraserver to read /proc/pid/cmdline to get process name, so that
+# it can do white list check which is MTK OMA DRM additional protection mechanism
+# system_app:
+allow cameraserver system_app:dir search;
+allow cameraserver system_app:file { read open getattr };
+# platform_app:
+allow cameraserver platform_app:dir search;
+allow cameraserver platform_app:file { read open getattr };
+# untrusted_app:
+allow cameraserver untrusted_app:dir search;
+allow cameraserver untrusted_app:file { read open getattr };
+
+# Date : WK15.45
+# Operation : 1/32x SlowMotion SQC
+# Purpose : for Clearmotion LowPower Switch
+allow cameraserver mjc_lib_prop:property_service set;
+allow cameraserver mtk_mjc_prop:property_service set;
+
+# Date : WK15.02
+# Operation : 120Hz Feature SQC
+# Purpose : for 120Hz Smart Switch
+allow cameraserver mtk_rrc_device:chr_file { read write ioctl open };
+
+# Date : WK14.39
+# Operation : Migration
+# Purpose : MJC Driver
+allow cameraserver MJC_device:chr_file { read write ioctl open };
+
+# Date : WK14.37
+# Operation : Migration
+# Purpose : WFD and MET Latency measurement
+allow cameraserver media_wfd_prop:property_service set;
+
+# Date : WK16.26
+# Operation : Migration
+# Purpose : Dump camera buffer to sdcard for debug
+#============= cameraserver ==============
+allow cameraserver fuse:dir { write search create add_name };
+allow cameraserver fuse:file { read write create open getattr };
+
+# Date : WK16.27
+# Operation : Migration
+# Purpose : Dump camera buffer to sdcard for debug
+#============= cameraserver ==============
+allow cameraserver media_rw_data_file:dir { rw_dir_perms };
+allow cameraserver media_rw_data_file:file { create_file_perms };
+allow cameraserver sdcardfs:dir { w_dir_perms };
+allow cameraserver sdcardfs:file { create_file_perms };
+allow cameraserver sysfs:file getattr;

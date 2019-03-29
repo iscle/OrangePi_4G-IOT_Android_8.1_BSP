@@ -1,0 +1,45 @@
+Running Android on hikey960 board:
+
+* Compiling userspace:
+Pull AOSP source:
+$ repo init -u https://android.googlesource.com/platform/manifest -b master & repo sync -j24
+
+Download and extract HDMI binaries:
+$ wget https://dl.google.com/dl/android/aosp/arm-hikey960-NOU-7ad3cccc.tgz
+$ tar xzf arm-hikey960-NOU-7ad3cccc.tgz
+$ ./extract-arm-hikey960.sh
+
+Build:
+$ . ./build/envsetup.sh
+$ lunch hikey960-userdebug
+$ make -j32
+
+* Flashing images:
+Enter fastboot mode by turning ON switch 1 and 3
+$ cd device/linaro/hikey/installer/hikey960
+$ ./flash-all.sh
+ or
+$ fastboot flash boot out/target/product/hikey/boot.img
+$ fastboot flash dts out/target/product/hikey960/dt.img
+$ fastboot flash system out/target/product/hikey/system.img
+$ fastboot flash cache out/target/product/hikey/cache.img
+$ fastboot flash userdata out/target/product/hikey/userdata.img
+Turn OFF switch 3 and power cycle the board.
+
+* Building kernel
+$ git clone https://android.googlesource.com/kernel/hikey-linaro
+$ cd hikey-linaro
+$ git checkout -b android-hikey-linaro-4.4 origin/android-hikey-linaro-4.4
+$ make ARCH=arm64 hikey960_defconfig
+$ make ARCH=arm64 CROSS_COMPILE=aarch64-linux-android- -j24
+Output: arch/arm64/boot/Image.gz & arch/arm64/boot/dts/hisilicon/hi3660-hikey960.dtb
+   copy Image.gz and hi3660-hikey960.dtb to hikey-kernel directory to files
+        Image.gz-hikey960 and hi3660-hikey960.dtb
+
+* Kernel serial output (uart3):
+J2 (LS Expansion): 1 - Gnd, 11 - Rx, 13 - Tx
+
+External links:
+Board: http://www.96boards.org/product/hikey960/
+Howto: http://www.96boards.org/documentation/ConsumerEdition/HiKey960/README.md/
+Schematics: https://github.com/96boards/documentation/raw/master/ConsumerEdition/HiKey960/HardwareDocs/HiKey960_Schematics.pdf

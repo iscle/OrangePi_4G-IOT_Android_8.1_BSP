@@ -1,0 +1,98 @@
+# ==============================================
+# ePDG in netd.te
+# ==============================================
+allow netd wo_ipsec:fd use;
+allow netd wo_ipsec:tcp_socket { read write setopt getopt };
+allow netd wo_ipsec:udp_socket { read write setopt getopt };
+allow netd wo_epdg_client:fd use;
+allow netd wo_epdg_client:tcp_socket { read write setopt getopt };
+allow netd wo_epdg_client:udp_socket {read write setopt getopt};
+
+# ==============================================
+# Policy File of /system/bin/wo_epdg_client Executable File
+
+# ==============================================
+# Type Declaration
+# ==============================================
+type wo_epdg_client_exec, exec_type, file_type, vendor_file_type;
+type wo_epdg_client, domain;
+
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+init_daemon_domain(wo_epdg_client)
+net_domain(wo_epdg_client)
+
+domain_auto_trans(wo_epdg_client, wo_starter_exec, wo_ipsec)
+domain_auto_trans(wo_epdg_client, wo_charon_exec, wo_ipsec)
+domain_auto_trans(wo_epdg_client, wo_stroke_exec, wo_ipsec)
+
+domain_auto_trans(wo_epdg_client, netutils_wrapper_exec, netutils_wrapper)
+
+# Date: WK14.52
+# Operation : Feature for ePDG
+# Purpose :  handle tunnel interface
+allow wo_epdg_client system_file:file { lock read getattr open execute execute_no_trans };
+allow wo_epdg_client self:tun_socket { relabelfrom relabelto create };
+allow wo_epdg_client tun_device:chr_file { read write ioctl open getattr };
+allow wo_epdg_client self:netlink_route_socket { setopt nlmsg_write read bind create nlmsg_read write getattr };
+allow wo_epdg_client self:capability { net_admin dac_override kill setuid setgid };
+
+# Purpose :  update ipsec deamon
+allow wo_epdg_client wo_ipsec_exec:file { read getattr open execute execute_no_trans };
+
+# Purpose : send signal to process (ipsec/charon)
+allow wo_epdg_client wo_ipsec:process { signal sigkill signull };
+
+# Purpose :  set property for debug messages
+allow wo_epdg_client init:unix_stream_socket connectto;
+allow wo_epdg_client mtk_epdg_prop:property_service set;
+allow wo_epdg_client property_socket:sock_file write;
+allow wo_epdg_client persist_epdg_prop:property_service set;
+
+# Purpose :  Query ePDG IP address
+allow wo_epdg_client dnsproxyd_socket:sock_file write;
+allow wo_epdg_client netd:unix_stream_socket connectto;
+allow wo_epdg_client netd_socket:sock_file write;
+
+
+# Purpose :  create strongswan config file for IKEv2 Tunnel,  removal old charon/starter PID file
+allow wo_epdg_client epdg_apn_conf_file:dir { write read open add_name remove_name search };
+allow wo_epdg_client epdg_apn_conf_file:file { write create unlink open getattr };
+allow wo_epdg_client epdg_ipsec_conf_file:file { write read create unlink open getattr };
+allow wo_epdg_client epdg_ipsec_conf_file:dir { write read open add_name remove_name search };
+
+# tear_xfrm_policy
+allow wo_epdg_client self:netlink_xfrm_socket { write getattr setopt nlmsg_write read bind create };
+
+# Purpose : check tun device is ready
+allow wo_epdg_client self:udp_socket { create ioctl };
+allow wo_epdg_client self:capability sys_module;
+
+# Purpose : create symbolic link for /dev/tun
+allow wo_epdg_client vendor_shell_exec:file { read execute open execute_no_trans };
+allow wo_epdg_client device:dir { write add_name };
+allow wo_epdg_client device:lnk_file create;
+
+# Purpose: Kill Process
+allow wo_epdg_client system_server:process { signal signull };
+allow wo_epdg_client kernel:process signal;
+
+# Purpose: access iptables for mss
+allow wo_epdg_client self:capability net_raw;
+allow wo_epdg_client self:rawip_socket { getopt create setopt };
+
+#============= wo_epdg_client ==============
+allow wo_epdg_client devpts:chr_file { read write open };
+allow wo_epdg_client kernel:system module_request;
+allow wo_epdg_client system_data_file:dir getattr;
+allow wo_epdg_client self:capability { setuid setgid };
+allowxperm wo_epdg_client self:udp_socket ioctl { SIOCSIFFLAGS SIOCSIFMTU SIOCSIFADDR };
+
+#============= netutils_wrapper ==============
+allow netutils_wrapper wo_epdg_client:unix_stream_socket { read write };
+allow netutils_wrapper wo_epdg_client:fd use;
+
+#TODO::MTK need to remove later
+#typeattribute wo_epdg_client vendor_executes_system_violators;
+

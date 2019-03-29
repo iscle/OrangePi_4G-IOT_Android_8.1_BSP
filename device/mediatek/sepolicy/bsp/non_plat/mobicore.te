@@ -1,0 +1,55 @@
+##
+# Trustonic TEE (mobicore) daemon
+#
+
+# ==============================================
+# Type Declaration
+# ==============================================
+type mobicore, domain;
+typeattribute mobicore hal_gatekeeper_server, hal_keymaster_server, mlstrustedsubject;
+type mobicore_exec, exec_type, file_type, vendor_file_type;
+type mobicore_admin_device, dev_type;
+type mobicore_user_device, dev_type, mlstrustedobject;
+type mobicore_tui_device, dev_type;
+type mobicore_data_file, file_type, data_file_type, mlstrustedobject;
+type mobicore_socket, file_type;
+
+# ==============================================
+# Type Declaration for secmem
+# ==============================================
+type proc_secmem, fs_type;
+# genfscon proc /secmem0 u:object_r:proc_secmem:s0;
+
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+# permissive mobicore;
+init_daemon_domain(mobicore)
+allow mobicore self:capability { dac_override };
+allow mobicore mobicore_admin_device:chr_file rw_file_perms;
+allow mobicore mobicore_user_device:chr_file rw_file_perms;
+allow mobicore mobicore_data_file:dir { create rw_dir_perms rename reparent };
+allow mobicore mobicore_data_file:file { create_file_perms rw_file_perms };
+allow mobicore self:netlink_socket create_socket_perms_no_ioctl;
+allow mobicore apk_data_file:dir { search write };
+allow mobicore mobicore_socket:sock_file { create_file_perms link };
+allow mobicore persist_data_file:dir { write search add_name };
+allow mobicore persist_data_file:file { read write create open getattr };
+
+# appdomain
+allow appdomain mobicore_user_device:chr_file { getattr read write ioctl open };
+
+# Date : 2016/10/17 (or WK16.43)
+# Operation : TUI Migration/SQC
+# Purpose : Set new added properties for TuiStarter in 311B mcDriverDaemon
+allow mobicore mobicore_tui_device:chr_file { read open ioctl };
+
+# Date : 2017/08/08 (or WK17.32)
+# Operation : Keymaster 3.0 Migration
+# Purpose : Set sepolicy for Keymaster attestation key injection
+allow hal_keymaster_attestation mobicore:unix_stream_socket connectto;
+allow hal_keymaster_attestation mobicore_user_device:chr_file { read write ioctl open };
+
+# Date: 2017/12/11
+# Purpose: set policy for FBE
+allow mobicore unlabeled:dir search;

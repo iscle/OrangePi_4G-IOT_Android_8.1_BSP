@@ -1,0 +1,24 @@
+# This file gets copied as /init.angler.diag.rc
+
+on post-fs-data
+    # Modem logging collection
+    mkdir /data/diag_logs 0777 system system
+
+    #Create folder subsystem_ramdump
+    mkdir /data/ramdump 0700 system system
+
+on boot
+    chmod 666 /dev/diag
+    write /sys/module/msm_poweroff/parameters/enable_edl 1
+
+# diag and adb
+on property:sys.usb.config=diag,adb
+    stop adbd
+    write /sys/class/android_usb/android0/enable 0
+    write /sys/class/android_usb/android0/idVendor 05C6
+    write /sys/class/android_usb/android0/idProduct 901D
+    write /sys/class/android_usb/android0/f_diag/clients diag
+    write /sys/class/android_usb/android0/functions diag,adb
+    write /sys/class/android_usb/android0/enable 1
+    start adbd
+    setprop sys.usb.state ${sys.usb.config}

@@ -1,0 +1,31 @@
+# ==============================================
+# Policy File of storagemanagerd Executable File
+
+# ==============================================
+# Type Declaration
+# ==============================================
+type storagemanagerd, domain;
+type storagemanagerd_exec, exec_type, file_type;
+typeattribute storagemanagerd coredomain;
+
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+
+init_daemon_domain(storagemanagerd)
+
+unix_socket_connect(storagemanagerd, vold, vold)
+
+# storagemanagerd sends information back to dumpstate when "adb bugreport" is used
+allow storagemanagerd dumpstate:fd use;
+allow storagemanagerd dumpstate:unix_stream_socket { read write getattr };
+
+# storagemanagerd information is written to shell owned bugreport files
+allow storagemanagerd shell_data_file:file { write getattr };
+
+# Why?
+allow storagemanagerd dumpstate:unix_dgram_socket { read write };
+
+# storagemanagerd can be invoked with logwrapper, so let it write to pty
+allow storagemanagerd devpts:chr_file rw_file_perms;
+

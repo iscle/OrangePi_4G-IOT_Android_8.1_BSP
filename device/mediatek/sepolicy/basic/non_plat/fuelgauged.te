@@ -1,0 +1,79 @@
+# ==============================================
+# Policy File of /system/bin/fuelgauged Executable File 
+
+# ==============================================
+# Type Declaration
+# ==============================================
+type fuelgauged ,domain;
+type fuelgauged_exec , exec_type, file_type, vendor_file_type;
+type fuelgauged_file, file_type, data_file_type;
+
+# ==============================================
+# Android Policy Rule
+# ==============================================
+
+# ==============================================
+# NSA Policy Rule
+# ==============================================
+
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+
+init_daemon_domain(fuelgauged)
+
+# Data : WK14.43
+# Operation : Migration
+# Purpose : Fuel Gauge daemon for access driver node
+allow fuelgauged input_device:dir rw_dir_perms;
+allow fuelgauged input_device:file r_file_perms;
+
+# Data : WK14.43
+# Operation : Migration
+# Purpose : For meta tool calibration
+allow fuelgauged mtk-adc-cali_device:chr_file rw_file_perms;
+
+# Data : WK14.43
+# Operation : Migration
+# Purpose : For fg.log can be printed with kernel log
+allow fuelgauged kmsg_device:chr_file w_file_perms;
+
+# Data : WK14.43
+# Operation : Migration
+# Purpose : For fg daemon can comminucate with kernel
+### TBD, neverallowxperm on line 177 of system/sepolicy/public/domain.t
+#allow fuelgauged fuelgauged:netlink_kobject_uevent_socket create_socket_perms;
+#allow fuelgauged fuelgauged:netlink_socket create_socket_perms;
+allow fuelgauged self:netlink_socket create;
+allow fuelgauged self:netlink_socket create_socket_perms_no_ioctl;
+allow fuelgauged self:netlink_route_socket { bind create getattr write nlmsg_read read nlmsg_write };
+
+# Data : WK16.21
+# Operation : New Feature
+# Purpose : For fg daemon can access /data/FG folder
+file_type_auto_trans(fuelgauged, system_data_file, fuelgauged_file);
+allow fuelgauged fuelgauged_file:file rw_file_perms;
+allow fuelgauged system_data_file:dir rw_dir_perms;
+
+# Data : WK16.21
+# Operation : New Feature
+# Purpose : For fg daemon can do nvram r/w to save car_tune_value
+allow fuelgauged nvdata_file:dir rw_dir_perms;
+allow fuelgauged nvdata_file:file {rw_file_perms create_file_perms};
+allow fuelgauged nvram_data_file:lnk_file rw_file_perms;
+allow fuelgauged nvdata_file:lnk_file rw_file_perms;
+
+# Data : WK16.39
+allow fuelgauged self:capability { chown fsetid dac_override };
+
+# Data : W16.43
+# Operation : New Feature
+# Purpose : Change from /data to /cache
+allow fuelgauged cache_file:file {rw_file_perms create_file_perms};
+allow fuelgauged cache_file:dir {rw_dir_perms create_dir_perms};
+allow fuelgauged sysfs:file {rw_file_perms create_file_perms};
+
+# Date: W17.22
+# Operation : New Feature
+# Purpose : Add for A/B system
+allow fuelgauged kernel:system module_request;

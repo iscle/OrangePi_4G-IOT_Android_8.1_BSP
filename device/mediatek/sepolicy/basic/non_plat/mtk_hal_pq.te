@@ -1,0 +1,40 @@
+# ==============================================
+# Policy File of /vendor/bin/hw/vendor.mediatek.hardware.pq@2.0-service Executable File
+
+# ==============================================
+# Type Declaration
+# ==============================================
+
+type mtk_hal_pq, domain;
+type mtk_hal_pq_exec, exec_type, file_type, vendor_file_type;
+
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+
+# Setup for domain transition
+init_daemon_domain(mtk_hal_pq)
+
+# Allow to use HWBinder IPC
+hwbinder_use(mtk_hal_pq);
+
+# Allow a set of permissions required for a domain to be a server which provides a HAL implementation over HWBinder.
+hal_server_domain(mtk_hal_pq, hal_pq)
+
+# add/find permission rule to hwservicemanager
+add_hwservice(hal_pq_server, mtk_hal_pq_hwservice)
+
+# Allow to allocate hidl memory
+hal_client_domain(mtk_hal_pq, hal_allocator)
+
+# Purpose : Allow to use kernel driver
+allow mtk_hal_pq graphics_device:chr_file { read write open ioctl };
+
+# Purpose : Allow property set
+allow mtk_hal_pq init:unix_stream_socket connectto;
+allow mtk_hal_pq property_socket:sock_file write;
+allow mtk_hal_pq system_prop:property_service set;
+allow mtk_hal_pq debug_prop:property_service set;
+
+# Purpose : Allow permission to get AmbientLux from hwservice_manager
+allow mtk_hal_pq fwk_sensor_hwservice:hwservice_manager find;

@@ -1,0 +1,128 @@
+# ==============================================
+# Policy File of /system/bin/mtkrild Executable File
+
+# ==============================================
+# Type Declaration
+# ==============================================
+type mtkrild_exec , exec_type, file_type, vendor_file_type;
+type mtkrild ,domain;
+
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+init_daemon_domain(mtkrild)
+net_domain(mtkrild)
+
+# Trigger module auto-load.
+allow mtkrild kernel:system module_request;
+
+# Capabilities assigned for mtkrild
+allow mtkrild self:capability { setuid net_admin net_raw };
+allow mtkrild self:capability dac_override;
+
+# Control cgroups
+allow mtkrild cgroup:dir create_dir_perms;
+
+# Property service
+# allow set RIL related properties (radio./net./system./etc)
+set_prop(mtkrild, radio_prop)
+set_prop(mtkrild, net_radio_prop)
+set_prop(mtkrild, system_radio_prop)
+set_prop(mtkrild, persist_ril_prop)
+auditallow mtkrild net_radio_prop:property_service set;
+auditallow mtkrild system_radio_prop:property_service set;
+set_prop(mtkrild, ril_active_md_prop)
+# allow set muxreport control properties
+set_prop(mtkrild, ril_cdma_report_prop)
+set_prop(mtkrild, ril_mux_report_case_prop)
+set_prop(mtkrild, ctl_muxreport-daemon_prop)
+
+#Dat: 2017/02/14
+#Purpose: allow set telephony Sensitive property
+set_prop(mtkrild, mtk_telephony_sensitive_prop)
+
+# Access to wake locks
+wakelock_use(mtkrild)
+
+# Allow access permission to efs files
+allow mtkrild efs_file:dir create_dir_perms;
+allow mtkrild efs_file:file create_file_perms;
+allow mtkrild bluetooth_efs_file:file r_file_perms;
+allow mtkrild bluetooth_efs_file:dir r_dir_perms;
+
+# Allow access permission to dir/files
+# (radio data/system data/proc/etc)
+allow mtkrild radio_data_file:dir rw_dir_perms;
+allow mtkrild radio_data_file:file create_file_perms;
+allow mtkrild sdcard_type:dir r_dir_perms;
+allow mtkrild system_data_file:dir r_dir_perms;
+allow mtkrild system_data_file:file r_file_perms;
+allow mtkrild system_file:file x_file_perms;
+allow mtkrild proc:file rw_file_perms;
+allow mtkrild proc_net:file w_file_perms;
+
+# Allow mtkrild to create and use netlink sockets.
+### TBD, neverallowxperm on line 177 of system/sepolicy/public/domain.te
+#allow mtkrild self:netlink_socket create_socket_perms;
+#allow mtkrild self:netlink_kobject_uevent_socket create_socket_perms;
+# Set and get routes directly via netlink.
+allow mtkrild self:netlink_route_socket nlmsg_write;
+
+# Allow mtkrild to create sockets.
+### TBD, neverallowxperm on line 177 of system/sepolicy/public/domain.te
+#allow mtkrild self:socket create_socket_perms;
+
+# Allow read/write to devices/files
+allow mtkrild alarm_device:chr_file rw_file_perms;
+allow mtkrild radio_device:chr_file rw_file_perms;
+allow mtkrild radio_device:blk_file r_file_perms;
+allow mtkrild mtd_device:dir search;
+# Allow read/write to uart driver (for GPS)
+#allow mtkrild gps_device:chr_file rw_file_perms;
+# Allow read/write to tty devices
+allow mtkrild tty_device:chr_file rw_file_perms;
+allow mtkrild eemcs_device:chr_file { rw_file_perms };
+
+allow mtkrild Vcodec_device:chr_file { rw_file_perms };
+allow mtkrild devmap_device:chr_file { r_file_perms };
+allow mtkrild devpts:chr_file { rw_file_perms };
+allow mtkrild ccci_device:chr_file { rw_file_perms };
+allow mtkrild misc_device:chr_file { rw_file_perms };
+allow mtkrild proc_lk_env:file rw_file_perms;
+allow mtkrild sysfs_vcorefs_pwrctrl:file { w_file_perms };
+allow mtkrild bootdevice_block_device:blk_file { rw_file_perms };
+allow mtkrild para_block_device:blk_file { rw_file_perms };
+
+# Allow dir search, fd uses
+allow mtkrild block_device:dir search;
+#allow mtkrild platformblk_device:dir search;
+allow mtkrild platform_app:fd use;
+allow mtkrild radio:fd use;
+
+# For emulator
+allow mtkrild qemu_pipe_device:chr_file rw_file_perms;
+allow mtkrild socket_device:sock_file { w_file_perms };
+
+# For MAL MFI
+allow mtkrild mal_mfi_socket:sock_file { w_file_perms };
+
+# For ccci sysfs node
+allow mtkrild sysfs_ccci:dir search;
+allow mtkrild sysfs_ccci:file r_file_perms;
+
+allow init socket_device:sock_file { create unlink setattr };
+
+#For Kryptowire mtklog issue
+allow mtkrild aee_aedv:unix_stream_socket connectto;
+# Allow ioctl in order to control network interface
+allowxperm mtkrild self:udp_socket ioctl {SIOCDELRT SIOCSIFFLAGS SIOCSIFADDR SIOCKILLADDR SIOCDEVPRIVATE SIOCDEVPRIVATE_1};
+
+# Allow to use vendor binder
+vndbinder_use(mtkrild)
+
+# Allow to trigger IPv6 RS
+allow mtkrild node:rawip_socket node_bind;
+
+# Allow to use sysenv
+allow mtkrild sysfs:file open;
+allow mtkrild sysfs:file read;

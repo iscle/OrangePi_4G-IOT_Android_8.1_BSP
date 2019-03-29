@@ -1,0 +1,40 @@
+get_prop(domain, camera_prop)
+
+dontaudit domain self:capability sys_module;
+dontaudit domain kernel:system module_request;
+
+# b/29072816
+# Triggered by kernel code which calls request_firmware(), which
+# eventually calls filp_open(), which attempts to look in /firmware
+# for the firmware file itself using the context of the calling
+# domain.
+# This does not occur on other Android builds because the marlin
+# kernel has various references to /firmware paths in the following
+# code:
+#
+# /* direct firmware loading support */
+# static char fw_path_para[256];
+# static const char * const fw_path[] = {
+#         fw_path_para,
+#         "/lib/firmware/updates/" UTS_RELEASE,
+#         "/lib/firmware/updates",
+#         "/lib/firmware/" UTS_RELEASE,
+#         "/lib/firmware",
+#         "/firmware/image",
+#         "/firmware/radio",
+#         "/firmware/adsp"        //HTC_AUD
+# };
+#
+# As described at http://www.makelinux.net/ldd3/chp-14-sect-8 ,
+# the userspace helper (in our case, ueventd) should always be loading
+# these files, not the requesting process itself. It is only due to a
+# hack added by Linus Torvalds that the kernel even attempt to load
+# firmware files directly from the filesystem
+# (https://github.com/torvalds/linux/commit/abb139e75c2cdbb955e840d6331cb5863e409d0e).
+#
+# Suppress these denials for most domains, since ueventd should be doing the
+# opening of the firmware.
+dontaudit domain firmware_file:dir search;
+
+allow domain debugfs_ion:dir search;
+allow domain debugfs_kgsl:dir search;

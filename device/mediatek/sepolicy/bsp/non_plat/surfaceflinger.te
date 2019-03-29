@@ -1,0 +1,117 @@
+# ==============================================
+# MTK Policy Rule
+# ============
+
+# for debug purpose
+allow surfaceflinger self:capability { net_admin sys_nice };
+allow surfaceflinger self:netlink_socket { read bind create };
+allow surfaceflinger debug_prop:property_service set;
+file_type_auto_trans(surfaceflinger, system_data_file, sf_bqdump_data_file);
+allow surfaceflinger anr_data_file:dir { write search create add_name };
+allow surfaceflinger anr_data_file:file { create write};
+allow surfaceflinger aee_exp_data_file:file write;
+allow surfaceflinger custom_file:dir search;
+allow surfaceflinger aee_dumpsys_data_file:file write;
+allow surfaceflinger RT_Monitor_device:chr_file { read ioctl open };
+
+# watch dog use shell to move debug file
+allow surfaceflinger shell_exec:file { read execute open execute_no_trans getattr };
+
+# for using toolbox
+allow surfaceflinger system_file:file x_file_perms;
+
+# for sf_dump
+userdebug_or_eng(`
+allow surfaceflinger sf_bqdump_data_file:{dir file} {relabelto open create read write getattr };
+allow surfaceflinger sf_bqdump_data_file:dir {search add_name};
+')
+
+# for driver access
+allow surfaceflinger sw_sync_device:chr_file { read write open ioctl getattr };
+allow surfaceflinger MTK_SMI_device:chr_file { read write open ioctl };
+
+# for bootanimation
+allow surfaceflinger bootanim:dir search;
+allow surfaceflinger bootanim:file { read getattr open };
+allow surfaceflinger self:capability dac_override;
+
+# for MTK Emulator HW GPU
+allow surfaceflinger qemu_pipe_device:chr_file rw_file_perms;
+
+# for SVP secure memory allocation
+allow surfaceflinger proc_secmem:file { read write open ioctl };
+
+# for watchdog
+allow surfaceflinger anr_data_file:dir { relabelfrom read remove_name getattr };
+allow surfaceflinger anr_data_file:file { rename getattr unlink open append};
+allow surfaceflinger sf_rtt_file:dir { create search write add_name remove_name};
+allow surfaceflinger sf_rtt_file:file { open read write create rename append getattr unlink};
+allow surfaceflinger sf_rtt_file:dir {relabelto getattr};
+allow surfaceflinger file_contexts_file:file read;
+allow surfaceflinger aee_aed:process sigchld;
+
+# for BufferQueue check process name of em_svr
+allow surfaceflinger em_svr:dir search;
+allow surfaceflinger em_svr:file { read getattr open };
+
+# need to check what is this allowance for
+#TODO:: MTK need to remove later
+not_full_treble(`
+    allow surfaceflinger mobicore:unix_stream_socket connectto;
+')
+
+allow surfaceflinger mobicore_data_file:file { read getattr open };
+allow surfaceflinger mobicore_user_device:chr_file { read write ioctl open };
+allow surfaceflinger mobicore_data_file:dir search;
+
+# take down the boot time for bootprof
+allow surfaceflinger proc:file write;
+
+# notify perf service of SF information for performance
+allow surfaceflinger mtk_perf_service:service_manager find;
+
+# HWC need to write mhl 4k information to debug node of GED
+#allow surfaceflinger debugfs:file { open write read };
+
+# allow SF to adjust vsync offset in freemode
+allow surfaceflinger debugfs:file getattr;
+
+# GuiExt service
+allow surfaceflinger guiext-server_service:service_manager { add find };
+
+# Add permission for gpu access
+allow surfaceflinger dri_device:chr_file { read write open ioctl };
+
+# for rtt dump
+allow surfaceflinger toolbox_exec:file { read getattr open execute execute_no_trans };
+
+# 1. Hwc writes mhl 4k information to debug node of GED
+# 2. allow SF to adjust vsync offset in freemode
+allow surfaceflinger debugfs_ged:file { open write read getattr};
+allow surfaceflinger debugfs_ged:dir { search };
+
+# for FpsPolicyServer
+# GL context of each APP will send fps request, so we have loose policy
+# FpsPolicyServer control refresh rate through dfrc
+allow surfaceflinger fpspolicy-server_service:service_manager add;
+
+# Date : WK17.23
+# Stage: O Migration, SQC
+# Purpose: Allow to use HAL PQ
+hal_client_domain(surfaceflinger, hal_pq)
+
+# Date : WK17.23
+# Stage: O Migration, SQC
+# Purpose: Allow to use shared memory for HAL PQ
+hal_client_domain(surfaceflinger, hal_allocator)
+
+# Date : WK17.43
+# Stage: O Migration, SQC
+# purpose: Allow to SF communicate with HAL DFPS
+hal_client_domain(surfaceflinger, hal_dfps)
+
+#TODO:: MTK need to remove later
+not_full_treble(`
+    allow {domain -init -isolated_app -webview_zygote -hal_configstore_server} fpspolicy-server_service:service_manager find;
+')
+allow surfaceflinger mtk_dfrc_device:chr_file rw_file_perms;

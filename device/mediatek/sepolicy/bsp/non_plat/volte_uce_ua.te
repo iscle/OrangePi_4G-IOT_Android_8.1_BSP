@@ -1,0 +1,43 @@
+# ==============================================
+# Policy File of /vendor/bin/volte_rcs_ua Executable File
+
+# ==============================================
+# Type Declaration
+# ==============================================
+type volte_uce_ua, domain, mtkimsapdomain;
+#type mtk_hal_presence, domain;
+type volte_uce_ua_exec, exec_type, file_type, vendor_file_type;
+type volte_uce_socket, file_type;
+# hwbinder access
+init_daemon_domain(volte_uce_ua)
+hwbinder_use(volte_uce_ua)
+hal_server_domain(volte_uce_ua, hal_presence)
+add_hwservice(hal_presence_server, volte_uce_ua_hwservice)
+# call into system_app process (callbacks)
+binder_call(volte_uce_ua, system_app)
+
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+
+# Date : WK14.42
+# Operation : Migration
+# Purpose : for VoLTE L early bring up and first call
+#allow volte_rcs_ua socket_device:sock_file write;
+#allow volte_rcs_ua node:udp_socket node_bind;
+#allow volte_rcs_ua self:udp_socket { bind create };
+#allow volte_rcs_ua self:udp_socket read;
+
+#allow volte_rcs_ua rcs_ua_proxy_socket:sock_file write;
+
+# Date : W17.29
+# Operation : IT
+# Purpose: Presence HIDL Migration
+allow volte_uce_ua hwservicemanager_prop:file { read getattr open };
+allow volte_uce_ua debugfs_tracing:file { write open };
+
+# Date : W1750
+# Operation: RCS over Internet development
+# Purpose: For volte_uce_ua to be able to talk to rcs_volte_stack
+allow volte_uce_ua rcs_volte_stack_socket:sock_file { open getattr read write append };
+allow volte_uce_ua rcs_volte_stack:unix_stream_socket { read getattr connectto };

@@ -1,0 +1,35 @@
+# ==============================================================================
+# Type Declaration
+# ==============================================================================
+type mtk_hal_imsa, domain, mtkimsapdomain;
+type mtk_hal_imsa_exec, exec_type, vendor_file_type, file_type;
+
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+init_daemon_domain(mtk_hal_imsa)
+
+# hwbinder access
+hwbinder_use(mtk_hal_imsa)
+hal_server_domain(mtk_hal_imsa, hal_imsa)
+add_hwservice(hal_imsa_server, mtk_hal_imsa_hwservice)
+
+# call into system_server process (callbacks)
+binder_call(mtk_hal_imsa, system_server)
+
+# Date : 2017/05/18
+# Operation : VoLTE sanity
+# Purpose : Add permission for IMSA connect to IMSM
+allow mtk_hal_imsa rild_imsm_socket:sock_file write;
+
+# Date : 2017/06/08
+# Operation : IMSA sanity
+# Purpose : Add permission for IMSA connect to hwservicemanager
+allow mtk_hal_imsa hwservicemanager_prop:file { read open };
+allow mtk_hal_imsa hwservicemanager_prop:file getattr;
+
+# Date : 2017/06/13
+# Operation : IMSA sanity
+# Purpose : Add permission for IMSA to access radio
+allow mtk_hal_imsa radio:binder call;
+allow mtk_hal_imsa debugfs_tracing:file { write open };

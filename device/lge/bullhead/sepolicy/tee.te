@@ -1,0 +1,49 @@
+# tee starts as root, and drops privileges
+allow tee self:capability { setuid setgid sys_rawio };
+
+allow tee block_device:dir r_dir_perms;
+allow tee drm_block_device:blk_file rw_file_perms;
+allow tee ssd_block_device:blk_file rw_file_perms;
+
+# Need to figure out how many scsi generic devices are preset
+# before being able to identify which one is rpmb device
+allow tee device:dir r_dir_perms;
+
+# allow tee to load firmware images
+allow tee firmware_file:dir r_dir_perms;
+allow tee firmware_file:file r_file_perms;
+
+r_dir_file(tee, persist_data_file)
+
+allow tee persist_file:dir r_dir_perms;
+
+# Write to drm related pieces of persist partition
+allow tee persist_drm_file:dir create_dir_perms;
+allow tee persist_drm_file:file create_file_perms;
+
+# allow tee to access persist_data_file
+allow tee persist_data_file:dir create_dir_perms;
+allow tee persist_data_file:file create_file_perms;
+
+# allow tee to operate tee device
+allow tee tee_device:chr_file rw_file_perms;
+
+# allow tee access for secure UI to work
+allow tee graphics_device:chr_file r_file_perms;
+allow tee graphics_device:dir r_dir_perms;
+
+set_prop(tee, qseecomtee_prop)
+
+binder_call(tee, surfaceflinger)
+binder_use(tee)
+
+allow tee system_app:unix_dgram_socket sendto;
+
+allow tee time_daemon:unix_stream_socket connectto;
+
+# allow tee to access data partition
+allow tee system_data_file:dir r_dir_perms;
+
+# fingerprint (HAL)
+allow tee fingerprintd_data_file:dir rw_dir_perms;
+allow tee fingerprintd_data_file:file create_file_perms;

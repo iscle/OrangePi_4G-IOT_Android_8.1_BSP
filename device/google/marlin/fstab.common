@@ -1,0 +1,14 @@
+# Android fstab file.
+# The filesystem that contains the filesystem e2fsck binary (typically /system) cannot
+# specify 'check', and must come before any filesystems that do specify 'check'
+
+# NOTE: /vendor partition is now early-mounted and the fstab entry is specified in device tree:
+#       /proc/device-tree/firmware/android/fstab/vendor
+
+#<src>                                                  <mnt_point>         <type>  <mnt_flags and options>     <fs_mgr_flags>
+/dev/block/platform/soc/624000.ufshc/by-name/system     /                   ext4    ro,barrier=1                wait,slotselect,verify
+/dev/block/platform/soc/624000.ufshc/by-name/modem      /firmware/radio     vfat    ro,shortname=lower,uid=1000,gid=0,dmask=227,fmask=337,context=u:object_r:firmware_file:s0   wait,slotselect
+/dev/block/platform/soc/624000.ufshc/by-name/userdata   /data               ext4    errors=panic,noatime,nosuid,nodev,barrier=1,noauto_da_alloc  latemount,wait,check,formattable,fileencryption=ice,quota
+/dev/block/zram0                                        none                swap    defaults                    zramsize=536870912,max_comp_streams=4
+/dev/block/platform/soc/624000.ufshc/by-name/misc       /misc               emmc    defaults                    defaults
+/devices/*/xhci-hcd.0.auto/usb*                         auto                vfat    defaults                    voldmanaged=usb:auto

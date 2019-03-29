@@ -1,0 +1,38 @@
+# ==============================================
+# Policy File of /system/bin/factory Executable File
+
+# ==============================================
+# Type Declaration
+# ==============================================
+type factory_exec , exec_type, file_type;
+typeattribute factory coredomain;
+
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+init_daemon_domain(factory)
+
+
+allow factory property_socket:sock_file write;
+allow factory init:unix_stream_socket connectto;
+allow factory kernel:system module_request;
+allow factory node:tcp_socket node_bind;
+allow factory userdata_block_device:blk_file rw_file_perms;
+allow factory port:tcp_socket { name_bind name_connect };
+allow factory self:capability { sys_module ipc_lock sys_nice dac_override net_raw fsetid net_admin sys_time sys_boot sys_admin };
+allow factory sdcard_type:dir r_dir_perms;
+### TBD, neverallowxperm on line 177 of system/sepolicy/public/domain.te
+#allow factory self:netlink_route_socket create_socket_perms;
+allow factory self:netlink_route_socket { bind create getattr write nlmsg_read read nlmsg_write };
+allow factory proc_net:file { read getattr open };
+allowxperm factory self:udp_socket ioctl priv_sock_ioctls;
+allowxperm factory self:udp_socket ioctl {SIOCGIFFLAGS SIOCGIWNWID};
+
+allow factory self:process execmem;
+allow factory self:tcp_socket create_stream_socket_perms;
+allow factory self:udp_socket create_socket_perms;
+
+allow factory sysfs_wake_lock:file rw_file_perms;
+allow factory system_data_file:dir w_dir_perms;
+allow factory system_data_file:sock_file create_file_perms;
+allow factory system_file:file x_file_perms;

@@ -1,0 +1,66 @@
+# ==============================================
+# MTK Policy Rule
+
+# Date : WK14.34
+# Operation : Migration
+# Purpose : 6571/6572 GMO external memory access(/dev/exm0)
+#allow installd exm0_device:chr_file { read write ioctl open };
+
+# Date : WK14.34
+# Operation : Migration
+# Purpose : Move app to phone storage
+# 1. Enter Settings->Apps
+# 2. Select Downloaded tab
+# 3. Choose the application and move to phone storage
+# 4. Check the application in Phone storage tab
+allow installd apk_tmp_file:dir getattr;
+allow installd vfat:file getattr;
+
+# Date : WK14.34
+# Operation : Migration
+# Purpose : for CIP project (access /custom partition)
+allow installd custom_file:file { getattr read open };
+allow installd custom_file:dir search;
+
+# Date : WK14.34
+# Operation : Development GMO Feature "Move OAT to SD Card"
+# Purpose : for GMO ROM Size Slim
+allow installd dalvikcache_data_file:lnk_file { read getattr setattr unlink create };
+allow installd sdcard_type:dir { write read remove_name search create add_name getattr setattr };
+allow installd sdcard_type:file { write getattr setattr read create unlink open };
+
+# Date : WK14.40
+# Operation : SQC1
+# Purpose : for access .android_secure
+allow installd vfat:dir search;
+
+# Date : WK14.44
+# Operation : SQC1
+# Purpose : for phone encrypted
+# Disabled 20150109 for bad policy review (ALPS01902735)
+#allow installd unlabeled:fifo_file write;
+#allow installd unlabeled:sock_file write;
+
+# Date : WK14.46
+# Operation : SQC1
+# Purpose : MOTA update KK to L, workaround for access /data/.layout_version 
+allow installd system_data_file:file open;
+
+# Date : WK15.02
+# Operation : SQC0
+# Purpose : ALPS01889518 (MTK MTBF)
+allow installd platform_app:fd use;
+
+
+# Date : WK15.32
+# Operation : Migration
+# Purpose : disable AT_SECURE for LD_PRELOAD
+userdebug_or_eng(`
+  allow installd dex2oat:process noatsecure;
+')
+
+# Date : WK16.09
+# Operation : Migration
+# Purpose : copy the content in /data/media/0 to /data/media
+allow installd media_rw_data_file:file { read write create open setattr };
+allow installd shell_exec:file { read execute open execute_no_trans };

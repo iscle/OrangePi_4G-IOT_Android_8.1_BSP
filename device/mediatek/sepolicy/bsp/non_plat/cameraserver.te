@@ -1,0 +1,131 @@
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+
+# Date : WK14.36
+# Operation : Migration
+# Purpose : guiext service for VP
+allow cameraserver guiext-server:binder { transfer call };
+
+# Data : 2014/11/26
+# Operation : Camera display client
+# Purpose : for SVP secure memory allocation
+allow cameraserver proc_secmem:file { read write open};
+
+# Date : WK14.52
+# Operation : WVL1 IT
+# Purpose : SVP module operates secmem driver
+allow cameraserver mobicore_data_file:file getattr;
+allow cameraserver proc_secmem:file ioctl;
+allow cameraserver mobicore_data_file:file getattr;
+
+# Date: WK14.45
+# Operation : Migration
+# Purpose : HDCP
+allow cameraserver mobicore_data_file:dir search;
+allow cameraserver mobicore_data_file:file { getattr read open lock};
+allow cameraserver mobicore_user_device:chr_file { read write open ioctl};
+
+# Date: WK14.45
+# Operation : Migration
+# Purpose : HDCP
+allow cameraserver persist_data_file:dir { create write add_name search};
+allow cameraserver persist_data_file:file { read write create open getattr };
+
+
+# Date : WK15.03
+# Operation : Migration
+# Purpose : offloadservice
+allow cameraserver offloadservice_device:chr_file { read write ioctl open };
+
+# Date : WK15.32
+# Operation : Migration
+# Purpose : for control CPU during camera working flow
+allow cameraserver mtk_perf_service:service_manager find;
+
+# Data : WK14.38
+# Operation : Migration
+# Purpose : WFD
+allow cameraserver surfaceflinger:dir search;
+allow cameraserver surfaceflinger:file { read open };
+
+# Data : WK14.47
+# Operation : Migration
+# Purpose : for WFD looper
+allow cameraserver custom_file:dir search;
+
+# Date : WK14.49
+# Operation : WFD
+# Purpose : WFD notifies its status to thermal module
+allow cameraserver proc_thermal:file { write getattr open };
+#allow cameraserver thermal_manager_exec:file { x_file_perms read open };
+allow cameraserver proc_mtkcooler:file { read write open };
+allow cameraserver proc_mtktz:file { read write open };
+allow cameraserver proc_thermal:file { read write open };
+allow cameraserver thermal_manager_data_file:file setattr;
+
+# Date : WK15.11
+# Operation : SRS
+# Purpose : SRS
+#allow cameraserver system_data_file:file { w_file_perms };
+
+# Date : WK15.44
+# Operation : Migration
+# Purpose : ancservice
+allow cameraserver ancservice_device:chr_file { read write ioctl open };
+
+# Date : WK14.36
+# Operation : Migration
+# Purpose : guiext service for VP
+binder_call(cameraserver, guiext-server)
+
+# Date : WK16.29
+# Operation : Migration
+# Purpose : Add permission for gpu access
+allow cameraserver dri_device:chr_file { read write open ioctl };
+
+#Data : WK16.30
+# Operation : Migration
+# Purpose : allow camera to save raw data on sdcard
+allow cameraserver fuse:dir { create_dir_perms };
+allow cameraserver fuse:file { create_file_perms };
+allow cameraserver property_socket:sock_file write;
+allow cameraserver sysfs:file getattr;
+allow cameraserver init:unix_stream_socket connectto;
+allow cameraserver debug_prop:property_service set;
+allow cameraserver system_prop:property_service set;
+
+# Date : WK16.32
+# Operation : Migration
+# Purpose : Dump camera buffer to sdcard for debug
+allow cameraserver fuse:dir { write search create add_name };
+allow cameraserver fuse:file { read write create open getattr };
+
+# Date : WK16.33
+# Operation : Migration
+# Purpose : Dump camera buffer to sdcard for debug
+allow cameraserver sdcardfs:dir { create_dir_perms };
+allow cameraserver sdcardfs:file { create_file_perms };
+allow cameraserver media_rw_data_file:dir { create_dir_perms };
+allow cameraserver media_rw_data_file:file { create_file_perms };
+
+#Data : WK16.35
+# Operation : Migration
+# Purpose : allow camera to access log too much detect property
+set_prop(cameraserver,logmuch_prop)
+
+# Date : WK17.23
+# Stage: O Migration, SQC
+# Purpose: Allow camera to use HAL PQ
+hal_client_domain(cameraserver, hal_pq)
+
+# Date : WK17.23
+# Stage: O Migration, SQC
+# Purpose: Allow to use shared memory for HAL PQ
+hal_client_domain(cameraserver, hal_allocator)
+
+# Date : WK17.31
+# Operation : ViLTE
+# Purpose : for ViLTE - set VTservice has permission to access me
+allow cameraserver vtservice:binder { transfer call };
+allow cameraserver vtservice:fd use;

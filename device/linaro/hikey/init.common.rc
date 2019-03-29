@@ -1,0 +1,95 @@
+import init.${ro.hardware}.usb.rc
+import init.${ro.hardware}.power.rc
+
+on init
+    # mount debugfs
+    mount debugfs /sys/kernel/debug /sys/kernel/debug
+
+    # disable transparent huge pages
+    write /sys/kernel/mm/transparent_hugepage/enabled "never"
+
+    # Disabled virtual memory randomization
+    # (if randomization is enabled the AEM-JIT will have a lower cache hit rate)
+    write /proc/sys/kernel/randomize_va_space 0
+
+on fs
+    mount_all /fstab.${ro.hardware}
+    setprop ro.crypto.fuse_sdcard false
+
+on post-fs
+
+    # For legacy support
+    # See storage config details at http://source.android.com/tech/storage/
+    # since /storage is mounted on post-fs in init.rc
+    symlink /sdcard /storage/sdcard0
+
+    # BT LED sysfs entry
+    write /sys/class/leds/bt_active/trigger "hci1rx"
+
+    chmod 0666 /dev/ump
+    chmod 0666 /dev/ion
+    chmod 0666 /dev/graphics/fb0
+
+# fake some battery state
+    setprop status.battery.state Slow
+    setprop status.battery.level 5
+    setprop status.battery.level_raw  50
+    setprop status.battery.level_scale 9
+
+# Set Display density
+    setprop ro.sf.lcd_density 160
+
+# Set supported opengles version
+    setprop ro.opengles.version 196608
+
+
+# enable Google-specific location features,
+# like NetworkLocationProvider and LocationCollector
+    setprop ro.com.google.locationfeatures 1
+
+# enable test harness
+    setprop ro.test_harness true
+
+on post-fs-data
+    mkdir /data/media 0770 media_rw media_rw
+    mkdir /data/misc/gatord 0700 root root
+    # Set SELinux security contexts for files used by lava.
+    restorecon_recursive /data/local/tmp/lava
+
+on property:sys.boot_completed=1
+    # update cpuset now that processors are up
+    # Foreground should contain most cores (7 is reserved for top-app)
+    write /dev/cpuset/foreground/cpus 0-6
+
+    # top-app gets all cpus (including reserved #7)
+    write /dev/cpuset/top-app/cpus 0-7
+
+    #background contains a small subset (generally one little core)
+    write /dev/cpuset/background/cpus 0
+
+    # add system-background cpuset, a new cpuset for system services
+    # that should not run on larger cores
+    # system-background is for system tasks that should only run on
+    # little cores, not on bigs to be used only by init
+    write /dev/cpuset/system-background/cpus 0-3
+
+on property:usb_speed.switch=high
+    write /sys/kernel/debug/f72c0000.usb/config "0"
+
+on property:usb_speed.switch=full
+    write /sys/kernel/debug/f72c0000.usb/config "1"
+
+#userspace daemon needed for bluetooth
+service uim /vendor/bin/uim
+    class main
+    user bluetooth
+    group bluetooth net_bt_admin system
+    oneshot
+
+service wpa_supplicant /system/vendor/bin/hw/wpa_supplicant \
+     -iwlan0 -Dnl80211 -c/data/misc/wifi/wpa_supplicant.conf \
+     -e/data/misc/wifi/entropy.bin  -g@android:wpa_wlan0
+     socket wpa_wlan0 dgram 660 wifi wifi
+     class main
+     disabled
+     oneshot

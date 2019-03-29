@@ -1,0 +1,33 @@
+# Connectivity Engine Observer Interface daemon (cnd)
+type cnd, domain, device_domain_deprecated;
+type cnd_exec, exec_type, file_type;
+
+init_daemon_domain(cnd)
+
+file_type_auto_trans(cnd, socket_device, cnd_socket);
+
+# Talk to qmuxd (qmux_radio)
+qmux_socket(cnd)
+
+# cnd is started as root uid/gid and transitions to system
+allow cnd self:capability { setuid setgid net_raw };
+
+# Note: fsetid is deliberately not included above. fsetid checks are
+# triggered by chmod on a directory or file owned by a group other
+# than one of the groups assigned to the current process to see if
+# the setgid bit should be cleared, regardless of whether the setgid
+# bit was even set.  We do not appear to truly need this capability
+# for cnd to operate.
+dontaudit cnd self:capability fsetid;
+
+allow cnd self:socket create_socket_perms;
+allowxperm cnd self:socket ioctl msm_sock_ipc_ioctls;
+
+# create upd_socket to gather network info via ioctls (e.g. MTU size)
+allow cnd self:udp_socket { create ioctl };
+
+userdebug_or_eng(`
+  allow cnd smem_log_device:chr_file rw_file_perms;
+')
+
+wakelock_use(cnd)

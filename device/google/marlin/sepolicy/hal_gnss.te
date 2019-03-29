@@ -1,0 +1,21 @@
+#access to /sys/devices/soc0/hw_platform and /sys/devices/soc0/soc_id
+allow hal_gnss self:socket { create read write ioctl } ;
+allowxperm hal_gnss self:socket ioctl { IPC_ROUTER_IOCTL_BIND_CONTROL_PORT
+                                        IPC_ROUTER_IOCTL_LOOKUP_SERVER } ;
+allow hal_gnss self:netlink_socket { create bind read };
+
+r_dir_file(hal_gnss, sysfs_msm_subsys);
+
+userdebug_or_eng(`
+  allow hal_gnss diag_device:chr_file { read write open ioctl};
+')
+
+# access to /sys/bus/esoc/devices
+allow hal_gnss sysfs:dir { read open };
+
+# access to /sys/devices/soc0/soc_id and /sys/devices/soc0/hw_platform
+allow hal_gnss sysfs_soc:dir search;
+allow hal_gnss sysfs_soc:file { read open getattr };
+
+# read access to sys/module/diagchar/parameters/timestamp_switch
+allow hal_gnss sysfs_timestamp_switch:file r_file_perms;

@@ -1,0 +1,197 @@
+# ==============================================
+# MTK Policy Rule
+# ============
+
+# Purpose : allow to access kpd driver file
+allow radio sysfs_keypad_file:dir { w_dir_perms };
+allow radio sysfs_keypad_file:file { w_file_perms };
+
+# Date : WK15.34 2015/08/21
+# Operation : IT
+# Purpose : for engineermode WFD IOT property
+allow radio surfaceflinger:fifo_file { rw_file_perms };
+
+# Date : WK16.14 2016/03/30
+# Operation : IT
+# Purpose : for engineermode camera app mode
+allow radio mtk_em_prop:property_service set;
+
+# Date : WK16.24 2016/06/10
+# Operation : Migration
+# Purpose : for engineermode camera app mode
+allow radio cameraserver_service:service_manager find;
+
+# Date : 2016/06/11
+# Operation : IT
+# Purpose : for engineermode Usb PHY Tuning
+allow radio debugfs_usb20_phy:file { read open getattr };
+allow radio debugfs_usb20_phy:dir search;
+
+# Date : 2016/06/28
+# Operation : IT
+# Purpose : for engineermode sensor can work normal
+allow radio als_ps_device:chr_file { read open ioctl };
+
+# Date : WK14.38 2016/06/28
+# Operation : Migration
+# Purpose : for engineermode
+allow radio mediatek_prop:property_service set;
+allow radio mt_otg_test_device:chr_file { read write ioctl open };
+allow radio mtgpio_device:chr_file { read ioctl open };
+allow radio stpbt_device:chr_file { read write open };
+allow radio stpant_device:chr_file { read write open };
+allow radio bt_int_adp_socket:sock_file write;
+allow radio persist_ril_prop:property_service set;
+allow radio mt6605_device:chr_file { read write ioctl open getattr };
+allow radio nfc_socket:dir { write add_name remove_name search };
+allow radio system_prop:property_service set;
+
+# Date : WK14.38 2016/06/28
+# Operation : Migration
+# Purpose : for engineermode
+allow radio em_svr:unix_stream_socket connectto;
+
+# Date : WK15.25 2016/06/28
+# Operation :N Migration
+# Purpose : for engineermode WiFi test mode
+# todo: in the feature Google maybe forbid this option,we should use other way
+allowxperm radio self:udp_socket ioctl { SIOCIWFIRSTPRIV-SIOCIWFIRSTPRIV_09 SIOCIWFIRSTPRIV_0B SIOCSIWESSID SIOCSIWMODE };
+
+# Date : 2014/12/13
+# Operation : IT
+# Purpose : for bluetooth relayer mode
+allow radio block_device:dir search;
+allow radio ttyGS_device:chr_file { open read write ioctl };
+
+#Date : 2015/10/27
+#Operation: patch back
+# Purpose: for set volte emergency pdn protocol
+allow radio mtk_em_pdn_prop:property_service set;
+
+#Date : 2015/11/11
+#Operation: IT
+# Purpose: for set ims simulate
+allow radio mtk_em_ims_simulate_prop:property_service set;
+
+#Date : 2015/11/13
+#Operation: IT
+# Purpose: for set auto answer
+allow radio mtk_em_auto_answer_prop:property_service set;
+
+#Date : 2016/07/19
+#Operation: IT
+# Purpose: for set bt.sspdebug
+allow radio mtk_em_bt_sspdebug_prop:property_service set;
+
+# Date : 2016/07/05
+# Purpose :
+#   Write IMEI - presanity item write imei should read the file on storage
+#   Swift APK integration - access TTL scripts and logs on external storage
+#   eng mode camera - save iamges files and log files on external storage
+#   eng mode ygps - save location information on external storage
+allow radio media_rw_data_file:dir { create_dir_perms };
+allow radio media_rw_data_file:file { create_file_perms };
+
+# Date : 2016/08/02
+# Purpose :
+#   Swift APK integration - access ccci dir/file
+allow radio ccci_fsd:dir { r_dir_perms };
+allow radio ccci_fsd:file { r_file_perms };
+
+# Date : 2016/07/25
+# Operation : Bluetooth access NVRAM fail in Engineer Mode
+# Purpose : for Bluetooth read NVRAM data
+allow radio nvdata_file:dir search;
+allow radio nvdata_file:file rw_file_perms;
+
+# Date : W1630 2016/07/21
+# Operation: IT
+# Purpose: for set ril.force_apn_change property in EM IA
+allow radio mtk_em_ril_apnchange_prop:property_service set;
+
+#Date : 2016/11/08
+#Operation: IT
+#Purpose: for set persist.net.auto.tethering
+allow radio mtk_em_net_auto_tethering_prop:property_service set;
+
+# Date : WK17.06 2017/02/06
+# Operation : IT
+# Purpose : for engineermode camera
+allow radio debug_prop:property_service set;
+
+# Date : WK17.03
+# Operation : O Migration
+# Purpose : HIDL for rilproxy
+binder_call(radio, hal_telephony)
+
+# Date : WK17.15
+# Operation : O Migration
+# Purpose : for YGPS execution
+allow radio hal_graphics_composer_default:fd use;
+
+#Dat: 2017/02/14
+#Purpose: allow set telephony Sensitive property
+set_prop(radio, mtk_telephony_sensitive_prop)
+
+# Date : WK17.26
+# Operation : O Migration
+# Purpose : HIDL for imsa
+binder_call(radio, mtk_hal_imsa)
+
+# Date : WK1727 2017/07/04
+# Operation : IT
+# Purpose : Allow to use HAL imsa
+hal_client_domain(radio, hal_imsa)
+
+#Dat: 2017/06/29
+#Purpose: For audio parameter tuning
+allow radio hal_audio_hwservice:hwservice_manager find;
+binder_call(radio,mtk_hal_audio)
+
+# TODO : Will move to plat_private when SEPolicy split done
+# Date : WK1727 2017/07/19
+# Operation : Migration
+# Purpose : Allow EM set usb property
+set_prop(radio, system_radio_prop)
+
+#Dat: 2017/07/20
+#Purpose: NFC EM
+allow radio hal_nfc_hwservice:hwservice_manager find;
+binder_call(radio, hal_nfc)
+binder_call(hal_nfc, radio)
+hwbinder_use(radio);
+allow radio debugfs_tracing:file write;
+#hal_client_domain(radio, hal_nfc)
+typeattribute radio halclientdomain;
+typeattribute radio hal_nfc_client;
+allow radio nfc_socket:sock_file { create write unlink setattr };
+set_prop(radio, system_prop)
+
+# Date : WK1734 2017/08/23
+# Purpose : Allow EM use power HAL
+allow radio mtk_hal_power_hwservice:hwservice_manager find;
+binder_call(radio, mtk_hal_power)
+
+#Date : 2017/09/12
+# Operation : Allow radio mtk_em_ril_xcapset_prop:property_service set;
+# Purpose : for set telephony xcap system property in Engineer Mode
+set_prop(radio, mtk_em_ril_xcapset_prop)
+
+# Date : WK1738 2017/09/21
+# Purpose : Allow YGPS trigger mnld NE
+set_prop(radio, mnld_prop)
+
+# Date : WK17.42
+# Operation: New feature for Wi-FI Log UI
+# Purpose: Allow EM store wifi log level in system property
+set_prop(radio, persist_debug_prop)
+
+# Date : 2017/10/31
+# Purpose: Policy for EM to set wcn coredump property
+set_prop(radio, wmt_prop)
+
+# Date : WK17.47
+# Operation: O migration
+# Purpose: Allow EM enable/disable Presence
+allow radio persist_uce_prop:property_service set;
+get_prop(radio, persist_uce_prop)

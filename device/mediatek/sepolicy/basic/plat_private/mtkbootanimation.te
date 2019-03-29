@@ -1,0 +1,95 @@
+# ==============================================
+# MTK Policy Rule
+# ============
+
+typeattribute mtkbootanimation coredomain;
+
+init_daemon_domain(mtkbootanimation)
+
+type mtkbootanimation_exec, exec_type, file_type;
+
+# Date W17.39
+# Operation Migration
+# Purpose : for mtk bootanimation
+
+hal_client_domain(mtkbootanimation, hal_configstore)
+hal_client_domain(mtkbootanimation, hal_graphics_allocator)
+hal_client_domain(mtkbootanimation, hal_graphics_composer)
+binder_use(mtkbootanimation)
+binder_call(mtkbootanimation, surfaceflinger)
+binder_call(mtkbootanimation, audioserver)
+hwbinder_use(mtkbootanimation)
+
+allow mtkbootanimation gpu_device:chr_file rw_file_perms;
+
+# /oem access
+allow mtkbootanimation oemfs:dir search;
+allow mtkbootanimation oemfs:file r_file_perms;
+
+allow mtkbootanimation audio_device:dir r_dir_perms;
+allow mtkbootanimation audio_device:chr_file rw_file_perms;
+
+allow mtkbootanimation surfaceflinger_service:service_manager find;
+
+# Allow access to ion memory allocation device
+allow mtkbootanimation ion_device:chr_file rw_file_perms;
+allow mtkbootanimation hal_graphics_allocator:fd use;
+
+# Fences
+allow mtkbootanimation hal_graphics_composer:fd use;
+
+# Read access to pseudo filesystems.
+r_dir_file(mtkbootanimation, proc)
+allow mtkbootanimation proc_meminfo:file r_file_perms;
+r_dir_file(mtkbootanimation, sysfs)
+r_dir_file(mtkbootanimation, cgroup)
+
+# System file accesses.
+allow mtkbootanimation system_file:dir r_dir_perms;
+# Date : WK14.31
+# Operation : Migration
+# Purpose : For IPC communication
+### TBD, neverallowxperm on line 177 of system/sepolicy/public/domain.te
+#allow mtkbootanimation self:netlink_socket create_socket_perms;
+
+# Date : WK14.32
+# Operation : Migration
+# Purpose : for playing boot tone
+allow mtkbootanimation mediaserver:binder {call transfer};
+allow mtkbootanimation mediaserver_service:service_manager find;
+
+# Purpose : for playing bootanimation audio
+allow mtkbootanimation audioserver:binder {call transfer};
+allow mtkbootanimation audioserver_service:service_manager find;
+
+# Date : WK14.37
+# Operation : Migration
+# Purpose : for opetator
+allow mtkbootanimation property_socket:sock_file write;
+allow mtkbootanimation init:unix_stream_socket connectto;
+allow mtkbootanimation debug_prop:property_service set;
+
+# Date : WK14.46
+# Operation : Migration
+# /data/resource-cache
+allow mtkbootanimation resourcecache_data_file:dir search;
+allow mtkbootanimation resourcecache_data_file:file { read getattr open };
+
+# Data : WK16.42
+# Operator: Whitney bring up
+# Purpose: call surfaceflinger due to powervr
+allow mtkbootanimation surfaceflinger:fifo_file rw_file_perms;
+
+# Date : W16.42
+# Operation : Integration
+# Purpose : DRM / DRI GPU driver required
+
+allow mtkbootanimation gpu_device:dir search;
+
+
+
+#============= bootanim ==============
+allow mtkbootanimation debugfs_tracing:file write;
+
+#============= bootanim ==============
+allow mtkbootanimation debugfs_tracing:file open;

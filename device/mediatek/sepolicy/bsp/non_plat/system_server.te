@@ -1,0 +1,143 @@
+# ==============================================
+# MTK Policy Rule
+# ============
+
+# Date : WK14.37
+# Operation : Migration
+# Purpose : for idling on homescreen
+allow system_server guiext-server:binder { transfer call };
+
+# Date: WK14.43
+# Operation : Migration
+# Purpose : access to atcid from system server for GPS AT Command.
+allow system_server atci_service:unix_dgram_socket sendto;
+allow system_server atci_service:dir write;
+allow system_server atci_service:dir add_name;
+
+# Date: WK14.43
+# Operation : Migration
+# Purpose : for bring up
+allow system_server sf_rtt_file:dir relabelto;
+
+# Date: WK14.44
+# Operation : Migration
+# Purpose : for debug
+allow system_server sf_rtt_file:dir r_dir_perms;
+
+# Date: WK14.47
+# Operation : MTBF
+# Purpose : for debug
+allow system_server sf_rtt_file:file r_file_perms;
+
+# Date: WK14.47
+# Operation : Sanity
+# Purpose : for /system/app/mcRegistry and /proc/secmem (TEE enable)
+allow system_server mobicore_data_file:dir r_dir_perms;
+allow system_server proc_secmem:file rw_file_perms;
+
+# Date: WK16.30
+# Operation : Migration
+# Purpose : for system_server operate /dev/RT_Monitor when enable hang detect
+allow system_server RT_Monitor_device:chr_file r_file_perms;
+
+
+# Date : WK15.24
+# Operation: TEEI integration
+# Purpose: access for fp device
+allow system_server teei_fp_device:chr_file rw_file_perms;
+allow system_server teei_client_device:chr_file r_file_perms;
+
+# Date : WK15.30
+# Operation : Migration
+# Purpose : for device bring up, not to block early migration/sanity
+allow system_server dm_agent_binder_service:service_manager find;
+allow system_server guiext-server_service:service_manager find;
+
+# Date: WK16.11
+# Operation: Migration
+# Purpose: [mtk_agpsd] Allow LocationExt connect to agpsd socket
+
+
+# Date : 2016/07/11
+# Operation : Migration
+# Purpose : Add permission for gpu access
+allow system_server dri_device:chr_file { read write open ioctl };
+
+
+
+# Date : 2017/01/24
+# Purpose : Add permission for DRM / DRI GPU driver
+allow system_server gas_srv_service:service_manager find;
+
+# Date : 2017/4/14
+# Purpose : Add permission for registering MtkTelecomService to ServiceManager
+allow system_server mtk_telecom_service:service_manager add;
+
+# Date : W17.24
+# Add for PQ:AppdetectionService
+set_prop(system_server,appdetection_prop);
+
+# Date : W17.24
+# Purpose: Allow to use HAL PQ
+hal_client_domain(system_server, hal_pq)
+
+# Date:W17.20
+# Operation : wifioffload hal developing
+# Purpose : Allow to use HAL Wfo
+hal_client_domain(system_server, hal_wfo)
+
+# Date : W17.26
+# Purpose: Allow to use phoneEx
+allow system_server mtk_radio_service:service_manager find;
+
+# Date : WK17.29
+# Operation : Migration
+# Purpose : for device bring up, not to block early SQC
+allow system_server debugfs_ion:dir search;
+
+# Date : W17.31
+# Purpose: Allow to use Ape swip decoder
+hal_client_domain(system_server, hal_mtkcodecservice)
+
+# Date:W17.33
+# Operation : camera hal developing
+# Purpose : camera hal binder_call permission
+binder_call(system_server, mtk_hal_camera)
+
+# Date : W17.36
+# Operation : Migration
+# Purpose : Allow system_server to add anrmanager
+allow system_server mtk_anrmanager_service:service_manager add;
+
+# Date:W17.36
+# Operation : Migration
+# Purpose : Allow to read binder log
+allow system_server debugfs_binder:file { read getattr open };
+
+# Date:W17.36
+# Operation : Migration
+# Purpose : Allow to send signal
+allow system_server netd:process signal;
+
+# Date: W17.42
+# Operation : Migration
+# Purpose : for WFD functionality
+allow system_server media_wfd_prop:property_service set;
+allow system_server wifi_prop:property_service set;
+
+# Date:W17.47
+# Purpose : Allow to enable/disable log too much
+set_prop(system_server, logmuch_prop);
+
+# Date : W17.48
+# Operation : Migration
+# Purpose : Allow system_server to add duraspeed
+allow system_server mtk_duraspeed_service:service_manager add;
+
+# Date:W17.07
+# Operation : dfps hal
+# Purpose : dfps hal interface permission
+hal_client_domain(system_server,hal_dfps)
+
+#============= system_server ==============
+allow system_server audioserver:file write;

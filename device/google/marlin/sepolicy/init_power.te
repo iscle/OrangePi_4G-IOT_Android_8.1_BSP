@@ -1,0 +1,25 @@
+type init_power, domain;
+type init_power_exec, exec_type, vendor_file_type, file_type;
+
+init_daemon_domain(init_power)
+
+allow init_power rootfs:file r_file_perms;
+allow init_power vendor_shell_exec:file rx_file_perms;
+allow init_power vendor_toolbox_exec:file rx_file_perms;
+
+# files are created in /sys as this script executes. Grant
+# access to all of /sys to make this robust.
+r_dir_file(init_power, sysfs_type)
+allow init_power sysfs:file { rw_file_perms relabelfrom };
+allow init_power sysfs:dir { relabelfrom r_dir_perms };
+allow init_power sysfs_devices_system_cpu:dir relabelto;
+allow init_power sysfs_devices_system_cpu:file { relabelto w_file_perms };
+allow init_power sysfs_msm_subsys:file w_file_perms;
+allow init_power sysfs_thermal:file w_file_perms;
+allow init_power sysfs_power_management:file write;
+
+# write to files proc/sys/kernel/sched_*
+allow init_power proc_kernel_sched:file w_file_perms;
+
+# set sys.post_boot.parsed to 1
+set_prop(init_power, post_boot_prop)

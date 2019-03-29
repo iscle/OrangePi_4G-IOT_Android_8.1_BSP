@@ -1,0 +1,50 @@
+# ==============================================
+# Policy File of /system/bin/thermalloadalgod_exec Executable File
+
+# ==============================================
+# Type Declaration
+# ==============================================
+type thermalloadalgod ,domain;
+type thermalloadalgod_exec , exec_type, file_type, vendor_file_type;
+
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+init_daemon_domain(thermalloadalgod)
+file_type_auto_trans(thermal_manager, system_data_file, thermal_manager_data_file)
+
+
+# Data : WK14.43
+# Operation : Migration
+# Purpose : thermal algorithm daemon for access driver node
+allow thermalloadalgod input_device:dir { r_dir_perms write };
+allow thermalloadalgod input_device:file r_file_perms;
+
+### TBD, neverallowxperm on line 177 of system/sepolicy/public/domain.te
+#allow thermalloadalgod thermalloadalgod:netlink_kobject_uevent_socket { write create bind read};
+allow thermalloadalgod thermalloadalgod:netlink_socket { create bind write read};
+
+allow thermalloadalgod thermal_manager_data_file:dir create_dir_perms;
+allow thermalloadalgod thermal_manager_data_file:file create_file_perms;
+allow thermalloadalgod kmsg_device:chr_file write;
+
+# Data : WK16.49
+# Operation : SPA porting
+# Purpose : thermal algorithm daemon for SPA
+# For /proc/[pid]/cgroup accessing
+typeattribute           thermalloadalgod                             mlstrustedsubject;
+allow thermalloadalgod           proc:dir                            {search getattr};
+allow thermalloadalgod           proc:file                           {getattr open read write ioctl};
+allow thermalloadalgod           shell:dir                           search;
+allow thermalloadalgod           platform_app:dir                    search;
+allow thermalloadalgod           platform_app:file                   {open read getattr};
+allow thermalloadalgod           priv_app:dir                        search;
+allow thermalloadalgod           priv_app:file                       {open read getattr};
+allow thermalloadalgod           system_app:dir                      search;
+allow thermalloadalgod           system_app:file                     {open read getattr};
+allow thermalloadalgod           untrusted_app:dir                   search;
+allow thermalloadalgod           untrusted_app:file                  {open read getattr};
+allow thermalloadalgod           mediaserver:dir                     search;
+allow thermalloadalgod           mediaserver:file                    {open read getattr};
+allow thermalloadalgod           proc_thermal:dir                    search;
+allow thermalloadalgod           proc_thermal:file                   { open read write getattr };

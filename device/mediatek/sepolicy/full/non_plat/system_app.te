@@ -1,0 +1,125 @@
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+
+# Data : 2014/09/09
+# Operation : Migration
+# Purpose : [Privacy protection lock][com.mediatek.ppl need to bind ppl_agent service to read/write nvram file]
+# Package name : com.mediatek.ppl
+allow system_app ppl_agent:binder call;
+
+# Date: 2014/09/02
+# Operation: BaseUT
+# Purpose: [HotKnot][HotKnot service will use devmap_device device node]
+# Package: com.mediatek.hotknot.service
+# Date: 2017/04/17
+# Operation: Phase Out
+# Comment: Hotknot is phased out from Android O, keep it for other applications
+allow system_app devmap_device:chr_file { read ioctl open };
+
+# Date: 2014/09/02
+# Operation: BaseUT
+# Purpose: [HotKnot][HotKnot service will use mtkfb device node]
+# Package: com.mediatek.hotknot.service
+# Date: 2017/04/17
+# Operation: Phase Out
+# Comment: Hotknot is phased out from Android O, keep it for other applications
+allow system_app graphics_device:chr_file { read write ioctl open };
+allow system_app graphics_device:dir search;
+
+# Date: W1602
+# Operation: IR-Learning Feature
+# Purpose: [IR-Learning][ConsumerIrHostService will use irtx_device device node]
+# Package: com.mediatek.hardware.consumerir
+allow system_app irtx_device:chr_file { read write ioctl open };
+
+# Date: W1602
+# Operation: IR-Learning Feature
+# Purpose: [IR-Learning][ConsumerIrHostService will use irrx_device device node]
+# Package: com.mediatek.hardware.consumerir
+allow system_app irrx_device:chr_file { read write ioctl open };
+
+# Date : WK14.46
+# Operation : Migration
+# Purpose : for MTK Emulator HW GPU
+allow system_app qemu_pipe_device:chr_file rw_file_perms;
+
+# Date : 2014/11/18
+# Operation : SQC
+# Purpose : for oma dm fota recovery update
+allow system_app ctl_rbfota_prop:property_service set;
+
+# Date : 2015/01/27
+# Operation: SQC
+# Purpose: It's not normal behavior, that system_app want to access radio_file_data
+# Package: android.ui
+dontaudit system_app radio_data_file:dir search;
+
+# Date: 2014/10/7
+# Operation: SQC
+# Purpose: [sysoper][sysoper will create folder /cache/recovery]
+# Package: com.mediatek.systemupdate.sysoper
+allow system_app cache_file:dir { write create add_name };
+allow system_app cache_file:file { write create open };
+
+# Date : WK15.30
+# Operation : Migration
+# Purpose : Permission related to VIE for adding service.
+allow system_app vie_command_service:service_manager add;
+
+# Date: 2015/9/23
+# Operation: Program binary service
+# Purpose : Add permission for program binary service find from ServiceManager.
+allow system_app program_binary_service:service_manager find;
+
+# Date: 2016/06/26
+# Operation: DataProtection select file in phone storage to encrypt
+# Purpose : Add permission for DataProtection select file to encrypt.
+allow system_app media_rw_data_file:dir { read open write remove_name search add_name };
+allow system_app media_rw_data_file:file { read write create unlink open rename };
+allow system_app media_rw_data_file:dir rmdir;
+
+# Date: 2016/06/27
+# Operation: DataProtection select file in sdcard to encrypt
+# Purpose : Add permission for DataProtection select file to encrypt.
+allow system_app vfat:dir { write remove_name add_name };
+allow system_app vfat:file { rename create unlink };
+
+# Date: 2016/07/05
+# Operation: SQC
+# Purpose: Add permission to access recovery folder and write command files to recovery for System Update
+allow system_app cache_recovery_file:dir { write search add_name remove_name };
+allow system_app cache_recovery_file:file { read write create open getattr unlink };
+
+# Date : 2016/07/11
+# Operation : SQC
+# Purpose : Allow system app to create a dir in sdcard
+allow system_app vfat:dir create;
+
+# Date : WK16.43
+# Operation : SQC
+# Purpose : OP02Plugin Set persist.radio.user.select.data for data logic.
+allow system_app radio_prop:property_service set;
+
+# Date : WK16.50
+# Operation : SQC
+# Purpose : allow AT tool to do aee command
+allow system_app aee_aed:unix_stream_socket connectto;
+
+# Date : WK17.29
+# Operation : SQC
+# Purpose : allow SystemUpdate to access ota_package file
+allow system_app ota_package_file:dir { read open write create remove_name search rename add_name getattr };
+allow system_app ota_package_file:file { read write create open rename getattr unlink };
+
+# Date : WK17.30
+# Operation : SQC
+# Purpose : allow SystemUpdate to access Update engine
+allow system_app update_engine:binder { call transfer };
+
+# Date : W17.36
+# Operation : SQC
+# Purpose : allow MOTA app to write perist.update_finished, persist_update_started
+allow system_app update_finished_prop:property_service set;
+allow system_app update_started_prop:property_service set;
+

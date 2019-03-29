@@ -1,0 +1,24 @@
+type init-power-sh, domain, device_domain_deprecated;
+type init-power-sh_exec, exec_type, file_type;
+
+init_daemon_domain(init-power-sh)
+
+allow init-power-sh shell_exec:file r_file_perms;
+allow init-power-sh sysfs_devices_system_cpu:file w_file_perms;
+allow init-power-sh sysfs_performance:dir r_dir_perms;
+allow init-power-sh sysfs_performance:file w_file_perms;
+allow init-power-sh sysfs_thermal:dir r_dir_perms;
+allow init-power-sh sysfs_thermal:file rw_file_perms;
+allow init-power-sh proc_kernel_sched:file w_file_perms;
+
+# allow labeling of interactive /sys files created post-initial restorecon
+allow init-power-sh sysfs:{ dir file lnk_file } relabelfrom;
+allow init-power-sh sysfs_devices_system_cpu:{ dir file lnk_file } relabelto;
+allow init-power-sh file_contexts_file:file r_file_perms;
+
+# allow writes to sysfs files that have not yet been labeled
+allow init-power-sh sysfs:file rw_file_perms;
+allow init-power-sh sysfs_usb:file w_file_perms;
+
+# execute toybox/toolbox
+allow init-power-sh toolbox_exec:file rx_file_perms;

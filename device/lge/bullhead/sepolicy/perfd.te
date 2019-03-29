@@ -1,0 +1,32 @@
+type perfd, domain, device_domain_deprecated;
+type perfd_exec, exec_type, file_type;
+
+init_daemon_domain(perfd)
+
+# Data file accesses.
+allow perfd perfd_data_file:dir create_dir_perms;
+allow perfd perfd_data_file:file create_file_perms;
+
+# Socket creation under /data/misc/perfd
+allow perfd perfd_data_file:sock_file create_file_perms;
+
+allow perfd sysfs_performance:dir search;
+allow perfd sysfs_performance:file rw_file_perms;
+
+allow perfd sysfs_thermal:dir search;
+allow perfd sysfs_thermal:file rw_file_perms;
+
+allow perfd proc_kernel_sched:file rw_file_perms;
+
+# allow writing to /sys/devices/system/cpu/*
+allow perfd sysfs_devices_system_cpu:file rw_file_perms;
+
+# access to /sys/module/lpm_levels/parameters/sleep_disabled
+allow perfd sysfs_power_management:file w_file_perms;
+
+# perfd uses kill(pid, 0) to determine if a process exists.
+# Determining if a process exists does not require the kill capability
+# since a permission denied indicates the process exists.
+dontaudit perfd self:capability kill;
+
+allow perfd cameraserver:process signull;

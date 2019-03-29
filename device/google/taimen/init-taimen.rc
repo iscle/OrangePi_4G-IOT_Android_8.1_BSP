@@ -1,0 +1,45 @@
+on late-fs
+    # boot time fs tune
+    write /sys/block/sda/queue/iostats 0
+    write /sys/block/sda/queue/scheduler cfq
+    write /sys/block/sda/queue/iosched/slice_idle 0
+    write /sys/block/sda/queue/read_ahead_kb 2048
+    write /sys/block/sda/queue/nr_requests 256
+    write /sys/block/sde/queue/iostats 0
+    write /sys/block/sde/queue/scheduler cfq
+    write /sys/block/sde/queue/iosched/slice_idle 0
+    write /sys/block/sde/queue/read_ahead_kb 2048
+    write /sys/block/sde/queue/nr_requests 256
+    write /sys/block/dm-0/queue/read_ahead_kb 2048
+    write /sys/block/dm-1/queue/read_ahead_kb 2048
+
+on property:sys.boot_completed=1
+    # end boot time fs tune
+    write /sys/block/sda/queue/read_ahead_kb 1024
+    write /sys/block/sda/queue/nr_requests 128
+    write /sys/block/sda/queue/iostats 1
+    write /sys/block/sde/queue/read_ahead_kb 1024
+    write /sys/block/sde/queue/nr_requests 128
+    write /sys/block/sde/queue/iostats 1
+    write /sys/block/dm-0/queue/read_ahead_kb 512
+    write /sys/block/dm-1/queue/read_ahead_kb 512
+
+on boot
+    # Allow ftm4 autotune from adb shell
+    chown system shell /sys/devices/virtual/input/ftm4_touch/autotune
+
+on init && property:ro.boot.revision=*
+    setprop ro.boot.hardware.revision ${ro.boot.revision}
+
+on property:init.svc.fps_hal=running && property:ro.boot.revision=rev_0
+    stop fps_hal
+
+on property:sys.all.modules.ready=1
+    # Update touch firmware if required
+    write /sys/devices/virtual/input/ftm4_touch/check_fw 1
+
+on property:sys.retaildemo.enabled=* && property:sys.all.modules.ready=1
+    write /sys/module/lge_battery/parameters/demo_mode ${sys.retaildemo.enabled}
+
+on property:ro.boot.hardware.display=2-1
+    setprop sys.display.low_persistence_mode_brightness 255

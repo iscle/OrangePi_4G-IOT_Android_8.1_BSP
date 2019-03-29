@@ -1,0 +1,41 @@
+#!/bin/sh
+
+TMPDIR=oo-$$
+KERNEL_BASE=kernel-3.4
+CONFIG_DIR=$KERNEL_BASE/arch/arm/configs
+GEN_DEFCONFIG=gen_defconfig.py
+
+if [ ! -d device/mediatek/build/config -o ! -d $CONFIG_DIR ]; then
+    echo Must in AOSP ALPS dir.
+    exit 1
+fi
+
+if [ -e device/mediatek/build/build/tools/check_option.py ]; then
+    GEN_DEFCONFIG='device/mediatek/build/build/tools/check_option.py gen_defconfig.py'
+fi
+
+CONFIGS=`cd ${CONFIG_DIR} ; ls mt*`
+for i in $CONFIGS ; do
+    PROJ=${i/%_defconfig/}
+    PROJ=${PROJ/%_debug/}
+    PROJECTCONFIG=device/mediatek/$PROJ/ProjectConfig.mk
+    if [ -e ${PROJECTCONFIG} ]; then
+    	pushd $KERNEL_BASE
+    	mkdir $TMPDIR
+    	rm $TPMDIR/.config
+    	make $i O=$TMPDIR
+    	popd
+    	$GEN_DEFCONFIG -c $PROJECTCONFIG >> $KERNEL_BASE/$TMPDIR/.config
+    	pushd $KERNEL_BASE
+    	make oldconfig O=$TMPDIR
+    	cmp $TMPDIR/.config arch/arm/configs/$i
+    	RET=$?
+    	if [ $RET != 0 ]; then
+    	    echo Update $i
+    	    cp $TMPDIR/.config arch/arm/configs/$i
+    	    p4 edit arch/arm/configs/$i
+    	fi
+    	popd
+    fi
+done
+rm -rf $KERNEL_BASE/$TMPDIR

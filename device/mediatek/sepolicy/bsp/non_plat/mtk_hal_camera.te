@@ -1,0 +1,67 @@
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+# Date : WK17.27
+# Stage: O Migration, SQC
+# Purpose: Allow to use HAL PQ
+hal_client_domain(mtk_hal_camera, hal_pq)
+
+# Date : WK17.27
+# Stage: O Migration, SQC
+# Purpose: Allow to use shared memory for HAL PQ
+hal_client_domain(mtk_hal_camera, hal_allocator)
+
+#WK17.33 camera binder_call permission
+binder_call(mtk_hal_camera, system_server)
+
+# Date : WK17.33
+# Stage: O Migration, SQC
+# Purpose: Allow to set log too much property
+set_prop(mtk_hal_camera,logmuch_prop)
+
+# Date : WK17.35
+# Stage: O Migration, SQC
+# Purpose: camera notifies its status to thermal module
+allow mtk_hal_camera proc_thermal:file { read write getattr open };
+allow mtk_hal_camera proc_mtktz:file { read write open};
+allow mtk_hal_camera mtk_thermal_config_prop:file { read getattr open };
+allow mtk_hal_camera init:unix_stream_socket connectto;
+allow mtk_hal_camera proc_mtkcooler:file { read write open };
+
+
+# W17.36 callback to mtk_advcamserver
+binder_call(mtk_hal_camera, mtk_advcamserver)
+
+# Date : WK17.39
+# Stage: O Migration, SQC
+# Purpose : Update camera flashlight driver device file
+allow mtk_hal_camera flashlight_device:chr_file { read write open ioctl };
+
+# Date : WK17.39
+# Stage: O1 Migration, SQC
+# Purpose : Update camera Vcodec device file
+allow mtk_hal_camera Vcodec_device:chr_file { read write open ioctl };
+allow mtk_hal_camera mtk_em_video_log_vdec_prop:file r_file_perms;
+
+# Date : WK17.42
+# Operation : Migration
+# Purpose : Dump camera buffer to sdcard for debug
+allow mtk_hal_camera sdcardfs:dir { create_dir_perms };
+allow mtk_hal_camera sdcardfs:file { create_file_perms };
+allow mtk_hal_camera media_rw_data_file:dir { create_dir_perms };
+allow mtk_hal_camera media_rw_data_file:file { create_file_perms };
+
+#============= mtk_hal_camera ==============
+allow mtk_hal_camera seninf_device:chr_file { read write ioctl open };
+
+# Date : WK17.48
+# Stage: O Migration
+# Purpose: CCT
+allow mtk_hal_camera cct_data_file:dir create_dir_perms;
+allow mtk_hal_camera cct_data_file:file create_file_perms;
+allow mtk_hal_camera cct_data_file:fifo_file create_file_perms;
+
+# Date : WK18.02
+# Stage: O Migration
+# Purpose: ISP tuning remapping
+allow mtk_hal_camera mediatek_prop:property_service set;

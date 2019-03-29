@@ -1,0 +1,25 @@
+# Policy for /system/bin/rmt_storage
+type rmt, domain;
+type rmt_exec, exec_type, vendor_file_type, file_type;
+
+allow rmt self:capability net_bind_service;
+
+init_daemon_domain(rmt)
+wakelock_use(rmt)
+
+allow rmt self:capability { setgid setpcap setuid };
+
+allow rmt block_device:dir search;
+allow rmt modem_block_device:blk_file rw_file_perms;
+
+# access to /dev/uio0
+allow rmt uio_device:chr_file rw_file_perms;
+
+allow rmt self:socket create_socket_perms;
+allowxperm rmt self:socket ioctl msm_sock_ipc_ioctls;
+
+allow rmt debugfs_rmt_storage:dir search;
+allow rmt debugfs_rmt_storage:file w_file_perms;
+
+allow rmt sysfs:dir r_dir_perms;
+r_dir_file(rmt, sysfs_rmtfs)

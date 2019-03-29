@@ -1,0 +1,54 @@
+#mass_storage,adb,acm
+on property:ro.boot.usbconfig=0
+    write /sys/class/android_usb/android0/iSerial $ro.serialno
+    write /sys/class/android_usb/android0/enable 0
+    write /sys/class/android_usb/android0/idVendor 0e8d
+    write /sys/class/android_usb/android0/idProduct 2006
+    write /sys/class/android_usb/android0/f_acm/instances 1
+    write /sys/class/android_usb/android0/functions mass_storage,adb,acm
+    write /sys/class/android_usb/android0/enable 1
+    start adbd
+    setprop sys.usb.acm_idx 1
+
+#acm
+on property:ro.boot.usbconfig=1
+    write /sys/class/android_usb/android0/enable 0
+    write /sys/class/android_usb/android0/iSerial " "
+    write /sys/class/android_usb/android0/idVendor 0e8d
+    write /sys/class/android_usb/android0/idProduct 2007
+    write /sys/class/android_usb/android0/f_acm/instances 1
+    write /sys/class/android_usb/android0/functions acm
+    write /sys/class/android_usb/android0/bDeviceClass 02
+    write /sys/class/android_usb/android0/enable 1
+
+#singloe modem comport for factory mode   
+on property:sys.usb.config=gs3,dual_acm
+    write /sys/class/android_usb/android0/enable 0
+    write /sys/class/android_usb/android0/idVendor $sys.usb.vid
+    write /sys/class/android_usb/android0/idProduct 202E
+    write /sys/class/android_usb/android0/f_acm/port_index 1,4
+    write /sys/devices/platform/mt_usb/saving 1
+    write /sys/class/android_usb/android0/functions mass_storage,adb,acm
+    write /sys/class/android_usb/android0/enable 1
+    chown system radio /dev/ttyGS3
+    chmod 0660 /dev/ttyGS3
+    start adbd
+    setprop sys.usb.state $sys.usb.config
+    setprop sys.usb.acm_idx 1,4
+    
+#dual modem comport for factory mode
+on property:sys.usb.config=gs1gs3,dual_acm
+    write /sys/class/android_usb/android0/enable 0
+    write /sys/class/android_usb/android0/idVendor $sys.usb.vid
+    write /sys/class/android_usb/android0/idProduct 202F
+    write /sys/class/android_usb/android0/f_acm/port_index 1,2,4
+    write /sys/devices/platform/mt_usb/saving 1
+    write /sys/class/android_usb/android0/functions adb,acm
+    write /sys/class/android_usb/android0/enable 1
+    chown system radio /dev/ttyGS3
+    chmod 0660 /dev/ttyGS3
+    chown system radio /dev/ttyGS1
+    chmod 0660 /dev/ttyGS1
+    start adbd
+    setprop sys.usb.state $sys.usb.config
+    setprop sys.usb.acm_idx 1,2,4

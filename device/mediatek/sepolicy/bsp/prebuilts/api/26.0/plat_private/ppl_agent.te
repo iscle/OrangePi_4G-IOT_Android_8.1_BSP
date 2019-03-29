@@ -1,0 +1,51 @@
+# ==============================================
+# Policy File of /system/bin/ppl_agent Executable File
+
+
+# ==============================================
+# Type Declaration
+# ==============================================
+
+type ppl_agent_exec , exec_type, file_type;
+#type ppl_agent ,domain;
+typeattribute ppl_agent coredomain;
+
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+
+init_daemon_domain(ppl_agent)
+
+# Date : 2014/09/11
+# Operation : Migration
+# Purpose : [Privacy protection lock][allow com.mediatek.ppl binder IPC to ppl_agent service]
+# Package name : com.mediatek.ppl
+binder_use(ppl_agent)
+binder_service(ppl_agent)
+
+# Date : 2014/10/24
+# Operation : Migration
+# Purpose : [Privacy protection lock][ppl_agent call FileOp_BackupToBinRegionForDM to do nvram backup]
+# Package name : com.mediatek.ppl
+allow ppl_agent block_device:dir search;
+
+# Data : 2014/10/24
+# Operation : Migration
+# Purpose : [Privacy protection lock][Allow ServiceManager add this service]
+# Package name : ServiceManager
+allow ppl_agent ppl_agent_service:service_manager add;
+
+# Data : 2016/08/11
+# Operation : QC
+# Purpose : FileOp_BackupToBinRegionForDM() interface needs below policy for nand project
+# Package name : com.mediatek.ppl.ppl_agent
+allow ppl_agent mtd_device:dir search;
+allow ppl_agent mtd_device:chr_file { read write open };
+
+# Data : 2017/07/7
+# Purpose : [Privacy protection lock][ppl_agent need access fstab.mt6755 ppl on mt6755]
+# Package name : com.mediatek.ppl
+allow ppl_agent system_data_file:lnk_file read;
+allow ppl_agent rootfs:file { read open getattr };
+allow ppl_agent sysfs:file { read open getattr };
+allow ppl_agent sysfs:dir { read open getattr };

@@ -1,0 +1,45 @@
+binder_call(rild, audioserver)
+binder_call(rild, mediaserver)
+binder_use(rild)
+binder_service(rild)
+
+# Grant access to Qualcomm MSM Interface (QMI) radio sockets to RILD
+qmux_socket(rild)
+
+# whitelist qualcomm specific ioctls
+allow rild self:socket ioctl;
+allowxperm rild self:socket ioctl msm_sock_ipc_ioctls;
+allowxperm rild self:udp_socket ioctl priv_sock_ioctls;
+
+allow rild persist_file:dir search;
+
+# rild needs to parse through /proc to obtain pid of netmgrd
+r_dir_file(rild, netmgrd)
+# b/18352920 suppress denials until the procfs lookup is removed
+dontaudit rild domain:dir r_dir_perms;
+
+allow rild audioserver_service:service_manager find;
+allow rild mediaserver_service:service_manager find;
+allow rild per_mgr_service:service_manager find;
+
+allow rild time_daemon:unix_stream_socket connectto;
+
+# rild reads qcril.db linked to /system/etc/qcril.db
+allow rild radio_data_file:lnk_file read;
+
+# allow rild to access radio data file
+allow rild radio_data_file:dir rw_dir_perms;
+allow rild radio_data_file:file create_file_perms;
+
+userdebug_or_eng(`
+  allow rild ssr_device:chr_file { open read };
+
+  allow rild sysfs_ssr:dir { open search read };
+  allow rild sysfs_ssr:lnk_file { read open };
+  allow rild sysfs_ssr:dir r_dir_perms;
+  allow rild sysfs_ssr:lnk_file read;
+')
+
+# allow rild to use qualcomm's socket ipc ioctls
+allow rild self:socket ioctl;
+allowxperm rild self:socket ioctl msm_sock_ipc_ioctls;

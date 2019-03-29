@@ -1,0 +1,44 @@
+#scp
+allow mobile_log_d sysfs_scp:file { open write };
+allow mobile_log_d sysfs_scp:dir search;
+allow mobile_log_d scp_device:chr_file { read open };
+
+#sspm
+allow mobile_log_d sysfs_sspm:file { open write };
+allow mobile_log_d sysfs_sspm:dir search;
+allow mobile_log_d sspm_device:chr_file { read open };
+
+#data/misc/mblog
+allow mobile_log_d logmisc_data_file:dir { relabelto create_dir_perms };
+allow mobile_log_d logmisc_data_file:file create_file_perms;
+
+#data/log_temp
+allow mobile_log_d logtemp_data_file:dir { relabelto create_dir_perms };
+allow mobile_log_d logtemp_data_file:file create_file_perms;
+
+#data/data_tmpfs_log
+allow mobile_log_d data_tmpfs_log_file:dir create_dir_perms;
+allow mobile_log_d data_tmpfs_log_file:file create_file_perms;
+
+#ftrace log property
+set_prop(mobile_log_d, ftrace_log_prop)
+
+#Dat: 2017/02/14
+#Purpose: allow set telephony Sensitive property
+set_prop(mobile_log_d, mtk_telephony_sensitive_prop)
+
+# Date: 2016/11/11
+# purpose: allow MobileLog to access aee socket
+allow mobile_log_d aee_aed:unix_stream_socket connectto;
+
+# purpose: send log to com port
+allow mobile_log_d ttyGS_device:chr_file { read write ioctl open };
+
+# purpose: allow mobile_log_d to access persist.meta.connecttype
+get_prop(mobile_log_d, meta_connecttype_prop);
+
+# purpose: allow mobile_log_d to create socket
+allow mobile_log_d port:tcp_socket { name_connect name_bind };
+allow mobile_log_d mobile_log_d:tcp_socket { create connect setopt bind };
+allow mobile_log_d mobile_log_d:tcp_socket { bind setopt listen accept read write };
+allow mobile_log_d node:tcp_socket node_bind;

@@ -1,0 +1,51 @@
+#===============================================
+# Policy File of /system/bin/audiocmdservice_atci Executable File
+
+type audiocmdservice_atci_exec , exec_type, file_type;
+
+# New added for move to /system
+typeattribute audiocmdservice_atci coredomain;
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+# audiocmdservice_atci - audio-daemon service
+init_daemon_domain(audiocmdservice_atci)
+
+# Perform Binder IPC for audio tuning tool and access to mediaserver
+binder_use(audiocmdservice_atci)
+binder_call(audiocmdservice_atci, mediaserver)
+#allow audiocmdservice_atci mediaserver:chr_file create_file_perms;
+allow audiocmdservice_atci mediaserver:dir w_dir_perms;
+allow audiocmdservice_atci mediaserver_service:service_manager find;
+
+# Since Android N, google separates mediaserver to audioserver and cameraserver
+binder_call(audiocmdservice_atci, audioserver)
+#allow audiocmdservice_atci audioserver:chr_file create_file_perms;
+allow audiocmdservice_atci audioserver:dir w_dir_perms;
+allow audiocmdservice_atci audioserver_service:service_manager find;
+
+
+# Access to fuse file system
+allow audiocmdservice_atci sdcard_type:file create_file_perms;
+allow audiocmdservice_atci sdcard_type:dir w_dir_perms;
+
+# Access to internal storage
+allow audiocmdservice_atci media_rw_data_file:dir create_dir_perms;
+allow audiocmdservice_atci media_rw_data_file:file create_file_perms;
+
+
+
+#To access the file at /dev/kmsg
+allow audiocmdservice_atci kmsg_device:chr_file w_file_perms;
+
+userdebug_or_eng(`
+  allow audiocmdservice_atci self:capability { dac_override sys_nice fowner chown fsetid setuid ipc_lock net_admin};
+')
+
+#audio-daemon needs to controlled from adb shell by AudioTuningTool
+allow radio audiocmdservice_atci_exec:file getattr;
+
+#Android O porting
+hwbinder_use(audiocmdservice_atci)
+get_prop(audiocmdservice_atci, hwservicemanager_prop);
+allow audiocmdservice_atci debugfs_tracing:file rw_file_perms;

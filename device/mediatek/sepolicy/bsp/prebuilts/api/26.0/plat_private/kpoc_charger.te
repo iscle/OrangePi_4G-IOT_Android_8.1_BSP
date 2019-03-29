@@ -1,0 +1,54 @@
+# ==============================================
+# Policy File of /system/bin/kpoc_charger Executable File
+
+type kpoc_charger_exec, exec_type, file_type;
+
+# Move to system partition
+typeattribute kpoc_charger coredomain;
+
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+# Date : WK15.32
+# Operation : Migration
+# Purpose : Start kpoc_charger
+init_daemon_domain(kpoc_charger)
+
+# Date : WK15.32
+# Operation : Migration
+# Purpose : Interact with kernel to perform kpoc_charger
+allow kpoc_charger block_device:dir search;
+allow kpoc_charger graphics_device:dir search;
+allow kpoc_charger input_device:dir { open read search };
+allow kpoc_charger input_device:chr_file { open read write ioctl };
+allow kpoc_charger property_socket:sock_file write;
+allow kpoc_charger self:capability sys_nice;
+allow kpoc_charger self:capability net_admin;
+allow kpoc_charger self:capability dac_override;
+allow kpoc_charger self:netlink_kobject_uevent_socket { create bind read setopt };
+allow kpoc_charger sysfs:file rw_file_perms;
+allow kpoc_charger sysfs:dir r_dir_perms;
+allow kpoc_charger graphics_device:chr_file { read write ioctl open };
+allow kpoc_charger kmsg_device:chr_file { write open };
+allow kpoc_charger rtc_device:chr_file { open read write };
+allow kpoc_charger init:unix_stream_socket connectto;
+allow healthd self:capability dac_override;
+allow healthd app_data_file:file write;
+allow healthd device:dir {open read write};
+allow kpoc_charger self:capability sys_boot;
+allow kpoc_charger alarm_device:chr_file write;
+
+# Date : WK15.44
+# Operation : Migration
+# Purpose : add sepolicy for nand platform which use mtd_device
+allow kpoc_charger mtd_device:dir search;
+allow kpoc_charger mtd_device:chr_file read;
+allow kpoc_charger mtd_device:chr_file { read open };
+
+# Date : WK17.25
+# Operation : Android O migration
+# Purpose : add sepolicy for accessing rootfs and sysfs_leds
+allow kpoc_charger rootfs:file r_file_perms;
+allow kpoc_charger sysfs_leds:lnk_file read;
+allow kpoc_charger sysfs_leds:file rw_file_perms;
+allow kpoc_charger sysfs_leds:dir r_dir_perms;

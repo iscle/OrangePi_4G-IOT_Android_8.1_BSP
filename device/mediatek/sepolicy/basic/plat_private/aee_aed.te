@@ -1,0 +1,136 @@
+# ==============================================
+# Policy File of /system/bin/aee_aed Executable File
+
+# ==============================================
+# Type Declaration
+# ==============================================
+type aee_aed_exec, exec_type, file_type;
+typeattribute aee_aed coredomain;
+typeattribute aee_aed mlstrustedsubject;
+
+init_daemon_domain(aee_aed)
+
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+
+# AED start: /dev/block/expdb
+allow aee_aed block_device:dir search;
+
+#allow aee_aed userdata_block_device:blk_file create_file_perms; # neverallow
+
+# aee db dir and db files
+allow aee_aed sdcard_type:dir create_dir_perms;
+allow aee_aed sdcard_type:file create_file_perms;
+
+#data/anr
+allow aee_aed anr_data_file:dir create_dir_perms;
+allow aee_aed anr_data_file:file create_file_perms;
+
+allow aee_aed domain:process { sigkill getattr getsched signal };
+allow aee_aed domain:lnk_file getattr;
+
+#core-pattern
+allow aee_aed usermodehelper:file r_file_perms;
+
+#suid_dumpable. this is neverallow
+# allow aee_aed proc_security:file r_file_perms;
+
+#property
+allow aee_aed init:unix_stream_socket connectto;
+allow aee_aed property_socket:sock_file write;
+
+#allow aee_aed call binaries labeled "system_file" under /system/bin/
+allow aee_aed system_file:file execute_no_trans;
+
+allow aee_aed init:process getsched;
+allow aee_aed kernel:process getsched;
+
+# Date: W15.34
+# Operation: Migration
+# Purpose: For pagemap & pageflags information in NE DB
+userdebug_or_eng(`allow aee_aed self:capability sys_admin;')
+
+# Date: W16.17
+# Operation: N0 Migeration
+# Purpose: creat dir "aee_exp" under /data
+allow aee_aed system_data_file:dir { write create add_name };
+allow aee_aed system_data_file:file r_file_perms;
+
+# Purpose: allow aee_aed to access toolbox
+allow aee_aed toolbox_exec:file rx_file_perms;
+
+# purpose: allow aee_aed to access storage on N version
+allow aee_aed media_rw_data_file:file  { create_file_perms };
+allow aee_aed media_rw_data_file:dir { create_dir_perms };
+
+# Purpose: mnt/user/*
+allow aee_aed mnt_user_file:dir search;
+allow aee_aed mnt_user_file:lnk_file read;
+
+allow aee_aed storage_file:dir search;
+allow aee_aed storage_file:lnk_file read;
+
+# Date : WK17.09
+# Operation : AEE UT for Android O
+# Purpose : for AEE module to dump files
+domain_auto_trans(aee_aed, dumpstate_exec, dumpstate)
+
+# Purpose : aee_aed communicate with aee_core_forwarder
+# allow aee_aed aee_core_forwarder:dir search;
+# allow aee_aed aee_core_forwarder:file { read getattr open };
+
+userdebug_or_eng(`
+  allow aee_aed su:dir {search read open };
+  allow aee_aed su:file { read getattr open };
+')
+
+# /data/tombstone
+allow aee_aed tombstone_data_file:dir w_dir_perms;
+allow aee_aed tombstone_data_file:file create_file_perms;
+
+# /proc/pid/
+allow aee_aed self:capability { fowner chown dac_override fsetid sys_nice sys_resource net_admin sys_module setgid setuid kill };
+
+# system(cmd) aee_dumpstate aee_archive
+allow aee_aed shell_exec:file rx_file_perms;
+
+# PROCESS_FILE_STATE
+allow aee_aed dumpstate:unix_stream_socket { read write ioctl };
+allow aee_aed dumpstate:dir search;
+allow aee_aed dumpstate:file r_file_perms;
+
+allow aee_aed proc:file rw_file_perms;
+allow aee_aed logdr_socket:sock_file write;
+allow aee_aed logd:unix_stream_socket connectto;
+# allow aee_aed system_ndebug_socket:sock_file write; mask for never allow rule
+
+# vibrator
+allow aee_aed sysfs_vibrator:file w_file_perms;
+
+# Data : 2017/03/22
+# Operation : add NE flow rule for Android O
+# Purpose : make aee_aed can get specific process NE info
+allow aee_aed domain:dir r_dir_perms;
+allow aee_aed domain:{ file lnk_file } r_file_perms;
+allow aee_aed {
+  domain
+  -logd
+  -keystore
+  -init
+}:process ptrace;
+allow aee_aed dalvikcache_data_file:dir r_dir_perms;
+allow aee_aed zygote_exec:file r_file_perms;
+allow aee_aed init_exec:file r_file_perms;
+
+# Data : 2017/04/06
+# Operation : add selinux rule for crash_dump notify aee_aed
+# Purpose : make aee_aed can get notify from crash_dump
+allow aee_aed crash_dump:dir search;
+allow aee_aed crash_dump:file r_file_perms;
+
+# Purpose:
+# [  217.196275] <0>.(0)[209:logd.auditd]type=1400 audit(1262304561.676:377): avc: denied { read }
+# for pid=1486 comm="aee_aed" name="atag,devinfo" dev="sysfs" ino=2349 scontext=u:r:aee_aed:s0
+# tcontext=u:object_r:sysfs:s0 tclass=file permissive=0
+allow aee_aed sysfs:file r_file_perms;

@@ -1,0 +1,17 @@
+on fs
+	# set charging free due to it waits for USB activation
+	write /sys/class/android_usb/android0/enable 1
+	start adbd
+
+	# distinguish USB shoulde connect or not, i.e. CDP vs SDP
+	write /sys/devices/platform/mt_usb/cmode 2
+
+on property:ro.debuggable=1
+	# restore cmode to normal for making USB enumeration
+	write /sys/devices/platform/mt_usb/cmode 1
+
+on post-fs-data
+# Support A/B feature for boot region
+	symlink /dev/block/mmcblk0boot0 /dev/block/platform/mtk-msdc.0/11230000.msdc0/by-name/preloader_a
+	symlink /dev/block/mmcblk0boot1 /dev/block/platform/mtk-msdc.0/11230000.msdc0/by-name/preloader_b
+

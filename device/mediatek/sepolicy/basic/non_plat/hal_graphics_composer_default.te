@@ -1,0 +1,48 @@
+vndbinder_use(hal_graphics_composer_default)
+
+allow hal_graphics_composer_default debugfs_ged:dir search;
+#allow hal_graphics_composer_default debugfs_ion:dir search;
+
+# Date : WK17.09
+# Operation : Add sepolicy
+# Purpose : Add polivy for hwc HIDL
+
+allow hal_graphics_composer_default proc:file { read getattr open ioctl };
+allow hal_graphics_composer_default proc_ged:file { read ioctl open };
+allow hal_graphics_composer_default self:netlink_kobject_uevent_socket { read bind create setopt };
+
+# Date : WK17.21
+# Purpose: GPU driver required
+allow hal_graphics_composer_default sw_sync_device:chr_file { read write open ioctl };
+allow hal_graphics_composer_default hal_graphics_mapper_hwservice:hwservice_manager find;
+
+# Date : W17.24
+# Purpose: GPU driver required
+allow hal_graphics_composer_default gpu_device:dir search;
+
+#============= hal_graphics_composer_default ==============
+allow hal_graphics_composer_default debugfs_ion:dir search;
+
+#============= hal_graphics_composer_default ==============
+allow hal_graphics_composer_default debugfs_tracing:file write;
+
+#============= hal_graphics_composer_default ==============
+allow hal_graphics_composer_default debugfs_tracing:file open;
+
+# Date : WK17.30
+# Operation : O Migration
+# Purpose: Allow to access cmdq driver
+allow hal_graphics_composer_default mtk_cmdq_device:chr_file { read ioctl open };
+
+# Date : W17.30
+# Add for control PowerHAL
+allow hal_graphics_composer_default mtk_hal_power_hwservice:hwservice_manager find;
+binder_call(hal_graphics_composer_default, mtk_hal_power)
+
+# Date : WK17.32
+# Operation : O Migration
+# Purpose: Allow to access property
+set_prop(hal_graphics_composer_default, graphics_config_prop)
+get_prop(hal_graphics_composer_default, graphics_config_prop)
+set_prop(hal_graphics_composer_default, graphics_hwc_pid_prop)
+get_prop(hal_graphics_composer_default, graphics_hwc_pid_prop)

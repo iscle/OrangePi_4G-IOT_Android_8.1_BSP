@@ -1,0 +1,58 @@
+# ==============================================
+# Policy File of /vendor/bin/mtk_agpsd Executable File
+
+# ==============================================
+# Type Declaration
+# ==============================================
+type mtk_agpsd_exec, exec_type, file_type, vendor_file_type;
+type mtk_agpsd, domain;
+
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+init_daemon_domain(mtk_agpsd)
+
+net_domain(mtk_agpsd)
+
+# Access channels to modem for E-CID, RRLP, and LPP
+allow mtk_agpsd agps_device:chr_file rw_file_perms;
+allow mtk_agpsd ttySDIO_device:chr_file { create setattr unlink rw_file_perms };
+allow mtk_agpsd ccci_device:chr_file { create setattr unlink rw_file_perms };
+
+# Access folders, files, and sockets in /data/agps_supl
+allow mtk_agpsd agpsd_data_file:dir create_dir_perms;
+allow mtk_agpsd agpsd_data_file:file create_file_perms;
+allow mtk_agpsd agpsd_data_file:sock_file create_file_perms;
+
+# Access file system partitions like /system, /data and SD Card
+allow mtk_agpsd sdcard_type:dir create_dir_perms;
+allow mtk_agpsd sdcard_type:file create_file_perms;
+allow mtk_agpsd eemcs_device:chr_file rw_file_perms;
+allow mtk_agpsd mnt_user_file:dir create_dir_perms;
+
+# Access symbolic link files like /etc and /sdcard
+allow mtk_agpsd tmpfs:lnk_file create_file_perms;
+allow mtk_agpsd storage_file:lnk_file create_file_perms;
+allow mtk_agpsd mnt_user_file:lnk_file create_file_perms;
+allow mtk_agpsd media_rw_data_file:dir { search write add_name read open };
+allow mtk_agpsd media_rw_data_file:file { create open append read getattr };
+
+# Send supl profile configuration to SLPD (to get SUPL Reference Location for HW Fused Location)
+allow mtk_agpsd slpd:unix_dgram_socket sendto;
+
+# Operators will send agps settings via OMADM.
+# Operators ask UE to save these settings into NVRAM.
+allow mtk_agpsd nvcfg_file:dir create_dir_perms;
+allow mtk_agpsd nvcfg_file:file create_file_perms;
+
+# Send GNSS assistance data and AGPS commands to MTK's GPS module 'mnld'
+allow mtk_agpsd mnld:unix_dgram_socket sendto;
+
+# Send the message to the LBS HIDL Service to forward to system partitions
+allow mtk_agpsd lbs_hidl_service:unix_dgram_socket sendto;
+
+# Send the message to the merged hal Service to forward to system partitions
+allow mtk_agpsd merged_hal_service:unix_dgram_socket sendto;
+
+# Allow send socket to fusion rild
+allow mtk_agpsd rild:unix_dgram_socket sendto;

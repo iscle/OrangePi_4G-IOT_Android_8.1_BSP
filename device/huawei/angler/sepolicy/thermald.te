@@ -1,0 +1,27 @@
+type thermald, domain, device_domain_deprecated;
+type thermald_exec, exec_type, file_type;
+
+init_daemon_domain(thermald)
+
+allow thermald shared_log_device:chr_file rw_file_perms;
+allow thermald thermal_engine_device:chr_file rw_file_perms;
+
+allow thermald self:socket create_socket_perms;
+allowxperm thermald self:socket ioctl msm_sock_ipc_ioctls;
+type_transition thermald socket_device:sock_file thermald_socket;
+allow thermald thermald_socket:sock_file create_file_perms;
+
+allow thermald sysfs_thermal:dir r_dir_perms;
+allow thermald sysfs_thermal:file rw_file_perms;
+
+allow thermald sysfs_msm_subsys:dir r_dir_perms;
+allow thermald sysfs_msm_subsys:lnk_file rw_file_perms;
+
+allow thermald sysfs_thermal:file write;
+
+# Grant access to Qualcomm MSM Interface (QMI) radio sockets to system services
+# (e.g., LocationManager)
+qmux_socket(thermald)
+
+# Reboot the device
+set_prop(thermald, powerctl_prop)

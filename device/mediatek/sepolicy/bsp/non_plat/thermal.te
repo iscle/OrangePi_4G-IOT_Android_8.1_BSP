@@ -1,0 +1,45 @@
+# ==============================================
+# Policy File of /system/binthermal Executable File
+
+
+# ==============================================
+# Type Declaration
+# ==============================================
+
+type thermal_exec , exec_type, file_type, vendor_file_type;
+type thermal ,domain;
+
+# ==============================================
+# Android Policy Rule
+# ==============================================
+
+# ==============================================
+# NSA Policy Rule
+# ==============================================
+
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+
+init_daemon_domain(thermal)
+net_domain(thermal)
+
+allow thermal mtkrild:unix_stream_socket connectto;
+allow thermal proc_thermal:dir search;
+allow thermal proc_thermal:file { read write open };
+allow thermal rild_oem_socket:sock_file write;
+allow thermal netd_socket:sock_file write;
+allow thermal netd:unix_stream_socket connectto;
+allow thermal self:udp_socket create;
+allow thermal self:udp_socket ioctl;
+allow thermal rpc_socket:sock_file write;
+allow thermal viarild:unix_stream_socket connectto;
+allow thermal statusd:unix_stream_socket connectto;
+allow thermal rild:unix_stream_socket connectto;
+
+# If thermal(which belongs to vendor partition) want to open binder dev node(e.g. Parcel) will be
+# denied for no permission. Should use vndbinder dev node in vendor domain.
+# Using the following sepolicy rule to allow thermal to use vendor binder.
+vndbinder_use(thermal);
+
+

@@ -1,0 +1,48 @@
+#integrated sensor process
+type ims, domain, vendor_executes_system_violators;
+type ims_exec, exec_type, vendor_file_type, file_type;
+
+allow ims self:capability net_bind_service;
+
+# Started by init
+init_daemon_domain(ims)
+net_domain(ims)
+
+# TODO(b/36657020): Removed this once ims no longer needs access to /dev/binder
+typeattribute ims binder_in_vendor_violators;
+
+# Grant access to Qualcomm MSM Interface (QMI) radio sockets
+qmux_socket(ims)
+
+# talk to netmgrd and cnd
+allow ims netmgrd_socket:dir search;
+unix_socket_connect(ims, netmgrd, netmgrd)
+unix_socket_connect(ims, cnd, cnd)
+set_prop(ims, system_prop)
+
+# files in /sys
+r_dir_file(ims, sysfs_type)
+
+# additional socket perms
+allow ims ims_socket:sock_file write;
+allow ims self:netlink_socket create_socket_perms_no_ioctl;
+allow ims self:socket create_socket_perms;
+allowxperm ims self:udp_socket ioctl RMNET_IOCTL_EXTENDED;
+allowxperm ims self:socket ioctl msm_sock_ipc_ioctls;
+
+userdebug_or_eng(`
+  allow ims diag_device:chr_file rw_file_perms;
+')
+userbuild(`
+  dontaudit ims diag_device:chr_file rw_file_perms;
+')
+
+# Runs /system/bin/sh for executing ndc commands via popen
+allow ims shell_exec:file rx_file_perms;
+allow ims system_file:file rx_file_perms;
+
+# use /dev/ion memory
+allow ims ion_device:chr_file r_file_perms;
+
+# use fds passed from radio app
+allow ims radio:fd use;

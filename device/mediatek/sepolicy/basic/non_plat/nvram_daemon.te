@@ -1,0 +1,99 @@
+# ==============================================
+# Policy File of /vendor/binnvram_daemon Executable File 
+
+
+# ==============================================
+# Type Declaration
+# ==============================================
+
+type nvram_daemon_exec , exec_type, file_type, vendor_file_type;
+type nvram_daemon ,domain;
+
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+
+init_daemon_domain(nvram_daemon)
+
+
+
+# Date : WK14.31
+# Operation : Migration 
+# Purpose : the device is used to store Nvram backup data that can not be lost. 
+allow nvram_daemon nvram_device:blk_file rw_file_perms;
+allow nvram_daemon bootdevice_block_device:blk_file rw_file_perms;
+allow nvram_daemon nvdata_device:blk_file rw_file_perms;
+
+
+# Date : WK14.34
+# Operation : Migration 
+# Purpose : the option is used to tell that if other processes can access nvram. 
+allow nvram_daemon system_prop:property_service set;
+
+# Date : WK14.35
+# Operation : chown folder and file permission 
+# Purpose : ensure nvram user can access nvram file normally when upgrade from KK/KK.AOSP to L. 
+#allow nvram_daemon shell_exec:file rx_file_perms;
+allow nvram_daemon nvram_data_file:dir create_dir_perms;
+allow nvram_daemon nvram_data_file:file create_file_perms;
+allow nvram_daemon nvram_data_file:lnk_file read;
+allow nvram_daemon nvdata_file:lnk_file read;
+allow nvram_daemon nvdata_file:dir create_dir_perms;
+allow nvram_daemon nvdata_file:file create_file_perms;
+
+#allow nvram_daemon system_file:file execute_no_trans;
+
+allow nvram_daemon als_ps_device:chr_file r_file_perms;
+allow nvram_daemon mtk-adc-cali_device:chr_file rw_file_perms;
+allow nvram_daemon gsensor_device:chr_file r_file_perms;
+allow nvram_daemon gyroscope_device:chr_file r_file_perms;
+allow nvram_daemon init:unix_stream_socket connectto;
+
+# Purpose: for property set
+#allow nvram_daemon property_socket:sock_file w_file_perms;
+allow nvram_daemon sysfs:file w_file_perms;
+allow nvram_daemon self:capability { fowner chown dac_override fsetid };
+
+# Purpose: for backup
+allow nvram_daemon nvram_device:chr_file rw_file_perms;
+allow nvram_daemon pro_info_device:chr_file rw_file_perms;
+
+allow nvram_daemon block_device:dir search;
+
+# Purpose: for nand project
+allow nvram_daemon mtd_device:dir search;
+allow nvram_daemon mtd_device:chr_file rw_file_perms;
+
+# Purpose: for fstab parser
+allow nvram_daemon kmsg_device:chr_file w_file_perms;
+allow nvram_daemon proc_lk_env:file rw_file_perms;
+
+# Purpose: for workaround
+# Todo: Remove this policy
+allow nvram_daemon system_data_file:dir write;
+
+# Purpose: property set
+#allow nvram_daemon service_nvram_init_prop:property_service set;
+
+# Purpose: copy /fstab*
+allow nvram_daemon rootfs:dir { read open };
+allow nvram_daemon rootfs:file r_file_perms;
+allow nvram_daemon system_data_file:lnk_file read;
+
+# Purpose: remove /data/nvram link
+allow nvram_daemon system_data_file:dir { remove_name add_name };
+allow nvram_daemon system_data_file:lnk_file { create unlink };
+allow nvram_daemon nvram_data_file:lnk_file unlink;
+# Purpose: for run toolbox command: chown chmode..
+#allow nvram_daemon toolbox_exec:file rx_file_perms;
+
+# Purpose: for setting property
+# ro.wlan.mtk.wifi.5g relabel to wifi_5g_prop
+# denied  { set } for property=ro.wlan.mtk.wifi.5g pid=242 uid=0 gid=1000 scontext=u:r:nvram_daemon:s0 tcontext=u:object_r:default_prop:s0 tclass=property_service permissive=1
+#allow nvram_daemon wifi_5g_prop:property_service set;
+set_prop(nvram_daemon, service_nvram_init_prop)
+set_prop(nvram_daemon, wifi_5g_prop)
+ 
+#WK17.26 camera 8163
+allow nvram_daemon sysfs:dir read;
+allow nvram_daemon sysfs:file read;

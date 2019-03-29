@@ -1,0 +1,17 @@
+# For netutils to be able to write their stdout stderr to the pipes opened by netmgrd
+allow netutils_wrapper netmgrd:fd use;
+allow netutils_wrapper netmgrd:fifo_file { getattr read write append };
+
+# netmgrd opens files without o_CLOEXEC and fork_execs the netutils wrappers
+# this results in all file (fd) permissions being audited for access by netutils_wrapper
+# domain. Stop those audit messages flooding the kernel log.
+dontaudit netutils_wrapper netmgrd:udp_socket { getattr read write append };
+dontaudit netutils_wrapper diag_device:chr_file { getattr read write append ioctl };
+dontaudit netutils_wrapper netmgr_data_file:file { getattr read write append };
+dontaudit netutils_wrapper netmgrd:netlink_route_socket { getattr read write append };
+dontaudit netutils_wrapper netmgrd:netlink_socket { getattr read write append };
+dontaudit netutils_wrapper netmgrd:netlink_xfrm_socket { getattr read write append };
+dontaudit netutils_wrapper netmgrd:unix_stream_socket { getattr read write append };
+dontaudit netutils_wrapper sysfs_msm_subsys:file read;
+dontaudit netutils_wrapper netmgrd:tcp_socket { getattr read write append };
+dontaudit netutils_wrapper netmgrd:socket { read write };

@@ -1,0 +1,52 @@
+##############################
+# vendor app domain
+#
+
+# This is for common part
+type vendor_app, domain;
+
+app_domain(vendor_app)
+
+allow vendor_app mnt_media_rw_file:dir search;
+
+# allow cts to query all services
+allow vendor_app servicemanager:service_manager list;
+
+allow vendor_app audioserver_service:service_manager find;
+allow vendor_app cameraserver_service:service_manager find;
+allow vendor_app drmserver_service:service_manager find;
+allow vendor_app mediaserver_service:service_manager find;
+allow vendor_app mediaextractor_service:service_manager find;
+allow vendor_app mediametrics_service:service_manager find;
+allow vendor_app mediadrmserver_service:service_manager find;
+allow vendor_app nfc_service:service_manager find;
+allow vendor_app radio_service:service_manager find;
+allow vendor_app surfaceflinger_service:service_manager find;
+allow vendor_app app_api_service:service_manager find;
+allow vendor_app vr_manager_service:service_manager find;
+
+# Cts: HwRngTest
+allow vendor_app sysfs_hwrandom:dir search;
+allow vendor_app sysfs_hwrandom:file r_file_perms;
+
+# Allow apps to view preloaded media content
+allow vendor_app preloads_media_file:dir r_dir_perms;
+allow vendor_app preloads_media_file:file r_file_perms;
+allow vendor_app preloads_data_file:dir search;
+
+# Allow untrusted apps read / execute access to /vendor/app for there can
+# be pre-installed vendor apps that package a library within themselves.
+# TODO (b/37784178) Consider creating  a special type for /vendor/app installed
+# apps.
+allow vendor_app vendor_app_file:dir { open getattr read search };
+allow vendor_app vendor_app_file:file { open getattr read execute };
+allow vendor_app vendor_app_file:lnk_file { open getattr read };
+#End for common part
+
+# For mtkloggerproxy
+unix_socket_connect(vendor_app, mnld, mnld);
+#============= vendor_app ==============
+allow vendor_app mnld:unix_stream_socket connectto;
+# PMTKLoggerProxy need copy exception db from data/vendor folder
+allow vendor_app aee_exp_data_file:file r_file_perms;
+allow vendor_app aee_exp_data_file:dir r_dir_perms;

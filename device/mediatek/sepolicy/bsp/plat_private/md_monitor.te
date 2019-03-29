@@ -1,0 +1,53 @@
+# ==============================================
+# Policy File of /system/bin/md_monitor Executable File
+
+
+# ==============================================
+# Type Declaration
+# ==============================================
+
+type md_monitor_exec , exec_type, file_type;
+#type md_monitor ,domain;
+
+typeattribute md_monitor coredomain;
+typeattribute md_monitor mlstrustedsubject;
+
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+
+init_daemon_domain(md_monitor)
+
+# Date : 2015/10/12
+# Operation : IT
+# Purpose : Allow md_monitor to set
+allow md_monitor system_data_file:dir { write add_name create };
+allow md_monitor property_socket:sock_file write;
+allow md_monitor init:unix_stream_socket connectto;
+allow md_monitor system_data_file:fifo_file { create read write setattr open };
+allow md_monitor system_data_file:dir relabelto;
+file_type_auto_trans(md_monitor, system_data_file, md_monitor_data_file)
+#allow md_monitor ccci_device:chr_file { read write open ioctl };
+allow md_monitor platform_app:unix_stream_socket connectto;
+#allow md_monitor debug_mdlogger_prop:property_service set;
+allow md_monitor untrusted_app:unix_stream_socket connectto;
+allow md_monitor radio:unix_stream_socket connectto;
+#allow md_monitor sysfs_ccci:dir search;
+#allow md_monitor sysfs_ccci:file r_file_perms;
+
+# access /data/md_mon/
+allow md_monitor md_monitor_data_file:dir { create_dir_perms relabelto relabelfrom};
+allow md_monitor md_monitor_data_file:fifo_file { create_file_perms };
+allow md_monitor md_monitor_data_file:file { create_file_perms };
+allow md_monitor md_monitor_data_file:file { create write open setattr };
+
+# Date : 2017/10/20
+# Operation : IT
+# Purpose : Allow md_monitor to dump raw data to file in /sdcard/MdmDump/
+allow md_monitor media_rw_data_file:dir { write remove_name create add_name read search open };
+allow md_monitor media_rw_data_file:file { create unlink getattr read write open };
+allow md_monitor mnt_user_file:dir search;
+allow md_monitor mnt_user_file:lnk_file read;
+allow md_monitor sdcardfs:dir { write remove_name search create add_name };
+allow md_monitor sdcardfs:file { write getattr read create unlink open };
+allow md_monitor storage_file:lnk_file read;

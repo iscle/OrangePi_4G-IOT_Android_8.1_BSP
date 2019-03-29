@@ -1,0 +1,92 @@
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+
+# Purpose: aee_dumpstate set surfaceflinger property
+set_prop(dumpstate, debug_bq_dump_prop);
+
+# Purpose: access dev/aed0
+allow dumpstate aed_device:chr_file { read getattr };
+
+# Purpose: data/dumpsys/*
+allow dumpstate aee_dumpsys_data_file:dir { w_dir_perms };
+allow dumpstate aee_dumpsys_data_file:file { create_file_perms };
+
+# Purpose: data/aee_exp/*
+allow dumpstate aee_exp_data_file:dir { w_dir_perms };
+allow dumpstate aee_exp_data_file:file { create_file_perms };
+
+# Purpose: debugfs files
+allow dumpstate debugfs:lnk_file read;
+allow dumpstate debugfs_binder:dir { read open };
+allow dumpstate debugfs_binder:file { read open };
+allow dumpstate debugfs_blockio:file { read open };
+allow dumpstate debugfs_fb:dir search;
+allow dumpstate debugfs_fb:file { read open };
+allow dumpstate debugfs_fuseio:dir search;
+allow dumpstate debugfs_fuseio:file { read open };
+allow dumpstate debugfs_ged:dir search;
+allow dumpstate debugfs_ged:file { read open };
+allow dumpstate debugfs_rcu:dir search;
+allow dumpstate debugfs_shrinker_debug:file { read open };
+allow dumpstate debugfs_wakeup_sources:file { read open };
+allow dumpstate debugfs_dmlog_debug:file { read open };
+allow dumpstate debugfs_page_owner_slim_debug:file { read open };
+allow dumpstate debugfs_ion_mm_heap:dir search;
+allow dumpstate debugfs_ion_mm_heap:file { read open };
+allow dumpstate debugfs_ion_mm_heap:lnk_file read;
+allow dumpstate debugfs_ion_mm_heap:lnk_file read;
+allow dumpstate debugfs_cpuhvfs:dir search;
+allow dumpstate debugfs_cpuhvfs:file { read open };
+
+# Purpose: /sys/kernel/ccci/md_chn
+allow dumpstate sysfs_ccci:dir search;
+allow dumpstate sysfs_ccci:file { read open };
+
+# Purpose: leds status
+allow dumpstate sysfs_leds:lnk_file read;
+
+# Purpose: /sys/module/lowmemorykiller/parameters/adj
+allow dumpstate sysfs_lowmemorykiller:file { read open };
+allow dumpstate sysfs_lowmemorykiller:dir search;
+
+# Purpose: /dev/block/mmcblk0p10
+allow dumpstate expdb_block_device:blk_file { read write ioctl open };
+
+#/data/anr/SF_RTT
+allow dumpstate sf_rtt_file:dir search;
+allow dumpstate sf_rtt_file:file r_file_perms;
+
+# Data : 2017/03/22
+# Operation : add fd use selinux rule
+# Purpose : type=1400 audit(0.0:81356): avc: denied { use } for path="/system/bin/linker"
+#           dev="mmcblk0p26" ino=250 scontext=u:r:dumpstate:s0
+#           tcontext=u:r:aee_aed:s0 tclass=fd permissive=0
+allow dumpstate aee_aed:fd use;
+allow dumpstate aee_aed:unix_stream_socket { read write ioctl };
+
+# private define
+# allow dumpstate config_gz:file read;
+
+allow dumpstate sysfs_leds:dir r_dir_perms;
+allow dumpstate sysfs_leds:file r_file_perms;
+
+# Purpose: 01-01 08:30:57.260  3070  3070 W aee_dumpstate: type=1400 audit(0.0:13196): avc: denied
+# { read } for name="SF_dump" dev="dm-0" ino=352257 scontext=u:r:dumpstate:s0 tcontext=u:object_r:
+# sf_bqdump_data_file:s0 tclass=dir permissive=0
+allow dumpstate sf_bqdump_data_file:dir r_dir_perms;
+allow dumpstate sf_bqdump_data_file:file r_file_perms;
+
+# Purpose:
+# 01-01 17:59:14.440  7664  7664 I aee_dumpstate: type=1400 audit(0.0:63497):
+# avc: denied { open } for path="/sys/kernel/debug/tracing/tracing_on" dev=
+# "debugfs" ino=2087 scontext=u:r:dumpstate:s0 tcontext=u:object_r:
+# tracing_shell_writable:s0 tclass=file permissive=1
+allow dumpstate debugfs_tracing:file { write read open };
+
+# Data : WK17.03
+# Purpose: Allow to access gpu
+allow dumpstate gpu_device:dir search;
+
+# Purpose: Allow aee_dumpstate to invoke "lshal debug <interface>", where <interface> is "ICameraProvider".
+allow dumpstate mtk_hal_camera:binder { call };

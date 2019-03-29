@@ -1,0 +1,46 @@
+# Grant access to Qualcomm MSM Interface (QMI) radio sockets
+qmux_socket(rild)
+
+allow rild per_mgr_service:service_manager find;
+
+hwbinder_use(rild)
+add_hwservice(rild, vnd_qcril_audio_hwservice)
+
+vndbinder_use(rild)
+binder_call(rild, per_mgr)
+
+# callback into telephony app
+binder_call(rild, platform_app);
+
+allow rild netmgrd_socket:dir search;
+unix_socket_connect(rild, netmgrd, netmgrd)
+
+r_dir_file(rild, sysfs_type)
+
+allow rild time:unix_stream_socket connectto;
+# smlog_dump
+allow rild smlog_dump_exec:file rx_file_perms;
+
+allowxperm rild self:udp_socket ioctl priv_sock_ioctls;
+allow rild self:socket ioctl;
+allowxperm rild self:socket ioctl msm_sock_ipc_ioctls;
+userdebug_or_eng(`
+  allow rild diag_device:chr_file rw_file_perms;
+')
+userbuild(`
+  dontaudit rild diag_device:chr_file rw_file_perms;
+')
+
+# rild needs 'lock' for /vendor/qcril.db
+allow rild vendor_file:file { lock };
+
+# allow rild to access radio data file
+allow rild radio_data_file:dir rw_dir_perms;
+allow rild radio_data_file:file create_file_perms;
+
+# In order to be able to use system()
+allow rild vendor_shell_exec:file rx_file_perms;
+
+# TODO(b/36613472): Remove this once system_server,  mediaserver, bluetooth, and radio no longer
+# communicate with rild over sockets.
+typeattribute rild socket_between_core_and_vendor_violators;

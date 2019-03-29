@@ -1,0 +1,30 @@
+# Temperature sensor daemon (root process)
+type thermal-engine, domain, device_domain_deprecated;
+type thermal-engine_exec, exec_type, file_type;
+
+# Started by init
+init_daemon_domain(thermal-engine)
+
+allow thermal-engine smem_log_device:chr_file rw_file_perms;
+
+allow thermal-engine thermal_device:chr_file rw_file_perms;
+
+allow thermal-engine self:capability { dac_read_search dac_override fsetid chown };
+allow thermal-engine self:capability2 wake_alarm;
+
+# Talk to qmuxd (/dev/socket/qmux_radio)
+qmux_socket(thermal-engine)
+
+# Create and access to /dev/socket/thermal-.*
+type_transition thermal-engine socket_device:sock_file thermal_socket;
+allow thermal-engine socket_device:dir w_dir_perms;
+allow thermal-engine thermal_socket:sock_file create_file_perms;
+
+allow thermal-engine self:socket create_socket_perms;
+allowxperm thermal-engine self:socket ioctl msm_sock_ipc_ioctls;
+allow thermal-engine sysfs_thermal:dir r_dir_perms;
+allow thermal-engine sysfs_thermal:file rw_file_perms;
+allow thermal-engine sysfs_thermal:lnk_file read;
+
+r_dir_file(thermal-engine, sysfs_ssr)
+r_dir_file(thermal-engine, sysfs_leds)

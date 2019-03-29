@@ -1,0 +1,20 @@
+vndbinder_use(hal_camera_default);
+allow hal_camera_default qdisplay_service:service_manager { find };
+
+allow hal_camera_default hal_graphics_mapper_hwservice:hwservice_manager find;
+hal_client_domain(hal_camera_default, hal_configstore)
+
+binder_call(hal_camera_default, hal_graphics_composer)
+binder_call(hal_camera_default, system_server)
+
+# For interfacing with PowerHAL
+hal_client_domain(hal_camera_default, hal_power)
+
+# For camera team debugging
+userdebug_or_eng(`
+  allow hal_camera_default camera_vendor_data_file:dir create_dir_perms;
+  allow hal_camera_default camera_vendor_data_file:file create_file_perms;
+')
+userbuild(`
+  dontaudit hal_camera_default camera_vendor_data_file:dir search;
+')

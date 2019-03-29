@@ -1,0 +1,119 @@
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+# recovery console (used in recovery init.rc for /sbin/recovery)
+
+# Date : WK14.38
+# Operation : Migration 
+# Purpose : for recovery operation 
+allow recovery misc_device:chr_file ~rename;
+allow recovery block_device:dir *;
+allow recovery block_device:blk_file ~rename;
+allow recovery system_block_device:blk_file ~rename;
+allow recovery vfat:dir *;
+allow recovery vfat:file ~{ execute entrypoint };
+#allow recovery vfat:lnk_file *;
+allow recovery misc_sd_device:chr_file ~rename;
+allow recovery userdata_block_device:blk_file ~rename;
+
+# Date : WK14.39
+# Operation : Migration 
+# Purpose : for CIP project access /custom partition 
+#allow recovery custom_file:dir *;
+#allow recovery custom_file:file ~{ execute entrypoint };
+#allow recovery custom_file:lnk_file *;
+allow recovery rootfs:dir *;
+
+# Date : WK14.41
+# Operation : Migration 
+# Purpose : Differential update
+allow recovery bootimg_device:chr_file ~rename;
+allow recovery recovery_device:chr_file ~rename;
+allow recovery logo_device:chr_file ~rename;
+allow recovery preloader_device:chr_file ~rename;
+allow recovery uboot_device:chr_file ~rename;
+allow recovery init:dir *;
+allow recovery init:file ~{ execute entrypoint execute_no_trans};
+allow recovery init:lnk_file *;
+allow recovery kernel:dir *;
+allow recovery kernel:file ~{ execute entrypoint execute_no_trans};
+allow recovery kernel:lnk_file *;
+
+
+# Date : WK14.41
+# Operation : Migration 
+# Purpose : Block full update
+allow recovery healthd:dir *;
+allow recovery healthd:file ~{ execute entrypoint execute_no_trans};
+allow recovery healthd:lnk_file *;
+dontaudit recovery self:capability sys_ptrace;
+allow recovery ueventd:dir *;
+allow recovery ueventd:file ~{ execute entrypoint execute_no_trans};
+allow recovery ueventd:lnk_file *;
+
+# Date : WK14.42
+# Operation : Migration 
+# Purpose : for sepcial factory reset
+#allow recovery system_data_file:dir *;
+#allow recovery system_data_file:fifo_file *;
+#allow recovery system_data_file:file ~{ execute entrypoint };
+#allow recovery system_data_file:lnk_file *;
+#allow recovery system_data_file:sock_file *;
+#allow recovery apk_data_file:dir *;
+###allow recovery apk_data_file:file ~{ execute entrypoint };
+#allow recovery apk_data_file:lnk_file *;
+
+userdebug_or_eng(`
+  allow recovery su:dir *;
+  allow recovery su:file ~{execute execute_no_trans entrypoint};
+  allow recovery su:lnk_file *;
+')
+
+# Date : WK14.43
+# Operation : Migration 
+# Purpose : JB to L differential OTA
+#allow recovery unlabeled:lnk_file *;
+
+# Date : WK14.45
+# Operation : SQC
+# Purpose : partition size changed
+allow recovery pmt_device:chr_file ~rename;
+allow recovery tee_part_device:chr_file ~rename;
+
+# Date : WK14.45
+# Operation : Migration 
+# Purpose : KK->L->L legacy secure OTA
+allow recovery proc_sysrq:file { write open };
+allow recovery sec_device:chr_file { read ioctl open };
+allow recovery sec_ro_device:chr_file { read open };
+allow recovery seccfg_device:chr_file { read open };
+allow recovery self:capability sys_boot;
+
+# Date : WK14.46
+# Operation : Migration 
+# Purpose : FOTA upgrade
+# allow recovery app_data_file:dir { write create add_name };
+allow recovery app_data_file:dir { read open };
+#allow recovery app_data_file:file { read write create open };
+#allow recovery mobicore_data_file:dir { write remove_name search add_name };
+#allow recovery mobicore_data_file:file { rename setattr read create write getattr unlink open };
+#allow recovery mobicore_data_file:file { relabelfrom relabelto };
+
+# Date : WK14.47
+# Operation : Migration 
+# Purpose : Root Integrity Check
+allow recovery md_ctrl:file { read getattr open };
+allow recovery mobicore_data_file:dir { read open };
+
+# Date : WK15.13
+# Operation : UT
+# Purpose : Nand device policy
+allow recovery mtd_device:dir search;
+allow recovery mtd_device:chr_file { read write open ioctl getattr };
+allow recovery self:capability sys_resource;
+
+# Date : WK15.35
+# Operation : UT
+# Purpose : eMMC data partition resize for non encrypted device
+allow recovery fsck_exec:file { execute execute_no_trans };
+allow recovery resize_exec:file { execute execute_no_trans };

@@ -1,0 +1,18 @@
+# init runs /system/bin/touchfwup.sh which runs rmi4update
+type rmi4update, domain, device_domain_deprecated;
+type rmi4update_exec, exec_type, file_type;
+
+init_daemon_domain(rmi4update)
+
+# access to /dev/hidraw0
+allow rmi4update hidraw_device:chr_file rw_file_perms;
+
+# TODO give the files being access a more specific label.
+allow rmi4update sysfs:dir search;
+allow rmi4update sysfs:file rw_file_perms;
+
+# Allow rmi4update to use file descriptor passed from touchfwup.sh
+allow rmi4update touch_fw_update:fd use;
+
+# Allow rmi4update to getattr and append to log file.
+allow rmi4update touch_fw_update_log_file:file { getattr append };

@@ -1,0 +1,86 @@
+#!/bin/bash
+
+RESULT_BUF=`echo -e ------------------------------------------------------------`
+RESULT_PASS_COUNT=0
+RESULT_FAIL_COUNT=0
+
+TOOLS_DIR="`dirname $0`"
+
+function result_log
+{
+	if [ $1 -eq 0 ]; then
+		RESULT_BUF="`printf \"%s\n%55s\tpass\" \"$RESULT_BUF\" \"$2\"`"
+		RESULT_PASS_COUNT=$(($RESULT_PASS_COUNT + 1))
+	else
+		RESULT_BUF="`printf \"%s\n%55s\tfail\" \"$RESULT_BUF\" \"$2\"`"
+		RESULT_FAIL_COUNT=$(($RESULT_FAIL_COUNT + 1))
+	fi
+}
+
+function result_print
+{
+	printf "%s" "$RESULT_BUF"
+	echo -e "\n------------------------------------------------------------"
+	printf "pass\t$RESULT_PASS_COUNT\n"
+	printf "fail\t$RESULT_FAIL_COUNT\n"
+
+	exit $RESULT_FAIL_COUNT
+}
+
+function get_build_arch
+{
+	case `uname -m` in
+	    arm*)
+	        BUILD_ARCH=ARM;;
+	    aarch64*)
+	        BUILD_ARCH=AARCH64;;
+	    *)
+	        BUILD_ARCH=other;;
+	esac
+}
+
+function set_cross_compile
+{
+	get_build_arch
+
+	echo "Target: $PLATFORM_ARCH"
+	echo "Build: $BUILD_ARCH"
+	if [ "$PLATFORM_ARCH" = "$BUILD_ARCH" ]; then
+	    TEMP_CROSS_COMPILE=
+	elif [ "$PLATFORM_ARCH" == "AARCH64" ]; then
+	    if [ X"$CROSS_COMPILE_64" != X"" ]; then
+	        TEMP_CROSS_COMPILE="$CROSS_COMPILE_64"
+	    else
+	        TEMP_CROSS_COMPILE=aarch64-linux-gnu-
+	    fi
+	elif [ "$PLATFORM_ARCH" == "ARM" ]; then
+	    if [ X"$CROSS_COMPILE_32" != X"" ]; then
+	        TEMP_CROSS_COMPILE="$CROSS_COMPILE_32"
+	    else
+	        TEMP_CROSS_COMPILE=arm-linux-gnueabihf-
+	    fi
+	else
+	    echo "Unsupported target architecture '$PLATFORM_ARCH'!" >&2
+	fi
+}
+
+function get_gcc_version
+{
+	gcc_version=$($1 -dumpversion)
+	case $gcc_version in
+		4.6*|4.7*|4.8*|4.9*)
+			echo GCC$(echo ${gcc_version} | awk -F. '{print $1$2}')
+			;;
+		*)
+			echo "Unknown toolchain version '$gcc_version'" >&2
+			echo "Attempting to build using GCC49 profile." >&2
+			echo GCC49
+			;;
+	esac
+}
+
+function get_clang_version
+{
+	clang_version=`$1 --version | head -1 | sed 's/^.*version\s*\([0-9]*\).\([0-9]*\).*/\1\2/g'`
+	echo "CLANG$clang_version"
+}

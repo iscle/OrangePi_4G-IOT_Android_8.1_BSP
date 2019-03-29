@@ -1,0 +1,99 @@
+# ==============================================
+# Policy File of /system/bin/wo_ipsec Executable File
+
+# ==============================================
+# Type Declaration
+# ==============================================
+type wo_starter_exec, exec_type, file_type, vendor_file_type;
+type wo_charon_exec, exec_type, file_type, vendor_file_type;
+type wo_ipsec_exec, exec_type, file_type, vendor_file_type;
+type wo_stroke_exec, exec_type, file_type, vendor_file_type;
+type wo_ipsec, domain;
+
+net_domain(wo_ipsec)
+
+domain_auto_trans(wo_ipsec, netutils_wrapper_exec, netutils_wrapper)
+
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+
+# Date: WK14.52
+# Operation : Feature developing for ePDG
+
+# Purpose :  access xfrm
+allow wo_ipsec proc_net:file write;
+
+# Purpose :  set property for ip address with epdg_wod
+allow wo_ipsec mtk_epdg_prop:property_service set;
+allow wo_ipsec property_socket:sock_file write;
+
+# Purpose :  send command to epdg_wod
+allow wo_ipsec wo_epdg_ipsec_socket:sock_file write;
+
+# Purpose :  create socket for IKEv2 protocol
+allow wo_ipsec node:udp_socket node_bind;
+allow wo_ipsec port:tcp_socket name_connect;
+allow wo_ipsec port:udp_socket name_bind;
+
+# Purpose :  Query DNS address
+allow wo_ipsec netd:unix_stream_socket connectto;
+allow wo_ipsec dnsproxyd_socket:sock_file write;
+
+# Purpose :   access property socket
+allow wo_ipsec init:unix_stream_socket connectto;
+
+# Purpose :  access socket of wod and property
+allow wo_ipsec wo_epdg_client:unix_stream_socket { read write connectto };
+
+# Purpose :  output to /dev/null
+allow wo_ipsec wo_epdg_client:fd use;
+
+# Purpose :  starter invoke charon
+allow wo_ipsec wo_charon_exec:file execute_no_trans;
+
+# Purpose :  charon set fwmark
+allow wo_ipsec fwmarkd_socket:sock_file write;
+
+# Purpose :  kernel ip/route operations
+allow wo_ipsec self:capability { net_admin net_bind_service dac_override kill };
+
+# Purpose :  send/receive packet to/from peer
+allow wo_ipsec self:tcp_socket { write getattr connect read getopt create };
+allow wo_ipsec self:udp_socket { write bind create read setopt };
+
+# Purpose :  kernel ip/route operations
+allow wo_ipsec self:netlink_route_socket { write nlmsg_write read bind create nlmsg_read };
+allow wo_ipsec self:netlink_xfrm_socket { write bind create read nlmsg_write nlmsg_read };
+
+# Purpose :  charon read certs
+allow wo_ipsec custom_file:dir { read open search };
+allow wo_ipsec custom_file:file { read getattr open };
+
+# Purpose :  read strongswan config file for IKEv2 Tunnel
+allow wo_ipsec epdg_apn_conf_file:dir { write read open search remove_name add_name create};
+allow wo_ipsec epdg_apn_conf_file:file { write read ioctl open getattr };
+allow wo_ipsec epdg_ipsec_conf_file:file { write read ioctl open getattr create append unlink };
+allow wo_ipsec epdg_ipsec_conf_file:dir { write read open search remove_name add_name };
+
+# Purpose : set alarm for DPD
+allow wo_ipsec self:capability2 wake_alarm;
+
+allow wo_ipsec devpts:chr_file { open read write };
+
+# Purpose :  charon/starter PID file
+allow wo_ipsec epdg_ipsec_conf_file:sock_file { write create unlink setattr };
+
+allow wo_ipsec proc_modules:file { getattr read };
+allow wo_ipsec proc_net:file { getattr open };
+allow wo_ipsec vendor_configs_file:file ioctl;
+allow wo_ipsec vendor_shell_exec:file { execute read open execute_no_trans getattr };
+allow wo_ipsec netd:unix_stream_socket connectto;
+allow wo_ipsec netd_socket:sock_file write;
+
+allow wo_ipsec system_data_file:dir getattr;
+allow wo_ipsec vendor_toolbox_exec:file { getattr execute execute_no_trans };
+allow wo_ipsec kernel:system module_request;
+
+#allow wo_ipsec shell_exec:file { execute read open execute_no_trans getattr };
+#typeattribute wo_ipsec vendor_executes_system_violators;

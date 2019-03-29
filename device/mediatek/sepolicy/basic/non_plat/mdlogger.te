@@ -1,0 +1,55 @@
+#allow mdlogger to set property
+allow mdlogger debug_mdlogger_prop:property_service set;
+allow mdlogger debug_prop:property_service set;
+
+# ccci device for internal modem
+allow mdlogger ccci_device:chr_file { rw_file_perms };
+
+# usb device ttyGSx for modem logger usb logging
+allow mdlogger ttyGS_device:chr_file { rw_file_perms};
+
+# modem logger access on /data/mdlog
+allow mdlogger mdlog_data_file:dir { create_dir_perms relabelto};
+allow mdlogger mdlog_data_file:fifo_file { create_file_perms};
+allow mdlogger mdlog_data_file:file { create_file_perms };
+allow mdlogger system_data_file:dir { create_dir_perms relabelfrom};
+
+# modem logger control port access /dev/ttyC1
+allow mdlogger mdlog_device:chr_file { rw_file_perms};
+
+
+#modem logger SD logging in factory mode
+allow mdlogger vfat:dir create_dir_perms;
+allow mdlogger vfat:file create_file_perms;
+
+#mdlogger for read /sdcard
+#allow mdlogger log_device:chr_file w_file_perms;
+allow mdlogger tmpfs:lnk_file read;
+allow mdlogger storage_file:lnk_file rw_file_perms;
+allow mdlogger mnt_user_file:dir search;
+allow mdlogger mnt_user_file:lnk_file rw_file_perms;
+allow mdlogger sdcard_type:file create_file_perms;
+allow mdlogger sdcard_type:dir { create_dir_perms };
+allow mdlogger storage_file:dir { create_dir_perms };
+allow mdlogger storage_file:file { create_file_perms };
+
+
+# Allow read to sys/kernel/ccci/* files
+allow mdlogger sysfs_ccci:dir search;
+allow mdlogger sysfs_ccci:file r_file_perms;
+
+# purpose: allow mdlogger to access storage in new version
+allow mdlogger media_rw_data_file:file  { create_file_perms };
+allow mdlogger media_rw_data_file:dir { create_dir_perms };
+
+#avc: denied { connectto } for path=006165653A72747464 scontext=u:r:mdlogger:s0
+#tcontext=u:object_r:aee_aed_socket:s0 tclass=unix_stream_socket permissive=0
+#security issue control
+allow mdlogger aee_aed:unix_stream_socket connectto;
+
+#Android O for created file in data
+
+    file_type_auto_trans(mdlogger, system_data_file, mdlog_data_file)
+    
+## purpose: avc: denied { read } for name="plat_file_contexts"
+allow emdlogger file_contexts_file:file { read getattr open};

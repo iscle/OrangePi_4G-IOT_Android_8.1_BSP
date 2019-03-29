@@ -1,0 +1,50 @@
+# Copyright (C) 2012 The Android Open Source Project
+#
+# IMPORTANT: Do not create world writable files or directories.
+# This is a common source of Android security bugs.
+#
+
+on early-init
+    write /sys/class/net/ccmni0/queues/rx-0/rps_cpus "0f"
+    write /sys/class/net/ccmni1/queues/rx-0/rps_cpus "0f"
+    write /sys/class/net/ccmni2/queues/rx-0/rps_cpus "0f"
+    setprop net.perf.rps.default 0f
+    setprop net.perf.tether.rps 0f
+    setprop net.perf.tether.cpu.core 4,4,0,0
+    setprop net.perf.tether.cpu.freq 1183000,1638000,0,0
+    setprop net.perf.internal.rps 0f
+    setprop net.perf.internal.cpu.core 4,4,0,0
+    setprop net.perf.internal.cpu.freq -1,-1,-1,-1
+
+on post-fs-data
+
+    write /proc/bootprof "post-fs-data: on modem start"
+
+# Encrypt phone function
+    setprop vold.post_fs_data_done 1
+
+#
+#  Modem related services (Begin)
+#
+
+service pppd_gprs /system/bin/pppd_dt /dev/ttyACM0 debug noauth refuse-eap usepeerdns nodetach
+    user root
+    group radio cache inet misc
+    disabled
+    oneshot
+
+#Add by T.Zh for ppp daemon
+service pppd /system/bin/pppd file /data/misc/ppp/ppp_options
+    user root
+    disabled 
+    oneshot
+
+#
+#
+#  Modem related services (End)
+#
+
+
+on property:ril.muxreport=1
+    start muxreport-daemon
+

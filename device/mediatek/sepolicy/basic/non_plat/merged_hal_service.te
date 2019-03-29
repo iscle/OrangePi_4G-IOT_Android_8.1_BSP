@@ -1,0 +1,108 @@
+# ==============================================================================
+# Type Declaration
+# ==============================================================================
+type merged_hal_service, domain;
+#type merged_hal_service, domain;
+type merged_hal_service_exec, exec_type, file_type, vendor_file_type;
+
+init_daemon_domain(merged_hal_service)
+
+hwbinder_use(merged_hal_service)
+hal_server_domain(merged_hal_service, hal_vibrator)
+hal_server_domain(merged_hal_service, hal_light)
+hal_server_domain(merged_hal_service, hal_power)
+hal_server_domain(merged_hal_service, hal_thermal)
+hal_server_domain(merged_hal_service, hal_memtrack)
+
+#adjust light brightness
+allow merged_hal_service sysfs:file write;
+
+#mtk libs_hidl_service permissions
+hal_server_domain(merged_hal_service, mtk_hal_lbs)
+vndbinder_use(merged_hal_service)
+r_dir_file(merged_hal_service, system_file)
+unix_socket_connect(merged_hal_service, agpsd, mtk_agpsd);
+allow merged_hal_service mtk_agpsd:unix_dgram_socket sendto;
+
+#mtk_gnss permissions
+hal_server_domain(merged_hal_service, hal_gnss);
+allow merged_hal_service mnld_data_file:sock_file create_file_perms;
+allow merged_hal_service mnld_data_file:sock_file rw_file_perms;
+allow merged_hal_service mnld_data_file:dir create_file_perms;
+allow merged_hal_service mnld_data_file:dir rw_dir_perms;
+allow merged_hal_service mnld:unix_dgram_socket sendto;
+
+#for nvram agent hidl
+allow merged_hal_service hwservicemanager_prop:file r_file_perms;
+allow merged_hal_service sysfs:file { read open };
+allow merged_hal_service system_data_file:lnk_file read;
+hal_server_domain(merged_hal_service, hal_nvramagent)
+# Allow a set of permissions required for a domain to be a server which provides a HAL implementation over HWBinder.
+#hal_server_domain(merged_hal_service, hal_nvramagent)
+#for nvram agent hidl access nvram file
+allow merged_hal_service nvram_agent_service:service_manager add;
+allow merged_hal_service nvram_device:blk_file rw_file_perms;
+allow merged_hal_service bootdevice_block_device:blk_file rw_file_perms;
+allow merged_hal_service nvdata_device:blk_file rw_file_perms;
+allow merged_hal_service nvram_data_file:dir create_dir_perms;
+allow merged_hal_service nvram_data_file:file create_file_perms;
+allow merged_hal_service nvram_data_file:lnk_file read;
+allow merged_hal_service nvdata_file:lnk_file read;
+allow merged_hal_service nvdata_file:dir create_dir_perms;
+allow merged_hal_service nvdata_file:file create_file_perms;
+#allow merged_hal_service system_file:file execute_no_trans;
+allow merged_hal_service als_ps_device:chr_file r_file_perms;
+allow merged_hal_service mtk-adc-cali_device:chr_file rw_file_perms;
+allow merged_hal_service gsensor_device:chr_file r_file_perms;
+allow merged_hal_service gyroscope_device:chr_file r_file_perms;
+allow merged_hal_service init:unix_stream_socket connectto;
+allow merged_hal_service property_socket:sock_file write;
+allow merged_hal_service sysfs:file write;
+allow merged_hal_service self:capability { fowner chown dac_override fsetid };
+allow merged_hal_service system_data_file:dir create_file_perms;
+allow merged_hal_service nvram_device:chr_file rw_file_perms;
+allow merged_hal_service pro_info_device:chr_file rw_file_perms;
+allow merged_hal_service block_device:dir search;
+allow merged_hal_service app_data_file:file write;
+allow merged_hal_service mtd_device:dir search;
+allow merged_hal_service mtd_device:chr_file rw_file_perms;
+
+#graphics allocator permissions
+hal_server_domain(merged_hal_service, hal_graphics_allocator)
+allow merged_hal_service gpu_device:dir search;
+allow merged_hal_service sw_sync_device:chr_file { open read write getattr ioctl };
+allow merged_hal_service debugfs_ion:dir search;
+allow merged_hal_service debugfs_tracing:file write;
+allow merged_hal_service debugfs_tracing:file open;
+
+#for ape hidl permissions
+hal_server_domain(merged_hal_service,hal_mtkcodecservice)
+allow merged_hal_service hidl_allocator_hwservice:hwservice_manager find;
+allow merged_hal_service hidl_memory_hwservice:hwservice_manager find;
+hal_client_domain(merged_hal_service, hal_allocator)
+
+#for default drm permissions
+hal_server_domain(merged_hal_service, hal_drm)
+allow merged_hal_service mediacodec:fd use;
+allow merged_hal_service { appdomain -isolated_app }:fd use;
+allow merged_hal_service debugfs_tracing:file write;
+
+#power permissions
+allow merged_hal_service proc:dir  {search getattr};
+allow merged_hal_service proc:file {getattr open read write ioctl};
+allow merged_hal_service debugfs_ged:dir search;
+allow merged_hal_service debugfs_ged:file { getattr open read write };
+allow merged_hal_service system_data_file:dir { create write add_name };
+allow merged_hal_service proc_thermal:file { write open };
+allow merged_hal_service proc_thermal:dir search;
+allow merged_hal_service sysfs:file {open write read};
+allow merged_hal_service proc_perfmgr:dir search;
+allow merged_hal_service proc_perfmgr:file { getattr open read write ioctl };
+allow merged_hal_service sdcard_type:dir create_dir_perms;
+allow merged_hal_service sdcard_type:file create_file_perms;
+allow merged_hal_service eemcs_device:chr_file rw_file_perms;
+allow merged_hal_service mnt_user_file:dir create_dir_perms;
+
+allow merged_hal_service mtk_powerhal_data_file:dir {create_dir_perms rw_dir_perms};
+allow merged_hal_service mtk_powerhal_data_file:file {create_file_perms rw_file_perms};
+allow merged_hal_service mtk_powerhal_data_file:sock_file {create_file_perms rw_file_perms};

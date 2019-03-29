@@ -1,0 +1,134 @@
+# ==============================================
+# MTK Policy Rule
+# ============
+
+# Date : WK14.34
+# Operation : Migration
+# Purpose : for L early bring up: add for nvram command in init rc files
+allow init nvram_data_file:dir create_dir_perms;
+allow init nvram_data_file:lnk_file r_file_perms;
+allow init nvdata_file:lnk_file r_file_perms;
+allow init nvdata_file:dir create_file_perms;
+
+#============= init ==============
+# Date : W14.42
+# Operation : Migration
+# Purpose : for L : add for partition (chown/chmod)
+allow init block_device:blk_file setattr;
+allow init system_block_device:blk_file setattr;
+allow init nvram_device:blk_file setattr;
+allow init seccfg_block_device:blk_file setattr;
+allow init secro_block_device:blk_file setattr;
+allow init frp_block_device:blk_file setattr;
+allow init logo_block_device:blk_file setattr;
+allow init para_block_device:blk_file setattr;
+allow init recovery_block_device:blk_file setattr;
+
+# Date : WK15.30
+# Operation : Migration
+# Purpose : format wiped partition with "formattable" and "check" flag in fstab file
+allow init protect1_block_device:blk_file rw_file_perms;
+allow init protect2_block_device:blk_file rw_file_perms;
+allow init userdata_block_device:blk_file rw_file_perms;
+allow init cache_block_device:blk_file rw_file_perms;
+allow init nvdata_device:blk_file w_file_perms;
+allow init persist_block_device:blk_file rw_file_perms;
+allow init nvcfg_block_device:blk_file rw_file_perms;
+allow init odm_block_device:blk_file rw_file_perms;
+allow init oem_block_device:blk_file rw_file_perms;
+allow init para_block_device:blk_file w_file_perms;
+
+# Date : WK15.32
+# Operation : Migration
+# Purpose : disable AT_SECURE for LD_PRELOAD
+userdebug_or_eng(`
+  allow init { domain -lmkd -crash_dump }:process noatsecure;
+')
+
+# Date : WK16.26
+# Operation : Access dynamic_debug control file
+# Purpose : For MobileLog on/off pr_debug on user/userdebug load
+allow init debugfs_dynamic_debug:file write;
+
+# Date : W16.28
+# Operation : Migration
+# Purpose : enable modules capability
+allow init self:capability sys_module;
+allow init kernel:system module_request;
+
+# Date : WK16.35
+# Operation : Migration
+# Purpose : create symbolic link from /mnt/sdcard to /sdcard
+allow init tmpfs:lnk_file create;
+
+# Date:W17.07
+# Operation : bt hal
+# Purpose : bt hal interface permission
+allow init mtk_hal_bluetooth_exec:file getattr;
+
+# Date : WK17.12
+# Purpose: Fix bootup fail
+allow init debugfs:file w_file_perms;
+
+# Date : WK17.02
+# Purpose: Fix audio hal service fail
+allow init mtk_hal_audio_exec:file getattr;
+
+# Date : W17.20
+# Purpose: Enable PRODUCT_FULL_TREBLE
+allow init vendor_block_device:lnk_file relabelto;
+
+# Date : WK17.21
+# Purpose: Fix gnss hal service fail
+allow init mtk_hal_gnss_exec:file getattr;
+
+# Fix boot up violation
+allow init debugfs_tracing_instances:file relabelfrom;
+
+# Date: W17.22
+# Operation : New Feature
+# Purpose : Add for A/B system
+allow init debugfs:file write;
+allow init kernel:system module_request;
+allow init nvdata_file:dir mounton;
+allow init oemfs:dir mounton;
+allow init protect_f_data_file:dir mounton;
+allow init protect_s_data_file:dir mounton;
+allow init nvcfg_file:dir mounton;
+allow init persist_data_file:dir mounton;
+#allow init system_file:dir setattr;
+allow init tmpfs:lnk_file create;
+
+# boot process denial clean up
+allow init debugfs_ged:file w_file_perms;
+
+
+
+# Date : WK17.39
+# Operation : able to relabel mntl block device link
+# Purpose : Correct permission for mntl
+allow init block_device:lnk_file relabelfrom;
+allow init expdb_block_device:lnk_file relabelto;
+allow init mcupmfw_block_device:lnk_file relabelto;
+allow init tee_block_device:lnk_file relabelto;
+
+# Date : WK17.43
+# Operation : able to insert fpsgo kernel module
+# Purpose : Correct permission for fpsgo
+allow init rootfs:system module_load;
+
+# Date: W17.43
+# Operation : module load
+# Purpose : insmod LKM under /vendor (connsys module KO)
+allow init vendor_file:system module_load;
+
+# Date : WK17.46
+# Operation : feature porting
+# Purpose : kernel module verification
+allow init kernel:key search;
+
+# Date : WK17.50
+# Operation : boost cpu while booting
+# Purpose : enhance boottime
+allow init proc_perfmgr:file write;
+

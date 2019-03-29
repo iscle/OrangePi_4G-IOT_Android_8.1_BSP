@@ -1,0 +1,40 @@
+# Grant access to Qualcomm MSM Interface (QMI) radio sockets
+qmux_socket(radio)
+
+allow radio uce_service:service_manager { add find };
+
+r_dir_file(radio, sysfs_msm_subsys)
+
+# Access to /vendor/framework/qti-vzw-ims-internal.jar for all
+# IMS packages running with com.android.phone sharedUID
+allow radio vendor_framework_file:dir { getattr search };
+allow radio vendor_framework_file:file { getattr open read };
+
+# TODO(b/37164021): Remove this once radio no longer communicates with ims over sockets
+typeattribute radio socket_between_core_and_vendor_violators;
+typeattribute ims socket_between_core_and_vendor_violators;
+# communicate with ims
+unix_socket_connect(radio, ims, ims)
+
+# Allow radio to talk to rild over socket
+unix_socket_connect(radio, rild, rild)
+
+# access to /dev/diag on debug builds
+userdebug_or_eng(`
+  allow radio diag_device:chr_file rw_file_perms;
+')
+userbuild(`
+  dontaudit radio diag_device:chr_file rw_file_perms;
+')
+
+# access to /dev/avtimer
+allow radio avtimer_device:chr_file rw_file_perms;
+
+allowxperm radio self:udp_socket ioctl priv_sock_ioctls;
+
+# Needed for use .so files in /vendor/lib64 needed by ims which runs as com.android.phone (radio)
+# r_dir_file(radio, vendor_file)
+allow radio vendor_file:file rx_file_perms;
+
+# read access to sys/module/diagchar/parameters/timestamp_switch
+allow radio sysfs_timestamp_switch:file r_file_perms;

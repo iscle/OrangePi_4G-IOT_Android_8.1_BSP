@@ -1,0 +1,66 @@
+# ==============================================================================
+# Policy File of /vendor/bin/ged_srv Executable File
+# ==============================================================================
+
+# ==============================================================================
+# Type Declaration
+# ==============================================================================
+type ged_srv, domain;
+
+type ged_srv_exec, exec_type, file_type;
+init_daemon_domain(ged_srv)
+
+typeattribute ged_srv coredomain;
+
+# Binder IPC
+binder_service(ged_srv)
+binder_use(ged_srv)
+binder_call(ged_srv, binderservicedomain)
+binder_call(ged_srv, surfaceflinger)
+binder_call(ged_srv, system_server)
+binder_call(ged_srv, gas_srv_service)
+binder_call(ged_srv, mtk_perf_service)
+binder_call(ged_srv, audioserver)
+binder_call(ged_srv, mtk_hal_power)
+binder_call(ged_srv, merged_hal_service)
+hwbinder_use(ged_srv)
+
+allow ged_srv gas_srv_service:service_manager {add find};
+allow ged_srv audioserver_service:service_manager find;
+allow ged_srv surfaceflinger_service:service_manager find;
+allow ged_srv input_service:service_manager find;
+allow ged_srv hwservicemanager_prop:file { read getattr open };
+allow ged_srv mtk_hal_power_hwservice:hwservice_manager find;
+
+# GpuAppSpectator
+allow ged_srv debugfs_ged:dir rw_dir_perms;
+allow ged_srv debugfs_ged:file rw_file_perms;
+
+# For property service and uevent
+allow ged_srv self:netlink_kobject_uevent_socket { bind create setopt read};
+allow ged_srv property_socket:sock_file write;
+allow ged_srv init:unix_stream_socket connectto;
+
+allow ged_srv proc_ged:file {open read write ioctl};
+
+r_dir_file(ged_srv, domain)
+r_dir_file(ged_srv, proc)
+r_dir_file(ged_srv, shell)
+r_dir_file(ged_srv, platform_app)
+r_dir_file(ged_srv, priv_app)
+r_dir_file(ged_srv, system_app)
+r_dir_file(ged_srv, untrusted_app)
+r_dir_file(ged_srv, untrusted_app_25)
+r_dir_file(ged_srv, mediaserver)
+
+allow ged_srv shell_exec:file { read execute open getattr execute_no_trans };
+allow ged_srv system_file:file execute_no_trans;
+allow ged_srv input_service:service_manager find;
+allow ged_srv proc_net:file { read getattr open };
+allow ged_srv rootfs:lnk_file getattr;
+allow audioserver ged_srv:fifo_file write;
+allow system_server ged_srv:fifo_file write;
+
+allow ged_srv self:udp_socket { create setopt write bind ioctl read };
+allow ged_srv self:capability { net_admin net_bind_service };
+allowxperm ged_srv self:udp_socket ioctl {SIOCSIFFLAGS SIOCGIFCONF SIOCIWFIRSTPRIV_08 SIOCIWFIRSTPRIV_09};

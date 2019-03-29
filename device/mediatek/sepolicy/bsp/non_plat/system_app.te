@@ -1,0 +1,153 @@
+# ==============================================
+# MTK Policy Rule
+# =================
+
+# Date : 2014/11/19
+# Operation: SQC
+# Purpose: [Settings][RenderThread][operate device file failed]
+# Package: com.android.settings
+allow system_app proc_secmem:file rw_file_perms;
+
+# Date : 2015/06/12
+# Operation: TEEI integration
+# Purpose: access for fp device and client device of TEEI
+# Package: com.microtrust.mtee
+allow system_app teei_fp_device:chr_file rw_file_perms;
+allow system_app teei_client_device:chr_file r_file_perms;
+
+# Date: 2014/08/01
+# Operation: BaseUT
+# Purpose: [Settings][Settings used list views need velocity tracker access touch dev]
+# Package: com.android.settings
+allow system_app touch_device:chr_file { read ioctl open };
+
+# Date: 2014/08/29
+# Stage: BaseUT
+# Purpose: [BatteryWarning][View update graphics]
+# Package Name: com.mediatek.batterywarning
+allow system_app guiext-server:binder { transfer call };
+
+# Date : 2014/11/17
+# Operation: SQC
+# Purpose : [Settings][Battery module will call batterystats API, and it will read /sys/kernel/debug/wakeup_sources]
+# Package: com.android.settings
+#allow system_app debugfs:file r_file_perms;
+
+# Date: 2014/08/04
+# Stage: BaseUT
+# Purpose: [MTKThermalManager][View thermal zones and coolers, and change thermal policies]
+# Package Name: com.mediatek.mtkthermalmanager
+allow system_app apk_private_data_file:dir getattr;
+allow system_app asec_image_file:dir getattr;
+allow system_app dontpanic_data_file:dir getattr;
+allow system_app drm_data_file:dir getattr;
+allow system_app install_data_file:file getattr;
+allow system_app lost_found_data_file:dir getattr;
+allow system_app media_data_file:dir getattr;
+allow system_app property_data_file:dir getattr;
+allow system_app shell_data_file:dir search;
+allow system_app thermal_manager_exec:file { read execute open execute_no_trans getattr};
+allow system_app proc_thermal:dir search;
+allow system_app proc_thermal:file { read getattr open write };
+allow system_app proc_mtkcooler:dir search;
+allow system_app proc_mtkcooler:file { read getattr open write };
+allow system_app proc_mtktz:dir search;
+allow system_app proc_mtktz:file  { read getattr open write };
+allow system_app proc_slogger:file { read getattr open write };
+
+# Date: 2015/07/24
+# Stage: Migration
+# Purpose: [MTKThermalManager][View thermal zones and coolers, and change thermal policies]
+# Package Name: com.mediatek.mtkthermalmanager
+allow system_app thermal_manager_data_file:file { open getattr read write create};
+allow system_app thermal_manager_data_file:file { open setattr lock };
+allow system_app thermal_manager_data_file:dir { search getattr open read write setattr add_name };
+
+# Date: 2016/04/07
+# Stage: Migration
+# Purpose: [BtLogger] btTool log reduction detect
+# Package Name: com.mediatek.bluetooth.dtt
+# allow system_app logmuch_prop:property_service set;
+
+
+# Date : WK17.23
+# Stage: Migration, SQC
+# Purpose: Allow to use HAL PQ
+hal_client_domain(system_app, hal_pq)
+
+# Date : WK17.29
+# Operation : Migration
+# Purpose : for device bring up, not to block early SQC
+allow system_app debugfs_ion:dir search;
+
+# Date:W17.29
+# Operation : presence hal developing
+# Purpose : Allow to use HAL presence
+hal_client_domain(system_app, hal_presence)
+
+# Date : WK17.31
+# Operation : Migration
+# Purpose : Carrier express service on BSP
+allow system_app mtk_carrierexpress_service:service_manager add;
+set_prop(system_app, usp_prop)
+set_prop(system_app, mtk_volte_prop)
+set_prop(system_app, mtk_wfc_prop)
+set_prop(system_app, mtk_vt_prop)
+set_prop(system_app, usp_srv_prop)
+set_prop(system_app, radio_prop)
+set_prop(system_app, cdma_prop)
+
+# Date:W17.31
+# Operation : rcs hal developing
+# Purpose : Allow to use HAL rcs
+hal_client_domain(system_app, hal_rcs)
+
+# For test apk to execute monkey script, keep in vendor
+allow system_app system_data_file:file {open execute execute_no_trans};
+
+# Date : WK17.29
+# Operation : SQC
+# Purpose : allow SystemUpdate to access ota_package file
+allow system_app ota_package_file:dir { read open write create remove_name search rename add_name getattr };
+allow system_app ota_package_file:file { read write create open rename getattr unlink };
+
+# Date : WK17.30
+# Operation : SQC
+# Purpose : allow SystemUpdate to access Update engine
+allow system_app update_engine:binder { call transfer };
+
+# Date : W17.36
+# Operation : SQC
+# Purpose : allow MOTA app to write perist.update_finished, persist_update_started
+allow system_app mtk_update_prop:property_service set;
+
+# Date : WK17.41
+# Stage: Migration, IT
+# Purpose: allow PermissionControl use mtk_hal_netdagent_hwservice
+hal_client_domain(system_app,mtk_hal_netdagent)
+
+# Date: WK17.41
+# Operation: SQC
+# Purpose: [sysoper][sysoper will create folder /cache/recovery]
+# Package: com.mediatek.systemupdate.sysoper
+allow system_app cache_file:dir { write search create add_name remove_name };
+allow system_app cache_file:file { read write create open getattr unlink };
+
+# Date: 2015/12/02
+# Stage: IT
+# Purpose: [Presence][Presence will start ril.volte.stack.uceua service in native layer]
+# Package Name: com.mediatek.presence:core
+allow system_app ril_volte_stack_uceua_prop:property_service set;
+get_prop(system_app, persist_uce_prop)
+
+# Date: 2015/04/08
+# Stage: IT
+# Purpose: [RCS][RCS will start ril.volte.stack.rcsuaproxy service in native layer]
+# Package Name: com.orangelasb.rcs:core
+allow system_app ril_volte_stack_rcsuaproxy_prop:property_service set;
+
+# Date: 2016/07/05
+# Operation: SQC
+# Purpose: Add permission to access recovery folder and write command files to recovery for System Update
+allow system_app cache_recovery_file:dir { write search add_name remove_name };
+allow system_app cache_recovery_file:file { read write create open getattr unlink };

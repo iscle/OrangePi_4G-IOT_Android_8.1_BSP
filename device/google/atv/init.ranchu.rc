@@ -1,0 +1,110 @@
+on fs
+    mount_all /fstab.ranchu
+
+on early-init
+    mount debugfs debugfs /sys/kernel/debug mode=755
+
+on init
+
+    symlink /dev/goldfish_pipe /dev/android_pipe
+    symlink /dev/goldfish_pipe /dev/qemu_pipe
+
+on post-fs-data
+    setprop vold.post_fs_data_done 1
+
+on boot
+    setprop net.eth0.gw 10.0.2.2
+    setprop net.eth0.dns1 10.0.2.3
+    setprop net.gprs.local-ip 10.0.2.15
+    setprop ro.radio.use-ppp no
+    setprop ro.build.product generic
+    setprop ro.product.device generic
+    setprop ro.hardware.audio.primary goldfish
+    setprop ro.setupwizard.mode EMULATOR
+
+# fake some battery state
+    setprop status.battery.state Slow
+    setprop status.battery.level 5
+    setprop status.battery.level_raw  50
+    setprop status.battery.level_scale 9
+
+# set up the GPU caching
+    setprop ro.hwui.texture_cache_size 72
+    setprop ro.hwui.layer_cache_size 48
+    setprop ro.hwui.r_buffer_cache_size 8
+    setprop ro.hwui.path_cache_size 32
+    setprop ro.hwui.gradient_cache_size 1
+    setprop ro.hwui.drop_shadow_cache_size 6
+    setprop ro.hwui.texture_cache_flushrate 0.4
+    setprop ro.hwui.text_small_cache_width 1024
+    setprop ro.hwui.text_small_cache_height 1024
+    setprop ro.hwui.text_large_cache_width 2048
+    setprop ro.hwui.text_large_cache_height 1024
+
+# disable some daemons the emulator doesn't want
+    stop dund
+    stop akmd
+
+# start essential services
+# These were written for the classic emulator, but are applicable to ranchu
+    start goldfish-logcat
+    start goldfish-setup
+
+
+# enable Google-specific location features,
+# like NetworkLocationProvider and LocationCollector
+    setprop ro.com.google.locationfeatures 1
+
+#emulator is not much useful before boot complete
+#start it later
+on property:sys.boot_completed=1
+    setprop sys.usb.config adb
+    start adbd
+    start goldfish-logcat
+
+# allow goldfish-setup to take wake lock
+    chown root system /sys/power/wake_lock
+    chown root system /sys/power/wake_unlock
+
+service ranchu-setup /vendor/bin/init.ranchu-core.sh
+    class core
+    user root
+    group root
+    oneshot
+
+service ranchu-net /vendor/bin/init.ranchu-net.sh
+    class late_start
+    user root
+    group root wakelock
+    oneshot
+
+# The qemu-props program is used to set various system
+# properties on boot. It must be run early during the boot
+# process to avoid race conditions with other daemons that
+# might read them (e.g. surface flinger), so define it in
+# class 'core'
+#
+service qemu-props /vendor/bin/qemu-props
+    class core
+    user root
+    group root
+    oneshot
+
+on property:qemu.logcat=start
+    start goldfish-logcat
+
+# -Q is a special logcat option that forces the
+# program to check wether it runs on the emulator
+# if it does, it redirects its output to the device
+# named by the androidboot.console kernel option
+# if not, is simply exits immediately
+# logd user added to prevent logcat from logging content.
+# log group added to support access to read logs socket.
+service goldfish-logcat /system/bin/logcat -Q
+    user logd
+    group log
+    oneshot
+
+service fingerprintd /system/bin/fingerprintd
+    class late_start
+    user system

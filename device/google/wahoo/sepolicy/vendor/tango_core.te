@@ -1,0 +1,19 @@
+type tango_core, domain, coredomain;
+
+app_domain(tango_core)
+#from system/sepolicy/private/untrusted_app.te
+untrusted_app_domain(tango_core)
+net_domain(tango_core)
+bluetooth_domain(tango_core)
+
+#from system/sepolicy/private/untrusted_app.te
+allow tango_core system_server:udp_socket { connect getattr read recvfrom sendto write };
+
+#calibration files
+allow tango_core persist_file:dir search;
+allow tango_core persist_sensors_file:dir search;
+allow tango_core persist_sensors_file:file { getattr open read };
+
+# Allow access to necessary vendor libraries to execute Hexagon code
+allow tango_core hexagon_halide_file:file { execute read open getattr };
+allow tango_core qdsp_device:chr_file { ioctl open read };

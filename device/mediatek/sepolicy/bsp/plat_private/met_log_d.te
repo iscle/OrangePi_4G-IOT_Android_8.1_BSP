@@ -1,0 +1,33 @@
+# ==============================================
+# Policy File of /system/bin/met_log_d Executable File
+
+# ==============================================
+# Type Declaration
+# ==============================================
+type met_log_d_exec , exec_type, file_type;
+# New added for move to /system
+typeattribute met_log_d coredomain;
+
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+init_daemon_domain(met_log_d)
+
+# for root permission
+allow met_log_d self:capability {setuid setgid dac_override fowner chown fsetid};
+
+# for
+# 1. debugfs_tracing: about ftrace
+# 2. debugfs_fb: about /sys/kernel/debug/dispsys
+# 3. sysfs_met: about /sys/class/misc/met/
+# 4. tmpfs: /mnt
+# 5. proc_net: /proc/sys/net/ipv4/
+allow met_log_d {debugfs_tracing tmpfs proc_net}:dir {rw_dir_perms setattr};
+allow met_log_d {debugfs_tracing tmpfs proc_net}:file {rw_file_perms setattr};
+
+# Run /system/bin/met_log_d
+allow met_log_d system_file:file rx_file_perms;
+
+# getprop & setprop permission
+get_prop(met_log_d, debug_prop)
+set_prop(met_log_d, debug_prop)

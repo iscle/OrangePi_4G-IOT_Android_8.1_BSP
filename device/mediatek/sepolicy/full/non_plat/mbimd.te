@@ -1,0 +1,39 @@
+# ==============================================
+# Policy File of /vendor/bin/mbimd Executable File 
+
+# ==============================================
+# Type Declaration
+# ==============================================
+type mbimd, domain;
+type mbimd_exec, exec_type, file_type, vendor_file_type;
+
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+# Date : WK15.45
+# Operation : create 
+# Purpose : Start mbimd
+init_daemon_domain(mbimd)
+
+
+#============= mbimd ==============
+
+# Date : WK15.44 2015/11/2
+# Operation : IT
+# Purpose : connect to rild-mbim socket
+allow mbimd init:unix_stream_socket connectto;
+allow mbimd mtkrild:unix_stream_socket connectto;
+allow mbimd property_socket:sock_file write;
+allow mbimd socket_device:sock_file write;
+
+# Date : WK15.44 2015/11/2
+# Operation : IT
+# Purpose : set system property:net.mbim.state
+allow mbimd system_prop:property_service set;
+
+# Date : WK15.44 2015/11/2
+# Operation : IT
+# Purpose : operate /dev/mbim device
+allow mbimd self:capability2 block_suspend;
+allow mbimd sysfs_wake_lock:file { write open };
+allow mbimd mbim_device:chr_file { read write open ioctl };

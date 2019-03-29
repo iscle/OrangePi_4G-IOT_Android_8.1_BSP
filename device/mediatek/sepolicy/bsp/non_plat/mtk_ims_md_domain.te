@@ -1,0 +1,109 @@
+typealias hal_wifi_supplicant_default alias wpa;
+
+# IMCB
+allow mtkimsmddomain ccci_device:chr_file { read write open };
+allow mtkimsmddomain fwmarkd_socket:sock_file write;
+allow mtkimsmddomain sysfs_ccci:dir search;
+allow mtkimsmddomain sysfs_ccci:file r_file_perms;
+allow mtkimsmddomain self:capability2 wake_alarm;
+allow mtkimsmddomain ril_mux_report_case_prop:property_service set;
+allow mtkimsmddomain radio_prop:property_service set;
+allow mtkimsmddomain self:capability { setuid setgid chown};
+
+# Date : 2017/02/17
+# Purpose : ptty
+allow mtkimsmddomain device:dir rw_dir_perms;
+allow mtkimsmddomain device:lnk_file { create unlink };
+allow mtkimsmddomain devpts:chr_file { rw_file_perms setattr };
+
+# UA
+allow mtkimsmddomain volte_vt_socket:sock_file write;
+#allow mtkimsmddomain debuggerd_socket:unix_stream_socket connectto;
+
+#no needed, ALPS03321218
+#allow mtkimsmddomain ims_ipsec_data_file:file { rename write ioctl create unlink open append };
+#allow mtkimsmddomain system_data_file:dir { write remove_name add_name };
+#allow mtkimsmddomain system_file:file execute_no_trans;
+allow mtkimsmddomain self:capability net_raw;
+
+# IMS to NETD
+#allow mtkimsmddomain netd:unix_stream_socket connectto;
+#allow mtkimsmddomain netd_socket:sock_file write;
+#allow netd mtkimsmddomain:fd use;
+#allow netd mtkimsmddomain:tcp_socket { read write setopt getopt };
+#allow netd mtkimsmddomain:udp_socket {read write setopt getopt};
+
+# IMSM
+allow mtkimsmddomain rild_imsm_socket:sock_file write;
+allow mtkimsmddomain mtkrild:unix_stream_socket connectto;
+allow mtkimsmddomain rild_mal_socket:sock_file write;
+allow mtkimsmddomain rild_mal_at_socket:sock_file write;
+allow mtkimsmddomain rild_mal_md2_socket:sock_file write;
+allow mtkimsmddomain rild_mal_at_md2_socket:sock_file write;
+unix_socket_send(mtkimsmddomain, wpa, wpa)
+allow mtkimsmddomain wpa_socket:dir rw_dir_perms;
+allow mtkimsmddomain wpa_socket:sock_file create_file_perms;
+allow mtkimsmddomain wifi_data_file:dir create_dir_perms;
+allow mtkimsmddomain wifi_data_file:file create_file_perms;
+allow mtkimsmddomain wpa:unix_dgram_socket sendto;
+
+# ePDG
+allow mtkimsmddomain dnsproxyd_socket:sock_file write;
+allow mtkimsmddomain ccci_device:chr_file { read write ioctl open };
+allow mtkimsmddomain devpts:chr_file { read write open };
+
+# MAL
+# allow mtkimsmddomain radio_tmpfs:file write;
+allow mtkimsmddomain tmpfs:lnk_file read;
+# VzW APN table
+allow mtkimsmddomain system_data_file:dir { read write open add_name remove_name };
+allow mtkimsmddomain mal_data_file:dir create_dir_perms;
+allow mtkimsmddomain mal_data_file:file create_file_perms;
+allow mtkimsmddomain system_prop:property_service set;
+
+# ATCP
+allow mtkimsmddomain devpts:chr_file { open read write ioctl };
+allow mtkimsmddomain devpts:chr_file { getattr setattr };
+
+# Netlink
+allow mtkimsmddomain self:netlink_route_socket { bind create write nlmsg_read };
+
+# RILD connection
+allow mtkimsmddomain mtkrild:unix_stream_socket connectto;
+allow mtkimsmddomain rild_mal_socket:sock_file write;
+allow mtkimsmddomain rild_mal_at_socket:sock_file write;
+allow mtkimsmddomain rild_mal_md2_socket:sock_file write;
+allow mtkimsmddomain rild_mal_at_md2_socket:sock_file write;
+
+#for RAN access wpa
+unix_socket_send(mtkimsmddomain, wpa, wpa)
+allow mtkimsmddomain wpa_socket:dir rw_dir_perms;
+allow mtkimsmddomain wpa_socket:sock_file create_file_perms;
+allow mtkimsmddomain wifi_data_file:dir create_dir_perms;
+allow mtkimsmddomain wifi_data_file:file create_file_perms;
+allow mtkimsmddomain wpa:unix_dgram_socket sendto;
+
+
+allow wpa mtkimsmddomain:unix_stream_socket connectto;
+allow wpa mtkimsmddomain:unix_dgram_socket sendto;
+allow wpa init:unix_dgram_socket sendto;
+allow wpa mtkimsmddomain:unix_stream_socket connectto;
+allow wpa mtkimsmddomain:unix_dgram_socket sendto;
+
+# Date:W18.03
+# Operation : volte modify logmuch.detect.delay
+# Purpose : volte modify logmuch.detect.delay from 4000 lines/second to 8000 lines/second in 3min
+# logmuch.detect.delay to 1 to elevate log level
+set_prop(mtkimsmddomain, logmuch_prop)
+
+#RILPROXY
+allow mtkimsmddomain rild:unix_stream_socket connectto;
+
+set_prop(mtkimsmddomain, mtk_operator_id_prop)
+
+# Set permission for MAL
+vndbinder_use(mtkimsmddomain)
+
+# ViLTE
+allow vtservice_hidl mtkimsmddomain:udp_socket { setopt getattr read write };
+allow mtkimsmddomain vtservice_hidl:unix_stream_socket connectto;

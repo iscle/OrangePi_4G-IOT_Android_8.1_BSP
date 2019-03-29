@@ -1,0 +1,31 @@
+# Grant access to Qualcomm MSM Interface (QMI) radio sockets to RILD
+qmux_socket(rild)
+
+binder_call(rild, per_mgr)
+binder_call(rild, audioserver)
+binder_call(rild, mediaserver)
+binder_use(rild)
+
+allow rild sysfs_msm_subsys:dir r_dir_perms;
+allow rild sysfs_msm_subsys:lnk_file read;
+
+allow rild sysfs_wifi_sar:file { getattr w_file_perms};
+
+allow rild sysfs_lcd_mipi:file rw_file_perms;
+
+allow rild time:unix_stream_socket connectto;
+
+allow rild audioserver_service:service_manager find;
+allow rild mediaserver_service:service_manager find;
+allow rild per_mgr_service:service_manager find;
+
+# rild needs 'lock' for /vendor/qcril.db
+allow rild vendor_file:file { lock };
+
+# allow rild to use qualcomm's socket ipc ioctls
+allow rild self:socket ioctl;
+allowxperm rild self:socket ioctl msm_sock_ipc_ioctls;
+
+# allow rild to access radio data file
+allow rild radio_data_file:dir rw_dir_perms;
+allow rild radio_data_file:file create_file_perms;

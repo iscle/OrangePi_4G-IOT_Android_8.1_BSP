@@ -1,0 +1,31 @@
+# Policy for /system/bin/cnss-daemon
+type cnss-daemon, domain;
+type cnss-daemon_exec, exec_type, vendor_file_type, file_type;
+
+allow cnss-daemon self:capability {
+    net_bind_service
+};
+
+init_daemon_domain(cnss-daemon)
+
+allow cnss-daemon self:capability { setgid setuid };
+
+# whitelist socket ioctl commands
+allow cnss-daemon self:netlink_socket create_socket_perms_no_ioctl;
+allow cnss-daemon self:socket create_socket_perms;
+allowxperm cnss-daemon self:socket ioctl msm_sock_ipc_ioctls;
+
+allow cnss-daemon proc_net:file rw_file_perms;
+allow cnss-daemon sysfs:dir r_dir_perms;
+allow cnss-daemon sysfs_wifi:dir search;
+allow cnss-daemon sysfs_wifi:file rw_file_perms;
+allow cnss-daemon sysfs_pcie:dir search;
+allow cnss-daemon sysfs_pcie:file w_file_perms;
+allow cnss-daemon sysfs_soc:dir search;
+allow cnss-daemon sysfs_soc:file r_file_perms;
+r_dir_file(cnss-daemon, sysfs_msm_subsys)
+
+# access to /dev/diag on debug builds
+userdebug_or_eng(`
+  allow cnss-daemon diag_device:chr_file rw_file_perms;
+')

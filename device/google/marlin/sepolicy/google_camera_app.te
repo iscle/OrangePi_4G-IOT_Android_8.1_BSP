@@ -1,0 +1,40 @@
+type google_camera_app, domain, coredomain;
+
+app_domain(google_camera_app)
+net_domain(google_camera_app)
+
+# Access standard system services
+allow google_camera_app app_api_service:service_manager find;
+allow google_camera_app audioserver_service:service_manager find;
+allow google_camera_app cameraserver_service:service_manager find;
+allow google_camera_app drmserver_service:service_manager find;
+allow google_camera_app mediacodec_service:service_manager find;
+allow google_camera_app mediaextractor_service:service_manager find;
+allow google_camera_app mediaserver_service:service_manager find;
+allow google_camera_app mediametrics_service:service_manager find;
+allow google_camera_app nfc_service:service_manager find;
+allow google_camera_app surfaceflinger_service:service_manager find;
+
+allow google_camera_app hidl_token_hwservice:hwservice_manager find;
+
+# Execute libraries from RenderScript cache
+allow google_camera_app app_data_file:file { rx_file_perms };
+
+# Read memory info
+allow google_camera_app proc_meminfo:file r_file_perms;
+
+# gdbserver / stack traces
+allow google_camera_app self:process ptrace;
+
+# Access to Hexagon DSP kernel device
+allow google_camera_app adsprpcd_device:chr_file { r_file_perms };
+
+# Read and write system app data files passed over Binder.
+# Motivating case was /data/data/com.android.settings/cache/*.jpg for
+# cropping or taking user photos.
+allow google_camera_app system_app_data_file:file { read write getattr };
+
+# Read / execute vendor code from /vendor/lib[64]/dsp for HVX for Pixel Camera
+# TODO: b/37258244, This MUST be a specific exception instead of opening up
+# /vendor for the application. The policy build MUST also catch the violations
+r_dir_file(google_camera_app, vendor_file)

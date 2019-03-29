@@ -1,0 +1,41 @@
+# =============================================================================
+# MTK Policy Rule
+# =============================================================================
+
+# New added for move to /system
+type thermalindicator_exec, exec_type, file_type;
+typeattribute thermalindicator coredomain;
+
+init_daemon_domain(thermalindicator)
+
+allow thermalindicator gpu_device:chr_file { getattr read write ioctl open };
+allow thermalindicator surfaceflinger:fd use;
+allow thermalindicator surfaceflinger:binder call;
+allow thermalindicator surfaceflinger:binder transfer;
+allow thermalindicator surfaceflinger_service:service_manager find;
+allow thermalindicator servicemanager:binder call;
+allow thermalindicator property_socket:sock_file write;
+allow thermalindicator init:unix_stream_socket connectto;
+
+allow surfaceflinger thermalindicator:fd use;
+allow surfaceflinger thermalindicator:binder call;
+allow surfaceflinger thermalindicator:binder transfer;
+allow surfaceflinger thermalindicator:file { getattr read open };
+allow surfaceflinger thermalindicator:dir search;
+
+allow servicemanager thermalindicator:dir search;
+allow servicemanager thermalindicator:file { read open };
+allow servicemanager thermalindicator:process { getattr };
+
+# For /proc/[pid]/cmdline accessing
+typeattribute thermalindicator mlstrustedsubject;
+
+allow thermalindicator proc:dir           {search getattr};
+allow thermalindicator proc:file          read;
+allow thermalindicator shell:dir          search;
+allow thermalindicator platform_app:dir   search;
+allow thermalindicator platform_app:file  {open read getattr};
+allow thermalindicator untrusted_app:dir  search;
+allow thermalindicator untrusted_app:file {open read getattr};
+allow thermalindicator mediaserver:dir    search;
+allow thermalindicator mediaserver:file   {open read getattr};

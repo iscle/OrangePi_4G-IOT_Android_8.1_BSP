@@ -1,0 +1,3 @@
+ifdef MTK_PROJECTCONFIG_OVERRIDE
+$(foreach x,$(MTK_PROJECTCONFIG_OVERRIDE),$(eval $(x)))
+endif

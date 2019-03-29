@@ -1,0 +1,61 @@
+Running Android on hikey board:
+
+* Compiling userspace:
+Pull AOSP source:
+$ repo init -u https://android.googlesource.com/platform/manifest -b master & repo sync -j24
+
+Download and extract HDMI binaries:
+$ wget https://dl.google.com/dl/android/aosp/linaro-hikey-20170523-4b9ebaff.tgz
+$ tar xzf linaro-hikey-20170523-4b9ebaff.tgz
+$ ./extract-linaro-hikey.sh
+
+Install mcopy utility:
+$ apt-get install mtools
+
+Build:
+$ . ./build/envsetup.sh
+$ lunch hikey-userdebug
+$ make -j32
+
+Note: For 4 GB eMMC part use:
+$ make -j32 TARGET_USERDATAIMAGE_4GB=true
+
+* Installing initial fastboot and ptable:
+Select special bootloader mode by linking J15 1-2 and 3-4 pins
+Connect USB to PC to get ttyUSB device (ex: ttyUSB1)
+Power the board
+$ cd device/linaro/hikey/installer/hikey
+$ ./flash-all.sh /dev/ttyUSB1 [4g]
+Remove link 3-4 and power the board
+
+* Flashing images:
+Enter fastboot mode by linking J15 1-2 and 5-6 pins
+$ fastboot flash boot out/target/product/hikey/boot.img
+$ fastboot flash system out/target/product/hikey/system.img
+$ fastboot flash cache out/target/product/hikey/cache.img
+$ fastboot flash userdata out/target/product/hikey/userdata.img
+Remove jumper 5-6 and power the board
+
+* Building kernel
+$ git clone https://android.googlesource.com/kernel/hikey-linaro
+$ cd hikey-linaro
+$ git checkout -b android-hikey-linaro-4.9 origin/android-hikey-linaro-4.9
+$ make ARCH=arm64 hikey_defconfig
+$ make ARCH=arm64 CROSS_COMPILE=aarch64-linux-android- -j24
+Output: arch/arm64/boot/Image & arch/arm64/boot/dts/hisilicon/hi6220-hikey.dtb
+   copy Image-dtb and hi6220-hikey.dtb to hikey-kernel directory to files
+        Image-dtb-4.9 and hi6220-hikey.dtb-4.9
+
+* Setting monitor resolution
+Add to BOARD_KERNEL_CMDLINE in BoardConfig.mk or
+if you are setting TARGET_BOOTIMAGE_USE_FAT=true edit
+device/linaro/hikey/bootloader/EFI/BOOT/grub.cfg
+Set video= (for example for 24” monitor): video=HDMI-A-1:1280x800@60
+
+* Kernel serial output (uart3):
+J2 (LS Expansion): 1 - Gnd, 11 - Rx, 13 - Tx
+
+External links:
+Board: https://www.96boards.org/products/ce/hikey/
+Howto: https://github.com/96boards/documentation/wiki/LatestSnapshots
+Schematics: https://www.96boards.org/wp-content/uploads/2015/02/96Boards-Hikey-Rev-A1.pdf

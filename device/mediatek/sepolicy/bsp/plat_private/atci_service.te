@@ -1,0 +1,50 @@
+# ==============================================
+# Policy File of /system/bin/atci_service Executable File
+# ==============================================
+
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+
+type atci_service_exec, exec_type, file_type;
+typeattribute atci_service coredomain;
+
+init_daemon_domain(atci_service)
+binder_service(atci_service)
+
+# Date : 2014/09/09 (or WK14.37)
+# Operation : Migration
+# Purpose : allow Binder IPC
+# atci_pq_cmd.cpp will call aal for runtime tuning
+binder_use(atci_service)
+binder_call(atci_service, aal)
+
+# Date : 2015/09/04
+# Operation : Migration
+# Purpose : to find AAL service
+allow atci_service aal_service:service_manager { find };
+
+allow atci_service block_device:dir search;
+file_type_auto_trans(atci_service, system_data_file, atci_data_file)
+allow atci_service atci_data_file:dir write;
+allow atci_service atci_data_file:dir add_name;
+allow atci_service atci_data_file:sock_file create;
+allow atci_service atci_data_file:sock_file setattr;
+allow atci_service self:capability chown;
+allow atci_service atci_data_file:dir remove_name;
+allow atci_service atci_data_file:sock_file unlink;
+allow atci_service system_server:unix_dgram_socket sendto;
+allow atci_service atci_data_file:sock_file write;
+
+# Date : WK17.07
+# Purpose : Allow to execute 'svc power' shell command
+allow atci_service power_service:service_manager find;
+allow atci_service shell_exec:file getattr;
+allow atci_service zygote_exec:file { read getattr open execute execute_no_trans };
+allow atci_service self:process execmem;
+allow atci_service gpu_device:dir search;
+
+# Date : WK17.34
+# Purpose : CCT
+allow atci_service hal_allocator_default:binder call;
+allow atci_service hal_allocator_default:fd use;

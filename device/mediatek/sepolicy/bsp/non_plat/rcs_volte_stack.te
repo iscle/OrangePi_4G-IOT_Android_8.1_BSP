@@ -1,0 +1,51 @@
+# ==============================================
+# Policy File of /vendor/bin/rcs_volte_stack Executable File
+
+# ==============================================
+# Type Declaration
+# ==============================================
+type rcs_volte_stack, domain, mtkimsapdomain;
+type rcs_volte_stack_exec, exec_type, file_type, vendor_file_type;
+
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+#permissive rcs_volte_stack;
+init_daemon_domain(rcs_volte_stack)
+file_type_auto_trans(rcs_volte_stack, system_data_file, ims_ipsec_data_file)
+
+# Date : WK14.42
+# Operation : Migration
+# Purpose : for VoLTE L early bring up and first call
+# allow rcs_volte_stack shell_exec:file { read execute open execute_no_trans };
+allow rcs_volte_stack vendor_shell_exec:file { read execute open execute_no_trans };
+allow rcs_volte_stack socket_device:sock_file write;
+allow rcs_volte_stack self:key_socket { write read create setopt };
+allow rcs_volte_stack self:capability net_admin;
+allow rcs_volte_stack self:capability { setuid setgid };
+allow rcs_volte_stack self:tcp_socket { bind create setopt listen };
+allow rcs_volte_stack self:udp_socket { write bind read setopt };
+allow rcs_volte_stack self:udp_socket create;
+allow rcs_volte_stack self:tcp_socket shutdown;
+allow rcs_volte_stack self:udp_socket shutdown;
+allow rcs_volte_stack node:tcp_socket node_bind;
+allow rcs_volte_stack node:udp_socket node_bind;
+allow rcs_volte_stack port:tcp_socket name_bind;
+allow rcs_volte_stack port:udp_socket name_bind;
+allow rcs_volte_stack fwmarkd_socket:sock_file write;
+allow rcs_volte_stack system_data_file:dir { write remove_name add_name };
+allow rcs_volte_stack ims_ipsec_data_file:file { rename write ioctl create unlink open append };
+allow rcs_volte_stack system_file:file execute_no_trans;
+
+# Date : 2015/01/07
+# Operation : Migration
+# Purpose : for VoLTE L Pre-FT test, Pre-FT error show we need add tcp rule
+allow rcs_volte_stack self:tcp_socket accept;
+allow rcs_volte_stack self:tcp_socket read;
+allow rcs_volte_stack self:tcp_socket write;
+allow rcs_volte_stack self:tcp_socket getattr;
+allow rcs_volte_stack self:tcp_socket connect;
+allow rcs_volte_stack port:tcp_socket name_connect;
+
+allow rcs_volte_stack rcs_volte_stack_socket:sock_file write;
+allow rcs_volte_stack self:netlink_xfrm_socket { write bind create read nlmsg_write nlmsg_read };

@@ -1,0 +1,33 @@
+# Set a new domain
+type mtk_hal_keyinstall, domain;
+
+# Set mtk_hal_keyinstall as server domain of hal_keymaster
+hal_server_domain(mtk_hal_keyinstall, hal_keymaster)
+
+# Set exec file type
+type mtk_hal_keyinstall_exec, exec_type, file_type, vendor_file_type;
+
+# Setup for domain transition
+init_daemon_domain(mtk_hal_keyinstall)
+
+# Associate mtk_hal_keyinstall_hwservice with all server domain
+add_hwservice(hal_keymaster_server, mtk_hal_keyinstall_hwservice)
+
+# Give permission for hal_keymaster_client to find mtk_hal_keyinstall_hwservice via hwservice_manager
+allow hal_keymaster_client mtk_hal_keyinstall_hwservice:hwservice_manager find;
+
+# Allow mtk_hal_keyinstall to communicate with mobicore
+allow mtk_hal_keyinstall mobicore:unix_stream_socket connectto;
+allow mtk_hal_keyinstall mobicore_data_file:dir search;
+allow mtk_hal_keyinstall mobicore_data_file:file { read getattr open };
+allow mtk_hal_keyinstall mobicore_user_device:chr_file { read write ioctl open };
+
+# Allow mtk_hal_keyinstall to access /persist
+allow mtk_hal_keyinstall persist_data_file:dir { search write add_name };
+allow mtk_hal_keyinstall persist_data_file:file { read write create open setattr getattr };
+
+# Allow mtk_hal_keyinstall to access /data/key_provisioning
+allow mtk_hal_keyinstall key_install_data_file:dir { write add_name remove_name search };
+allow mtk_hal_keyinstall key_install_data_file:file { write create setattr read getattr unlink open append };
+
+allow mtk_hal_keyinstall debugfs_tracing:file { write };

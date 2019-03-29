@@ -1,0 +1,400 @@
+# ==============================================================================
+# Policy File of /system/bin/cameraserver Executable File
+
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+
+# -----------------------------------
+# Android O
+# Purpose: Allow cameraserver to perform binder IPC to servers and callbacks.
+# -----------------------------------
+
+# call camerahalserver
+binder_call(cameraserver, mtk_hal_camera)
+
+# call the graphics allocator hal
+binder_call(cameraserver, hal_graphics_allocator)
+
+
+# -----------------------------------
+# Android O
+# Purpose: Debugging
+# -----------------------------------
+# Purpose: adb shell dumpsys media.camera --unreachable
+allow cameraserver self:process { ptrace };
+
+
+# -----------------------------------
+# Purpose: property access
+# -----------------------------------
+allow cameraserver mtkcam_prop:file { open read getattr };
+
+
+# Date : WK14.31
+# Operation : Migration
+# Purpose : camera devices access.
+allow cameraserver camera_isp_device:chr_file rw_file_perms;
+allow cameraserver ccu_device:chr_file rw_file_perms;
+allow cameraserver vpu_device:chr_file rw_file_perms;
+allow cameraserver kd_camera_hw_device:chr_file rw_file_perms;
+allow cameraserver seninf_device:chr_file rw_file_perms;
+allow cameraserver self:capability { setuid ipc_lock sys_nice };
+allow cameraserver sysfs_wake_lock:file rw_file_perms;
+allow cameraserver MTK_SMI_device:chr_file r_file_perms;
+allow cameraserver camera_pipemgr_device:chr_file r_file_perms;
+allow cameraserver kd_camera_flashlight_device:chr_file rw_file_perms;
+allow cameraserver lens_device:chr_file rw_file_perms;
+allow cameraserver nvdata_file:dir { write search add_name };
+allow cameraserver nvdata_file:file { read write getattr setattr open create };
+allow cameraserver nvram_data_file:dir search;
+allow cameraserver nvram_data_file:dir w_dir_perms;
+allow cameraserver nvram_data_file:file create_file_perms;
+allow cameraserver nvram_data_file:lnk_file read;
+allow cameraserver nvdata_file:lnk_file read;
+allow cameraserver proc:file { read ioctl open };
+allow cameraserver proc_meminfo:file { read getattr open };
+allow cameraserver sysfs:file { read write open };
+
+# Date : WK14.34
+# Operation : Migration
+# Purpose : nvram access (dumchar case for nand and legacy chip)
+allow cameraserver nvram_device:chr_file rw_file_perms;
+### TBD, neverallowxperm on line 177 of system/sepolicy/public/domain.te
+#allow cameraserver self:netlink_kobject_uevent_socket { create setopt bind };
+allow cameraserver self:capability { net_admin };
+
+# Date : WK14.34
+# Operation : Migration
+# Purpose : VP/VR
+allow cameraserver devmap_device:chr_file { ioctl };
+
+# Date : WK14.34
+# Operation : Migration
+# Purpose : Smartcard Service
+### TBD, neverallowxperm on line 177 of system/sepolicy/public/domain.te
+#allow cameraserver self:netlink_kobject_uevent_socket read;
+allow cameraserver system_data_file:file open;
+
+# Date : WK14.36
+# Operation : Migration
+# Purpose : media server and bt process communication for A2DP data.and other control flow
+allow cameraserver bluetooth:unix_dgram_socket sendto;
+allow cameraserver bt_a2dp_stream_socket:sock_file write;
+allow cameraserver bt_int_adp_socket:sock_file write;
+
+# Date : WK14.37
+# Operation : Migration
+# Purpose : camera ioctl
+allow cameraserver camera_sysram_device:chr_file r_file_perms;
+
+# Date : WK14.36
+# Operation : Migration
+# Purpose : VDEC/VENC device node
+allow cameraserver Vcodec_device:chr_file rw_file_perms;
+
+# Date : WK14.36
+# Operation : Migration
+# Purpose : MMProfile debug
+# userdebug_or_eng(`
+#allow cameraserver debugfs:file {read ioctl getattr search};
+# ')
+
+# Date : WK14.36
+# Operation : Migration
+# Purpose :  access nvram, otp, ccci cdoec devices.
+allow cameraserver MtkCodecService:binder call;
+allow cameraserver ccci_device:chr_file rw_file_perms;
+allow cameraserver eemcs_device:chr_file rw_file_perms;
+allow cameraserver devmap_device:chr_file r_file_perms;
+allow cameraserver ebc_device:chr_file rw_file_perms;
+allow cameraserver nvram_device:blk_file rw_file_perms;
+allow cameraserver bootdevice_block_device:blk_file rw_file_perms;
+
+# Date : WK14.36
+# Operation : Migration
+# Purpose : for SW codec VP/VR
+#allow cameraserver mtk_device:chr_file { read write ioctl open };
+allow cameraserver mtk_sched_device:chr_file rw_file_perms;
+
+# Date : WK14.38
+# Operation : Migration
+# Purpose : NVRam access
+allow cameraserver block_device:dir { write search };
+
+# Date : WK14.38
+# Operation : Migration
+# Purpose : FM driver access
+allow cameraserver fm_device:chr_file rw_file_perms;
+
+# Data : WK14.38
+# Operation : Migration
+# Purpose : for VP/VR
+allow cameraserver block_device:dir search;
+allow cameraserver FM50AF_device:chr_file rw_file_perms;
+allow cameraserver AD5820AF_device:chr_file rw_file_perms;
+allow cameraserver DW9714AF_device:chr_file rw_file_perms;
+allow cameraserver DW9814AF_device:chr_file rw_file_perms;
+allow cameraserver AK7345AF_device:chr_file rw_file_perms;
+allow cameraserver DW9714A_device:chr_file rw_file_perms;
+allow cameraserver LC898122AF_device:chr_file rw_file_perms;
+allow cameraserver LC898212AF_device:chr_file rw_file_perms;
+allow cameraserver BU6429AF_device:chr_file rw_file_perms;
+allow cameraserver DW9718AF_device:chr_file rw_file_perms;
+allow cameraserver BU64745GWZAF_device:chr_file rw_file_perms;
+allow cameraserver MAINAF_device:chr_file rw_file_perms;
+allow cameraserver MAIN2AF_device:chr_file rw_file_perms;
+allow cameraserver SUBAF_device:chr_file rw_file_perms;
+
+
+# Data : WK14.38
+# Operation : Migration
+# Purpose : for boot animation.
+allow cameraserver bootanim:binder { transfer call };
+
+allow cameraserver mtkbootanimation:binder { transfer call };
+# Data : WK14.38
+# Operation : Migration
+# Purpose : dump for debug
+allow cameraserver sdcard_type:file append;
+
+# Date : WK14.39
+# Operation : Migration
+# Purpose : FDVT Driver
+allow cameraserver camera_fdvt_device:chr_file rw_file_perms;
+
+# Date : WK14.39
+# Operation : Migration
+# Purpose : APE PLAYBACK
+binder_call(cameraserver,MtkCodecService)
+
+# Data : WK14.39
+# Operation : Migration
+# Purpose : HW encrypt SW codec
+allow cameraserver mediaserver_data_file:file create_file_perms;
+allow cameraserver mediaserver_data_file:dir create_dir_perms;
+allow cameraserver sec_device:chr_file r_file_perms;
+
+# Date : WK14.40
+# Operation : Migration
+# Purpose : HDMI driver access
+allow cameraserver graphics_device:chr_file rw_file_perms;
+
+# Date : WK14.40
+# Operation : Migration
+# Purpose : Smartpa
+allow cameraserver smartpa_device:chr_file rw_file_perms;
+
+# Date : WK14.40
+# Operation : Migration
+# Purpose : mtk_jpeg
+allow cameraserver mtk_jpeg_device:chr_file r_file_perms;
+
+# Date : WK14.41
+# Operation : Migration
+# Purpose : WFD HID Driver
+allow cameraserver uhid_device:chr_file rw_file_perms;
+
+# Date : WK14.41
+# Operation : Migration
+# Purpose : Camera EEPROM Calibration
+allow cameraserver CAM_CAL_DRV_device:chr_file rw_file_perms;
+allow cameraserver CAM_CAL_DRV1_device:chr_file rw_file_perms;
+allow cameraserver CAM_CAL_DRV2_device:chr_file rw_file_perms;
+
+# Date : WK14.43
+# Operation : Migration
+# Purpose : VOW
+allow cameraserver vow_device:chr_file rw_file_perms;
+
+# Date: WK14.44
+# Operation : Migration
+# Purpose : EVDO
+allow cameraserver rpc_socket:sock_file write;
+allow cameraserver ttySDIO_device:chr_file rw_file_perms;
+
+# Data: WK14.44
+# Operation : Migration
+# Purpose : VP
+allow cameraserver surfaceflinger:file getattr;
+
+# Data: WK14.44
+# Operation : Migration
+# Purpose : for low SD card latency issue
+allow cameraserver sysfs_lowmemorykiller:file { read open };
+
+# Data: WK14.45
+# Operation : Migration
+# Purpose : for change thermal policy when needed
+allow cameraserver proc_mtkcooler:dir search;
+allow cameraserver proc_mtktz:dir search;
+allow cameraserver proc_thermal:dir search;
+allow cameraserver thermal_manager_data_file:file create_file_perms;
+allow cameraserver thermal_manager_data_file:dir { rw_dir_perms setattr };
+
+# Date : WK14.46
+# Operation : Migration
+# Purpose : for MTK Emulator HW GPU
+allow cameraserver qemu_pipe_device:chr_file rw_file_perms;
+
+# Date : WK14.46
+# Operation : Migration
+# Purpose : for camera init
+allow cameraserver system_server:unix_stream_socket { read write };
+
+# Data : WK14.46
+# Operation : Migration
+# Purpose : for SMS app
+allow cameraserver radio_data_file:dir search;
+allow cameraserver radio_data_file:file open;
+
+# Data : WK14.47
+# Operation : Launch camcorder from MMS
+# Purpose : Camcorder
+allow cameraserver radio_data_file:file open;
+
+# Data : WK14.47
+# Operation : CTS
+# Purpose : cts search strange app
+allow cameraserver untrusted_app:dir search;
+
+# Date : WK15.03
+# Operation : Migration
+# Purpose : offloadservice
+allow cameraserver offloadservice_device:chr_file rw_file_perms;
+
+# Date : WK15.32
+# Operation : Pre-sanity
+# Purpose : 3A algorithm need to access sensor service
+allow cameraserver sensorservice_service:service_manager find;
+
+# Date : WK15.34
+# Operation : Migration
+# Purpose: for camera middleware dump image buffer to sdcard & audio frameworks dump
+allow cameraserver system_data_file:dir write;
+allow cameraserver storage_file:lnk_file {read write};
+allow cameraserver mnt_user_file:dir {write read search};
+allow cameraserver mnt_user_file:lnk_file {read write};
+
+# Date : WK15.35
+# Operation : Migration
+# Purpose: Allow cameraserver to read binder from surfaceflinger
+allow cameraserver surfaceflinger:fifo_file {read write};
+
+
+# Date : WK15.45
+# Purpose : camera read/write /nvcfg/camera data
+allow cameraserver nvcfg_file:dir create_dir_perms;
+allow cameraserver nvcfg_file:file create_file_perms;
+
+
+# Date : WK15.46
+# Operation : Migration
+# Purpose : DPE Driver
+allow cameraserver camera_dpe_device:chr_file rw_file_perms;
+
+# Date : WK15.46
+# Operation : Migration
+# Purpose : TSF Driver
+allow cameraserver camera_tsf_device:chr_file rw_file_perms;
+
+# Date : WK16.20
+# Operation : Migration
+# Purpose: research root dir "/"
+allow cameraserver tmpfs:dir search;
+
+# Date : WK16.21
+# Operation : Migration
+# Purpose : EGL file access
+allow cameraserver system_file:dir { read open };
+allow cameraserver gpu_device:chr_file { read open write getattr ioctl };
+allow cameraserver gpu_device:dir search;
+
+# Date : WK16.30
+# Operation : Migration
+# Purpose :  Use file_type_auto_trans to specify label to avoid violated(never allow)
+allow cameraserver property_socket:sock_file write;
+allow cameraserver proc:file getattr;
+allow cameraserver shell_exec:file { execute read getattr open};
+domain_auto_trans(cameraserver, thermal_manager_exec, thermal_manager)
+allow cameraserver thermal_manager_exec:file { read getattr open execute};
+allow cameraserver init:unix_stream_socket connectto;
+
+# Date : WK16.32
+# Operation : Migration
+# Purpose : RSC Driver
+allow cameraserver camera_rsc_device:chr_file rw_file_perms;
+
+# Date : WK16.33
+# Purpose: Allow to access ged for gralloc_extra functions
+allow cameraserver proc_ged:file {open read write ioctl getattr};
+
+# Date : WK16.33
+# Operation : Migration
+# Purpose : GEPF Driver
+allow cameraserver camera_gepf_device:chr_file rw_file_perms;
+
+# Date : WK16.35
+# Operation : Migration
+# Purpose : Update camera flashlight driver device file
+allow cameraserver flashlight_device:chr_file rw_file_perms;
+
+# Data : WK16.42
+# Operator: Whitney bring up
+# Purpose: call surfaceflinger due to powervr
+allow cameraserver surfaceflinger:fifo_file rw_file_perms;
+
+# Date : WK16.43
+# Operation : Migration
+# Purpose : WPE Driver
+allow cameraserver camera_wpe_device:chr_file rw_file_perms;
+
+# Date : WK16.49
+# Operation : label aee_aed sockets
+# Purpose : Engineering mode need access for aee commmand
+userdebug_or_eng(`
+allow cameraserver aee_aed:unix_stream_socket connectto;
+')
+
+# Purpose: Allow to access debugfs_ion dir.
+#allow cameraserver debugfs_ion:dir search;
+allow cameraserver system_data_file:lnk_file read;
+
+# Date : WK17.19
+# Operation : Migration
+# Purpose : OWE Driver
+allow cameraserver camera_owe_device:chr_file rw_file_perms;
+
+# Date : WK17.25
+# Operation : Migration
+allow cameraserver debugfs_tracing:file { write open };
+allow cameraserver nvram_data_file:dir { add_name write create};
+allow cameraserver nvram_data_file:file { write getattr setattr read create open };
+allow cameraserver debugfs_ion:dir search;
+
+# Date : WK17.30
+# Operation : O Migration
+# Purpose: Allow to access cmdq driver
+allow cameraserver mtk_cmdq_device:chr_file { read ioctl open };
+
+# Date : WK17.28
+# Operation : MT6757 SQC
+# Purpose : Change thermal config
+allow cameraserver mtk_thermal_config_prop:file { getattr open read };
+allow cameraserver mtk_thermal_config_prop:property_service set;
+
+# Date : WK17.44
+# Operation : Migration
+# Purpose : DIP Driver
+allow cameraserver camera_dip_device:chr_file rw_file_perms;
+
+# Date : WK17.44
+# Operation : Migration
+# Purpose : MFB Driver
+allow cameraserver camera_mfb_device:chr_file rw_file_perms;
+
+# Date : WK17.49
+# Operation : MT6771 SQC
+# Purpose: Allow permgr access
+allow cameraserver proc_perfmgr:dir {read search};
+allow cameraserver proc_perfmgr:file {open read ioctl};

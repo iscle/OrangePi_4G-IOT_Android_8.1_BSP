@@ -1,0 +1,266 @@
+# ==============================================
+# Policy File of /system/bin/vtservice Executable File
+
+
+# ==============================================
+# Type Declaration
+#
+# "coredomain" mean in system partition
+# "mtkimsapdomain" is for IMS repo phase 3, mean all permiton for IMCB/UA
+# ==============================================
+
+type vtservice_exec , exec_type, file_type;
+type vtservice ,domain;
+typeattribute vtservice coredomain;
+
+type vtservice_hidl_exec , exec_type, file_type, vendor_file_type;
+type vtservice_hidl ,domain, mtkimsapdomain;
+
+# ==============================================
+# Android Policy Rule
+# ==============================================
+
+# ==============================================
+# NSA Policy Rule
+# ==============================================
+
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+
+init_daemon_domain(vtservice)
+binder_use(vtservice)
+binder_call(vtservice, mediaserver)
+binder_service(vtservice)
+
+init_daemon_domain(vtservice_hidl)
+
+# Date : 2017/08/14
+# Operation : VT development
+# Purpose : Add vtservice to support video telephony functionality
+#           3G VT/ViLTE both use this service which will also communication with IMCB/Rild
+allow vtservice self:capability dac_override;
+allow vtservice soc_vt_svc_socket:sock_file write;
+allow vtservice soc_vt_tcv_socket:sock_file write;
+allow vtservice rild_oem_socket:sock_file write;
+allow vtservice platform_app:binder call;
+allow vtservice system_server:binder call;
+allow vtservice sdcard_type:dir write;
+allow vtservice sdcard_type:dir add_name;
+allow vtservice sdcard_type:dir create;
+allow vtservice sdcard_type:file create;
+allow vtservice sdcard_type:file getattr;
+allow vtservice surfaceflinger:fd use;
+allow vtservice tmpfs:lnk_file read;
+allow vtservice radio:binder call;
+
+# Date : WK15.33
+# Purpose : Add vtservice to support video telephony functionality
+#           3G VT/ViLTE both use this service which will also communication with IMCB/Rild
+allow vtservice vtservice_service:service_manager add;
+allow vtservice sdcard_type:dir search;
+allow vtservice sdcard_type:file { read write open };
+allow vtservice radio_service:service_manager find;
+allow vtservice mediaserver_service:service_manager find;
+allow vtservice power_service:service_manager find;
+allow vtservice batterystats_service:service_manager find;
+
+allow vtservice_hidl vtservice_service:service_manager add;
+unix_socket_connect(vtservice_hidl, rild_oem, mtkrild)
+allow vtservice_hidl mtkrild:unix_stream_socket connectto;
+
+# Date : 2015/08/13
+# Purpose : for access ccci device
+allow vtservice ccci_device:chr_file { read write open ioctl };
+
+# Purpose : VDEC/VENC device node
+allow vtservice Vcodec_device:chr_file { read write ioctl open };
+
+# Date: 2015/09/22
+# Purpose: for unix domain socket access /dev/socket/volte_vt
+allow vtservice_hidl MTK_SMI_device:chr_file { read write ioctl open };
+allow vtservice_hidl sysfs:file write;
+allow vtservice_hidl fwmarkd_socket:sock_file write;
+allow vtservice_hidl netd:unix_stream_socket connectto;
+allow vtservice_hidl untrusted_app:binder call;
+allow vtservice_hidl proc:file open;
+
+# Date: 2016/06/27
+# This part is for both 3G VT/ViLTE
+# Purpose: add in N migration for access audioflinger etc.
+allow vtservice audioserver_service:service_manager find;
+allow vtservice mnt_user_file:dir search;
+allow vtservice property_socket:sock_file write;
+allow vtservice surfaceflinger:binder call;
+allow vtservice system_data_file:dir write;
+
+# Date: 2016/06/30
+# This part is for both 3G VT/ViLTE
+# Purpose: add in N migration for access SDcard etc.
+allow vtservice audioserver:binder call;
+allow vtservice init:unix_stream_socket connectto;
+allow vtservice mnt_user_file:lnk_file read;
+allow vtservice system_data_file:dir add_name;
+
+# Date: 2016/07/01
+# This part is for both 3G VT/ViLTE
+# Purpose: add in N migration for write SDcard etc.
+allow vtservice media_rw_data_file:dir { write search create add_name };
+allow vtservice media_rw_data_file:file { write create open };
+
+# Date: 2016/07/26
+# Purpose: add for cleanup thread's AF_UNIX socket
+allow vtservice proc_ged:file { read open ioctl };
+allow vtservice system_data_file:dir remove_name;
+
+# Date: 2016/08/11
+# Purpose: add more for AF_UNIX socket using
+allow vtservice system_data_file:dir { open read create };
+allow vtservice system_data_file:sock_file { create open read write unlink };
+
+# ==============================================
+# For socket path between vt_service and volte_ua
+# ==============================================
+allow vtservice_hidl self:udp_socket { create bind connect read write setopt getattr getopt shutdown };
+allow vtservice_hidl node:udp_socket { node_bind };
+
+#============= vtservice ==============
+#for debug dump data
+#=====================================
+allow vtservice storage_file:lnk_file read;
+allow vtservice devmap_device:chr_file read;
+
+allow vtservice devmap_device:chr_file open;
+allow vtservice devmap_device:chr_file ioctl;
+
+#============= vtservice ==============
+#for using surfaceflinger
+#=====================================
+allow vtservice surfaceflinger_service:service_manager find;
+
+#============= vtservice ==============
+#for using camera
+#=====================================
+allow vtservice cameraserver_service:service_manager find;
+allow vtservice cameraserver:binder call;
+allow vtservice cameraserver:fd use;
+
+#============= vtservice ==============
+#Change VTS uid to media
+#=====================================
+allow vtservice mediacodec_service:service_manager find;
+allow vtservice mediacodec:binder call;
+allow vtservice qtaguid_device:chr_file r_file_perms;
+allow vtservice qtaguid_proc:file rw_file_perms;
+allow vtservice priv_app:binder call;
+
+#============= vtservice ==============
+# For loopback mode
+#=====================================
+allow vtservice self:capability net_admin;
+
+#============= vtservice ==============
+# For GED Service
+#=====================================
+allow vtservice debugfs_ged:dir search;
+allow vtservice debugfs_ged:file { write open };
+
+#============= vtservice ==============
+# For vendro GPU
+#=====================================
+allow vtservice gpu_device:dir search;
+allow vtservice dri_device:chr_file { open read write ioctl getattr};
+allow vtservice gpu_device:chr_file { open read write ioctl getattr};
+
+#============= vtservice ==============
+#allow vtservice_hidl mtkfusionrild:unix_stream_socket connectto;
+
+# Date : WK17.23
+# Stage: O Migration, SQC
+# Purpose: Allow to use HAL PQ
+hal_client_domain(vtservice, hal_pq)
+
+# Date : WK17.23
+# Stage: O Migration, SQC
+# Purpose: Allow to use shared memory for HAL PQ
+hal_client_domain(vtservice, hal_allocator)
+
+# Date : WK17.28
+# Stage: O Migration, SQC
+# Purpose: Allow vtservice add service
+allow vtservice vtservice_service:service_manager add;
+
+#============= vtservice ==============
+# 2017/07/
+# HiDL porting
+#=====================================
+allow vtservice hwservicemanager:binder call;
+allow vtservice hwservicemanager_prop:file { getattr open read }; 
+allow vtservice debugfs_tracing:file write;
+allow vtservice system_file:dir read;
+allow vtservice system_file:dir open; 
+allow vtservice debugfs_tracing:file open;
+
+# give permission for hal client
+allow vtservice mtk_hal_videotelephony_hwservice :hwservice_manager find;
+
+# Permission to use hwbinder functionality for communication: 
+#    1.	add_hwservice(server_domain, service_name)
+add_hwservice(vtservice_hidl, mtk_hal_videotelephony_hwservice)
+#    2. also permission to access to /dev/hwbinder
+hwbinder_use(vtservice_hidl)
+#    3. For binder transaction. HwBinder IPC from clients into server, and callbacks
+binder_call(vtservice, vtservice_hidl)
+binder_call(vtservice_hidl, vtservice)
+
+allow vtservice_hidl hwservicemanager_prop:file open;
+allow vtservice_hidl hwservicemanager_prop:file read;
+allow vtservice_hidl hwservicemanager_prop:file getattr;
+
+allow vtservice_hidl debugfs_tracing:file open;
+allow vtservice_hidl debugfs_tracing:file write;
+allow vtservice_hidl system_file:dir read;
+allow vtservice_hidl system_file:dir open;
+allow vtservice_hidl rild:unix_stream_socket connectto;
+
+net_domain(vtservice_hidl)
+
+# for codec acces dev/ion
+allow aee_aedv vtservice_exec:file read;
+allow vtservice ion_device:chr_file { open read };
+
+# for MA socket rebind
+allow vtservice hal_omx_hwservice:hwservice_manager find;
+allow vtservice mediametrics_service:service_manager find;
+allow vtservice mtk_em_video_log_acodec_prop:file read;
+allow vtservice mtk_em_video_log_sf_postbuffer_prop:file r_file_perms;
+allow vtservice mediametrics:binder call;
+
+allow vtservice self:udp_socket { bind create read write connect getattr setopt};
+allow vtservice node:udp_socket node_bind;
+allow vtservice mtk_em_video_log_acodec_prop:file r_file_perms;
+
+allow vtservice debugfs_ion:dir search;
+allow vtservice fwmarkd_socket:sock_file write;
+allow vtservice hal_graphics_allocator_default:binder call;
+allow vtservice hal_graphics_allocator_default:fd use;
+allow vtservice hal_graphics_allocator_hwservice:hwservice_manager find;
+allow vtservice hal_graphics_mapper_hwservice:hwservice_manager find;
+allow vtservice netd:unix_stream_socket connectto;
+allow vtservice proc:file { ioctl open read };
+allow vtservice ion_device:chr_file ioctl;
+allow vtservice MTK_SMI_device:chr_file { read write ioctl open };
+allow vtservice mtk_em_video_venc_h264_prop:file read;
+allow vtservice proc:file getattr;
+allow vtservice sysfs:file rw_file_perms;
+allow vtservice mtk_cmdq_device:chr_file { read ioctl open };
+allow vtservice_hidl proc:file read;
+allow vtservice mtk_em_video_venc_h264_prop:file r_file_perms;
+allow vtservice merged_hal_service:fd use;
+allow vtservice merged_hal_service:binder call;
+
+# Date : WK17.43
+# Operation : Migration
+# Purpose : DISP access
+allow vtservice graphics_device:chr_file { ioctl open read };
+allow vtservice graphics_device:dir search;

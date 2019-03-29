@@ -1,0 +1,33 @@
+# Policy for /vendor/bin/wcnss_filter
+type wcnss_filter, domain;
+type wcnss_filter_exec, exec_type, vendor_file_type, file_type;
+
+init_daemon_domain(wcnss_filter)
+
+# talk to /dev/ttyHS0
+allow wcnss_filter hci_attach_dev:chr_file rw_file_perms;
+
+set_prop(wcnss_filter, wc_prop)
+
+# write to proc/sysrq-trigger
+allow wcnss_filter proc_sysrq:file w_file_perms;
+
+# access to /dev/diag on debug builds
+userdebug_or_eng(`
+  allow wcnss_filter diag_device:chr_file rw_file_perms;
+  allow wcnss_filter sysfs_timestamp_switch:file r_file_perms;
+  r_dir_file(wcnss_filter, sysfs_diag)
+  allow wcnss_filter ramdump_vendor_data_file:dir w_dir_perms;
+  allow wcnss_filter ramdump_vendor_data_file:file { create w_file_perms };
+  r_dir_file(wcnss_filter, debugfs_ipc)
+  set_prop(wcnss_filter, ssr_prop)
+')
+userbuild(`
+  dontaudit wcnss_filter diag_device:chr_file rw_file_perms;
+')
+
+# Allow reading Bluetooth-related system properties
+get_prop(wcnss_filter, bluetooth_prop)
+
+# allow wcnss to set threads to RT priority
+allow wcnss_filter self:capability sys_nice;

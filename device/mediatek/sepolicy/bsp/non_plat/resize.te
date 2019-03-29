@@ -1,0 +1,40 @@
+# ==============================================
+# Policy File of /vendor/bin/resize_xxx Executable File
+
+# ==============================================
+# Type Declaration
+# ==============================================
+type resize, domain;
+type resize_exec, exec_type, file_type, vendor_file_type;
+
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+
+# Date : WK15.30
+# Operation : Migration
+# Purpose : resize fs(ext4) partition, only run once.
+init_daemon_domain(resize)
+
+allow resize resize_exec:file execute_no_trans;
+
+# Inherit and use pty created by android_fork_execvp_ext().
+allow resize devpts:chr_file { read write open getattr ioctl };
+
+allow resize kmsg_device:chr_file { write open };
+
+allow resize userdata_block_device:blk_file rw_file_perms;
+
+allow resize block_device:dir search;
+
+allow resize resize:capability sys_admin;
+
+allow resize labeledfs:filesystem unmount;
+
+allow resize property_socket:sock_file write;
+
+allow resize init:unix_stream_socket connectto;
+
+allow resize system_prop:property_service set;
+
+allow resize system_file:file execute_no_trans;

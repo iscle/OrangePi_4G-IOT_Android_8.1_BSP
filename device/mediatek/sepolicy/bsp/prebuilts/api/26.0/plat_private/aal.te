@@ -1,0 +1,58 @@
+# ==============================================
+# Policy File of /system/binaal Executable File
+
+# ==============================================
+# Type Declaration
+# ==============================================
+
+type aal_exec , exec_type, file_type;
+type aal ,domain;
+
+# ==============================================
+# Android Policy Rule
+# ==============================================
+
+# ==============================================
+# NSA Policy Rule
+# ==============================================
+
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+
+# permissive aal;
+init_daemon_domain(aal)
+# unconfined_domain(aal)
+
+# Date : 2014/09/09 (or WK14.37)
+# Operation : Migration
+# Purpose : allow Binder IPC
+binder_use(aal)
+binder_call(aal, binderservicedomain)
+binder_service(aal)
+
+# Date : WK14.41
+# Operation : Migration
+# Purpose : All enforing mode
+allow aal graphics_device:chr_file { read open ioctl };
+allow aal graphics_device:dir search;
+allow aal aal_service:service_manager add;
+
+# Date : WK15.37
+# Operation : Migration
+# Purpose : Allow permission check
+allow aal permission_service:service_manager { find };
+
+# Date : WK16.20
+# New added for move to /system
+typeattribute aal coredomain;
+
+# Date : WK17.26
+# Operation : Migration
+# Purpose : Allow permission to get AmbientLux from SensorManager
+#denied  { find } for service=sensorservice pid=441 uid=1000 scontext=u:r:aal:s0
+#tcontext=u:object_r:sensorservice_service:s0 tclass=service_manager
+allow aal sensorservice_service:service_manager { find };
+#denied { read write } for path="socket:[25560]" dev="sockfs" ino=25560 scontext=u:r:aal:s0
+#tcontext=u:r:system_server:s0 tclass=unix_stream_socket permissive=0
+allow aal system_server:unix_stream_socket { read write };

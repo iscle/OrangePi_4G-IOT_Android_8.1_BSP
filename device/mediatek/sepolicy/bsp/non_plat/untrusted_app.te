@@ -1,0 +1,56 @@
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+
+# TODO:: Security Issue
+# Date : W1452
+# Operation : WVL1 Modular DRM IT
+# Purpose : Allow svp client alloc sec mem
+allow untrusted_app proc_secmem:file { read ioctl open };
+
+# Date : WK15.42
+# Operation : TEEI Migration
+# Purpose : allow teei tester APK to use teei_client_device
+userdebug_or_eng(`
+  allow untrusted_app teei_client_device:chr_file write;
+')
+
+# Date : 2014/09/04
+# Stage: BaseUT
+# Purpose :[Launcher2][View update graphics]
+# Package Name: com.android.launcher2
+allow untrusted_app guiext-server:binder { transfer call };
+
+# Date : 2016/07/12
+# Operation : SQC
+# Purpose : allow untrusted_app access ntfs device
+allow untrusted_app fuseblk:dir search;
+allow untrusted_app fuseblk:file read;
+allow untrusted_app fuseblk:file rw_file_perms;
+
+# Date : 2016/7/22
+# Operation: SQC
+# Purpose : Allow untrusted_app access through sdcardfs and fuse. Note: Android is planned
+# to run untrusted_app in sandbox, and may limit more FS operations of untrusted_app in the future.
+allow untrusted_app {fuse sdcardfs}:dir create_dir_perms;
+allow untrusted_app {fuse sdcardfs}:file create_file_perms;
+allow untrusted_app vfat:dir  {reparent rename rmdir setattr rw_dir_perms};
+allow untrusted_app vfat:file {rename setattr rw_file_perms};
+
+# Date : WK16.35
+# Operation : untrusted_app support direct-coredump abort message
+# Purpose :
+# avc: denied { write } for name="aee_interim" dev="dm-0" ino=8236
+# scontext=u:r:untrusted_app:s0:c512,c768 tcontext=u:object_r:coredump_file:s0
+# tclass=dir permissive=0
+userdebug_or_eng(`
+  allow untrusted_app coredump_file:dir { write };
+')
+
+# Date : 2016/7/22
+# Operation: Migration
+# Purpose : Move from tk sepolicy for ViLTE
+allow untrusted_app vtservice:dir search;
+allow untrusted_app vtservice:file { read getattr open };
+allow untrusted_app mediaserver:dir search;
+allow untrusted_app mediaserver:file read;

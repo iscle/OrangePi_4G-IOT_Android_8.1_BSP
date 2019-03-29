@@ -1,0 +1,1270 @@
+on early-init
+    write /sys/module/musb_hdrc/parameters/kernel_init_done 1
+
+on post-fs
+    setprop sys.usb.vid "0x0E8D"
+    mkdir /dev/usb-ffs 0770 shell shell
+    mkdir /dev/usb-ffs/adb 0770 shell shell
+    mkdir /config/usb_gadget/g1 0770 shell shell
+    write /config/usb_gadget/g1/idVendor ${sys.usb.vid}
+    write /config/usb_gadget/g1/bcdDevice 0x0223
+    write /config/usb_gadget/g1/bcdUSB 0x0200
+    mkdir /config/usb_gadget/g1/strings/0x409 0770
+    write /config/usb_gadget/g1/strings/0x409/serialnumber ${ro.serialno}
+    write /config/usb_gadget/g1/strings/0x409/manufacturer ${ro.product.manufacturer}
+    write /config/usb_gadget/g1/strings/0x409/product ${ro.product.model}
+    mkdir /config/usb_gadget/g1/functions/accessory.gs2
+    mkdir /config/usb_gadget/g1/functions/audio_source.gs3
+    mkdir /config/usb_gadget/g1/functions/ffs.adb
+    mkdir /config/usb_gadget/g1/functions/mtp.gs0
+    write /config/usb_gadget/g1/functions/mtp.gs0/os_desc/interface.MTP/compatible_id "MTP"
+    mkdir /config/usb_gadget/g1/functions/ptp.gs1
+    mkdir /config/usb_gadget/g1/functions/rndis.gs4
+    mkdir /config/usb_gadget/g1/functions/midi.gs5
+    mkdir /config/usb_gadget/g1/functions/acm.gs0
+    mkdir /config/usb_gadget/g1/functions/acm.gs1
+    mkdir /config/usb_gadget/g1/functions/acm.gs2
+    mkdir /config/usb_gadget/g1/functions/acm.gs3
+    mkdir /config/usb_gadget/g1/functions/mass_storage.usb0
+    mkdir /config/usb_gadget/g1/functions/hid.gs0
+    mkdir /config/usb_gadget/g1/functions/via_modem.gs0
+    mkdir /config/usb_gadget/g1/functions/via_ets.gs0
+    mkdir /config/usb_gadget/g1/functions/via_atc.gs0
+    mkdir /config/usb_gadget/g1/configs/b.1 0770 shell shell
+    mkdir /config/usb_gadget/g1/configs/b.1/strings/0x409 0770 shell shell
+    write /config/usb_gadget/g1/os_desc/b_vendor_code 0x1
+    write /config/usb_gadget/g1/os_desc/qw_sign "MSFT100"
+    write /config/usb_gadget/g1/configs/b.1/MaxPower 500
+    symlink /config/usb_gadget/g1/configs/b.1 /config/usb_gadget/g1/os_desc/b.1
+    mount functionfs adb /dev/usb-ffs/adb uid=2000,gid=2000
+
+on boot
+    setprop sys.usb.configfs 1
+    setprop sys.usb.controller "musb-hdrc"
+    setprop sys.usb.acm_cnt 0
+    setprop sys.usb.acm_port0 ""
+    setprop sys.usb.acm_port1 ""
+    setprop sys.usb.temp ""
+    setprop sys.usb.acm_enable 0
+    setprop sys.usb.clear boot
+    write /sys/class/android_usb/android0/f_mtp/cpu_mask 0xF0
+    chmod 0664 /sys/class/android_usb/android0/iSerial
+    chown root system /sys/class/android_usb/android0/iSerial
+
+    chown radio system /sys/class/usb_rawbulk/data/enable
+    chmod 0660 /sys/class/usb_rawbulk/data/enable
+    chown radio system /sys/class/usb_rawbulk/ets/enable
+    chmod 0660 /sys/class/usb_rawbulk/ets/enable
+    chown radio system /sys/class/usb_rawbulk/atc/enable
+    chmod 0660 /sys/class/usb_rawbulk/atc/enable
+    chown radio system /sys/class/usb_rawbulk/pcv/enable
+    chmod 0660 /sys/class/usb_rawbulk/pcv/enable
+    chown radio system /sys/class/usb_rawbulk/gps/enable
+    chmod 0660 /sys/class/usb_rawbulk/gps/enable
+    chown system radio /dev/ttyGS0
+    chmod 0660 /dev/ttyGS0
+    chown system radio /dev/ttyGS1
+    chmod 0660 /dev/ttyGS1
+    chown system radio /dev/ttyGS2
+    chmod 0660 /dev/ttyGS2
+    chown system radio /dev/ttyGS3
+    chmod 0660 /dev/ttyGS3
+
+on charger
+    mkdir /config/usb_gadget/g1 0770 shell shell
+    write /config/usb_gadget/g1/idVendor 0x0E8D
+    write /config/usb_gadget/g1/bcdDevice 0x0223
+    write /config/usb_gadget/g1/bcdUSB 0x0200
+    mkdir /config/usb_gadget/g1/strings/0x409 0770
+    write /config/usb_gadget/g1/strings/0x409/serialnumber ${ro.serialno}
+    write /config/usb_gadget/g1/strings/0x409/manufacturer ${ro.product.manufacturer}
+    write /config/usb_gadget/g1/strings/0x409/product ${ro.product.model}
+    mkdir /config/usb_gadget/g1/functions/hid.gs0
+    mkdir /config/usb_gadget/g1/configs/b.1 0770 shell shell
+    mkdir /config/usb_gadget/g1/configs/b.1/strings/0x409 0770 shell shell
+    write /config/usb_gadget/g1/configs/b.1/MaxPower 500
+    mount functionfs adb /dev/usb-ffs/adb uid=2000,gid=2000
+    setprop sys.usb.configfs 1
+    setprop sys.usb.controller "musb-hdrc"
+    setprop sys.usb.acm_cnt 0
+    setprop sys.usb.acm_port0 ""
+    setprop sys.usb.acm_port1 ""
+    setprop sys.usb.acm_enable 0
+    setprop sys.usb.clear boot
+    setprop sys.usb.config hid
+
+### more command at init.usb.configfs.rc ###
+on property:sys.usb.config=none && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/idVendor ${sys.usb.vid}
+    rm /config/usb_gadget/g1/configs/b.1/f4
+    rm /config/usb_gadget/g1/configs/b.1/f5
+    write /sys/devices/platform/mt_usb/saving 0
+
+on property:sys.usb.clear=1 && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/UDC "none"
+    write /config/usb_gadget/g1/bDeviceClass 0
+    write /config/usb_gadget/g1/bDeviceSubClass 0
+    write /config/usb_gadget/g1/bDeviceProtocol 0
+    rm /config/usb_gadget/g1/configs/b.1/f1
+    rm /config/usb_gadget/g1/configs/b.1/f2
+    rm /config/usb_gadget/g1/configs/b.1/f3
+    rm /config/usb_gadget/g1/configs/b.1/f4
+    rm /config/usb_gadget/g1/configs/b.1/f5
+    rmdir /config/usb_gadget/g1/functions/rndis.gs4
+    write /sys/devices/platform/mt_usb/saving 0
+    setprop sys.usb.clear 2
+
+### HID for KPOC ###
+on property:sys.usb.config=hid && property:sys.usb.configfs=1
+    setprop sys.usb.clear 1
+
+on property:sys.usb.config=hid && property:sys.usb.configfs=1 && \
+property:sys.usb.clear=2
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "HID"
+    write /config/usb_gadget/g1/idProduct 0x20FF
+    write /config/usb_gadget/g1/functions/hid.gs0/protocol 0
+    write /config/usb_gadget/g1/functions/hid.gs0/subclass 0
+    #write /config/usb_gadget/g1/functions/hid.gs0/report_length 4
+    #write /config/usb_gadget/g1/functions/hid.gs0/report_desc \\x05\\x01\\x09\\x00\\xa1\\x01\\xc0
+    symlink /config/usb_gadget/g1/functions/hid.gs0 /config/usb_gadget/g1/configs/b.1/f1
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+    setprop sys.usb.clear 0
+
+### main function : adb ###
+### start adbd at init.usb.configfs.rc ###
+on property:sys.usb.config=adb && property:sys.usb.acm_cnt=0 && \
+property:sys.usb.configfs=1
+    setprop sys.usb.pid 0x201C
+on property:sys.usb.config=adb && property:sys.usb.acm_cnt=1 && \
+property:sys.usb.configfs=1
+    setprop sys.usb.pid 0x2006
+    setprop sys.usb.acm_port1 ""
+on property:sys.usb.config=adb && property:sys.usb.acm_cnt=2 && \
+property:sys.usb.configfs=1
+    setprop sys.usb.pid 0x2029
+
+on property:sys.usb.ffs.ready=1 && property:sys.usb.config=adb && \
+property:sys.usb.acm_enable=1 && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "adb_acm"
+    write /config/usb_gadget/g1/idProduct ${sys.usb.pid}
+    write /sys/devices/platform/mt_usb/saving 1
+    symlink /config/usb_gadget/g1/functions/mass_storage.usb0 /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f2
+    symlink /config/usb_gadget/g1/functions/acm.gs${sys.usb.acm_port0} /config/usb_gadget/g1/configs/b.1/f3
+    symlink /config/usb_gadget/g1/functions/acm.gs${sys.usb.acm_port1} /config/usb_gadget/g1/configs/b.1/f4
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+on property:sys.usb.ffs.ready=1 && property:sys.usb.config=adb && \
+property:sys.usb.acm_enable=0 && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "adb"
+    write /config/usb_gadget/g1/idProduct ${sys.usb.pid}
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f1
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+### main function : mtp ###
+on property:sys.usb.config=mtp && property:sys.usb.acm_cnt=0 && \
+property:sys.usb.configfs=1
+    setprop sys.usb.pid 0x2008
+on property:sys.usb.config=mtp && property:sys.usb.acm_cnt=1 && \
+property:sys.usb.configfs=1
+    setprop sys.usb.pid 0x2012
+    setprop sys.usb.acm_port1 ""
+on property:sys.usb.config=mtp && property:sys.usb.acm_cnt=2 && \
+property:sys.usb.configfs=1
+    setprop sys.usb.pid 0x202A
+
+on property:sys.usb.config=mtp && property:sys.usb.acm_enable=1 && \
+property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "mtp_acm"
+    write /config/usb_gadget/g1/idProduct ${sys.usb.pid}
+    write /config/usb_gadget/g1/os_desc/use 1
+    write /sys/devices/platform/mt_usb/saving 1
+    symlink /config/usb_gadget/g1/functions/mtp.gs0 /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/acm.gs${sys.usb.acm_port0} /config/usb_gadget/g1/configs/b.1/f2
+    symlink /config/usb_gadget/g1/functions/acm.gs${sys.usb.acm_port1} /config/usb_gadget/g1/configs/b.1/f3
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+on property:sys.usb.config=mtp && property:sys.usb.acm_enable=0 && \
+property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "mtp"
+    write /config/usb_gadget/g1/idProduct ${sys.usb.pid}
+    write /config/usb_gadget/g1/os_desc/use 1
+    symlink /config/usb_gadget/g1/functions/mtp.gs0 /config/usb_gadget/g1/configs/b.1/f1
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+### start adbd at init.usb.configfs.rc ###
+on property:sys.usb.config=mtp,adb && property:sys.usb.acm_cnt=0 && \
+property:sys.usb.configfs=1
+    setprop sys.usb.pid 0x201D
+on property:sys.usb.config=mtp,adb && property:sys.usb.acm_cnt=1 && \
+property:sys.usb.configfs=1
+    setprop sys.usb.pid 0x200A
+    setprop sys.usb.acm_port1 ""
+on property:sys.usb.config=mtp,adb && property:sys.usb.acm_cnt=2 && \
+property:sys.usb.configfs=1
+    setprop sys.usb.pid 0x2026
+
+on property:sys.usb.ffs.ready=1 && property:sys.usb.config=mtp,adb && \
+property:sys.usb.acm_enable=1 && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "mtp_adb_acm"
+    write /config/usb_gadget/g1/idProduct ${sys.usb.pid}
+    write /config/usb_gadget/g1/os_desc/use 1
+    write /sys/devices/platform/mt_usb/saving 1
+    symlink /config/usb_gadget/g1/functions/mtp.gs0 /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f2
+    symlink /config/usb_gadget/g1/functions/acm.gs${sys.usb.acm_port0} /config/usb_gadget/g1/configs/b.1/f3
+    symlink /config/usb_gadget/g1/functions/acm.gs${sys.usb.acm_port1} /config/usb_gadget/g1/configs/b.1/f4
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+on property:sys.usb.ffs.ready=1 && property:sys.usb.config=mtp,adb && \
+property:sys.usb.acm_enable=0 && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "mtp_adb"
+    write /config/usb_gadget/g1/idProduct ${sys.usb.pid}
+    write /config/usb_gadget/g1/os_desc/use 1
+    symlink /config/usb_gadget/g1/functions/mtp.gs0 /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f2
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+### main function : ptp ###
+on property:sys.usb.config=ptp && property:sys.usb.acm_cnt=0 && \
+property:sys.usb.configfs=1
+    setprop sys.usb.pid 0x200B
+on property:sys.usb.config=ptp && property:sys.usb.acm_cnt=1 && \
+property:sys.usb.configfs=1
+    setprop sys.usb.pid 0x2013
+    setprop sys.usb.acm_port1 ""
+on property:sys.usb.config=ptp && property:sys.usb.acm_cnt=2 && \
+property:sys.usb.configfs=1
+    setprop sys.usb.pid 0x202B
+
+on property:sys.usb.config=ptp && property:sys.usb.acm_enable=1 && \
+property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "ptp_acm"
+    write /config/usb_gadget/g1/idProduct ${sys.usb.pid}
+    write /sys/devices/platform/mt_usb/saving 1
+    symlink /config/usb_gadget/g1/functions/ptp.gs1 /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/acm.gs${sys.usb.acm_port0} /config/usb_gadget/g1/configs/b.1/f2
+    symlink /config/usb_gadget/g1/functions/acm.gs${sys.usb.acm_port1} /config/usb_gadget/g1/configs/b.1/f3
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+on property:sys.usb.config=ptp && property:sys.usb.acm_enable=0 && \
+property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "ptp"
+    write /config/usb_gadget/g1/idProduct ${sys.usb.pid}
+    symlink /config/usb_gadget/g1/functions/ptp.gs1 /config/usb_gadget/g1/configs/b.1/f1
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+### start adbd at init.usb.configfs.rc ###
+on property:sys.usb.config=ptp,adb && property:sys.usb.acm_cnt=0 && \
+property:sys.usb.configfs=1
+    setprop sys.usb.pid 0x200C
+on property:sys.usb.config=ptp,adb && property:sys.usb.acm_cnt=1 && \
+property:sys.usb.configfs=1
+    setprop sys.usb.pid 0x200D
+    setprop sys.usb.acm_port1 ""
+on property:sys.usb.config=ptp,adb && property:sys.usb.acm_cnt=2 && \
+property:sys.usb.configfs=1
+    setprop sys.usb.pid 0x2027
+
+on property:sys.usb.ffs.ready=1 && property:sys.usb.config=ptp,adb && \
+property:sys.usb.acm_enable=1 && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "ptp_adb_acm"
+    write /config/usb_gadget/g1/idProduct ${sys.usb.pid}
+    write /sys/devices/platform/mt_usb/saving 1
+    symlink /config/usb_gadget/g1/functions/ptp.gs1 /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f2
+    symlink /config/usb_gadget/g1/functions/acm.gs${sys.usb.acm_port0} /config/usb_gadget/g1/configs/b.1/f3
+    symlink /config/usb_gadget/g1/functions/acm.gs${sys.usb.acm_port1} /config/usb_gadget/g1/configs/b.1/f4
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+on property:sys.usb.ffs.ready=1 && property:sys.usb.config=ptp,adb && \
+property:sys.usb.acm_enable=0 && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "ptp_adb"
+    write /config/usb_gadget/g1/idProduct ${sys.usb.pid}
+    symlink /config/usb_gadget/g1/functions/ptp.gs1 /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f2
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+### main function : rndis ###
+on property:sys.usb.config=rndis && property:sys.usb.acm_cnt=0 && \
+property:sys.usb.configfs=1
+    setprop sys.usb.pid 0x2004
+on property:sys.usb.config=rndis && property:sys.usb.acm_cnt=1 && \
+property:sys.usb.configfs=1
+    setprop sys.usb.pid 0x2011
+    setprop sys.usb.acm_port1 ""
+on property:sys.usb.config=rndis && property:sys.usb.acm_cnt=2 && \
+property:sys.usb.configfs=1
+    setprop sys.usb.pid 0x202C
+
+on property:sys.usb.config=rndis && property:sys.usb.acm_enable=1 && \
+property:sys.usb.configfs=1
+    mkdir /config/usb_gadget/g1/functions/rndis.gs4
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "ums_acm"
+    write /config/usb_gadget/g1/idProduct ${sys.usb.pid}
+    write /sys/devices/platform/mt_usb/saving 1
+    symlink /config/usb_gadget/g1/functions/rndis.gs4 /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/acm.gs${sys.usb.acm_port0} /config/usb_gadget/g1/configs/b.1/f2
+    symlink /config/usb_gadget/g1/functions/acm.gs${sys.usb.acm_port1} /config/usb_gadget/g1/configs/b.1/f3
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+on property:sys.usb.config=rndis && property:sys.usb.acm_enable=0 && \
+property:sys.usb.configfs=1
+    mkdir /config/usb_gadget/g1/functions/rndis.gs4
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "rndis"
+    write /config/usb_gadget/g1/idProduct ${sys.usb.pid}
+    symlink /config/usb_gadget/g1/functions/rndis.gs4 /config/usb_gadget/g1/configs/b.1/f1
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+on property:sys.usb.config=rndis,adb && property:sys.usb.acm_cnt=0 && \
+property:sys.usb.configfs=1
+    setprop sys.usb.pid 0x2005
+on property:sys.usb.config=rndis,adb && property:sys.usb.acm_cnt=1 && \
+property:sys.usb.configfs=1
+    setprop sys.usb.pid 0x2010
+    setprop sys.usb.acm_port1 ""
+on property:sys.usb.config=rndis,adb && property:sys.usb.acm_cnt=2 && \
+property:sys.usb.configfs=1
+    setprop sys.usb.pid 0x2028
+
+on property:sys.usb.ffs.ready=1 && property:sys.usb.config=rndis,adb && \
+property:sys.usb.acm_enable=1 && property:sys.usb.configfs=1
+    mkdir /config/usb_gadget/g1/functions/rndis.gs4
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "rndis_adb_acm"
+    write /config/usb_gadget/g1/idProduct ${sys.usb.pid}
+    write /sys/devices/platform/mt_usb/saving 1
+    symlink /config/usb_gadget/g1/functions/rndis.gs4 /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f2
+    symlink /config/usb_gadget/g1/functions/acm.gs${sys.usb.acm_port0} /config/usb_gadget/g1/configs/b.1/f3
+    symlink /config/usb_gadget/g1/functions/acm.gs${sys.usb.acm_port1} /config/usb_gadget/g1/configs/b.1/f4
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+on property:sys.usb.ffs.ready=1 && property:sys.usb.config=rndis,adb && \
+property:sys.usb.acm_enable=0 && property:sys.usb.configfs=1
+    mkdir /config/usb_gadget/g1/functions/rndis.gs4
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "rndis_adb"
+    write /config/usb_gadget/g1/idProduct ${sys.usb.pid}
+    symlink /config/usb_gadget/g1/functions/rndis.gs4 /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f2
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+### main function : midi ###
+on property:sys.usb.config=midi && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/idProduct 0x2046
+
+on property:sys.usb.config=midi,adb && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/idProduct 0x2048
+
+### main function : accessory ###
+on property:sys.usb.config=accessory && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/idVendor 0x18d1
+    write /config/usb_gadget/g1/idProduct 0x2d00
+
+on property:sys.usb.config=accessory,adb && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/idVendor 0x18d1
+    write /config/usb_gadget/g1/idProduct 0x2d01
+
+### main function : audio_source ###
+on property:sys.usb.config=audio_source && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/idVendor 0x18d1
+    write /config/usb_gadget/g1/idProduct 0x2d02
+
+on property:sys.usb.config=audio_source,adb && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/idVendor 0x18d1
+    write /config/usb_gadget/g1/idProduct 0x2d03
+
+### main function : accessory,audio_source ###
+on property:sys.usb.config=accessory,audio_source && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/idVendor 0x18d1
+    write /config/usb_gadget/g1/idProduct 0x2d04
+
+on property:sys.usb.config=accessory,audio_source,adb && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/idVendor 0x18d1
+    write /config/usb_gadget/g1/idProduct 0x2d05
+
+on property:sys.usb.config=via_bypass && property:sys.usb.acm_cnt=0 && \
+property:sys.usb.configfs=1
+    setprop sys.usb.pid 0x2031
+on property:sys.usb.config=via_bypass && property:sys.usb.acm_cnt=1 && \
+property:sys.usb.configfs=1
+    setprop sys.usb.pid 0x2033
+    setprop sys.usb.acm_port1 ""
+
+##via_modem,via_ets,via_atc,acm
+on property:sys.usb.config=via_bypass && property:sys.usb.acm_enable=1 && \
+property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "via_bypass"
+    write /config/usb_gadget/g1/idProduct ${sys.usb.pid}
+    write /sys/devices/platform/mt_usb/saving 1
+    symlink /config/usb_gadget/g1/functions/via_modem.gs0 /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/via_ets.gs0 /config/usb_gadget/g1/configs/b.1/f2
+    symlink /config/usb_gadget/g1/functions/via_atc.gs0 /config/usb_gadget/g1/configs/b.1/f3
+    symlink /config/usb_gadget/g1/functions/acm.gs${sys.usb.acm_port0} /config/usb_gadget/g1/configs/b.1/f4
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+##via_modem,via_ets,via_atc,adb
+on property:sys.usb.config=via_bypass && property:sys.usb.acm_enable=0 && \
+property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "via_bypass"
+    write /config/usb_gadget/g1/idProduct ${sys.usb.pid}
+    write /sys/devices/platform/mt_usb/saving 1
+    symlink /config/usb_gadget/g1/functions/via_modem.gs0 /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/via_ets.gs0 /config/usb_gadget/g1/configs/b.1/f2
+    symlink /config/usb_gadget/g1/functions/via_atc.gs0 /config/usb_gadget/g1/configs/b.1/f3
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+on property:sys.usb.config=via_bypass,adb && property:sys.usb.acm_cnt=0 && \
+property:sys.usb.configfs=1
+    setprop sys.usb.pid 0x2032
+on property:sys.usb.config=via_bypass,adb && property:sys.usb.acm_cnt=1 && \
+property:sys.usb.configfs=1
+    setprop sys.usb.pid 0x2034
+    #setprop sys.usb.via_func via_modem,via_ets,via_atc,adb,acm
+    setprop sys.usb.acm_port1 ""
+on property:sys.usb.config=via_bypass,adb && property:sys.usb.acm_cnt=2 && \
+property:sys.usb.configfs=1
+    setprop sys.usb.pid 0x2050
+    #setprop sys.usb.via_func via_modem,acm,adb
+
+on property:sys.usb.config=via_bypass,adb && property:sys.usb.configfs=1
+    start adbd
+
+##via_modem,via_ets,via_atc,adb,acm
+on property:sys.usb.ffs.ready=1 && property:sys.usb.config=via_bypass,adb && \
+property:sys.usb.acm_enable=1 && property:sys.usb.acm_cnt=1 && \
+property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "rndis_adb_acm"
+    write /config/usb_gadget/g1/idProduct ${sys.usb.pid}
+    write /sys/devices/platform/mt_usb/saving 1
+    symlink /config/usb_gadget/g1/functions/via_modem.gs0 /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/via_ets.gs0 /config/usb_gadget/g1/configs/b.1/f2
+    symlink /config/usb_gadget/g1/functions/via_atc.gs0 /config/usb_gadget/g1/configs/b.1/f3
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f4
+    symlink /config/usb_gadget/g1/functions/acm.gs${sys.usb.acm_port0} /config/usb_gadget/g1/configs/b.1/f5
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+##via_modem,acm,adb
+on property:sys.usb.ffs.ready=1 && property:sys.usb.config=via_bypass,adb && \
+property:sys.usb.acm_enable=1 && property:sys.usb.acm_cnt=2 && \
+property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "rndis_adb_acm2"
+    write /config/usb_gadget/g1/idProduct ${sys.usb.pid}
+    write /sys/devices/platform/mt_usb/saving 1
+    symlink /config/usb_gadget/g1/functions/via_modem.gs0 /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f2
+    symlink /config/usb_gadget/g1/functions/acm.gs${sys.usb.acm_port0} /config/usb_gadget/g1/configs/b.1/f3
+    symlink /config/usb_gadget/g1/functions/acm.gs${sys.usb.acm_port1} /config/usb_gadget/g1/configs/b.1/f4
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+##via_modem,via_ets,via_atc,adb
+on property:sys.usb.ffs.ready=1 && property:sys.usb.config=via_bypass,adb && \
+property:sys.usb.acm_enable=0 && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "rndis_adb"
+    write /config/usb_gadget/g1/idProduct ${sys.usb.pid}
+    write /sys/devices/platform/mt_usb/saving 1
+    symlink /config/usb_gadget/g1/functions/via_modem.gs0 /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/via_ets.gs0 /config/usb_gadget/g1/configs/b.1/f2
+    symlink /config/usb_gadget/g1/functions/via_atc.gs0 /config/usb_gadget/g1/configs/b.1/f3
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f4
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+### main function : mass_storage ###
+on property:sys.usb.config=mass_storage && property:sys.usb.acm_cnt=0 && \
+property:sys.usb.configfs=1
+    setprop sys.usb.pid 0x2002
+on property:sys.usb.config=mass_storage && property:sys.usb.acm_cnt=1 && \
+property:sys.usb.configfs=1
+    setprop sys.usb.pid 0x200F
+    setprop sys.usb.acm_port1 ""
+on property:sys.usb.config=mass_storage && property:sys.usb.acm_cnt=2 && \
+property:sys.usb.configfs=1
+    setprop sys.usb.pid 0x202D
+
+on property:sys.usb.config=mass_storage && property:sys.usb.acm_enable=1 && \
+property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "ums_acm"
+    write /config/usb_gadget/g1/idProduct ${sys.usb.pid}
+    write /sys/devices/platform/mt_usb/saving 1
+    symlink /config/usb_gadget/g1/functions/mass_storage.usb0 /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/acm.gs${sys.usb.acm_port0} /config/usb_gadget/g1/configs/b.1/f2
+    symlink /config/usb_gadget/g1/functions/acm.gs${sys.usb.acm_port1} /config/usb_gadget/g1/configs/b.1/f3
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+on property:sys.usb.config=mass_storage && property:sys.usb.acm_enable=0 && \
+property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "ums"
+    write /config/usb_gadget/g1/idProduct ${sys.usb.pid}
+    symlink /config/usb_gadget/g1/functions/mass_storage.usb0 /config/usb_gadget/g1/configs/b.1/f1
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+on property:sys.usb.config=mass_storage,adb && property:sys.usb.acm_cnt=0 && \
+property:sys.usb.configfs=1
+    setprop sys.usb.pid 0x2003
+on property:sys.usb.config=mass_storage,adb && property:sys.usb.acm_cnt=1 && \
+property:sys.usb.configfs=1
+    setprop sys.usb.pid 0x2006
+    setprop sys.usb.acm_port1 ""
+on property:sys.usb.config=mass_storage,adb && property:sys.usb.acm_cnt=2 && \
+property:sys.usb.configfs=1
+    setprop sys.usb.pid 0x2029
+
+on property:sys.usb.config=mass_storage,adb && property:sys.usb.configfs=1
+    start adbd
+
+on property:sys.usb.ffs.ready=1 && property:sys.usb.config=mass_storage,adb && \
+property:sys.usb.acm_enable=1 && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "ums_adb_acm"
+    write /config/usb_gadget/g1/idProduct ${sys.usb.pid}
+    write /sys/devices/platform/mt_usb/saving 1
+    symlink /config/usb_gadget/g1/functions/mass_storage.usb0 /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f2
+    symlink /config/usb_gadget/g1/functions/acm.gs${sys.usb.acm_port0} /config/usb_gadget/g1/configs/b.1/f3
+    symlink /config/usb_gadget/g1/functions/acm.gs${sys.usb.acm_port1} /config/usb_gadget/g1/configs/b.1/f4
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+on property:sys.usb.ffs.ready=1 && property:sys.usb.config=mass_storage,adb && \
+property:sys.usb.acm_enable=0 && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "ums_adb"
+    write /config/usb_gadget/g1/idProduct ${sys.usb.pid}
+    symlink /config/usb_gadget/g1/functions/mass_storage.usb0 /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f2
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+### main function : bicr ###
+on property:sys.usb.config=bicr && property:sys.usb.acm_cnt=0 && \
+property:sys.usb.configfs=1
+    setprop sys.usb.pid 0x2002
+on property:sys.usb.config=bicr && property:sys.usb.acm_cnt=1 && \
+property:sys.usb.configfs=1
+    setprop sys.usb.pid 0x200F
+    setprop sys.usb.acm_port1 ""
+on property:sys.usb.config=bicr && property:sys.usb.acm_cnt=2 && \
+property:sys.usb.configfs=1
+    setprop sys.usb.pid 0x202D
+
+on property:sys.usb.config=bicr && property:sys.usb.acm_enable=1 && \
+property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "ums_acm"
+    write /config/usb_gadget/g1/idProduct ${sys.usb.pid}
+    write /sys/devices/platform/mt_usb/saving 1
+    write /config/usb_gadget/g1/functions/mass_storage.usb0/lun.0/cdrom 1
+    write /config/usb_gadget/g1/functions/mass_storage.usb0/lun.0/file "/dev/block/loop0"
+    symlink /config/usb_gadget/g1/functions/mass_storage.usb0 /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/acm.gs${sys.usb.acm_port0} /config/usb_gadget/g1/configs/b.1/f2
+    symlink /config/usb_gadget/g1/functions/acm.gs${sys.usb.acm_port1} /config/usb_gadget/g1/configs/b.1/f3
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+on property:sys.usb.config=bicr && property:sys.usb.acm_enable=0 && \
+property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "ums"
+    write /config/usb_gadget/g1/idProduct ${sys.usb.pid}
+    write /config/usb_gadget/g1/functions/mass_storage.usb0/lun.0/cdrom 1
+    write /config/usb_gadget/g1/functions/mass_storage.usb0/lun.0/file "/dev/block/loop0"
+    symlink /config/usb_gadget/g1/functions/mass_storage.usb0 /config/usb_gadget/g1/configs/b.1/f1
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+on property:sys.usb.config=bicr,adb && property:sys.usb.acm_cnt=0 && \
+property:sys.usb.configfs=1
+    setprop sys.usb.pid 0x2003
+on property:sys.usb.config=bicr,adb && property:sys.usb.acm_cnt=1 && \
+property:sys.usb.configfs=1
+    setprop sys.usb.pid 0x2006
+    setprop sys.usb.acm_port1 ""
+on property:sys.usb.config=bicr,adb && property:sys.usb.acm_cnt=2 && \
+property:sys.usb.configfs=1
+    setprop sys.usb.pid 0x2029
+
+on property:sys.usb.config=bicr,adb && property:sys.usb.configfs=1
+    start adbd
+
+on property:sys.usb.ffs.ready=1 && property:sys.usb.config=bicr,adb && \
+property:sys.usb.acm_enable=1 && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "ums_adb_acm"
+    write /config/usb_gadget/g1/idProduct ${sys.usb.pid}
+    write /sys/devices/platform/mt_usb/saving 1
+    write /config/usb_gadget/g1/functions/mass_storage.usb0/lun.0/cdrom 1
+    write /config/usb_gadget/g1/functions/mass_storage.usb0/lun.0/file "/dev/block/loop0"
+    symlink /config/usb_gadget/g1/functions/mass_storage.usb0 /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f2
+    symlink /config/usb_gadget/g1/functions/acm.gs${sys.usb.acm_port0} /config/usb_gadget/g1/configs/b.1/f3
+    symlink /config/usb_gadget/g1/functions/acm.gs${sys.usb.acm_port1} /config/usb_gadget/g1/configs/b.1/f4
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+on property:sys.usb.ffs.ready=1 && property:sys.usb.config=bicr,adb && \
+property:sys.usb.acm_enable=0 && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "ums_adb"
+    write /config/usb_gadget/g1/idProduct ${sys.usb.pid}
+    write /config/usb_gadget/g1/functions/mass_storage.usb0/lun.0/cdrom 1
+    write /config/usb_gadget/g1/functions/mass_storage.usb0/lun.0/file "/dev/block/loop0"
+    symlink /config/usb_gadget/g1/functions/mass_storage.usb0 /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f2
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+### ttyGS series begin ###
+# From mdlogger/emdlogger/pcengine.cpp
+on property:sys.usb.config=via_bypass,gs1gs3 && property:sys.usb.configfs=1
+    start adbd
+    setprop sys.usb.clear 1
+
+on property:sys.usb.ffs.ready=1 && property:sys.usb.config=via_bypass,gs1gs3 && \
+property:sys.usb.clear=2 && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "via_bypass_gs1gs3"
+    write /config/usb_gadget/g1/idProduct 0x2050
+    write /sys/devices/platform/mt_usb/saving 1
+    symlink /config/usb_gadget/g1/functions/via_modem.gs0 /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f2
+    symlink /config/usb_gadget/g1/functions/acm.gs1 /config/usb_gadget/g1/configs/b.1/f3
+    symlink /config/usb_gadget/g1/functions/acm.gs3 /config/usb_gadget/g1/configs/b.1/f3
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+    setprop sys.usb.pid 0x2050
+    setprop sys.usb.acm_port0 1
+    setprop sys.usb.acm_port1 3
+    setprop sys.usb.acm_cnt 2
+    setprop sys.usb.acm_enable 1
+    setprop sys.usb.clear 0
+    setprop sys.usb.acm_idx "2,4"
+
+on property:sys.usb.config=rndis,gs1gs3 && property:sys.usb.configfs=1
+    setprop sys.usb.clear 1
+
+on property:sys.usb.config=rndis,gs1gs3 && property:sys.usb.configfs=1 && \
+property:sys.usb.clear=2
+    mkdir /config/usb_gadget/g1/functions/rndis.gs4
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "rndis_gs1gs3"
+    write /config/usb_gadget/g1/idProduct 0x2043
+    write /sys/devices/platform/mt_usb/saving 1
+    symlink /config/usb_gadget/g1/functions/rndis.gs4 /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/acm.gs1 /config/usb_gadget/g1/configs/b.1/f2
+    symlink /config/usb_gadget/g1/functions/acm.gs3 /config/usb_gadget/g1/configs/b.1/f3
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+    setprop sys.usb.pid 0x2043
+    setprop sys.usb.acm_port0 1
+    setprop sys.usb.acm_port1 3
+    setprop sys.usb.acm_cnt 2
+    setprop sys.usb.acm_enable 1
+    setprop sys.usb.clear 0
+    setprop sys.usb.acm_idx "2,4"
+
+# MD logger USB mode From mdlogger/emdlogger/pcengine.cpp
+on property:sys.usb.config=gs3 && property:init.svc.adbd=restarting && \
+property:sys.usb.pid=0x2044 && property:service.adb.root=1
+    setprop sys.usb.acm_enable 0
+    setprop sys.usb.clear 1
+    setprop sys.usb.ffs.ready 0
+
+on property:sys.usb.config=gs3 && property:sys.usb.configfs=1 && \
+property:sys.usb.acm_enable=0
+    start adbd
+    setprop sys.usb.clear 1
+
+on property:sys.usb.ffs.ready=1 && property:sys.usb.config=gs3 && \
+property:sys.usb.clear=2 && property:sys.usb.configfs=1 && \
+property:sys.usb.acm_enable=0
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "gs3"
+    write /config/usb_gadget/g1/idProduct 0x2044
+    write /sys/devices/platform/mt_usb/saving 1
+    symlink /config/usb_gadget/g1/functions/mass_storage.usb0 /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f2
+    symlink /config/usb_gadget/g1/functions/acm.gs3 /config/usb_gadget/g1/configs/b.1/f3
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+    setprop sys.usb.pid 0x2044
+    setprop sys.usb.acm_port0 3
+    setprop sys.usb.acm_port1 ""
+    setprop sys.usb.acm_cnt 1
+    setprop sys.usb.acm_enable 1
+    setprop sys.usb.clear 0
+    setprop sys.usb.acm_idx 4
+
+# ATCI + MD logger USB mode
+on property:sys.usb.config=gs3 && property:init.svc.adbd=restarting && \
+property:sys.usb.pid=0x202E && property:service.adb.root=1
+    setprop sys.usb.clear 1
+    setprop sys.usb.temp atci
+    setprop sys.usb.ffs.ready 0
+
+on property:sys.usb.config=gs3 && property:sys.usb.configfs=1 && \
+property:persist.radio.port_index=1
+    start adbd
+    setprop sys.usb.clear 1
+    setprop sys.usb.temp atci
+
+on property:sys.usb.ffs.ready=1 && property:sys.usb.config=gs3 && \
+property:sys.usb.clear=2 && property:sys.usb.configfs=1 && \
+property:sys.usb.temp=atci
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "acti_gs3"
+    write /config/usb_gadget/g1/idProduct 0x202E
+    write /sys/devices/platform/mt_usb/saving 1
+    symlink /config/usb_gadget/g1/functions/mass_storage.usb0 /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f2
+    symlink /config/usb_gadget/g1/functions/acm.gs0 /config/usb_gadget/g1/configs/b.1/f3
+    symlink /config/usb_gadget/g1/functions/acm.gs3 /config/usb_gadget/g1/configs/b.1/f4
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+    setprop sys.usb.pid 0x202E
+    setprop sys.usb.acm_port0 0
+    setprop sys.usb.acm_port1 3
+    setprop sys.usb.acm_cnt 2
+    setprop sys.usb.acm_enable 1
+    setprop sys.usb.clear 0
+    setprop sys.usb.temp ""
+    setprop sys.usb.acm_idx "1,4"
+
+on property:sys.usb.config=gs3,dual_acm && property:sys.usb.configfs=1
+    start adbd
+    setprop sys.usb.clear 1
+
+on property:sys.usb.ffs.ready=1 && property:sys.usb.config=gs3,dual_acm && \
+property:sys.usb.clear=2 && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "gs3_dual_acm"
+    write /config/usb_gadget/g1/idProduct 0x202E
+    write /sys/devices/platform/mt_usb/saving 1
+    symlink /config/usb_gadget/g1/functions/mass_storage.usb0 /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f2
+    symlink /config/usb_gadget/g1/functions/acm.gs0 /config/usb_gadget/g1/configs/b.1/f3
+    symlink /config/usb_gadget/g1/functions/acm.gs3 /config/usb_gadget/g1/configs/b.1/f4
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+    setprop sys.usb.pid 0x202E
+    setprop sys.usb.acm_port0 0
+    setprop sys.usb.acm_port1 3
+    setprop sys.usb.acm_cnt 2
+    setprop sys.usb.acm_enable 1
+    setprop sys.usb.clear 0
+    setprop sys.usb.acm_idx "1,4"
+
+# From mdlogger/emdlogger/pcengine.cpp
+on property:sys.usb.config=gs1gs3 && property:sys.usb.configfs=1
+    start adbd
+    setprop sys.usb.clear 1
+
+on property:sys.usb.ffs.ready=1 && property:sys.usb.config=gs1gs3 && \
+property:sys.usb.clear=2 && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "gs1gs3"
+    write /config/usb_gadget/g1/idProduct 0x2029
+    write /sys/devices/platform/mt_usb/saving 1
+    symlink /config/usb_gadget/g1/functions/mass_storage.usb0 /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f2
+    symlink /config/usb_gadget/g1/functions/acm.gs1 /config/usb_gadget/g1/configs/b.1/f3
+    symlink /config/usb_gadget/g1/functions/acm.gs3 /config/usb_gadget/g1/configs/b.1/f4
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+    setprop sys.usb.pid 0x2029
+    setprop sys.usb.acm_port0 1
+    setprop sys.usb.acm_port1 3
+    setprop sys.usb.acm_cnt 2
+    setprop sys.usb.acm_enable 1
+    setprop sys.usb.clear 0
+    setprop sys.usb.acm_idx "2,4"
+
+# From mdlogger/emdlogger/pcengine.cpp
+on property:sys.usb.config=mtp,gs3 && property:sys.usb.configfs=1
+    start adbd
+    setprop sys.usb.clear 1
+
+on property:sys.usb.ffs.ready=1 && property:sys.usb.config=mtp,gs3 && \
+property:sys.usb.clear=2 && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "mtp_gs3"
+    write /config/usb_gadget/g1/idProduct 0x205A
+    write /sys/devices/platform/mt_usb/saving 1
+    symlink /config/usb_gadget/g1/functions/mtp.gs0 /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f2
+    symlink /config/usb_gadget/g1/functions/acm.gs3 /config/usb_gadget/g1/configs/b.1/f3
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+    setprop sys.usb.pid 0x205A
+    setprop sys.usb.acm_port0 3
+    setprop sys.usb.acm_port1 ""
+    setprop sys.usb.acm_cnt 1
+    setprop sys.usb.acm_enable 1
+    setprop sys.usb.clear 0
+    setprop sys.usb.acm_idx 4
+
+on property:sys.usb.config=mtp,gs3,dual_acm && property:sys.usb.configfs=1
+    start adbd
+    setprop sys.usb.clear 1
+
+on property:sys.usb.ffs.ready=1 && property:sys.usb.config=mtp,gs3,dual_acm && \
+property:sys.usb.clear=2 && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "mtp_gs3_dual_acm"
+    write /config/usb_gadget/g1/idProduct 0x205F
+    write /sys/devices/platform/mt_usb/saving 1
+    symlink /config/usb_gadget/g1/functions/mtp.gs0 /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f2
+    symlink /config/usb_gadget/g1/functions/acm.gs0 /config/usb_gadget/g1/configs/b.1/f3
+    symlink /config/usb_gadget/g1/functions/acm.gs3 /config/usb_gadget/g1/configs/b.1/f4
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+    setprop sys.usb.pid 0x205F
+    setprop sys.usb.acm_port0 0
+    setprop sys.usb.acm_port1 3
+    setprop sys.usb.acm_cnt 2
+    setprop sys.usb.acm_enable 1
+    setprop sys.usb.clear 0
+    setprop sys.usb.acm_idx "1,4"
+
+# From mdlogger/emdlogger/pcengine.cpp
+on property:sys.usb.config=mtp,gs1gs3 && property:sys.usb.configfs=1
+    start adbd
+    setprop sys.usb.clear 1
+
+on property:sys.usb.ffs.ready=1 && property:sys.usb.config=mtp,gs1gs3 && \
+property:sys.usb.clear=2 && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "mtp_gs1gs3"
+    write /config/usb_gadget/g1/idProduct 0x205B
+    write /sys/devices/platform/mt_usb/saving 1
+    symlink /config/usb_gadget/g1/functions/mtp.gs0 /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f2
+    symlink /config/usb_gadget/g1/functions/acm.gs1 /config/usb_gadget/g1/configs/b.1/f3
+    symlink /config/usb_gadget/g1/functions/acm.gs3 /config/usb_gadget/g1/configs/b.1/f4
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+    setprop sys.usb.pid 0x205B
+    setprop sys.usb.acm_port0 1
+    setprop sys.usb.acm_port1 3
+    setprop sys.usb.acm_cnt 2
+    setprop sys.usb.acm_enable 1
+    setprop sys.usb.clear 0
+    setprop sys.usb.acm_idx "2,4"
+
+on property:sys.usb.config=mtp,gs0gs3 && property:sys.usb.configfs=1
+    start adbd
+    setprop sys.usb.clear 1
+
+on property:sys.usb.ffs.ready=1 && property:sys.usb.config=mtp,gs0gs3 && \
+property:sys.usb.clear=2 && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "mtp_gs0gs3"
+    write /config/usb_gadget/g1/idProduct 0x205C
+    write /sys/devices/platform/mt_usb/saving 1
+    symlink /config/usb_gadget/g1/functions/mtp.gs0 /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f2
+    symlink /config/usb_gadget/g1/functions/acm.gs0 /config/usb_gadget/g1/configs/b.1/f3
+    symlink /config/usb_gadget/g1/functions/acm.gs3 /config/usb_gadget/g1/configs/b.1/f4
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+    setprop sys.usb.pid 0x205C
+    setprop sys.usb.acm_port0 0
+    setprop sys.usb.acm_port1 3
+    setprop sys.usb.acm_cnt 2
+    setprop sys.usb.acm_enable 1
+    setprop sys.usb.clear 0
+    setprop sys.usb.acm_idx "1,4"
+
+on property:sys.usb.config=mtp,gs0gs1 && property:sys.usb.configfs=1
+    start adbd
+    setprop sys.usb.clear 1
+
+on property:sys.usb.ffs.ready=1 && property:sys.usb.config=mtp,gs0gs1 && \
+property:sys.usb.clear=2 && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "mtp_gs0gs1"
+    write /config/usb_gadget/g1/idProduct 0x2060
+    write /sys/devices/platform/mt_usb/saving 1
+    symlink /config/usb_gadget/g1/functions/mtp.gs0 /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f2
+    symlink /config/usb_gadget/g1/functions/acm.gs0 /config/usb_gadget/g1/configs/b.1/f3
+    symlink /config/usb_gadget/g1/functions/acm.gs1 /config/usb_gadget/g1/configs/b.1/f4
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+    setprop sys.usb.pid 0x2060
+    setprop sys.usb.acm_port0 0
+    setprop sys.usb.acm_port1 1
+    setprop sys.usb.acm_cnt 2
+    setprop sys.usb.acm_enable 1
+    setprop sys.usb.clear 0
+    setprop sys.usb.acm_idx "1,2"
+
+on property:sys.usb.config=gs0gs3 && property:sys.usb.configfs=1
+    start adbd
+    setprop sys.usb.clear 1
+
+on property:sys.usb.ffs.ready=1 && property:sys.usb.config=gs0gs3 && \
+property:sys.usb.clear=2 && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "gs0gs3"
+    write /config/usb_gadget/g1/idProduct 0x2040
+    write /sys/devices/platform/mt_usb/saving 1
+    symlink /config/usb_gadget/g1/functions/mass_storage.usb0 /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f2
+    symlink /config/usb_gadget/g1/functions/acm.gs0 /config/usb_gadget/g1/configs/b.1/f3
+    symlink /config/usb_gadget/g1/functions/acm.gs3 /config/usb_gadget/g1/configs/b.1/f4
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+    setprop sys.usb.pid 0x2040
+    setprop sys.usb.acm_port0 0
+    setprop sys.usb.acm_port1 3
+    setprop sys.usb.acm_cnt 2
+    setprop sys.usb.acm_enable 1
+    setprop sys.usb.clear 0
+    setprop sys.usb.acm_idx "1,4"
+
+on property:sys.usb.config=gs0gs1 && property:sys.usb.configfs=1
+    start adbd
+    setprop sys.usb.clear 1
+
+on property:sys.usb.ffs.ready=1 && property:sys.usb.config=gs0gs1 && \
+property:sys.usb.clear=2 && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "gs0gs1"
+    write /config/usb_gadget/g1/idProduct 0x2041
+    write /sys/devices/platform/mt_usb/saving 1
+    symlink /config/usb_gadget/g1/functions/mass_storage.usb0 /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f2
+    symlink /config/usb_gadget/g1/functions/acm.gs0 /config/usb_gadget/g1/configs/b.1/f3
+    symlink /config/usb_gadget/g1/functions/acm.gs1 /config/usb_gadget/g1/configs/b.1/f4
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+    setprop sys.usb.pid 0x2041
+    setprop sys.usb.acm_port0 0
+    setprop sys.usb.acm_port1 1
+    setprop sys.usb.acm_cnt 2
+    setprop sys.usb.acm_enable 1
+    setprop sys.usb.clear 0
+    setprop sys.usb.acm_idx "1,2"
+
+on property:sys.usb.config=rndis,gs0gs3 && property:sys.usb.configfs=1
+    setprop sys.usb.clear 1
+
+on property:sys.usb.config=rndis,gs0gs3 && property:sys.usb.configfs=1 && \
+property:sys.usb.clear=2
+    mkdir /config/usb_gadget/g1/functions/rndis.gs4
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "rndis_gs0gs3"
+    write /config/usb_gadget/g1/idProduct 0x2042
+    write /sys/devices/platform/mt_usb/saving 1
+    symlink /config/usb_gadget/g1/functions/rndis.gs4 /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/acm.gs0 /config/usb_gadget/g1/configs/b.1/f2
+    symlink /config/usb_gadget/g1/functions/acm.gs3 /config/usb_gadget/g1/configs/b.1/f3
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+    setprop sys.usb.pid 0x2042
+    setprop sys.usb.acm_port0 0
+    setprop sys.usb.acm_port1 3
+    setprop sys.usb.acm_cnt 2
+    setprop sys.usb.acm_enable 1
+    setprop sys.usb.clear 0
+    setprop sys.usb.acm_idx "1,4"
+
+on property:sys.usb.config=rndis,gs0gs1 && property:sys.usb.configfs=1
+    setprop sys.usb.clear 1
+
+on property:sys.usb.config=rndis,gs0gs1 && property:sys.usb.configfs=1 && \
+property:sys.usb.clear=2
+    mkdir /config/usb_gadget/g1/functions/rndis.gs4
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "rndis_gs0gs1"
+    write /config/usb_gadget/g1/idProduct 0x2045
+    write /sys/devices/platform/mt_usb/saving 1
+    symlink /config/usb_gadget/g1/functions/rndis.gs4 /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/acm.gs0 /config/usb_gadget/g1/configs/b.1/f2
+    symlink /config/usb_gadget/g1/functions/acm.gs1 /config/usb_gadget/g1/configs/b.1/f3
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+    setprop sys.usb.pid 0x2045
+    setprop sys.usb.acm_port0 0
+    setprop sys.usb.acm_port1 1
+    setprop sys.usb.acm_cnt 2
+    setprop sys.usb.acm_enable 1
+    setprop sys.usb.clear 0
+    setprop sys.usb.acm_idx "1,2"
+
+on property:sys.usb.config=rndis,adb,gs0gs3 && property:sys.usb.configfs=1
+    start adbd
+    setprop sys.usb.clear 1
+
+on property:sys.usb.ffs.ready=1 && property:sys.usb.config=rndis,adb,gs0gs3 && \
+property:sys.usb.clear=2 && property:sys.usb.configfs=1
+    mkdir /config/usb_gadget/g1/functions/rndis.gs4
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "rndis_adb_gs0gs3"
+    write /config/usb_gadget/g1/idProduct 0x2061
+    write /sys/devices/platform/mt_usb/saving 1
+    symlink /config/usb_gadget/g1/functions/rndis.gs4 /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f2
+    symlink /config/usb_gadget/g1/functions/acm.gs0 /config/usb_gadget/g1/configs/b.1/f3
+    symlink /config/usb_gadget/g1/functions/acm.gs3 /config/usb_gadget/g1/configs/b.1/f4
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+    setprop sys.usb.pid 0x2061
+    setprop sys.usb.acm_port0 0
+    setprop sys.usb.acm_port1 3
+    setprop sys.usb.acm_cnt 2
+    setprop sys.usb.acm_enable 1
+    setprop sys.usb.clear 0
+    setprop sys.usb.acm_idx "1,4"
+
+on property:sys.usb.config=rndis,adb,gs0gs1 && property:sys.usb.configfs=1
+    start adbd
+    setprop sys.usb.clear 1
+
+on property:sys.usb.ffs.ready=1 && property:sys.usb.config=rndis,adb,gs0gs1 && \
+property:sys.usb.clear=2 && property:sys.usb.configfs=1
+    mkdir /config/usb_gadget/g1/functions/rndis.gs4
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "rndis_adb_gs0gs1"
+    write /config/usb_gadget/g1/idProduct 0x2062
+    write /sys/devices/platform/mt_usb/saving 1
+    symlink /config/usb_gadget/g1/functions/rndis.gs4 /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f2
+    symlink /config/usb_gadget/g1/functions/acm.gs0 /config/usb_gadget/g1/configs/b.1/f3
+    symlink /config/usb_gadget/g1/functions/acm.gs1 /config/usb_gadget/g1/configs/b.1/f4
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+    setprop sys.usb.pid 0x2062
+    setprop sys.usb.acm_port0 0
+    setprop sys.usb.acm_port1 1
+    setprop sys.usb.acm_cnt 2
+    setprop sys.usb.acm_enable 1
+    setprop sys.usb.clear 0
+    setprop sys.usb.acm_idx "1,2"
+
+### ttyGS series end ###
+
+### radio series begin ###
+# Add sys.usb.clear=0, Because after enable/disable ACM by EM.
+# persist.radio.port_index set as "". At boot, the init trigger
+# this property. So at "on boot", set sys.usb.clear as 2.
+# Skip this action.
+on property:sys.usb.em.clear=1 && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/UDC "none"
+    write /config/usb_gadget/g1/bDeviceClass 0
+    write /config/usb_gadget/g1/bDeviceSubClass 0
+    write /config/usb_gadget/g1/bDeviceProtocol 0
+    rm /config/usb_gadget/g1/configs/b.1/f1
+    rm /config/usb_gadget/g1/configs/b.1/f2
+    rm /config/usb_gadget/g1/configs/b.1/f3
+    rm /config/usb_gadget/g1/configs/b.1/f4
+    rm /config/usb_gadget/g1/configs/b.1/f5
+    rmdir /config/usb_gadget/g1/functions/rndis.gs4
+    write /sys/devices/platform/mt_usb/saving 0
+    setprop sys.usb.em.clear 2
+
+on property:persist.radio.port_index="" && property:sys.usb.em.clear=0 && \
+property:sys.usb.configfs=1
+    setprop sys.usb.em.clear 1
+    setprop persist.radio.port_index none
+
+on property:persist.radio.port_index=none && property:sys.usb.em.clear=2 && \
+property:sys.usb.configfs=1
+    setprop sys.usb.acm_port0 ""
+    setprop sys.usb.acm_port1 ""
+    setprop sys.usb.acm_cnt 0
+    setprop sys.usb.acm_enable 0
+    setprop sys.usb.em.clear 0
+    setprop sys.usb.acm_idx ""
+
+#atci/atciActivity.java
+on property:persist.radio.port_index=1 && property:sys.usb.configfs=1
+    setprop sys.usb.em.clear 1
+    setprop sys.usb.ffs.ready 0
+    stop adbd
+
+on property:persist.radio.port_index=1 && property:sys.usb.em.clear=2 && \
+property:sys.usb.configfs=1
+    setprop sys.usb.acm_port0 0
+    setprop sys.usb.acm_port1 ""
+    setprop sys.usb.acm_cnt 1
+    setprop sys.usb.acm_enable 1
+    start adbd
+    setprop sys.usb.em.clear 0
+    setprop sys.usb.acm_idx ${persist.radio.port_index}
+
+on property:persist.radio.port_index=2 && property:sys.usb.configfs=1
+    setprop sys.usb.em.clear 1
+    setprop sys.usb.ffs.ready 0
+    stop adbd
+
+on property:persist.radio.port_index=2 && property:sys.usb.em.clear=2 && \
+property:sys.usb.configfs=1
+    setprop sys.usb.acm_port0 1
+    setprop sys.usb.acm_port1 ""
+    setprop sys.usb.acm_cnt 1
+    setprop sys.usb.acm_enable 1
+    start adbd
+    setprop sys.usb.em.clear 0
+    setprop sys.usb.acm_idx ${persist.radio.port_index}
+
+on property:persist.radio.port_index=3 && property:sys.usb.configfs=1
+    setprop sys.usb.em.clear 1
+    setprop sys.usb.ffs.ready 0
+    stop adbd
+
+on property:persist.radio.port_index=3 && property:sys.usb.em.clear=2 && \
+property:sys.usb.configfs=1
+    setprop sys.usb.acm_port0 2
+    setprop sys.usb.acm_port1 ""
+    setprop sys.usb.acm_cnt 1
+    setprop sys.usb.acm_enable 1
+    start adbd
+    setprop sys.usb.em.clear 0
+    setprop sys.usb.acm_idx ${persist.radio.port_index}
+
+on property:persist.radio.port_index=4 && property:sys.usb.configfs=1
+    setprop sys.usb.em.clear 1
+    setprop sys.usb.ffs.ready 0
+    stop adbd
+
+on property:persist.radio.port_index=4 && property:sys.usb.em.clear=2 && \
+property:sys.usb.configfs=1
+    setprop sys.usb.acm_port0 3
+    setprop sys.usb.acm_port1 ""
+    setprop sys.usb.acm_cnt 1
+    setprop sys.usb.acm_enable 1
+    start adbd
+    setprop sys.usb.em.clear 0
+    setprop sys.usb.acm_idx ${persist.radio.port_index}
+
+### radio series end ###
+
+### PC trigger series begin ###
+# BT relayer at Engineer mode
+on property:sys.usb.config=acm_third && property:sys.usb.configfs=1
+    start adbd
+    setprop sys.usb.clear 1
+
+on property:sys.usb.ffs.ready=1 && property:sys.usb.config=acm_third && \
+property:sys.usb.clear=2 && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "acm_third"
+    write /config/usb_gadget/g1/idProduct 0x2006
+    symlink /config/usb_gadget/g1/functions/mass_storage.usb0 /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f2
+    symlink /config/usb_gadget/g1/functions/acm.gs2 /config/usb_gadget/g1/configs/b.1/f3
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+    setprop sys.usb.pid 0x2006
+    setprop sys.usb.acm_port0 2
+    setprop sys.usb.acm_port1 ""
+    setprop sys.usb.clear 0
+
+# Meta mode under Normal boot, execute by META
+on property:sys.usb.config=mass_storage,adb,acm && property:init.svc.adbd=restarting && \
+property:sys.usb.pid=0x2006 && property:service.adb.root=1
+    setprop sys.usb.clear 1
+    setprop sys.usb.ffs.ready 0
+
+on property:sys.usb.config=mass_storage,adb,acm && property:sys.usb.configfs=1
+   start adbd
+   setprop sys.usb.clear 1
+
+on property:sys.usb.ffs.ready=1 && property:sys.usb.config=mass_storage,adb,acm && \
+property:sys.usb.clear=2 && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "mass_storage_adb_acm"
+    write /config/usb_gadget/g1/idProduct 0x2006
+    symlink /config/usb_gadget/g1/functions/mass_storage.usb0 /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f2
+    symlink /config/usb_gadget/g1/functions/acm.gs0 /config/usb_gadget/g1/configs/b.1/f3
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+    setprop sys.usb.pid 0x2006
+    setprop sys.usb.acm_port0 0
+    setprop sys.usb.acm_port1 ""
+    setprop sys.usb.clear 0
+
+### PC trigger series end ###
+
+on property:sys.usb.config=charging
+    setprop sys.usb.state ${sys.usb.config}
+    setprop sys.usb.charging cdp
+
+on property:sys.usb.charging=cdp && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "mtp"
+    write /config/usb_gadget/g1/idProduct 0x2008
+    write /config/usb_gadget/g1/os_desc/use 1
+    symlink /config/usb_gadget/g1/functions/mtp.gs0 /config/usb_gadget/g1/configs/b.1/f1
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+    setprop sys.usb.pid 0x2008
+
+#on property:sys.usb.charging=cdp
+#	write /sys/class/android_usb/android0/enable 0
+#	write /sys/class/android_usb/android0/idVendor ${sys.usb.vid}
+#	write /sys/class/android_usb/android0/idProduct 2008
+#	write /sys/class/android_usb/android0/functions mtp
+#	write /sys/class/android_usb/android0/enable 1
+#	write /sys/class/udc/musb-hdrc/device/cmode 2
+
+on property:sys.usb.charging=yes
+    write /sys/class/udc/musb-hdrc/device/cmode 2
+on property:sys.usb.charging=no
+    write /sys/class/udc/musb-hdrc/device/cmode 1
+
+on property:sys.usb.bicr=yes
+    write /sys/class/android_usb/android0/f_mass_storage/bicr 1
+    write /sys/class/android_usb/android0/f_mass_storage/lun/file "/dev/block/loop0"
+on property:sys.usb.bicr=no
+    write /sys/class/android_usb/android0/f_mass_storage/bicr 0
+    write /sys/class/android_usb/android0/f_mass_storage/lun/file "off"
+
+on property:mediatek.usb.port.mode=usb
+    write /sys/devices/platform/mt_usb/portmode 0
+on property:mediatek.usb.port.mode=uart
+    write /sys/devices/platform/mt_usb/portmode 1
+
+on property:mediatek.em.usb.set=USB_DRIVING_CAPABILITY
+    write /sys/kernel/debug/usb20_phy/USB_DRIVING_CAPABILITY ${mediatek.em.usb.value}
+on property:mediatek.em.usb.set=RG_USB20_TERM_VREF_SEL
+    write /sys/kernel/debug/usb20_phy/RG_USB20_TERM_VREF_SEL ${mediatek.em.usb.value}
+on property:mediatek.em.usb.set=RG_USB20_HSTX_SRCTRL
+    write /sys/kernel/debug/usb20_phy/RG_USB20_HSTX_SRCTRL ${mediatek.em.usb.value}
+on property:mediatek.em.usb.set=RG_USB20_VRT_VREF_SEL
+    write /sys/kernel/debug/usb20_phy/RG_USB20_VRT_VREF_SEL ${mediatek.em.usb.value}
+on property:mediatek.em.usb.set=RG_USB20_INTR_EN
+    write /sys/kernel/debug/usb20_phy/RG_USB20_INTR_EN ${mediatek.em.usb.value}
+on property:mediatek.em.usb.set=RG_USB20_PHY_REV6
+    write /sys/kernel/debug/usb20_phy/RG_USB20_PHY_REV6 ${mediatek.em.usb.value}
+
+## need to fix##
+#on property:sys.usb.config=*
+#	write /sys/class/android_usb/android0/log ${sys.usb.config}
+
+on property:mediatek.em.usb.bypass.enable=0
+    write /sys/class/usb_rawbulk/gps/enable 1
+on property:mediatek.em.usb.bypass.enable=1
+    write /sys/class/usb_rawbulk/pcv/enable 1
+on property:mediatek.em.usb.bypass.enable=2
+    write /sys/class/usb_rawbulk/atc/enable 1
+on property:mediatek.em.usb.bypass.enable=3
+    write /sys/class/usb_rawbulk/ets/enable 1
+on property:mediatek.em.usb.bypass.enable=4
+    write /sys/class/usb_rawbulk/data/enable 1
+on property:mediatek.em.usb.bypass.disable=0
+    write /sys/class/usb_rawbulk/gps/enable 0
+on property:mediatek.em.usb.bypass.disable=1
+    write /sys/class/usb_rawbulk/pcv/enable 0
+on property:mediatek.em.usb.bypass.disable=2
+    write /sys/class/usb_rawbulk/atc/enable 0
+on property:mediatek.em.usb.bypass.disable=3
+    write /sys/class/usb_rawbulk/ets/enable 0
+on property:mediatek.em.usb.bypass.disable=4
+    write /sys/class/usb_rawbulk/data/enable 0
+
+### test command start ###
+on property:sys.usb.test=*
+    setprop sys.usb.config none
+    setprop sys.usb.config ${sys.usb.test}
+### test command end ###
+
+### PLATFORM VARIANT, cat $rc_file | grep write | sort | grep -vE "android0|usb20_phy" | awk '{print $2}' | uniq ###

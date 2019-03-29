@@ -1,0 +1,70 @@
+# ==============================================
+# Policy File of /vendor/bin/nvram_agent_binder Executable File
+
+
+# ==============================================
+# Type Declaration
+# ==============================================
+type nvram_agent_binder_exec , exec_type, file_type, vendor_file_type;
+type nvram_agent_binder ,domain;
+
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+init_daemon_domain(nvram_agent_binder)
+
+# Date : WK14.35
+# Operation : access nvram by binder 
+# Purpose : ensure nvram user can access nvram file normally. 
+allow nvram_agent_binder nvram_agent_service:service_manager add;
+
+
+# Date : WK14.43
+# Operation : 2rd Selinux Migration 
+# Purpose : the role of nvram_agent_binder is same with nvram_daemon except property_set & exect permission
+allow nvram_agent_binder nvram_device:blk_file rw_file_perms;
+allow nvram_agent_binder bootdevice_block_device:blk_file rw_file_perms;
+allow nvram_agent_binder nvdata_device:blk_file rw_file_perms;
+allow nvram_agent_binder nvram_data_file:dir create_dir_perms;
+allow nvram_agent_binder nvram_data_file:file create_file_perms;
+allow nvram_agent_binder nvram_data_file:lnk_file read;
+allow nvram_agent_binder nvdata_file:lnk_file read;
+allow nvram_agent_binder nvdata_file:dir create_dir_perms;
+allow nvram_agent_binder nvdata_file:file create_file_perms;
+
+#allow nvram_agent_binder system_file:file execute_no_trans;
+
+allow nvram_agent_binder als_ps_device:chr_file r_file_perms;
+allow nvram_agent_binder mtk-adc-cali_device:chr_file rw_file_perms;
+allow nvram_agent_binder gsensor_device:chr_file r_file_perms;
+allow nvram_agent_binder gyroscope_device:chr_file r_file_perms;
+allow nvram_agent_binder init:unix_stream_socket connectto;
+allow nvram_agent_binder property_socket:sock_file write;
+allow nvram_agent_binder sysfs:file write;
+allow nvram_agent_binder self:capability { fowner chown dac_override fsetid };
+allow nvram_agent_binder system_data_file:dir create_file_perms;
+
+# Purpose: for backup
+allow nvram_agent_binder nvram_device:chr_file rw_file_perms;
+allow nvram_agent_binder pro_info_device:chr_file rw_file_perms;
+allow nvram_agent_binder block_device:dir search;
+
+allow nvram_agent_binder app_data_file:file write;
+# for MLC device
+allow nvram_agent_binder mtd_device:dir search;
+allow nvram_agent_binder mtd_device:chr_file rw_file_perms;
+
+#for nvram agent hidl
+allow nvram_agent_binder hwservicemanager_prop:file r_file_perms;
+
+
+#for nvram hidl client support
+allow nvram_agent_binder sysfs:file { read open };
+allow nvram_agent_binder system_data_file:lnk_file read;
+
+# Allow to use HWBinder IPC
+hwbinder_use(nvram_agent_binder);
+
+# Allow a set of permissions required for a domain to be a server which provides a HAL implementation over HWBinder.
+hal_server_domain(nvram_agent_binder, hal_nvramagent)
+

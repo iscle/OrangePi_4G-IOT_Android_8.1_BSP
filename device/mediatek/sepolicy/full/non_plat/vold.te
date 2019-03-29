@@ -1,0 +1,70 @@
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+
+# Date : WK14.37
+# Operation : Migration 
+# Purpose : re-init ExternalSD
+allow vold misc_sd_device:chr_file { read ioctl open };
+
+# Date : WK14.43
+# Purpose : grant permission to /protect_f and /protect_s for the command, fstrim dotrim
+allow vold protect_f_data_file:dir { read getattr open ioctl };
+allow vold protect_s_data_file:dir { read getattr open ioctl };
+allow vold persist_data_file:dir { read getattr open ioctl };
+
+# Date : WK14.46
+# Operation : copy the logs in /data(tmpfs) to real userdata partition
+allow vold logtemp_data_file:dir { read open getattr search};
+allow vold logtemp_data_file:file { read getattr open };
+allow vold logmisc_data_file:dir { read open getattr search};
+allow vold logmisc_data_file:file { read getattr open };
+allow vold mdlog_data_file:dir { read open getattr search};
+allow vold mdlog_data_file:file { read getattr open };
+allow vold aee_exp_data_file:dir { read open getattr search};
+allow vold aee_exp_data_file:file { read getattr open };
+allow vold data_tmpfs_log_file:dir { setattr getattr read create write rmdir relabelto remove_name open add_name search};
+allow vold data_tmpfs_log_file:file { write setattr getattr relabelto create unlink open read};
+# mount crypto block device to /data/tmp_mnt/data_tmpfs_log and restorecon
+allow vold system_data_file:dir { relabelfrom relabelto setattr };
+
+#rawfs
+allow vold rawfs:dir { read ioctl open };
+
+# Date : WK15.30
+# Operation : Migration
+# Purpose : resize userdata partition
+allow vold resize_exec:file rx_file_perms;
+
+# Date : WK15.30
+# Operation : Migration
+# Purpose : for device bring up, not to block early migration/sanity
+allow vold proc_mtkcooler:dir r_dir_perms;
+allow vold proc_mtktz:dir r_dir_perms;
+
+# Date : WK15.37
+# Operation : Migration
+# Purpose : for ntfs device mount
+allow vold mmcblk1p1_block_device:blk_file { open read write lock ioctl getattr};
+
+# Date : WK15.44
+# Purpose : access protect1 and protect2 partitions for the platform without nvdata partition
+allow vold protect1_block_device:blk_file rw_file_perms;
+allow vold protect2_block_device:blk_file rw_file_perms;
+
+# Date : WK15.49
+# Operation : Migration
+# Purpose: Trustonic HW-backed Keymaster
+# allow vold mobicore:unix_stream_socket connectto;
+allow vold mobicore_user_device:chr_file { read write ioctl open };
+
+# Date : 2016/06/01
+# Operation: TEEI integration
+# Purpose: Microtrust HW-backed Keymaster
+allow vold ut_keymaster_device:chr_file rw_file_perms;
+
+# Date : WK16.42
+# Operation : integration
+# Purpose : add hwzram block device
+allow vold hwzram0_device:blk_file getattr;
+

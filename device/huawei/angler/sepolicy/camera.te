@@ -1,0 +1,34 @@
+type camera, domain, device_domain_deprecated;
+type camera_exec, exec_type, file_type;
+
+# Started by init
+init_daemon_domain(camera)
+
+binder_use(camera)
+binder_call(camera, system_server)
+
+allow camera self:capability { sys_nice };
+
+allow camera sensorservice_service:service_manager find;
+
+allow camera system_server:unix_stream_socket { read write };
+
+allow camera camera_device:chr_file rw_file_perms;
+allow camera input_device:dir r_dir_perms;
+allow camera input_device:chr_file r_file_perms;
+allow camera media_device:chr_file rw_file_perms;
+allow camera gpu_device:chr_file rw_file_perms;
+allow camera video_device:chr_file rw_file_perms;
+
+allow camera sysfs_prox_snsr:file rw_file_perms;
+allow camera camera_data_file:dir rw_dir_perms;
+allow camera camera_data_file:sock_file create_file_perms;
+
+# /persist access
+allow camera persist_file:dir search;
+allow camera persist_data_file:dir search;
+allow camera persist_data_file:file r_file_perms;
+
+allow camera { cameraserver surfaceflinger }:fd use;
+hal_client_domain(camera, hal_graphics_allocator)
+allow camera hal_renderscript_hwservice:hwservice_manager find;

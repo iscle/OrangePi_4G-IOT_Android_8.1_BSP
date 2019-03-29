@@ -1,0 +1,135 @@
+# ==============================================
+# Policy File of /vendor/bin/rild Executable File
+
+# ==============================================
+# Type Declaration
+# ==============================================
+
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+# Access to wake locks
+wakelock_use(rild)
+# Trigger module auto-load.
+allow rild kernel:system module_request;
+
+# Capabilities assigned for rild
+allow rild self:capability { setuid net_admin net_raw };
+allow rild self:capability dac_override;
+
+# Control cgroups
+allow rild cgroup:dir create_dir_perms;
+
+# Property service
+# allow set RIL related properties (radio./net./system./etc)
+set_prop(rild, radio_prop)
+set_prop(rild, net_radio_prop)
+set_prop(rild, system_radio_prop)
+set_prop(rild, persist_ril_prop)
+auditallow rild net_radio_prop:property_service set;
+auditallow rild system_radio_prop:property_service set;
+set_prop(rild, ril_active_md_prop)
+# allow set muxreport control properties
+set_prop(rild, ril_cdma_report_prop)
+set_prop(rild, ril_mux_report_case_prop)
+set_prop(rild, ctl_muxreport-daemon_prop)
+
+# Access to wake locks
+wakelock_use(rild)
+
+# Allow access permission to efs files
+allow rild efs_file:dir create_dir_perms;
+allow rild efs_file:file create_file_perms;
+allow rild bluetooth_efs_file:file r_file_perms;
+allow rild bluetooth_efs_file:dir r_dir_perms;
+
+# Allow access permission to dir/files
+# (radio data/system data/proc/etc)
+allow rild radio_data_file:dir rw_dir_perms;
+allow rild radio_data_file:file create_file_perms;
+allow rild sdcard_type:dir r_dir_perms;
+allow rild system_data_file:dir r_dir_perms;
+allow rild system_data_file:file r_file_perms;
+allow rild system_file:file x_file_perms;
+allow rild proc:file rw_file_perms;
+allow rild proc_net:file w_file_perms;
+
+# Allow rild to create and use netlink sockets.
+### TBD, neverallowxperm on line 177 of system/sepolicy/public/domain.te
+#allow rild self:netlink_socket create_socket_perms;
+#allow rild self:netlink_kobject_uevent_socket create_socket_perms;
+# Set and get routes directly via netlink.
+allow rild self:netlink_route_socket nlmsg_write;
+
+# Allow rild to create sockets.
+### TBD, neverallowxperm on line 177 of system/sepolicy/public/domain.te
+#allow rild self:socket create_socket_perms;
+
+# Allow read/write to devices/files
+allow rild alarm_device:chr_file rw_file_perms;
+allow rild radio_device:chr_file rw_file_perms;
+allow rild radio_device:blk_file r_file_perms;
+allow rild mtd_device:dir search;
+# Allow read/write to uart driver (for GPS)
+#allow rild gps_device:chr_file rw_file_perms;
+# Allow read/write to tty devices
+allow rild tty_device:chr_file rw_file_perms;
+allow rild eemcs_device:chr_file { rw_file_perms };
+
+allow rild Vcodec_device:chr_file { rw_file_perms };
+allow rild devmap_device:chr_file { r_file_perms };
+allow rild devpts:chr_file { rw_file_perms };
+allow rild ccci_device:chr_file { rw_file_perms };
+allow rild misc_device:chr_file { rw_file_perms };
+allow rild proc_lk_env:file rw_file_perms;
+allow rild sysfs_vcorefs_pwrctrl:file { w_file_perms };
+allow rild bootdevice_block_device:blk_file { rw_file_perms };
+allow rild para_block_device:blk_file { rw_file_perms };
+
+# Allow dir search, fd uses
+allow rild block_device:dir search;
+#allow rild platformblk_device:dir search;
+allow rild platform_app:fd use;
+allow rild radio:fd use;
+
+# For MAL MFI
+allow rild mal_mfi_socket:sock_file { w_file_perms };
+
+# For ccci sysfs node
+allow rild sysfs_ccci:dir search;
+allow rild sysfs_ccci:file r_file_perms;
+
+#Date : W17.18
+#Purpose: Treble SEpolicy denied clean up
+add_hwservice(hal_telephony_server, mtk_hal_rild_hwservice)
+allow hal_telephony_client mtk_hal_rild_hwservice:hwservice_manager find;
+
+#Date : W17.21
+#Purpose: Grant permission to access binder dev node
+vndbinder_use(rild)
+
+#Dat: 2017/03/27
+#Purpose: allow set telephony Sensitive property
+set_prop(rild, mtk_telephony_sensitive_prop)
+
+# For AGPSD
+allow rild mtk_agpsd:unix_stream_socket connectto;
+
+#Date 2017/10/12
+#Purpose: allow set MTU size
+allow rild toolbox_exec:file getattr;
+allow rild toolbox_exec:file {execute read open};
+allow rild toolbox_exec:file {execute_no_trans};
+allow rild mtk_net_ipv6_prop:property_service set;
+
+#Dat: 2017/10/17
+# Allow to use sysenv & persist.radio.multisim.config
+# for dynamic feature switch between ss & dsds
+allow rild sysfs:file open;
+allow rild sysfs:file read;
+allow rild usp_prop:property_service set;
+
+#Date: 2017/12/6
+#Purpose: allow set the RS times for /proc/sys/net/ipv6/conf/ccmniX/router_solicitations
+allow rild vendor_shell_exec:file {execute_no_trans};
+allow rild vendor_toolbox_exec:file {execute_no_trans};

@@ -1,0 +1,55 @@
+# ==============================================
+# Policy File of /system/bin/fuelgauged_nvram Executable File 
+
+# ==============================================
+# Type Declaration
+# ==============================================
+type fuelgauged_nvram ,domain;
+type fuelgauged_nvram_exec , exec_type, file_type, vendor_file_type;
+type fuelgauged_nvram_file, file_type, data_file_type;
+
+# ==============================================
+# Android Policy Rule
+# ==============================================
+
+# ==============================================
+# NSA Policy Rule
+# ==============================================
+
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+
+init_daemon_domain(fuelgauged_nvram)
+
+# Data : WK16.21
+# Operation : New Feature
+# Purpose : For fg daemon can access /data/FG folder
+file_type_auto_trans(fuelgauged_nvram, system_data_file, fuelgauged_nvram_file);
+allow fuelgauged_nvram fuelgauged_nvram_file:file rw_file_perms;
+allow fuelgauged_nvram system_data_file:dir rw_dir_perms;
+
+# Data : WK16.21
+# Operation : New Feature
+# Purpose : For fg daemon can do nvram r/w to save car_tune_value
+allow fuelgauged_nvram nvdata_file:dir rw_dir_perms;
+allow fuelgauged_nvram nvdata_file:file {rw_file_perms create_file_perms};
+allow fuelgauged_nvram nvram_data_file:lnk_file rw_file_perms;
+allow fuelgauged_nvram nvdata_file:lnk_file rw_file_perms;
+
+allow fuelgauged_nvram fuelgauged_file:dir rw_dir_perms;
+allow fuelgauged_nvram fuelgauged_file:file {rw_file_perms create_file_perms};
+
+# Data : W16.43
+# Operation : New Feature
+# Purpose : Change from /data to /cache
+allow fuelgauged_nvram cache_file:file {rw_file_perms create_file_perms};
+allow fuelgauged_nvram cache_file:dir {rw_dir_perms create_dir_perms};
+allow fuelgauged_nvram self:capability { dac_read_search dac_override chown };
+allow fuelgauged_nvram kmsg_device:chr_file { write open };
+allow fuelgauged_nvram self:capability fsetid;
+
+# Data : W17.34
+# Operation : New Feature
+# Purpose : fgauge_nvram could use IOCTL
+allow fuelgauged_nvram MT_pmic_adc_cali_device:chr_file rw_file_perms;

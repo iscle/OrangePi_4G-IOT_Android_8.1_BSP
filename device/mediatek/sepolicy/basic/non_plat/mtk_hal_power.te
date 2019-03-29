@@ -1,0 +1,81 @@
+# ==============================================================================
+# Type Declaration
+# ==============================================================================
+type mtk_hal_power, domain;
+type mtk_hal_power_exec, exec_type, file_type, vendor_file_type;
+
+# hwbinder access
+init_daemon_domain(mtk_hal_power)
+hwbinder_use(mtk_hal_power);
+
+allow mtk_hal_power hwservicemanager_prop:file r_file_perms;
+allow mtk_hal_power hal_power_hwservice:hwservice_manager { add find };
+allow mtk_hal_power hidl_base_hwservice:hwservice_manager add;
+
+add_hwservice(hal_power, mtk_hal_power_hwservice)
+allow hal_power_client mtk_hal_power_hwservice:hwservice_manager find;
+
+hal_server_domain(mtk_hal_power, hal_power);
+
+# proc fs
+allow mtk_hal_power proc:dir  {search getattr};
+allow mtk_hal_power proc:file {getattr open read write ioctl};
+
+# sysfs
+allow mtk_hal_light sysfs:file rw_file_perms;
+allow mtk_hal_power sysfs_devices_system_cpu:file write;
+
+# debugfs
+allow mtk_hal_power debugfs_ged:dir search;
+allow mtk_hal_power debugfs_ged:file { getattr open read write };
+
+allow mtk_hal_power system_data_file:dir { create write add_name };
+
+# proc_thermal
+allow mtk_hal_power proc_thermal:file { write open };
+
+# proc info
+allow mtk_hal_power mtk_hal_audio:dir getattr;
+
+# Date : 2017/10/02
+# Operation: SQC
+# Purpose : Allow powerHAL to access perfmgr
+allow mtk_hal_power proc_perfmgr:dir search;
+allow mtk_hal_power proc_perfmgr:file { getattr open read write ioctl };
+
+# Date : 2017/10/11
+# Operation: SQC
+# Purpose : Allow powerHAL to access powerhal folder
+allow mtk_hal_power sdcard_type:dir create_dir_perms;
+allow mtk_hal_power sdcard_type:file create_file_perms;
+allow mtk_hal_power eemcs_device:chr_file rw_file_perms;
+allow mtk_hal_power mnt_user_file:dir create_dir_perms;
+
+allow mtk_hal_power mtk_powerhal_data_file:dir {create_dir_perms rw_dir_perms};
+allow mtk_hal_power mtk_powerhal_data_file:file {create_file_perms rw_file_perms};
+allow mtk_hal_power mtk_powerhal_data_file:sock_file {create_file_perms rw_file_perms};
+
+#camera contorl cpu
+allow mtk_hal_power mtk_hal_camera:dir search;
+allow mtk_hal_power mtk_hal_camera:file { read open };
+
+# Date : 2017/10/24
+# Operation: SQC
+# Purpose : Allow powerHAL to access thermal
+allow mtk_hal_power proc_thermal:dir search;
+allow mtk_hal_power sysfs:file {open write read};
+allow mtk_hal_power debugfs_fpsgo:dir search;
+allow mtk_hal_power debugfs_fpsgo:file { getattr open write read };
+
+# Date : 2017/12/19
+# Operation: SQC
+# Purpose : Allow powerHAL to access wlan
+allow mtk_hal_power proc_net:file {open write};
+
+# Date : 2017/12/21
+# Operation: SQC
+# Purpose : Allow powerHAL to access mediacodec
+allow mtk_hal_power mediacodec:dir search;
+allow mtk_hal_power mediacodec:file { getattr open write read };
+
+set_prop(mtk_hal_power, mtk_thermal_config_prop)

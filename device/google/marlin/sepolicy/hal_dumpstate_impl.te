@@ -1,0 +1,61 @@
+type hal_dumpstate_impl, domain;
+hal_server_domain(hal_dumpstate_impl, hal_dumpstate)
+
+type hal_dumpstate_impl_exec, exec_type, vendor_file_type, file_type;
+init_daemon_domain(hal_dumpstate_impl)
+
+# Execute dump scripts
+allow hal_dumpstate_impl vendor_shell_exec:file rx_file_perms;
+allow hal_dumpstate_impl vendor_toolbox_exec:file rx_file_perms;
+# system file execution
+#allow hal_dumpstate_impl system_data_file:dir r_dir_perms;
+
+# smlog_dump
+allow hal_dumpstate_impl smlog_dump_exec:file rx_file_perms;
+userdebug_or_eng(`
+allow hal_dumpstate_impl smlog_dump_file:dir create_dir_perms;
+allow hal_dumpstate_impl smlog_dump_file:file create_file_perms;
+allow hal_dumpstate_impl radio_data_file:dir r_dir_perms;
+allow hal_dumpstate_impl netmgr_data_file:dir r_dir_perms;
+allow hal_dumpstate_impl radio_data_file:file r_file_perms;
+allow hal_dumpstate_impl netmgr_data_file:file r_file_perms;
+')
+
+allow hal_dumpstate_impl uio_device:chr_file rw_file_perms;
+r_dir_file(hal_dumpstate_impl, sysfs_uio)
+r_dir_file(hal_dumpstate_impl, sysfs_rmtfs)
+r_dir_file(hal_dumpstate_impl, sysfs_msm_subsys)
+
+# Access to files for dumping
+allow hal_dumpstate_impl  sysfs:dir r_dir_perms;
+# rpm stat
+allow hal_dumpstate_impl debugfs_rpm:file r_file_perms;
+allow hal_dumpstate_impl debugfs_bufinfo:file r_file_perms;
+# wlan power stats
+allow hal_dumpstate_impl debugfs_wlan:dir r_dir_perms;
+allow hal_dumpstate_impl debugfs_wlan:file r_file_perms;
+# runtime-pm
+allow hal_dumpstate_impl debugfs_runtime_pm:file r_file_perms;
+# cnss
+allow hal_dumpstate_impl debugfs_cnss:file r_file_perms;
+# qsee_logger
+allow hal_dumpstate_impl qsee_logger_exec:file rx_file_perms;
+allow hal_dumpstate_impl debugfs_qsee_log:file r_file_perms;
+# MDP logs
+allow hal_dumpstate_impl debugfs_mdp:file r_file_perms;
+# ION HEAPS
+r_dir_file(hal_dumpstate_impl, debugfs_ion)
+# ipc
+r_dir_file(hal_dumpstate_impl, debugfs_ipc)
+# Temperatures
+r_dir_file(hal_dumpstate_impl, sysfs_thermal)
+# CPU stat
+r_dir_file(hal_dumpstate_impl, sysfs_devices_system_cpu)
+# usb logs
+userdebug_or_eng(`allow hal_dumpstate_impl debugfs_usb:file r_file_perms;')
+
+# Access to UFS info
+allow hal_dumpstate_impl sysfs_scsi_devices_0000:dir r_dir_perms;
+allow hal_dumpstate_impl sysfs_scsi_devices_0000:file r_file_perms;
+allow hal_dumpstate_impl debugfs_ufs:dir r_dir_perms;
+allow hal_dumpstate_impl debugfs_ufs:file r_file_perms;

@@ -1,0 +1,20 @@
+# Qualcomm TimeService app
+type qtimeservice, domain;
+
+app_domain(qtimeservice)
+
+allow qtimeservice { app_api_service }:service_manager find;
+
+# Communicate with time_daemon
+allow qtimeservice time:unix_stream_socket connectto;
+
+# Read and write /data/data subdirectory.
+allow qtimeservice system_app_data_file:dir create_dir_perms;
+allow qtimeservice system_app_data_file:{ file lnk_file } create_file_perms;
+
+# qtimeservice is a vendor app that can run/execute vendor libraries
+# TODO: (b/36613996) This MUST be removed when 'qtimeservice' is moved to /vendor
+# as part of the fix
+allow qtimeservice vendor_file_type:dir { search getattr };
+allow qtimeservice vendor_file_type:file { execute read open getattr };
+allow qtimeservice vendor_file_type:lnk_file { getattr read };

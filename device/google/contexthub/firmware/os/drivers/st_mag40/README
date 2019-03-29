@@ -1,0 +1,59 @@
+STMicroelectronics mag40 magnetometer sensor device driver for Google nanohub.
+
+This drivers support following devices:
+    - LSM303AGR
+    - LSM303AH
+    - LIS2MDL
+
+- Supported features:
+
+A. Reports geomagnetic field vector data
+B. Different data rates: 10/20/50/100 Hz
+C. I2C protocol
+D. Data ready reported by interrupt
+
+
+- Platform/variant porting:
+
+The driver requires that following macros are defined in the variant.h
+file of the specific variant:
+
+  ST_MAG40_CAL_ENABLED   /* specify whether the magnetic calibration API must be included */
+
+  ST_MAG40_I2C_BUS_ID    /* specify I2C Bus ID */
+  ST_MAG40_I2C_SPEED     /* specify I2C Bus speed in hz */
+  ST_MAG40_I2C_ADDR      /* specify device I2C address */
+
+  ST_MAG40_INT_PIN       /* specify the gpio used for the DRDY irq */
+  ST_MAG40_INT_IRQ       /* specify the exti interrupt of ST_MAG40_INT_PIN */
+  ST_MAG40_ROT_MATRIX    /* specify how axis has to be rotated according to variant platform
+                          * orientation.
+                          *
+                          * = r11, r12, r13, r21, r22, r23, r31, r32, r33
+                          *
+                          * Rotation:
+                          *
+                          * [x']   [r11 r12 r13]   [x]   [r11*x + r12*y +r13*z]
+                          * [y'] = [r21 r22 r23] * [y] = [r21*x + r22*y +r23*z]
+                          * [z']   [r31 r32 r33]   [x]   [r31*x + r32*y +r33*z]
+                          */
+
+Example:
+
+  /*
+   * Define platform/variant dependent ST_MAG40 device macros
+   */
+  #define ST_MAG40_CAL_ENABLED   1
+
+  /* I2C defs to be used when device is plugged on U4 slot */
+  #define ST_MAG40_I2C_BUS_ID      0
+  #define ST_MAG40_I2C_SPEED       400000
+  #define ST_MAG40_I2C_ADDR        0x1E
+
+  #define ST_MAG40_INT_PIN         GPIO_PB(4)
+  #define ST_MAG40_INT_IRQ         EXTI4_IRQn
+
+  #define ST_MAG40_ROT_MATRIX      0, 1, 0, 1, 0, 0, 0, 0, 1
+
+If these macros are not defined in the current variant the driver forces a compilation
+error.

@@ -1,0 +1,71 @@
+# ==============================================
+# MTK Policy Rule
+# ============
+
+#permissive adbd;
+
+# Date : WK14.27
+# Operation : KK.AOSP SQC
+# Purpose : MTK snapshot-related mechanism
+allow adbd graphics_device:chr_file r_file_perms;
+
+# Date : WK14.27
+# Operation : KK.AOSP SQC
+# Purpose : A process wants to access a specific path. For example : shell:ls -l /data/data/
+#allow adbd platform_app_data_file:dir ra_dir_perms;
+#allow adbd platform_app_data_file:file create_file_perms;
+#allow adbd radio_data_file:file r_file_perms;
+
+# Date : WK14.27
+# Operation : KK.AOSP SQC
+# Purpose : shell:logcat -v threadtime
+allow adbd self:capability2 syslog;
+
+allow adbd block_device:dir r_dir_perms;
+allow adbd kernel:process setsched;
+allow adbd self:capability { net_raw ipc_lock dac_override };
+allow adbd system_data_file:dir w_dir_perms;
+file_type_auto_trans(adbd, system_data_file, adbd_data_file)
+allow adbd adbd_data_file:file create_file_perms;
+
+# Date : WK14.46
+# Operation : Migration
+# Purpose : for MTK Emulator HW GPU
+allow adbd qemu_pipe_device:chr_file rw_file_perms;
+
+# user load adb pull /data/aee_exp db
+allow adbd aee_exp_data_file:dir r_dir_perms;
+allow adbd aee_exp_data_file:file r_file_perms;
+
+# call screencap by DDMS
+allow adbd surfaceflinger:dir search;
+allow adbd surfaceflinger:file r_file_perms;
+
+# Date : WK14.48
+# Operation : L0 SQC
+# Purpose : push/pull files to specific folders
+allow adbd sf_rtt_file:dir getattr;
+
+# Date : WK15.35
+# Operation : Migration
+# Purpose: Allow adbd to read binder from surfaceflinger
+allow adbd surfaceflinger:fifo_file rw_file_perms;
+
+# Date : WK16.33
+# Purpose: Allow to access ged for gralloc_extra functions
+allow adbd proc_ged:file {open read write ioctl getattr};
+
+# Data : WK16.42
+# Operator: Whitney bring up
+# Purpose: call surfaceflinger due to powervr
+allow adbd surfaceflinger:fifo_file rw_file_perms;
+
+# Data : WK16.45
+# Operator: Whitney SQC
+# Purpose: gpu_device uses adbd to screencap
+allow adbd gpu_device:dir search;
+
+# Data : WK17.46
+# Operator: Migration
+# Purpose: Allow adbd to read KE DB
+allow adbd aee_dumpsys_data_file:file r_file_perms;

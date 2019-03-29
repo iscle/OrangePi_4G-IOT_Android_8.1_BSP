@@ -1,0 +1,67 @@
+# loc_launcher service
+type location, domain;
+type location_exec, exec_type, vendor_file_type, file_type;
+
+# STOPSHIP b/28340421
+# Temporarily grant this permission and log its use.
+allow location self:capability { net_admin net_raw };
+auditallow location self:capability { net_admin net_raw };
+
+init_daemon_domain(location)
+
+allow location self:capability { setgid setuid };
+
+hwbinder_use(location)
+get_prop(location, hwservicemanager_prop)
+allow location fwk_sensor_hwservice:hwservice_manager find;
+binder_call(location, system_server)
+allow location hal_wifi:unix_stream_socket { read write };
+
+# Grant access to Qualcomm MSM Interface (QMI) radio sockets
+qmux_socket(location)
+
+allow location self:netlink_route_socket create_socket_perms_no_ioctl;
+allow location self:netlink_socket create_socket_perms_no_ioctl;
+allow location self:udp_socket create_socket_perms;
+allowxperm location self:udp_socket ioctl { SIOCGIFINDEX SIOCGIFHWADDR SIOCIWFIRSTPRIV_05 };
+allow location self:socket create_socket_perms;
+# whitelist socket ioctl commands
+allowxperm location self:socket ioctl msm_sock_ipc_ioctls;
+
+# files in /sys
+r_dir_file(location, sysfs_type)
+
+allow location proc_net:file r_file_perms;
+
+# execute /vendor/bin/slim_daemon
+allow location vendor_file:file rx_file_perms;
+allow location vendor_file:file execute_no_trans;
+
+# execute /vendor/bin/lowi-server
+allow location location_exec:file rx_file_perms;
+
+# /data/misc/location
+allow location location_data_file:dir create_dir_perms;
+allow location location_data_file:{ file sock_file } create_file_perms;
+
+# allow location permission_service:service_manager find;
+# allow location sensorservice_service:service_manager find;
+
+userdebug_or_eng(`
+  allow location diag_device:chr_file rw_file_perms;
+')
+
+# netd is a vendor daemon that is on /system; its functionality is related to
+# cellular data; since we allow telephony and telephony-data violations on
+# Marlin and Sailfish, we need to tag the dependency on netd with
+# socket_between_core_and_vendor_violators
+typeattribute location socket_between_core_and_vendor_violators;
+
+# Added to enable XTRA download (from internet) per
+# audit2allow after a test that downloaded XTRA on boot
+allow location dnsproxyd_socket:sock_file write;
+allow location fwmarkd_socket:sock_file write;
+allow location netd:unix_stream_socket connectto;
+allow location port:tcp_socket name_connect;
+allow location self:tcp_socket { connect create read setopt write };
+allow location self:udp_socket { create ioctl read write };

@@ -1,0 +1,27 @@
+# ==============================================
+# Policy File of /vendor/bin/wifi2agps Executable File
+
+# ==============================================
+# Type Declaration
+# ==============================================
+type wifi2agps_exec , exec_type, file_type, vendor_file_type;
+type wifi2agps ,domain;
+
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+init_daemon_domain(wifi2agps)
+
+# Date : WK14.34
+# Operation : Migration
+# Purpose : for mtk debug mechanism. agpsd_data_file, mtk_agpsd are used
+# to share wifi scan results with AGPS module. netlink_socket is used to
+# listen events of wlan driver. udp_socket is used to do ioctl with wlan driver
+# kernel-3.18 uses netlink_socket, but kernel-4.4 uses generic netlink_socket
+allow wifi2agps agpsd_data_file:sock_file write;
+allow wifi2agps mtk_agpsd:unix_dgram_socket sendto;
+allow wifi2agps agpsd_data_file:dir search;
+### TBD, neverallowxperm on line 177 of system/sepolicy/public/domain.te
+#allow wifi2agps self:netlink_socket create_socket_perms;
+allow wifi2agps self:netlink_generic_socket create_socket_perms_no_ioctl;
+allow wifi2agps self:udp_socket { create ioctl };

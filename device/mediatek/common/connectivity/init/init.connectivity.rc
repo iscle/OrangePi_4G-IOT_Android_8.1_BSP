@@ -1,0 +1,86 @@
+# MTK connectivity .rc configure
+
+on post-fs-data
+
+
+#
+# Connectivity related device nodes & configuration (begin)
+#
+
+#/dev/ttyMT2 for Connectivity BT/FM/GPS usage
+    chmod 0660 /dev/ttyMT2
+    chown system system /dev/ttyMT2
+
+#/dev/ttyMT1 for GPS 3337 usage
+    chmod 0660 /dev/ttyMT1
+    chown system system /dev/ttyMT1
+
+# GPS
+    mkdir /data/gps_mnl 0771 gps system
+    mkdir /data/misc/gps 0770 gps system
+    mkdir /data/mnl_flp 0771 gps system
+    mkdir /data/mnl_gfc 0771 gps system
+    chown gps system /data/mpe_mnl
+    chown gps system /data/mnl_flp
+    chown gps system /data/mnl_gfc
+    chown gps gps /sys/class/gpsdrv/gps/pwrctl
+    chown gps gps /sys/class/gpsdrv/gps/suspend
+    chown gps gps /sys/class/gpsdrv/gps/state
+    chown gps gps /sys/class/gpsdrv/gps/pwrsave
+    chown gps gps /sys/class/gpsdrv/gps/status
+
+# GPS EMI
+    chmod 666 /dev/gps_emi
+
+# WiFi
+    mkdir /data/misc/wifi 0770 wifi wifi
+    mkdir /data/misc/wifi/sockets 0770 wifi wifi
+    mkdir /data/misc/wpa_supplicant 0770 wifi wifi
+
+# BT relayer mode used VCOM
+    chown bluetooth bluetooth /dev/ttyGS2
+    chmod 0660 /dev/ttyGS2
+
+#
+# Connectivity related device nodes & configuration (end)
+#
+
+
+on boot
+
+#
+# Connectivity related services (Begin)
+#
+
+# GPS
+service mnld /vendor/bin/mnld
+    class main
+    user gps
+    group gps inet misc sdcard_rw sdcard_r media_rw system radio wakelock
+    socket mnld stream 660 gps system
+
+#service BGW /vendor/bin/BGW
+#    user system
+#    group gps system radio
+#    class main
+
+# Wlan
+service wpa_supplicant /vendor/bin/hw/wpa_supplicant \
+    -iwlan0 -Dnl80211 -c/data/misc/wifi/wpa_supplicant.conf \
+    -I/vendor/etc/wifi/wpa_supplicant_overlay.conf -N \
+    -ip2p0 -Dnl80211 -c/data/misc/wifi/p2p_supplicant.conf -e/data/misc/wifi/entropy.bin \
+    -I/vendor/etc/wifi/p2p_supplicant_overlay.conf \
+    -O/data/misc/wifi/sockets -g@android:wpa_wlan0
+    #   we will start as root and wpa_supplicant will switch to user wifi
+    #   after setting up the capabilities required for WEXT
+    #   user wifi
+    #   group wifi inet keystore
+    class main
+    socket wpa_wlan0 dgram 660 wifi wifi
+    disabled
+    oneshot
+
+#
+# Connectivity related services (End)
+#
+

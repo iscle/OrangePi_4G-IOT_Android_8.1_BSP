@@ -1,0 +1,26 @@
+on post-fs
+    ## ensure correct calibration file permissions
+    chown root system /persist/sensorcal.json
+    chmod 0640 /persist/sensorcal.json
+    start flash-nanohub-fw
+
+on post-fs-data
+    mkdir /data/vendor/sensor
+    chown root system /data/vendor/sensor
+    chmod 0770 /data/vendor/sensor
+
+service flash-nanohub-fw /vendor/bin/nanoapp_cmd download
+    oneshot
+    disabled
+    user root
+    group system
+
+service nanohub_slpi /vendor/bin/nanohub_slpi
+    class late_start
+    user root
+    group system
+
+on post-fs-data
+    mkdir /data/system/nanohub_lock/
+    restorecon /data/system/nanohub_lock
+

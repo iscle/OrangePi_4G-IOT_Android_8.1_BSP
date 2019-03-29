@@ -1,0 +1,107 @@
+#allow emdlogger to set property
+allow emdlogger debug_mdlogger_prop:property_service set;
+allow emdlogger debug_prop:property_service set;
+allow emdlogger persist_mtklog_prop:property_service set;
+allow emdlogger system_radio_prop:property_service set;
+
+# ccci device for internal modem
+allow emdlogger ccci_device:chr_file { rw_file_perms };
+
+# eemcs device for external modem
+allow emdlogger eemcs_device:chr_file { rw_file_perms };
+
+# C2K project SDIO device for external modem ttySDIO2 control port, ttySDIO8 log port
+allow emdlogger ttySDIO_device:chr_file { rw_file_perms };
+
+# C2K project modem device for external modem vmodem start/stop/ioctl modem
+allow emdlogger vmodem_device:chr_file { rw_file_perms };
+
+# usb device ttyGSx for modem logger usb logging
+allow emdlogger ttyGS_device:chr_file { rw_file_perms};
+
+# for modem logging sdcard access
+allow emdlogger sdcard_type:dir { create_dir_perms };
+allow emdlogger sdcard_type:file { create_file_perms };
+
+# modem logger access on /data/mdlog
+allow emdlogger mdlog_data_file:dir { create_dir_perms relabelto };
+allow emdlogger mdlog_data_file:fifo_file { create_file_perms };
+allow emdlogger mdlog_data_file:file { create_file_perms };
+allow emdlogger system_data_file:dir { create_dir_perms relabelfrom};
+
+# modem logger control port access /dev/ttyC1
+allow emdlogger mdlog_device:chr_file { rw_file_perms};
+
+#modem logger SD logging in factory mode
+allow emdlogger vfat:dir create_dir_perms;
+allow emdlogger vfat:file create_file_perms;
+
+#modem logger permission in storage in android M version
+#allow emdlogger log_device:chr_file { write open };
+allow emdlogger mnt_user_file:dir search;
+allow emdlogger mnt_user_file:lnk_file read;
+allow emdlogger storage_file:lnk_file read;
+
+#permission for storage link access in vzw Project
+allow emdlogger mnt_media_rw_file:dir search;
+
+
+#permission for use SELinux API
+#avc: denied { read } for pid=576 comm="emdlogger1" name="selinux_version" dev="rootfs"
+allow emdlogger rootfs:file r_file_perms;
+
+#permission for storage access storage
+allow emdlogger storage_file:dir { create_dir_perms };
+allow emdlogger tmpfs:lnk_file read;
+allow emdlogger storage_file:file { create_file_perms };
+
+#permission for read boot mode
+#avc: denied { open }  path="/sys/devices/virtual/BOOT/BOOT/boot/boot_mode" dev="sysfs"
+allow emdlogger sysfs:file { read open };
+
+# Allow read to sys/kernel/ccci/* files
+allow emdlogger sysfs_ccci:dir search;
+allow emdlogger sysfs_ccci:file r_file_perms;
+
+# Allow read avc: denied { read } for name="mddb" dev="mmcblk0p25" ino=681 
+# scontext=u:r:emdlogger:s0 tcontext=u:object_r:system_file:s0 tclass=dir permissive=0
+allow emdlogger system_file:dir read;
+
+
+# purpose: allow emdlogger to access storage in N version
+allow emdlogger media_rw_data_file:file  { create_file_perms };
+allow emdlogger media_rw_data_file:dir { create_dir_perms };
+
+#avc: denied { connectto } for path=006165653A72747464 scontext=u:r:emdlogger:s0
+#tcontext=u:object_r:aee_aed_socket:s0 tclass=unix_stream_socket permissive=0
+#security issue control
+allow emdlogger aee_aed:unix_stream_socket connectto;
+
+# For dynamic CCB buffer feature
+#avc: denied { read write } for name="lk_env" dev="proc" ino=4026532192
+#scontext=u:r:emdlogger:s0 tcontext=u:object_r:proc_lk_env:s0 tclass=file permissive=0
+#avc: denied { read } for name="mmcblk0p3" dev="tmpfs" ino=8493 scontext=u:r:emdlogger:s0
+# tcontext=u:object_r:para_block_device:s0 tclass=blk_file permissive=0
+allow emdlogger para_block_device:blk_file { read open };
+allow emdlogger proc_lk_env:file { read write ioctl open };
+
+#Android O for created file in data
+
+    file_type_auto_trans(emdlogger, system_data_file, mdlog_data_file)
+
+## purpose: avc: denied { read } for name="plat_file_contexts"
+allow emdlogger file_contexts_file:file { read getattr open };
+
+allow emdlogger block_device:dir search;
+allow emdlogger md_block_device:blk_file { read open };
+allow emdlogger self:capability { chown dac_override };
+
+
+# purpose: allow emdlogger to access persist.meta.connecttype
+get_prop(emdlogger, meta_connecttype_prop);
+
+# purpose: allow emdlogger to create socket
+allow emdlogger port:tcp_socket { name_connect name_bind };
+allow emdlogger emdlogger:tcp_socket { create connect setopt bind };
+allow emdlogger emdlogger:tcp_socket { bind setopt listen accept read write };
+allow emdlogger node:tcp_socket node_bind;

@@ -1,0 +1,66 @@
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+
+# New added for move to /system
+type emdlogger_exec , exec_type, file_type;
+typeattribute emdlogger coredomain;
+
+init_daemon_domain(emdlogger)
+binder_use(emdlogger)
+binder_service(emdlogger)
+
+
+# for modem logging sdcard access
+allow emdlogger sdcard_type:dir { create_dir_perms };
+allow emdlogger sdcard_type:file { create_file_perms };
+
+
+# modem logger socket access
+allow emdlogger property_socket:sock_file write;
+allow emdlogger init:unix_stream_socket connectto;
+allow emdlogger platform_app:unix_stream_socket connectto;
+allow emdlogger shell_exec:file { rx_file_perms };
+allow emdlogger system_file:file execute_no_trans;
+allow emdlogger zygote_exec:file { rx_file_perms };
+
+#modem logger SD logging in factory mode
+allow emdlogger vfat:dir create_dir_perms;
+allow emdlogger vfat:file create_file_perms;
+
+#modem logger permission in storage in android M version
+#allow emdlogger log_device:chr_file { write open };
+allow emdlogger mnt_user_file:dir search;
+allow emdlogger mnt_user_file:lnk_file read;
+allow emdlogger storage_file:lnk_file read;
+
+#permission for storage link access in vzw Project
+allow emdlogger mnt_media_rw_file:dir search;
+
+
+#permission for use SELinux API
+#avc: denied { read } for pid=576 comm="emdlogger1" name="selinux_version" dev="rootfs"
+allow emdlogger rootfs:file r_file_perms;
+
+#permission for storage access storage
+allow emdlogger storage_file:dir { create_dir_perms };
+allow emdlogger tmpfs:lnk_file read;
+allow emdlogger storage_file:file { create_file_perms };
+
+#permission for read boot mode
+#avc: denied { open }  path="/sys/devices/virtual/BOOT/BOOT/boot/boot_mode" dev="sysfs"
+allow emdlogger sysfs:file { read open };
+
+# Allow read avc: denied { read } for name="mddb" dev="mmcblk0p25" ino=681 
+# scontext=u:r:emdlogger:s0 tcontext=u:object_r:system_file:s0 tclass=dir permissive=0
+allow emdlogger system_file:dir read;
+
+# permission for android N policy
+allow emdlogger toolbox_exec:file rx_file_perms;
+
+# purpose: allow emdlogger to access storage in N version
+allow emdlogger media_rw_data_file:file  { create_file_perms };
+allow emdlogger media_rw_data_file:dir { create_dir_perms };
+
+## purpose: avc: denied { read } for name="plat_file_contexts"
+allow emdlogger file_contexts_file:file { read getattr open };

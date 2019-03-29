@@ -1,0 +1,23 @@
+binder_call(mediaserver, rild)
+# send data to camera socket
+allow mediaserver camera_data_file:sock_file write;
+allow mediaserver camera:unix_stream_socket connectto;
+allow mediaserver camera:unix_dgram_socket sendto;
+#read/write /dev/media[0-N]
+allow mediaserver media_device:chr_file rw_file_perms;
+#read/write /dev/msm_audio_cal
+userdebug_or_eng(`
+  allow mediaserver diag_device:chr_file rw_file_perms;
+')
+#read/write /dev/v4l-subdev[0-N]
+allow mediaserver v41_subdev_device:chr_file rw_file_perms;
+
+allow mediaserver persist_file:dir search;
+allow mediaserver persist_audio_file:dir search;
+allow mediaserver persist_audio_file:file r_file_perms;
+
+# allow communication w/perfd
+allow mediaserver perfd_data_file:dir search;
+allow mediaserver perfd_data_file:sock_file write;
+allow mediaserver perfd:unix_dgram_socket sendto;
+allow mediaserver perfd:unix_stream_socket connectto;

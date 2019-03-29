@@ -1,0 +1,30 @@
+# nfc subsystem
+type nfc_hal_pn54x, domain;
+type nfc_hal_pn54x_exec, exec_type, file_type;
+
+# may be started by init
+init_daemon_domain(nfc_hal_pn54x)
+
+allow nfc_hal_pn54x nfc_hal_pn54x_exec:file rx_file_perms;
+
+# hwbinder access
+hwbinder_use(nfc_hal_pn54x)
+
+# call into NFC process (callbacks)
+binder_call(nfc_hal_pn54x, nfc)
+
+# Set NFC properties
+set_prop(nfc_hal_pn54x, nfc_prop)
+
+# NFC device access.
+allow nfc_hal_pn54x nfc_device:chr_file rw_file_perms;
+
+# Data file accesses.
+allow nfc_hal_pn54x nfc_vendor_data_file:dir create_dir_perms;
+allow nfc_hal_pn54x nfc_vendor_data_file:notdevfile_class_set create_file_perms;
+
+allow nfc_hal_pn54x sysfs_nfc_power_writable:file rw_file_perms;
+allow nfc_hal_pn54x sysfs:file write;
+
+# TODO: added to match above sysfs rule. Remove me?
+allow nfc_hal_pn54x sysfs_usb:file write;

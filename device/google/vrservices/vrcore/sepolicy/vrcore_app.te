@@ -1,0 +1,37 @@
+###
+### VrCore was historically an untrusted_app, but it was moved into its own
+### domain to tighten access to VrCore-specific IPC services and
+### opportunistically eliminate legacy untrusted_app rules.
+###
+
+type vrcore_app, domain;
+
+app_domain(vrcore_app)
+net_domain(vrcore_app)
+bluetooth_domain(vrcore_app)
+
+# Services from untrusted_app_all.
+# Should be kept in sync with untrusted_app_all.
+allow vrcore_app audioserver_service:service_manager find;
+allow vrcore_app cameraserver_service:service_manager find;
+allow vrcore_app drmserver_service:service_manager find;
+allow vrcore_app mediaserver_service:service_manager find;
+allow vrcore_app mediaextractor_service:service_manager find;
+allow vrcore_app mediametrics_service:service_manager find;
+allow vrcore_app mediadrmserver_service:service_manager find;
+allow vrcore_app nfc_service:service_manager find;
+allow vrcore_app radio_service:service_manager find;
+allow vrcore_app surfaceflinger_service:service_manager find;
+allow vrcore_app app_api_service:service_manager find;
+
+# VrCore-specific services.
+allow vrcore_app vr_manager_service:service_manager find;
+allow vrcore_app vr_hwc_service:service_manager find;
+allow vrcore_app virtual_touchpad_service:service_manager find;
+
+# gdbserver for ndk-gdb ptrace attaches to app process.
+allow vrcore_app self:process ptrace;
+
+# Access to /data/media for screenshots.
+allow vrcore_app media_rw_data_file:dir create_dir_perms;
+allow vrcore_app media_rw_data_file:file create_file_perms;

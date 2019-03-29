@@ -1,0 +1,45 @@
+# loc_launcher service
+type location, domain, device_domain_deprecated;
+type location_exec, exec_type, file_type;
+
+init_daemon_domain(location)
+
+binder_use(location)
+binder_call(location, per_mgr)
+binder_call(location, system_server)
+
+qmux_socket(location)
+allow location hal_wifi:unix_stream_socket { read write };
+
+allow location location_data_file:dir rw_dir_perms;
+allow location location_data_file:file create_file_perms;
+allow location location_data_file:sock_file create_file_perms;
+allow location location_exec:file x_file_perms;
+allow location self:socket create_socket_perms;
+allowxperm location self:socket ioctl msm_sock_ipc_ioctls;
+allow location self:netlink_socket create_socket_perms_no_ioctl;
+allow location self:netlink_route_socket create_socket_perms_no_ioctl;
+allow location self:udp_socket create_socket_perms;
+allowxperm location self:udp_socket ioctl { SIOCGIFINDEX SIOCGIFHWADDR SIOCIWFIRSTPRIV_05 };
+
+# create location socket location-mq-s
+allow location location_data_file:sock_file { create setattr unlink };
+
+# daemon starts as root to obtain all DAC capabilities
+# TODO start as gps user and use filesystem-config to give
+# proper DAC capabilities.
+allow location self:capability { setuid setgid net_admin net_raw };
+
+# execute /system/bin/lowi-server and /vendor/bin/slim_daemon
+allow location location_exec:file rx_file_perms;
+
+# slim_daemon receives data from Loc_hal_worker
+allow location self:socket create_socket_perms;
+
+allow location sensorservice_service:service_manager find;
+
+# subsystem ramdump for debug builds
+userdebug_or_eng(`
+    allow location sysfs_ssr:dir r_dir_perms;
+    allow location sysfs_ssr:lnk_file read;
+')

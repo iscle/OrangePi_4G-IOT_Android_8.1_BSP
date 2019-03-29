@@ -1,0 +1,131 @@
+# Copyright (C) 2012 The Android Open Source Project
+#
+# IMPORTANT: Do not create world writable files or directories.
+# This is a common source of Android security bugs.
+#
+
+on early-init
+    write /sys/class/net/ccmni0/queues/rx-0/rps_cpus "ff"
+    write /sys/class/net/ccmni1/queues/rx-0/rps_cpus "ff"
+    write /sys/class/net/ccmni2/queues/rx-0/rps_cpus "ff"
+    write /sys/class/net/ccmni0/queues/rx-0/rps_flow_cnt "1000"
+    write /sys/class/net/ccmni1/queues/rx-0/rps_flow_cnt "1000"
+    write /sys/class/net/ccmni2/queues/rx-0/rps_flow_cnt "1000"
+    setprop net.perf.tether.rps 0f
+    setprop net.perf.rps.default ff
+    setprop net.perf.tether.cpu.core 4,4,0,0
+    setprop net.perf.tether.cpu.freq 1183000,1638000,0,0
+    setprop net.perf.internal.cpu.core 4,4,0,0
+    setprop net.perf.internal.cpu.freq -1,-1,-1,-1
+
+on post-fs-data
+
+    write /proc/bootprof "post-fs-data: on modem start"
+
+    # Modem related device nodes
+    mkdir /vendor/nvdata/md  0770 root system
+    mkdir /vendor/nvdata/md3  0770 root system
+    mkdir /data/md3	0770 root system
+#  Build-in Modified - S
+#    insmod /vendor/lib/modules/ccci_plat.ko
+#    insmod /vendor/lib/modules/ccci.ko
+#  Build-in Modified - E
+#   chown radio radio /sys/class/BOOT/BOOT/boot/md
+    chown radio radio /sys/kernel/ccci/boot
+
+#SeLinux
+    mkdir /data/ccci_cfg 0770 system radio
+    restorecon /data/ccci_cfg
+    restorecon_recursive /vendor/protect_f
+    restorecon_recursive /vendor/protect_s
+# Encrypt phone function
+    setprop vold.post_fs_data_done 1
+
+service md_minilog_util /vendor/bin/md_minilog_util
+    user radio
+    disabled
+    oneshot
+
+#VIA RILD service
+service viarild /vendor/bin/viarild -l /vendor/lib/libviatelecom-withuim-ril.so -- -d /dev/ttySDIO4
+    class core
+    socket rild-via stream 660 radio radio
+    socket msap_c2k_socket1 stream 660 radio radio
+    socket msap_c2k_socket2 stream 660 radio radio
+    socket msap_c2k_socket3 stream 660 radio radio
+    socket msap_c2k_socket4 stream 660 radio radio
+    socket rpc stream 660 radio system
+    socket rildc-debug stream 660 radio system
+    socket rild-ctclient stream 660 radio system
+    socket rild-atci-c2k stream 660 radio system
+    group radio cache inet misc audio sdcard_r sdcard_rw log system
+    disabled
+    oneshot
+
+#
+#  Modem related services (Begin)
+#
+
+service permission_check /vendor/bin/permission_check
+    class main
+    user root
+    group system radio
+    oneshot
+
+service ccci_fsd /vendor/bin/ccci_fsd 0
+    user radio
+    group radio system
+    class core
+    oneshot
+
+service ccci_mdinit /vendor/bin/ccci_mdinit 0
+    user system
+    group radio system
+    class core
+    oneshot
+
+service ccci3_fsd /vendor/bin/ccci_fsd 2
+    user radio
+    group  radio system
+    class core
+    oneshot
+
+service ccci3_mdinit /vendor/bin/ccci_mdinit 2
+    user system
+    group radio system
+    class core
+    oneshot
+
+service ccci_rpcd /vendor/bin/ccci_rpcd 0
+    user radio
+    group radio system
+    class core
+    oneshot
+
+service pppd_gprs /system/bin/pppd_dt /dev/ttyACM0 debug noauth refuse-eap usepeerdns nodetach
+    user root
+    group radio cache inet misc
+    disabled
+    oneshot
+
+#Add by T.Zh for ppp daemon
+service pppd /system/bin/pppd file /data/misc/ppp/ppp_options
+    user root
+    disabled 
+    oneshot
+
+#
+#
+#  Modem related services (End)
+#
+
+#Add by hp.chen for
+#
+#   Telephony Early Read service
+#
+service terservice /vendor/bin/terservice
+    class core
+    user radio
+    group radio cache inet misc
+    oneshot
+

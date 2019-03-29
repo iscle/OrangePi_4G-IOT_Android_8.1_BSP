@@ -1,0 +1,400 @@
+#
+# Copyright (C) 2016 The Android Open-Source Project
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+on init
+    chmod 666 /dev/diag
+
+on post-fs-data
+    # Modem logging collection
+    mkdir /data/vendor/radio 0777 radio radio
+    mkdir /data/vendor/radio/diag_logs 0777 system system
+    # WLAN logging collection
+    mkdir /data/vendor/wifi 0777 system system
+    mkdir /data/vendor/wifi/cnss_diag 0777 system system
+
+on property:sys.usb.ffs.ready=1 && property:sys.usb.config=diag && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "diag"
+    rm /config/usb_gadget/g1/configs/b.1/f1
+    rm /config/usb_gadget/g1/configs/b.1/f2
+    rm /config/usb_gadget/g1/configs/b.1/f3
+    rm /config/usb_gadget/g1/configs/b.1/f4
+    rm /config/usb_gadget/g1/configs/b.1/f5
+    write /config/usb_gadget/g1/idVendor 0x05C6
+    write /config/usb_gadget/g1/idProduct 0x900E
+    symlink /config/usb_gadget/g1/functions/diag.diag /config/usb_gadget/g1/configs/b.1/f1
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+on property:sys.usb.config=diag,adb && property:sys.usb.configfs=1
+    start adbd
+
+
+on property:sys.usb.ffs.ready=1 && property:sys.usb.config=diag,adb && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "diag_adb"
+    rm /config/usb_gadget/g1/configs/b.1/f1
+    rm /config/usb_gadget/g1/configs/b.1/f2
+    rm /config/usb_gadget/g1/configs/b.1/f3
+    rm /config/usb_gadget/g1/configs/b.1/f4
+    rm /config/usb_gadget/g1/configs/b.1/f5
+    write /config/usb_gadget/g1/idVendor 0x05C6
+    write /config/usb_gadget/g1/idProduct 0x901D
+    symlink /config/usb_gadget/g1/functions/diag.diag /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f2
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+on property:sys.usb.config=diag,serial_cdev,rmnet_gsi,adb && property:sys.usb.configfs=1
+    start adbd
+    start port-bridge
+
+on property:sys.usb.ffs.ready=1 && property:sys.usb.config=diag,serial_cdev,rmnet_gsi,adb && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "Default composition"
+    rm /config/usb_gadget/g1/configs/b.1/f1
+    rm /config/usb_gadget/g1/configs/b.1/f2
+    rm /config/usb_gadget/g1/configs/b.1/f3
+    rm /config/usb_gadget/g1/configs/b.1/f4
+    rm /config/usb_gadget/g1/configs/b.1/f5
+    write /config/usb_gadget/g1/idVendor 0x05C6
+    write /config/usb_gadget/g1/idProduct 0x9091
+    write /config/usb_gadget/g1/os_desc/use 1
+    symlink /config/usb_gadget/g1/functions/diag.diag /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/cser.dun.0 /config/usb_gadget/g1/configs/b.1/f2
+    symlink /config/usb_gadget/g1/functions/gsi.rmnet /config/usb_gadget/g1/configs/b.1/f3
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f4
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+on property:sys.usb.config=diag,serial_cdev,rmnet_gsi && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "Default comp without ADB"
+    rm /config/usb_gadget/g1/configs/b.1/f1
+    rm /config/usb_gadget/g1/configs/b.1/f2
+    rm /config/usb_gadget/g1/configs/b.1/f3
+    rm /config/usb_gadget/g1/configs/b.1/f4
+    rm /config/usb_gadget/g1/configs/b.1/f5
+    write /config/usb_gadget/g1/idVendor 0x05C6
+    write /config/usb_gadget/g1/idProduct 0x9092
+    write /config/usb_gadget/g1/os_desc/use 1
+    symlink /config/usb_gadget/g1/functions/diag.diag /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/cser.dun.0 /config/usb_gadget/g1/configs/b.1/f2
+    symlink /config/usb_gadget/g1/functions/gsi.rmnet /config/usb_gadget/g1/configs/b.1/f3
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+    start port-bridge
+
+on property:sys.usb.config=rndis,diag && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "rndis_diag"
+    rm /config/usb_gadget/g1/configs/b.1/f1
+    rm /config/usb_gadget/g1/configs/b.1/f2
+    rm /config/usb_gadget/g1/configs/b.1/f3
+    rm /config/usb_gadget/g1/configs/b.1/f4
+    rm /config/usb_gadget/g1/configs/b.1/f5
+    write /config/usb_gadget/g1/idVendor 0x05C6
+    write /config/usb_gadget/g1/idProduct 0x902C
+    symlink /config/usb_gadget/g1/functions/gsi.rndis /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/diag.diag /config/usb_gadget/g1/configs/b.1/f2
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+on property:sys.usb.config=rndis,diag,adb && property:sys.usb.configfs=1
+    start adbd
+
+on property:sys.usb.ffs.ready=1 && property:sys.usb.config=rndis,diag,adb && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "rndis_diag_adb"
+    rm /config/usb_gadget/g1/configs/b.1/f1
+    rm /config/usb_gadget/g1/configs/b.1/f2
+    rm /config/usb_gadget/g1/configs/b.1/f3
+    rm /config/usb_gadget/g1/configs/b.1/f4
+    rm /config/usb_gadget/g1/configs/b.1/f5
+    write /config/usb_gadget/g1/idVendor 0x05C6
+    write /config/usb_gadget/g1/idProduct 0x902D
+    symlink /config/usb_gadget/g1/functions/gsi.rndis /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/diag.diag /config/usb_gadget/g1/configs/b.1/f2
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f3
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+on property:sys.usb.config=rndis,serial_cdev,diag && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "rndis_dun_diag"
+    rm /config/usb_gadget/g1/configs/b.1/f1
+    rm /config/usb_gadget/g1/configs/b.1/f2
+    rm /config/usb_gadget/g1/configs/b.1/f3
+    rm /config/usb_gadget/g1/configs/b.1/f4
+    rm /config/usb_gadget/g1/configs/b.1/f5
+    write /config/usb_gadget/g1/idVendor 0x05C6
+    write /config/usb_gadget/g1/idProduct 0x90B5
+    symlink /config/usb_gadget/g1/functions/gsi.rndis /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/cser.dun.0 /config/usb_gadget/g1/configs/b.1/f2
+    symlink /config/usb_gadget/g1/functions/diag.diag /config/usb_gadget/g1/configs/b.1/f3
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+    start port-bridge
+
+on property:sys.usb.config=rndis,serial_cdev,diag,adb && property:sys.usb.configfs=1
+    start adbd
+    start port-bridge
+
+on property:sys.usb.ffs.ready=1 && property:sys.usb.config=rndis,serial_cdev,diag,adb && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "rndis_dun_diag"
+    rm /config/usb_gadget/g1/configs/b.1/f1
+    rm /config/usb_gadget/g1/configs/b.1/f2
+    rm /config/usb_gadget/g1/configs/b.1/f3
+    rm /config/usb_gadget/g1/configs/b.1/f4
+    rm /config/usb_gadget/g1/configs/b.1/f5
+    write /config/usb_gadget/g1/idVendor 0x05C6
+    write /config/usb_gadget/g1/idProduct 0x90B6
+    symlink /config/usb_gadget/g1/functions/gsi.rndis /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/cser.dun.0 /config/usb_gadget/g1/configs/b.1/f2
+    symlink /config/usb_gadget/g1/functions/diag.diag /config/usb_gadget/g1/configs/b.1/f3
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f4
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+on property:sys.usb.config=mtp,diag && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "mtp_diag"
+    rm /config/usb_gadget/g1/configs/b.1/f1
+    rm /config/usb_gadget/g1/configs/b.1/f2
+    rm /config/usb_gadget/g1/configs/b.1/f3
+    rm /config/usb_gadget/g1/configs/b.1/f4
+    rm /config/usb_gadget/g1/configs/b.1/f5
+    write /config/usb_gadget/g1/idVendor 0x05C6
+    write /config/usb_gadget/g1/idProduct 0x901B
+    symlink /config/usb_gadget/g1/functions/mtp.gs0 /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/diag.diag /config/usb_gadget/g1/configs/b.1/f2
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+on property:sys.usb.config=mtp,diag,adb && property:sys.usb.configfs=1
+    start adbd
+
+on property:sys.usb.ffs.ready=1 && property:sys.usb.config=mtp,diag,adb && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "mtp_diag_adb"
+    rm /config/usb_gadget/g1/configs/b.1/f1
+    rm /config/usb_gadget/g1/configs/b.1/f2
+    rm /config/usb_gadget/g1/configs/b.1/f3
+    rm /config/usb_gadget/g1/configs/b.1/f4
+    rm /config/usb_gadget/g1/configs/b.1/f5
+    write /config/usb_gadget/g1/idVendor 0x05C6
+    write /config/usb_gadget/g1/idProduct 0x903A
+    symlink /config/usb_gadget/g1/functions/mtp.gs0 /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/diag.diag /config/usb_gadget/g1/configs/b.1/f2
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f3
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+on property:sys.usb.config=diag,qdss && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "diag_qdss"
+    rm /config/usb_gadget/g1/configs/b.1/f1
+    rm /config/usb_gadget/g1/configs/b.1/f2
+    rm /config/usb_gadget/g1/configs/b.1/f3
+    rm /config/usb_gadget/g1/configs/b.1/f4
+    rm /config/usb_gadget/g1/configs/b.1/f5
+    write /config/usb_gadget/g1/idVendor 0x05C6
+    write /config/usb_gadget/g1/idProduct 0x904A
+    write /config/usb_gadget/g1/functions/qdss.qdss/enable_debug_inface 1
+    symlink /config/usb_gadget/g1/functions/diag.diag /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/qdss.qdss /config/usb_gadget/g1/configs/b.1/f2
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+on property:sys.usb.config=diag,qdss,adb && property:sys.usb.configfs=1
+    start adbd
+
+on property:sys.usb.ffs.ready=1 && property:sys.usb.config=diag,qdss,adb && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "diag_qdss_adb"
+    rm /config/usb_gadget/g1/configs/b.1/f1
+    rm /config/usb_gadget/g1/configs/b.1/f2
+    rm /config/usb_gadget/g1/configs/b.1/f3
+    rm /config/usb_gadget/g1/configs/b.1/f4
+    rm /config/usb_gadget/g1/configs/b.1/f5
+    write /config/usb_gadget/g1/idVendor 0x05C6
+    write /config/usb_gadget/g1/idProduct 0x9060
+    write /config/usb_gadget/g1/functions/qdss.qdss/enable_debug_inface 1
+    symlink /config/usb_gadget/g1/functions/diag.diag /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/qdss.qdss /config/usb_gadget/g1/configs/b.1/f2
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f3
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+on property:sys.usb.config=diag,qdss,rmnet_gsi && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "diag_qdss_rmnet"
+    rm /config/usb_gadget/g1/configs/b.1/f1
+    rm /config/usb_gadget/g1/configs/b.1/f2
+    rm /config/usb_gadget/g1/configs/b.1/f3
+    rm /config/usb_gadget/g1/configs/b.1/f4
+    rm /config/usb_gadget/g1/configs/b.1/f5
+    write /config/usb_gadget/g1/idVendor 0x05C6
+    write /config/usb_gadget/g1/idProduct 0x9083
+    write /config/usb_gadget/g1/functions/qdss.qdss/enable_debug_inface 1
+    symlink /config/usb_gadget/g1/functions/diag.diag /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/qdss.qdss /config/usb_gadget/g1/configs/b.1/f2
+    symlink /config/usb_gadget/g1/functions/gsi.rmnet /config/usb_gadget/g1/configs/b.1/f3
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+on property:sys.usb.config=diag,qdss,rmnet_gsi,adb && property:sys.usb.configfs=1
+    start adbd
+
+on property:sys.usb.ffs.ready=1 && property:sys.usb.config=diag,qdss,rmnet_gsi,adb && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "diag_qdss_rmnet_adb"
+    rm /config/usb_gadget/g1/configs/b.1/f1
+    rm /config/usb_gadget/g1/configs/b.1/f2
+    rm /config/usb_gadget/g1/configs/b.1/f3
+    rm /config/usb_gadget/g1/configs/b.1/f4
+    rm /config/usb_gadget/g1/configs/b.1/f5
+    write /config/usb_gadget/g1/idVendor 0x05C6
+    write /config/usb_gadget/g1/idProduct 0x9084
+    write /config/usb_gadget/g1/functions/qdss.qdss/enable_debug_inface 1
+    symlink /config/usb_gadget/g1/functions/diag.diag /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/qdss.qdss /config/usb_gadget/g1/configs/b.1/f2
+    symlink /config/usb_gadget/g1/functions/gsi.rmnet /config/usb_gadget/g1/configs/b.1/f3
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f4
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+on property:sys.usb.config=rndis,diag,qdss && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "rndis_diag_qdss"
+    rm /config/usb_gadget/g1/configs/b.1/f1
+    rm /config/usb_gadget/g1/configs/b.1/f2
+    rm /config/usb_gadget/g1/configs/b.1/f3
+    rm /config/usb_gadget/g1/configs/b.1/f4
+    rm /config/usb_gadget/g1/configs/b.1/f5
+    write /config/usb_gadget/g1/idVendor 0x05C6
+    write /config/usb_gadget/g1/idProduct 0x9081
+    write /config/usb_gadget/g1/functions/qdss.qdss/enable_debug_inface 1
+    symlink /config/usb_gadget/g1/functions/gsi.rndis /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/diag.diag /config/usb_gadget/g1/configs/b.1/f2
+    symlink /config/usb_gadget/g1/functions/qdss.qdss /config/usb_gadget/g1/configs/b.1/f3
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+on property:sys.usb.config=rndis,diag,qdss,adb && property:sys.usb.configfs=1
+    start adbd
+
+on property:sys.usb.ffs.ready=1 && property:sys.usb.config=rndis,diag,qdss,adb && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "rndis_diag_qdss_adb"
+    rm /config/usb_gadget/g1/configs/b.1/f1
+    rm /config/usb_gadget/g1/configs/b.1/f2
+    rm /config/usb_gadget/g1/configs/b.1/f3
+    rm /config/usb_gadget/g1/configs/b.1/f4
+    rm /config/usb_gadget/g1/configs/b.1/f5
+    write /config/usb_gadget/g1/idVendor 0x05C6
+    write /config/usb_gadget/g1/idProduct 0x9082
+    write /config/usb_gadget/g1/functions/qdss.qdss/enable_debug_inface 1
+    symlink /config/usb_gadget/g1/functions/gsi.rndis /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/diag.diag /config/usb_gadget/g1/configs/b.1/f2
+    symlink /config/usb_gadget/g1/functions/qdss.qdss /config/usb_gadget/g1/configs/b.1/f3
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f4
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+on property:sys.usb.config=diag,serial_cdev && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "diag_dun"
+    rm /config/usb_gadget/g1/configs/b.1/f1
+    rm /config/usb_gadget/g1/configs/b.1/f2
+    rm /config/usb_gadget/g1/configs/b.1/f3
+    rm /config/usb_gadget/g1/configs/b.1/f4
+    rm /config/usb_gadget/g1/configs/b.1/f5
+    write /config/usb_gadget/g1/idVendor 0x05C6
+    write /config/usb_gadget/g1/idProduct 0x9004
+    symlink /config/usb_gadget/g1/functions/diag.diag /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/cser.dun.0 /config/usb_gadget/g1/configs/b.1/f2
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+    start port-bridge
+
+on property:sys.usb.config=diag,adb,serial_cdev && property:sys.usb.configfs=1
+    start adbd
+    start port-bridge
+
+on property:sys.usb.ffs.ready=1 && property:sys.usb.config=diag,adb,serial_cdev && property:sys.usb.configfs=1
+    write /config/usb_gadget/g1/configs/b.1/strings/0x409/configuration "diag_adb_dun"
+    rm /config/usb_gadget/g1/configs/b.1/f1
+    rm /config/usb_gadget/g1/configs/b.1/f2
+    rm /config/usb_gadget/g1/configs/b.1/f3
+    rm /config/usb_gadget/g1/configs/b.1/f4
+    rm /config/usb_gadget/g1/configs/b.1/f5
+    write /config/usb_gadget/g1/idVendor 0x05C6
+    write /config/usb_gadget/g1/idProduct 0x901f
+    symlink /config/usb_gadget/g1/functions/diag.diag /config/usb_gadget/g1/configs/b.1/f1
+    symlink /config/usb_gadget/g1/functions/ffs.adb /config/usb_gadget/g1/configs/b.1/f2
+    symlink /config/usb_gadget/g1/functions/cser.dun.0 /config/usb_gadget/g1/configs/b.1/f3
+    write /config/usb_gadget/g1/UDC ${sys.usb.controller}
+    setprop sys.usb.state ${sys.usb.config}
+
+service diag_mdlog_start /vendor/bin/diag_mdlog
+    class late_start
+    user shell
+    group system diag media_rw
+    disabled
+    oneshot
+
+service diag_mdlog_stop /vendor/bin/diag_mdlog -k
+    class late_start
+    user shell
+    group system diag media_rw
+    disabled
+    oneshot
+
+on boot && property:persist.sys.modem.diag.mdlog=*
+    setprop sys.modem.diag.mdlog ${persist.sys.modem.diag.mdlog}
+
+on property:sys.modem.diag.mdlog=true
+    start diag_mdlog_start
+
+on property:sys.modem.diag.mdlog=false
+    start diag_mdlog_stop
+
+on property:persist.sys.cnss.diag_qxdm=true
+    start cnss_diag
+
+on property:persist.sys.cnss.diag_qxdm=false
+    stop cnss_diag
+
+on property:persist.sys.cnss.diag_txt=true
+    start cnss_diag_txt
+
+on property:persist.sys.cnss.diag_txt=false
+    stop cnss_diag_txt
+
+service cnss_diag /vendor/bin/cnss_diag -q -u -w
+    class late_start
+    user system
+    group system
+    oneshot
+
+service cnss_diag_txt /vendor/bin/cnss_diag -s -f -m /data/vendor/wifi/cnss_diag/cnss_diag.conf
+    class late_start
+    user system
+    group system
+    disabled
+    oneshot
+
+on property:debug.htc.ramdump.crash=true
+    write /proc/sysrq-trigger "c"
+
+on property:sys.logger.bluetooth=true
+   setprop persist.service.bdroid.snooplog true
+   setprop persist.service.bdroid.fwsnoop true
+
+on property:sys.logger.bluetooth=false
+   setprop persist.service.bdroid.snooplog false
+   setprop persist.service.bdroid.fwsnoop false
+
+on property:persist.bluetooth.btsnoopenable=true
+   setprop persist.service.bdroid.soclog true
+
+on property:persist.bluetooth.btsnoopenable=false
+   setprop persist.service.bdroid.soclog false

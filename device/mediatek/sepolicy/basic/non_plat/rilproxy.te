@@ -1,0 +1,51 @@
+# ==============================================
+# Policy File of /vendor/bin/rilproxy Executable File
+
+
+# ==============================================
+# Type Declaration
+# ==============================================
+
+# ==============================================
+# MTK Policy Rule
+# ==============================================
+
+# Access to wake locks
+wakelock_use(rild)
+
+# rild Bringup Policy
+allow rild init:unix_stream_socket connectto;
+allow rild mtkrild:unix_stream_socket connectto;
+allow rild property_socket:sock_file write;
+allow rild self:capability setuid;
+allow rild socket_device:sock_file write;
+allow rild radio_prop:property_service set;
+allow rild ril_mux_report_case_prop:property_service set;
+allow rild mtk_agpsd:unix_stream_socket connectto;
+allow servicemanager rild:dir search;
+allow servicemanager rild:file { read open };
+allow servicemanager rild:process getattr;
+allow rild proc:file read;
+
+# Allow the socket read/write of netd for rild
+allow rild netd_socket:sock_file write;
+allow rild netd_socket:sock_file read;
+
+#Date : W17.13
+#Purpose: Treble SEpolicy denied clean up
+allow rild hwservicemanager_prop:file r_file_perms;
+
+#Date : W17.18
+#Purpose: Treble SEpolicy denied clean up
+add_hwservice(hal_telephony_server, mtk_hal_rild_hwservice)
+allow hal_telephony_client mtk_hal_rild_hwservice:hwservice_manager find;
+
+#Date : W17.21
+#Purpose: Grant permission to access binder dev node
+vndbinder_use(rild)
+
+#Date : W17.20
+#Purpose: allow access to audio hal
+binder_call(rild, mtk_hal_audio)
+allow rild hal_audio_hwservice:hwservice_manager find;
+

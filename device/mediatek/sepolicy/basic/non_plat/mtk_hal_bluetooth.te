@@ -1,0 +1,54 @@
+type mtk_hal_bluetooth, domain;
+type mtk_hal_bluetooth_exec, exec_type, vendor_file_type, file_type;
+init_daemon_domain(mtk_hal_bluetooth)
+
+r_dir_file(mtk_hal_bluetooth, system_file)
+# call into the Bluetooth process (callbacks)
+binder_call(mtk_hal_bluetooth, bluetooth)
+hwbinder_use(mtk_hal_bluetooth);
+
+wakelock_use(mtk_hal_bluetooth);
+
+# bluetooth factory file accesses.
+r_dir_file(mtk_hal_bluetooth, bluetooth_efs_file)
+
+allow mtk_hal_bluetooth { uhid_device hci_attach_dev }:chr_file rw_file_perms;
+
+# Access to config files to look for a Bluetooth address
+r_dir_file(mtk_hal_bluetooth, bluetooth_data_file)
+
+# sysfs access.
+r_dir_file(mtk_hal_bluetooth, sysfs_type)
+allow mtk_hal_bluetooth sysfs_bluetooth_writable:file rw_file_perms;
+allow mtk_hal_bluetooth self:capability2 wake_alarm;
+
+# Allow write access to bluetooth-specific properties
+set_prop(mtk_hal_bluetooth, bluetooth_prop)
+
+# /proc access (bluesleep etc.).
+allow mtk_hal_bluetooth proc_bluetooth_writable:file rw_file_perms;
+
+# VTS tests need to be able to toggle rfkill
+userdebug_or_eng(`
+  allow mtk_hal_bluetooth self:capability net_admin;
+')
+
+# Logging for backward compatibility
+allow mtk_hal_bluetooth bluetooth_data_file:dir ra_dir_perms;
+allow mtk_hal_bluetooth bluetooth_data_file:file create_file_perms;
+
+# Purpose : Set to access stpbt driver & NVRAM
+allow mtk_hal_bluetooth stpbt_device:chr_file rw_file_perms;
+
+allow mtk_hal_bluetooth nvdata_file:dir search;
+allow mtk_hal_bluetooth nvdata_file:file rw_file_perms;
+allow mtk_hal_bluetooth nvram_data_file:lnk_file read;
+allow mtk_hal_bluetooth nvdata_file:lnk_file read;
+
+allow mtk_hal_bluetooth hwservicemanager_prop:file r_file_perms;
+
+add_hwservice(hal_bluetooth, mtk_hal_bluetooth_hwservice)
+allow hal_bluetooth_client mtk_hal_bluetooth_hwservice:hwservice_manager find;
+
+allow mtk_hal_bluetooth system_data_file:lnk_file read;
+hal_server_domain(mtk_hal_bluetooth,hal_bluetooth);

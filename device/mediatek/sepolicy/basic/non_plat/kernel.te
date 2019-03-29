@@ -1,0 +1,109 @@
+# ==============================================
+# MTK Policy Rule
+# ============
+# Date : WK14.38
+# Operation : Migration
+# Purpose : run guitar_update for touch F/W upgrade.
+allow kernel sdcard_type:dir search;
+
+# Date : WK14.39
+# Operation : Migration
+# Purpose : ums driver can access blk_file
+allow kernel block_device:blk_file rw_file_perms;
+allow kernel loop_device:blk_file r_file_perms;
+allow kernel vold_device:blk_file rw_file_perms;
+
+# Date : WK14.43
+# Operation : Migration
+# Purpose :  Access to nvarm for reading MAC. (LOS WIFI feature)
+allow kernel system_data_file:lnk_file r_file_perms;
+
+# Date : WK14.31
+# Operation : Migration
+# Purpose : transit from kernel to aee_core_forwarder domain when executing aee_core_forwarder
+domain_auto_trans(kernel, aee_core_forwarder_exec, aee_core_forwarder)
+
+# Date : WK14.43
+# Operation : Migration
+# Purpose :  Access to nvarm for reading MAC. (LOS WIFI feature)
+#allow kernel nvram_device:blk_file rw_file_perms;
+
+# Date : WK15.29
+# Operation : Migration
+# Purpose : grant wifi data file access for mtk_wmtd as root.
+#allow kernel self:capability { dac_read_search dac_override };
+
+# Date : WK15.35
+# Operation : Migration
+# Purpose : grant fon_image_data_file read permission for loop device
+allow kernel fon_image_data_file:file read;
+
+# Date : WK15.38
+# Operation : Migration
+# Purpose : grant proc_thermal for dir search
+allow kernel proc_thermal:dir search;
+
+# Date : WK16.11
+# Operation : Migration
+# Purpose : grant nvram data access permission for kernel thread mtk_wmtd to access nvram file,
+# because wifi driver need to access nvram to get radio configuration. On Userdebug or Eng load,
+# factory engineers may need to update nvram by Egineer Mode, so we need to grant write permissions
+# on Eng or Userdebug load
+allow kernel nvram_data_file:dir search;
+allow kernel nvram_data_file:file r_file_perms;
+allow kernel nvram_data_file:lnk_file read;
+allow kernel nvdata_file:lnk_file read;
+allow kernel nvdata_file:dir search;
+allow kernel nvdata_file:file r_file_perms;
+userdebug_or_eng(`
+  allow kernel nvdata_file:file w_file_perms;
+')
+
+# Date : WK16.11
+# Operation : Migration
+# Purpose : grant storage_file and wifi_data_file for kernel thread mtk_wmtd to access /sdcard/wifi.cfg
+# and /data/misc/wifi/wifi.cfg to access wifi.cfg, in which, some wifi driver configuations are there.
+allow kernel mnt_user_file:dir search;
+allow kernel mnt_user_file:lnk_file read;
+allow kernel wifi_data_file:file r_file_perms;
+allow kernel wifi_data_file:dir search;
+allow kernel storage_file:lnk_file read;
+allow kernel sdcard_type:file open;
+
+# Data : WK16.16
+# Operation : Migration
+# Purpose :  Access to TC1 partition for reading MEID
+allow kernel block_device:dir search;
+
+# Data : WK16.16
+# Operation : Migration
+# Purpose :  Access to TC1 partition for reading MEID
+allow kernel misc2_block_device:blk_file rw_file_perms;
+
+# Date : WK16.30
+# Operation: SQC
+# Purpose: Allow sdcardfs workqueue to access lower file systems
+allow kernel { fuseblk }:dir create_dir_perms;
+allow kernel { fuseblk }:file create_file_perms;
+
+# Date : WK16.30
+# Operation: SQC
+# Purpose: Allow sdcardfs workqueue to access lower file systems
+allow kernel {vfat mnt_media_rw_file}:dir create_dir_perms;
+allow kernel {vfat mnt_media_rw_file}:file create_file_perms;
+allow kernel kernel:key { write search setattr };
+
+# Date : WK16.42
+# Operation: SQC
+# Purpose: Allow task of cpuset cgroup can migration to parent cgroup when cpus is NULL
+allow kernel platform_app:process setsched;
+
+# Date : WK17.01
+# Operation: SQC
+# Purpose: Allow OpenDSP kthread to write debug dump to sdcard
+allow kernel audioserver:fd use;
+
+# Date : WK18.02
+# Operation: SQC
+# Purpose: Allow SCP SmartPA kthread to write debug dump to sdcard
+allow kernel mtk_hal_audio:fd use;

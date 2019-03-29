@@ -1,0 +1,21 @@
+allow tee self:capability { chown setgid setuid sys_rawio sys_admin };
+
+# scan SCSI devices
+allow tee device:dir r_dir_perms;
+allow tee sg_device:chr_file { ioctl open read setattr write };
+
+# access to ssd partition for HW FDE
+allow tee block_device:dir r_dir_perms;
+allow tee ssd_block_device:blk_file { open read write };
+
+# Set the sys.listeners.registered property
+set_prop(tee, system_prop)
+
+allow tee system_data_file:dir r_dir_perms;
+allow tee fingerprintd_data_file:dir rw_dir_perms;
+allow tee fingerprintd_data_file:file create_file_perms;
+
+# /persist
+r_dir_file(tee, persist_file)
+allow tee persist_data_file:dir create_dir_perms;
+allow tee persist_data_file:file create_file_perms;

@@ -1,0 +1,24 @@
+# ==============================================================================
+# Type Declaration
+# ==============================================================================
+type mtk_hal_wfo, domain, mtkimsapdomain;
+#type mtk_hal_wfo, domain;
+type mtk_hal_wfo_exec, exec_type, file_type, vendor_file_type;
+
+#typeattribute mtk_hal_wfo mtkimsapdomain;
+# hwbinder access
+init_daemon_domain(mtk_hal_wfo)
+hwbinder_use(mtk_hal_wfo)
+hal_server_domain(mtk_hal_wfo, hal_wfo)
+add_hwservice(hal_wfo_server, mtk_hal_wfo_hwservice)
+
+# call into system_server process (callbacks)
+binder_call(mtk_hal_wfo, system_server)
+
+# Date : WK1721 2017/5/26
+# Operation : IT
+# Purpose: WifiOffloadService HIDL Migration
+allow mtk_hal_wfo mal_mfi_socket:sock_file write;
+#allow mtk_hal_wfo mtkmal:unix_stream_socket connectto;
+allow mtk_hal_wfo hwservicemanager_prop:file { read getattr open };
+allow mtk_hal_wfo debugfs_tracing:file { write open };

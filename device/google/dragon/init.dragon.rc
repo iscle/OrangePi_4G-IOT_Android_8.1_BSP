@@ -1,0 +1,262 @@
+import init.dragon.usb.rc
+
+on early-init
+    mount debugfs /sys/kernel/debug /sys/kernel/debug mode=755
+
+on init
+    symlink /sdcard /storage/sdcard0
+
+    # Setup zram options
+    write /sys/block/zram0/comp_algorithm lz4
+    write /sys/block/zram0/max_comp_streams 4
+
+    setprop ro.hardware.gralloc tegra
+    setprop ro.hardware.hwcomposer drm
+    setprop hwc.drm.device /dev/dri/card1
+    setprop persist.tegra.compression off
+    setprop persist.tegra.decompression disabled
+    setprop ro.radio.noril yes
+    setprop persist.tegra.nvblit.engine gpu
+
+    # GL driver parameters for tiled cache size and efficient tex fetch
+    setprop persist.tegra.0x523dc5 0x3f000000
+    setprop persist.tegra.58027529 0x00000002
+    setprop persist.tegra.a3456abe 0x087f6080
+
+    # fix navigation bar not showing
+    setprop qemu.hw.mainkeys 0
+    start watchdogd
+
+on late-init
+    # Setting slice_idle to 0 for CFQ, so make sure the scheduler is CFQ.
+    write /sys/block/mmcblk0/queue/scheduler cfq
+    write /sys/block/mmcblk0/queue/iosched/slice_idle 0
+
+    # enable rcu_expedited
+    write /sys/kernel/rcu_expedited 1
+
+on early-boot
+    # Update dm-verity state and set partition.*.verified properties
+    verity_update_state
+
+# Set watchdog timer to 30 seconds and pet it every 10 seconds to get a 20 second margin
+service watchdogd /sbin/watchdogd 10 20
+    class core
+    seclabel u:r:watchdogd:s0
+
+on post-fs
+    # Turn on swap
+    swapon_all /fstab.dragon
+
+    # Swap in only 1 page at a time
+    write /proc/sys/vm/page-cluster 0
+
+on post-fs-data
+    # Now that are booted all the way and out of mount panics, ensure that we panic on later errors.
+    # This is a hack to work around the fact that we can't recover from all errors that would lead to a panic
+    # during the initial mount (http://b/17382778), yet we need to panic on emmc errors (http://b/17640053)
+    # For a remount only the flags and the target mount point are relevant.
+    mount dummy dummy /data remount nosuid nodev noatime rw seclabel,background_gc=on,user_xattr,acl,errors=panic
+
+    mkdir /data/nvcam 0700 media camera
+    mkdir /data/misc/camera 0700 media camera
+
+    # NFC: create data/nfc for nv storage
+    mkdir /data/nfc 0770 nfc nfc
+    mkdir /data/nfc/param 0770 nfc nfc
+
+    # secure os storage
+    mkdir /data/ss 0700 system system
+    mkdir /data/ss/tlk 0700 system system
+
+    # secure os storage
+    mkdir /data/ss 0700 system system
+
+    # modem init
+    mkdir /data/qcks 0770 system system
+    mkdir /data/efs 0771 system system
+    mkdir /data/qcks/mdm 0770 system system
+
+    # crash_collector
+    mkdir /data/system/crash_reports 0700 system system
+
+    # EC/charger logs
+    mkdir /data/misc/fw_logs 0755 root root
+
+    # touch firmware updater logs
+    mkdir /data/misc/touchfwup 0755 root log
+
+    # initialize region info
+    exec -- /system/bin/init_regions.sh
+
+    setprop vold.post_fs_data_done 1
+
+on boot
+    # power down interface
+    write /sys/class/rfkill/rfkill0/state 0
+
+    write /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor interactive
+    write /sys/devices/system/cpu/cpu1/cpufreq/scaling_governor interactive
+    write /sys/devices/system/cpu/cpu2/cpufreq/scaling_governor interactive
+    write /sys/devices/system/cpu/cpu3/cpufreq/scaling_governor interactive
+
+    # (crosbug.com/p/46057) : Limit min frequency to 204Mhz for audio latency
+    write /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq 204000
+    write /sys/devices/system/cpu/cpu1/cpufreq/scaling_min_freq 204000
+    write /sys/devices/system/cpu/cpu2/cpufreq/scaling_min_freq 204000
+    write /sys/devices/system/cpu/cpu3/cpufreq/scaling_min_freq 204000
+
+    restorecon_recursive /sys/devices/system/cpu/cpufreq/interactive
+    chown system system /sys/devices/system/cpu/cpufreq/interactive/timer_rate
+    chmod 0660 /sys/devices/system/cpu/cpufreq/interactive/timer_rate
+    chown system system /sys/devices/system/cpu/cpufreq/interactive/timer_slack
+    chmod 0660 /sys/devices/system/cpu/cpufreq/interactive/timer_slack
+    chown system system /sys/devices/system/cpu/cpufreq/interactive/min_sample_time
+    chmod 0660 /sys/devices/system/cpu/cpufreq/interactive/min_sample_time
+    chown system system /sys/devices/system/cpu/cpufreq/interactive/hispeed_freq
+    chmod 0660 /sys/devices/system/cpu/cpufreq/interactive/hispeed_freq
+    chown system system /sys/devices/system/cpu/cpufreq/interactive/target_loads
+    chmod 0660 /sys/devices/system/cpu/cpufreq/interactive/target_loads
+    chown system system /sys/devices/system/cpu/cpufreq/interactive/go_hispeed_load
+    chmod 0660 /sys/devices/system/cpu/cpufreq/interactive/go_hispeed_load
+    chown system system /sys/devices/system/cpu/cpufreq/interactive/above_hispeed_delay
+    chmod 0660 /sys/devices/system/cpu/cpufreq/interactive/above_hispeed_delay
+    chown system system /sys/devices/system/cpu/cpufreq/interactive/boost
+    chmod 0660 /sys/devices/system/cpu/cpufreq/interactive/boost
+    chown system system /sys/devices/system/cpu/cpufreq/interactive/boostpulse
+    chown system system /sys/devices/system/cpu/cpufreq/interactive/input_boost
+    chmod 0660 /sys/devices/system/cpu/cpufreq/interactive/input_boost
+    chown system system /sys/devices/system/cpu/cpufreq/interactive/boostpulse_duration
+    chmod 0660 /sys/devices/system/cpu/cpufreq/interactive/boostpulse_duration
+    chown system system /sys/devices/system/cpu/cpufreq/interactive/io_is_busy
+    chmod 0660 /sys/devices/system/cpu/cpufreq/interactive/io_is_busy
+    chown system system /sys/devices/57000000.gpu/pstate
+
+    # update foreground cpuset now that processors are up
+    # reserve CPU 3 for the top app
+    write /dev/cpuset/foreground/cpus 0-2
+    write /dev/cpuset/foreground/boost/cpus 0-2
+    write /dev/cpuset/background/cpus 0
+    write /dev/cpuset/system-background/cpus 0-1
+    write /dev/cpuset/top-app/cpus 0-3
+
+    # for gpu cap in battery saver mode
+    chown system system /sys/kernel/debug/system_edp/capping/force_gpu
+    chmod 0660 /sys/kernel/debug/system_edp/capping/force_gpu
+
+    # for lightbar
+    chown system system /sys/class/chromeos/cros_ec/lightbar/userspace_control
+    chmod 0660 /sys/class/chromeos/cros_ec/lightbar/userspace_control
+    chown system system /sys/class/chromeos/cros_ec/lightbar/sequence
+    chmod 0660 /sys/class/chromeos/cros_ec/lightbar/sequence
+
+    # for external power limits
+    chown system system /sys/class/chromeos/cros_ec/usb-pd-charger/ext_voltage_lim
+    chmod 0660 /sys/class/chromeos/cros_ec/usb-pd-charger/ext_voltage_lim
+
+    # Enable CC4
+    write /sys/devices/system/cpu/cpu0/cpuidle/state1/disabled 0
+    write /sys/devices/system/cpu/cpu1/cpuidle/state1/disabled 0
+    write /sys/devices/system/cpu/cpu2/cpuidle/state1/disabled 0
+    write /sys/devices/system/cpu/cpu3/cpuidle/state1/disabled 0
+
+    # b/13568411: make lazy vfree flush thresholds match flush_tlb_range
+    write /proc/sys/vm/lazy_vfree_tlb_flush_all_threshold 524288
+
+    chmod 0444 /sys/kernel/debug/bq2419x-regs
+
+    write /proc/sys/net/core/rmem_max 1048576
+    write /proc/sys/net/core/wmem_max 1048576
+
+    # Execute crash_collector when a process is crashing.
+    write /proc/sys/kernel/core_pattern "|/system/bin/crash_dispatcher %p %u %g %s %t %e"
+    write /proc/sys/kernel/core_pipe_limit 4
+    write /proc/self/coredump_filter 0x1
+
+    # enable GPU dvfs
+    write /sys/class/drm/card0/device/pstate auto
+
+    # set GPU auto suspend
+    write /sys/devices/57000000.gpu/power/autosuspend_delay_ms 520
+
+    # Raise RLIMIT_NOFILE softlimit to workaround b/28277319. This is intended
+    # to go away at some point, do not copy it to new devices! This makes fd
+    # leaks much harder to notice and debug.
+    setrlimit 7 2048 4096
+
+    # Wifi firmware reload path
+    chown wifi wifi /sys/module/bcmdhd/parameters/firmware_path
+
+on fs
+    # Enable verity notification
+    write /sys/module/dm_verity/parameters/error_behavior notify
+
+    mount_all /fstab.dragon
+
+# run the touch firmware update script as soon as non-tmpfs /data is ready
+on property:vold.decrypt=trigger_restart_framework
+    exec -- /system/bin/touchfwup.sh
+
+# tune thermal governor
+service tune_therm_gov /system/bin/tune-thermal-gov.sh skin-therm pd_thermal_gov \
+    max_err_temp 5000
+    class main
+    oneshot
+
+service battery_charger /charger
+    class charger
+    seclabel u:r:healthd:s0
+
+# on userdebug and eng builds, enable kgdb on the serial console
+on property:ro.debuggable=1
+    write /sys/module/kgdboc/parameters/kgdboc ttyFIQ0
+    write /sys/module/fiq_debugger/parameters/kgdb_enable 1
+
+# bugreport is triggered by holding down volume down, volume up and power
+service bugreport /system/bin/dumpstate -d -p -B -z \
+        -o /data/user_de/0/com.android.shell/files/bugreports/bugreport
+    class late_start
+    disabled
+    oneshot
+    keycodes 114 115 116
+
+service wpa_supplicant /vendor/bin/hw/wpa_supplicant \
+    -iwlan0 -Dnl80211 -c/data/misc/wifi/wpa_supplicant.conf \
+    -I/system/etc/wifi/p2p_supplicant_overlay.conf \
+    -puse_p2p_group_interface=1p2p_device=1 \
+    -m/data/misc/wifi/p2p_supplicant.conf \
+    -e/data/misc/wifi/entropy.bin -g@android:wpa_wlan0
+    class late_start
+    socket wpa_wlan0 dgram 660 wifi wifi
+    disabled
+    oneshot
+
+service fwtool /system/bin/fwtool mark_boot success
+    class late_start
+    user root
+    oneshot
+
+service kickstart /vendor/bin/qcks -i /vendor/firmware/mdm/image/ -r /data/qcks/mdm/
+    class late_start
+    disabled
+    user system
+    group system
+    oneshot
+
+service qmuxd /vendor/bin/qmuxd
+    class late_start
+    disabled
+    user system
+    group system radio
+
+service netmgrd /vendor/bin/netmgrd
+    class late_start
+    disabled
+    group system radio
+
+service tlk_daemon /vendor/bin/tlk_daemon --storagedir /data/ss --rpmbdev /dev/block/mmcblk0rpmb
+    class main
+    group system
+
+on property:debug.bq25892=dump
+    exec - root root system -- /system/bin/dump_bq25892.sh

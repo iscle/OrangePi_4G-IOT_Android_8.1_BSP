@@ -1,0 +1,21 @@
+# Policies for time daemon
+type time_daemon, domain, device_domain_deprecated;
+type time_daemon_exec, exec_type, file_type;
+type time_data_file, file_type, data_file_type;
+
+# Make transition to its own time_daemon domain from init
+init_daemon_domain(time_daemon)
+
+allow time_daemon self:capability { setuid setgid };
+allow time_daemon self:socket create_socket_perms;
+allowxperm time_daemon self:socket ioctl msm_sock_ipc_ioctls;
+
+allow time_daemon time_data_file:dir w_dir_perms;
+allow time_daemon time_data_file:file create_file_perms;
+
+allow time_daemon smem_log_device:chr_file rw_file_perms;
+
+allow time_daemon rtc_device:chr_file r_file_perms;
+allow time_daemon alarm_device:chr_file w_file_perms;
+
+qmux_socket(time_daemon)

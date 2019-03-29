@@ -1,0 +1,19 @@
+type crash_collector, domain, device_domain_deprecated;
+type crash_collector_exec, exec_type, file_type;
+type crash_reports_data_file, file_type, data_file_type;
+
+# To start crash_collector via /proc/sys/core_pattern.
+domain_auto_trans(kernel, crash_collector_exec, crash_collector)
+allow crash_collector kernel:fifo_file read;
+allow crash_collector crash_collector_exec:file execute_no_trans;
+allow crash_collector kernel:fd use;
+
+# To stop being root.
+allow crash_collector self:capability { setuid setgid };
+
+# To read exec files.
+allow crash_collector exec_type:file r_file_perms;
+
+# To write crash reports in /data/system/crash_reports/
+allow crash_collector crash_reports_data_file:dir create_dir_perms;
+allow crash_collector crash_reports_data_file:file create_file_perms;
