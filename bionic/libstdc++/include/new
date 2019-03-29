@@ -1,0 +1,35 @@
+/* -*- c++ -*- */
+#ifndef __NEW__
+#define __NEW__
+
+#include <stddef.h>
+
+extern "C++" {
+
+namespace std {
+  using ::size_t;
+  struct nothrow_t {};
+  extern const nothrow_t nothrow;
+}
+
+void* operator new(std::size_t);
+void* operator new(std::size_t, const std::nothrow_t&);
+void operator delete(void*) throw();
+// TODO: void operator delete(void*, std::size_t) throw();
+void operator delete(void*, const std::nothrow_t&) throw();
+
+void* operator new[](std::size_t);
+void* operator new[](std::size_t, const std::nothrow_t&);
+void operator delete[](void*) throw();
+// TODO: void operator delete[](void*, std::size_t) throw();
+void operator delete[](void*, const std::nothrow_t&) throw();
+
+// These four are not replaceable, so should be inlined.
+inline void* operator new(std::size_t, void* p) { return p; }
+inline void* operator new[](std::size_t, void* p) { return p; }
+inline void operator delete(void*, void*) throw() { }
+inline void operator delete[](void*, void*) throw() { }
+
+}  // extern C++
+
+#endif // __NEW__
