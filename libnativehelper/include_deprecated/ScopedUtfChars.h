@@ -1,0 +1,1 @@
+../include/nativehelper/ScopedUtfChars.h
