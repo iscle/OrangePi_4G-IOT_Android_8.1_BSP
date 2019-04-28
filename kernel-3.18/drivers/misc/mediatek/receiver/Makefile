@@ -1,0 +1,2 @@
+
+obj-$(CONFIG_MTK_RECEIVER_VS838) += vs838/

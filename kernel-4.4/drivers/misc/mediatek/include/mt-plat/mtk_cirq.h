@@ -1,0 +1,26 @@
+/*
+ * Copyright (C) 2015 MediaTek Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ */
+
+#ifndef __CIRQ_H__
+#define __CIRQ_H__
+
+/*
+ * Define function prototypes.
+ */
+void mt_cirq_enable(void);
+void mt_cirq_disable(void);
+void mt_cirq_clone_gic(void);
+void mt_cirq_flush(void);
+void set_wakeup_sources(u32 *list, u32 num_events);
+
+#endif  /*!__CIRQ_H__ */
