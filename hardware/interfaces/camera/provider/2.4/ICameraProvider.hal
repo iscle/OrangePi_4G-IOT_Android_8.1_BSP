@@ -1,0 +1,188 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.camera.provider@2.4;
+
+import ICameraProviderCallback;
+import android.hardware.camera.common@1.0::types;
+import android.hardware.camera.device@1.0::ICameraDevice;
+import android.hardware.camera.device@3.2::ICameraDevice;
+
+/**
+ * Camera provider HAL, which enumerates the available individual camera devices
+ * known to the provider, and provides updates about changes to device status,
+ * such as connection, disconnection, or torch mode enable/disable.
+ *
+ * The provider is responsible for generating a list of camera device service
+ * names that can then be opened via the hardware service manager.
+ *
+ * Multiple camera provider HALs may be present in a single system.
+ * For discovery, the service names, and process names, must be of the form
+ * "android.hardware.camera.provider@<major>.<minor>/<type>/<instance>"
+ * where
+ *   - <major>/<minor> is the provider HAL HIDL version,
+ *   - <type> is the type of devices this provider knows about, such as
+ *     "internal", "legacy", "usb", or "remote"
+ *   - <instance> is a non-negative integer starting from 0 to disambiguate
+ *     between multiple HALs of the same type.
+ *
+ * The "legacy" type is only used for passthrough legacy HAL mode, and must
+ * not be used by a standalone binderized HAL.
+ *
+ * The device instance names enumerated by the provider must be of the form
+ * "device@<major>.<minor>/<type>/<id>" where
+ * <major>/<minor> is the HIDL version of the interface. <id> is either a small
+ * incrementing integer for "internal" device types, with 0 being the main
+ * back-facing camera and 1 being the main front-facing camera, if they exist.
+ * Or, for external devices such as type "usb", a unique serial number that can
+ * be used to identify the device reliably when it is disconnected and
+ * reconnected. Multiple providers may not enumerate the same device ID.
+ *
+ */
+interface ICameraProvider {
+
+    /**
+     * setCallback:
+     *
+     * Provide a callback interface to the HAL provider to inform framework of
+     * asynchronous camera events. The framework must call this function once
+     * during camera service startup, before any other calls to the provider
+     * (note that in case the camera service restarts, this method must be
+     * invoked again during its startup).
+     *
+     * @param callback
+     *     A non-null callback interface to invoke when camera events occur.
+     * @return status
+     *     Status code for the operation, one of:
+     *     OK:
+     *         On success
+     *     INTERNAL_ERROR:
+     *         An unexpected internal error occurred while setting the callbacks
+     *     ILLEGAL_ARGUMENT:
+     *         The callback argument is invalid (for example, null).
+     *
+     */
+    setCallback(ICameraProviderCallback callback) generates (Status status);
+
+    /**
+     * getVendorTags:
+     *
+     * Retrieve all vendor tags supported by devices discoverable through this
+     * provider. The tags are grouped into sections.
+     *
+     * @return status
+     *     Status code for the operation, one of:
+     *     OK:
+     *         On success
+     *     INTERNAL_ERROR:
+     *         An unexpected internal error occurred while setting the callbacks
+     * @return sections
+     *     The supported vendor tag sections; empty if there are no supported
+     *     vendor tags, or status is not OK.
+     *
+     */
+    getVendorTags() generates (Status status, vec<VendorTagSection> sections);
+
+    /**
+     * getCameraDeviceList:
+     *
+     * Returns the list of internal camera device interfaces known to this
+     * camera provider. These devices can then be accessed via the hardware
+     * service manager.
+     *
+     * External camera devices (camera facing EXTERNAL) must be reported through
+     * the device status change callback, not in this list. Only devices with
+     * facing BACK or FRONT must be listed here.
+     *
+     * @return status Status code for the operation, one of:
+     *     OK:
+     *         On a succesful generation of camera ID list
+     *     INTERNAL_ERROR:
+     *         A camera ID list cannot be created. This may be due to
+     *         a failure to initialize the camera subsystem, for example.
+     * @return cameraDeviceServiceNames The vector of internal camera device
+     *     names known to this provider.
+     */
+    getCameraIdList()
+            generates (Status status, vec<string> cameraDeviceNames);
+
+    /**
+     * isSetTorchModeSupported:
+     *
+     * Returns if the camera devices known to this camera provider support
+     * setTorchMode API or not. If the provider does not support setTorchMode
+     * API, calling to setTorchMode will return METHOD_NOT_SUPPORTED.
+     *
+     * Note that not every camera device has a flash unit, so even this API
+     * returns true, setTorchMode call might still fail due to the camera device
+     * does not have a flash unit. In such case, the returned status will be
+     * OPERATION_NOT_SUPPORTED.
+     *
+     * @return status Status code for the operation, one of:
+     *     OK:
+     *         On a succesful call
+     *     INTERNAL_ERROR:
+     *         Torch API support cannot be queried. This may be due to
+     *         a failure to initialize the camera subsystem, for example.
+     * @return support Whether the camera devices known to this provider
+     *     supports setTorchMode API or not.
+     *
+     */
+    isSetTorchModeSupported() generates (Status status, bool support);
+
+    /**
+     * getCameraDeviceInterface_VN_x:
+     *
+     * Return a android.hardware.camera.device@N.x/ICameraDevice interface for
+     * the requested device name. This does not power on the camera device, but
+     * simply acquires the interface for querying the device static information,
+     * or to additionally open the device for active use.
+     *
+     * A separate method is required for each major revision of the camera device
+     * HAL interface, since they are not compatible with each other.
+     *
+     * Valid device names for this provider can be obtained via either
+     * getCameraIdList(), or via availability callbacks from
+     * ICameraProviderCallback::cameraDeviceStatusChange().
+     *
+     * The returned interface must be of the highest defined minor version for
+     * the major version; it's the responsibility of the HAL client to ensure
+     * they do not use methods/etc that are not valid for the actual minor
+     * version of the device.
+     *
+     * @param cameraDeviceName the name of the device to get an interface to.
+     * @return status Status code for the operation, one of:
+     *     OK:
+     *         On a succesful generation of camera ID list
+     *     ILLEGAL_ARGUMENT:
+     *         This device name is unknown, or has been disconnected
+     *     OPERATION_NOT_SUPPORTED:
+     *         The specified device does not support this major version of the
+     *         HAL interface.
+     *     INTERNAL_ERROR:
+     *         A camera interface cannot be returned due to an unexpected
+     *         internal error.
+     * @return device The inteface to this camera device, or null in case of
+     *     error.
+     */
+    getCameraDeviceInterface_V1_x(string cameraDeviceName) generates
+            (Status status,
+             android.hardware.camera.device@1.0::ICameraDevice device);
+    getCameraDeviceInterface_V3_x(string cameraDeviceName) generates
+            (Status status,
+             android.hardware.camera.device@3.2::ICameraDevice device);
+
+};

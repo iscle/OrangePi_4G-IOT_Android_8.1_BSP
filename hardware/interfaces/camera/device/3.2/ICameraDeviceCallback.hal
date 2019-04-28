@@ -1,0 +1,135 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.camera.device@3.2;
+
+import android.hardware.camera.common@1.0::types;
+
+/**
+ *
+ * Callback methods for the HAL to call into the framework.
+ *
+ * These methods are used to return metadata and image buffers for a completed
+ * or failed captures, and to notify the framework of asynchronous events such
+ * as errors.
+ *
+ * The framework must not call back into the HAL from within these callbacks,
+ * and these calls must not block for extended periods.
+ *
+ */
+interface ICameraDeviceCallback {
+
+    /**
+     * processCaptureResult:
+     *
+     * Send results from one or more completed or partially completed captures
+     * to the framework.
+     * processCaptureResult() may be invoked multiple times by the HAL in
+     * response to a single capture request. This allows, for example, the
+     * metadata and low-resolution buffers to be returned in one call, and
+     * post-processed JPEG buffers in a later call, once it is available. Each
+     * call must include the frame number of the request it is returning
+     * metadata or buffers for. Only one call to processCaptureResult
+     * may be made at a time by the HAL although the calls may come from
+     * different threads in the HAL.
+     *
+     * A component (buffer or metadata) of the complete result may only be
+     * included in one process_capture_result call. A buffer for each stream,
+     * and the result metadata, must be returned by the HAL for each request in
+     * one of the processCaptureResult calls, even in case of errors producing
+     * some of the output. A call to processCaptureResult() with neither
+     * output buffers or result metadata is not allowed.
+     *
+     * The order of returning metadata and buffers for a single result does not
+     * matter, but buffers for a given stream must be returned in FIFO order. So
+     * the buffer for request 5 for stream A must always be returned before the
+     * buffer for request 6 for stream A. This also applies to the result
+     * metadata; the metadata for request 5 must be returned before the metadata
+     * for request 6.
+     *
+     * However, different streams are independent of each other, so it is
+     * acceptable and expected that the buffer for request 5 for stream A may be
+     * returned after the buffer for request 6 for stream B is. And it is
+     * acceptable that the result metadata for request 6 for stream B is
+     * returned before the buffer for request 5 for stream A is. If multiple
+     * capture results are included in a single call, camera framework must
+     * process results sequentially from lower index to higher index, as if
+     * these results were sent to camera framework one by one, from lower index
+     * to higher index.
+     *
+     * The HAL retains ownership of result structure, which only needs to be
+     * valid to access during this call.
+     *
+     * The output buffers do not need to be filled yet; the framework must wait
+     * on the stream buffer release sync fence before reading the buffer
+     * data. Therefore, this method should be called by the HAL as soon as
+     * possible, even if some or all of the output buffers are still in
+     * being filled. The HAL must include valid release sync fences into each
+     * output_buffers stream buffer entry, or -1 if that stream buffer is
+     * already filled.
+     *
+     * If the result buffer cannot be constructed for a request, the HAL must
+     * return an empty metadata buffer, but still provide the output buffers and
+     * their sync fences. In addition, notify() must be called with an
+     * ERROR_RESULT message.
+     *
+     * If an output buffer cannot be filled, its status field must be set to
+     * STATUS_ERROR. In addition, notify() must be called with a ERROR_BUFFER
+     * message.
+     *
+     * If the entire capture has failed, then this method still needs to be
+     * called to return the output buffers to the framework. All the buffer
+     * statuses must be STATUS_ERROR, and the result metadata must be an
+     * empty buffer. In addition, notify() must be called with a ERROR_REQUEST
+     * message. In this case, individual ERROR_RESULT/ERROR_BUFFER messages
+     * must not be sent.
+     *
+     * Performance requirements:
+     *
+     * This is a non-blocking call. The framework must handle each CaptureResult
+     * within 5ms.
+     *
+     * The pipeline latency (see S7 for definition) should be less than or equal to
+     * 4 frame intervals, and must be less than or equal to 8 frame intervals.
+     *
+     */
+    processCaptureResult(vec<CaptureResult> results);
+
+    /**
+     * notify:
+     *
+     * Asynchronous notification callback from the HAL, fired for various
+     * reasons. Only for information independent of frame capture, or that
+     * require specific timing. Multiple messages may be sent in one call; a
+     * message with a higher index must be considered to have occurred after a
+     * message with a lower index.
+     *
+     * Multiple threads may call notify() simultaneously.
+     *
+     * Buffers delivered to the framework must not be dispatched to the
+     * application layer until a start of exposure timestamp (or input image's
+     * start of exposure timestamp for a reprocess request) has been received
+     * via a SHUTTER notify() call. It is highly recommended to dispatch this
+     * call as early as possible.
+     *
+     * ------------------------------------------------------------------------
+     * Performance requirements:
+     *
+     * This is a non-blocking call. The framework must handle each message in 5ms.
+     */
+    notify(vec<NotifyMsg> msgs);
+
+};

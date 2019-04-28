@@ -1,0 +1,65 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.graphics.mapper@2.0;
+
+enum Error : int32_t {
+    NONE            = 0, /** no error */
+    BAD_DESCRIPTOR  = 1, /** invalid BufferDescriptor */
+    BAD_BUFFER      = 2, /** invalid buffer handle */
+    BAD_VALUE       = 3, /** invalid width, height, etc. */
+    /* 4 is reserved */
+    NO_RESOURCES    = 5, /** temporary failure due to resource contention */
+    /* 6 is reserved */
+    UNSUPPORTED     = 7, /** permanent failure */
+};
+
+/**
+ * A buffer descriptor is an implementation-defined opaque data returned by
+ * createDescriptor. It describes the properties of a buffer and is consumed
+ * by the allocator.
+ */
+typedef vec<uint32_t> BufferDescriptor;
+
+/**
+ * Structure for describing YCbCr formats for consumption by applications.
+ * This is used with PixelFormat::YCBCR_*_888.
+ *
+ * Buffer chroma subsampling is defined in the format.
+ * e.g. PixelFormat::YCBCR_420_888 has subsampling 4:2:0.
+ *
+ * Buffers must have a 8 bit depth.
+ *
+ * y, cb, and cr point to the first byte of their respective planes.
+ *
+ * Stride describes the distance in bytes from the first value of one row of
+ * the image to the first value of the next row. It includes the width of the
+ * image plus padding.
+ * yStride is the stride of the luma plane.
+ * cStride is the stride of the chroma planes.
+ *
+ * chromaStep is the distance in bytes from one chroma pixel value to the
+ * next. This is 2 bytes for semiplanar (because chroma values are interleaved
+ * and each chroma value is one byte) and 1 for planar.
+ */
+struct YCbCrLayout {
+    pointer y;
+    pointer cb;
+    pointer cr;
+    uint32_t yStride;
+    uint32_t cStride;
+    uint32_t chromaStep;
+};

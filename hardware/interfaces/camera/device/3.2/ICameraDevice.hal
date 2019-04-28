@@ -1,0 +1,199 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.camera.device@3.2;
+
+import android.hardware.camera.common@1.0::types;
+import ICameraDeviceSession;
+import ICameraDeviceCallback;
+
+/**
+ * Camera device HAL, first modern version
+ *
+ * Supports the android.hardware.Camera API, and the android.hardware.camera2
+ * API at LIMITED or better hardware level.
+ *
+ */
+interface ICameraDevice {
+
+    /**
+     * Get camera device resource cost information.
+     *
+     * @return status Status code for the operation, one of:
+     *     OK:
+     *         On success
+     *     INTERNAL_ERROR:
+     *         An unexpected internal camera HAL error occurred, and the
+     *         resource cost is not available.
+     *     CAMERA_DISCONNECTED:
+     *         An external camera device has been disconnected, and is no longer
+     *         available. This camera device interface is now stale, and a new
+     *         instance must be acquired if the device is reconnected. All
+     *         subsequent calls on this interface must return
+     *         CAMERA_DISCONNECTED.
+     * @return resourceCost
+     *     The resources required to open this camera device, or unspecified
+     *     values if status is not OK.
+     */
+    getResourceCost() generates (Status status, CameraResourceCost resourceCost);
+
+    /**
+     * getCameraCharacteristics:
+     *
+     * Return the static camera information for this camera device. This
+     * information may not change between consecutive calls.
+     *
+     * When an external camera is disconnected, its camera id becomes
+     * invalid. Calling this method with this invalid camera id must result in
+     * ILLEGAL_ARGUMENT; this may happen even before the device status callback
+     * is invoked by the HAL.
+     *
+     * @return status Status code for the operation, one of:
+     *     OK:
+     *         On a successful open of the camera device.
+     *     INTERNAL_ERROR:
+     *         The camera device cannot be opened due to an internal
+     *         error.
+     *     CAMERA_DISCONNECTED:
+     *         An external camera device has been disconnected, and is no longer
+     *         available. This camera device interface is now stale, and a new
+     *         instance must be acquired if the device is reconnected. All
+     *         subsequent calls on this interface must return
+     *         CAMERA_DISCONNECTED.
+     *
+     * @return cameraCharacteristics
+     *     The static metadata for this camera device, or an empty metadata
+     *     structure if status is not OK.
+     *
+     */
+    getCameraCharacteristics() generates
+            (Status status, CameraMetadata cameraCharacteristics);
+
+    /**
+     * setTorchMode:
+     *
+     * Turn on or off the torch mode of the flash unit associated with this
+     * camera device. If the operation is successful, HAL must notify the
+     * framework torch state by invoking
+     * ICameraProviderCallback::torchModeStatusChange() with the new state.
+     *
+     * An active camera session has a higher priority accessing the flash
+     * unit. When there are any resource conflicts, such as when open() is
+     * called to fully activate a camera device, the provider must notify the
+     * framework through ICameraProviderCallback::torchModeStatusChange() that
+     * the torch mode has been turned off and the torch mode state has become
+     * TORCH_MODE_STATUS_NOT_AVAILABLE. When resources to turn on torch mode
+     * become available again, the provider must notify the framework through
+     * ICameraProviderCallback::torchModeStatusChange() that the torch mode
+     * state has become TORCH_MODE_STATUS_AVAILABLE_OFF for set_torch_mode() to
+     * be called.
+     *
+     * When the client calls setTorchMode() to turn on the torch mode of a flash
+     * unit, if the HAL cannot keep multiple torch modes on simultaneously, the
+     * HAL must turn off the torch mode(s) that were turned on by previous
+     * setTorchMode() calls and notify the framework that the torch mode state
+     * of those flash unit(s) has become TORCH_MODE_STATUS_AVAILABLE_OFF.
+     *
+     * @param torchMode The new mode to set the device flash unit to.
+     *
+     * @return status Status code for the operation, one of:
+     *     OK:
+     *         On a successful change to the torch state
+     *     INTERNAL_ERROR:
+     *         The flash unit cannot be operated due to an unexpected internal
+     *         error.
+     *     ILLEGAL_ARGUMENT:
+     *         The camera ID is unknown.
+     *     CAMERA_IN_USE:
+     *         This camera device has been opened, so the torch cannot be
+     *         controlled until it is closed.
+     *     MAX_CAMERAS_IN_USE:
+     *         Due to other camera devices being open, or due to other
+     *         resource constraints, the torch cannot be controlled currently.
+     *     METHOD_NOT_SUPPORTED:
+     *         This provider does not support direct operation of flashlight
+     *         torch mode. The framework must open the camera device and turn
+     *         the torch on through the device interface.
+     *     OPERATION_NOT_SUPPORTED:
+     *         This camera device does not have a flash unit. This can
+     *         be returned if and only if android.flash.info.available is
+     *         false.
+     *     CAMERA_DISCONNECTED:
+     *         An external camera device has been disconnected, and is no longer
+     *         available. This camera device interface is now stale, and a new
+     *         instance must be acquired if the device is reconnected. All
+     *         subsequent calls on this interface must return
+     *         CAMERA_DISCONNECTED.
+     *
+     */
+    setTorchMode(TorchMode mode) generates (Status status);
+
+    /**
+     * open:
+     *
+     * Power on and initialize this camera device for active use, returning a
+     * session handle for active operations.
+     *
+     * @param callback Interface to invoke by the HAL for device asynchronous
+     *     events.
+     * @return status Status code for the operation, one of:
+     *     OK:
+     *         On a successful open of the camera device.
+     *     INTERNAL_ERROR:
+     *         The camera device cannot be opened due to an internal
+     *         error.
+     *     ILLEGAL_ARGUMENT:
+     *         The callbacks handle is invalid (for example, it is null).
+     *     CAMERA_IN_USE:
+     *         This camera device is already open.
+     *     MAX_CAMERAS_IN_USE:
+     *         The maximal number of camera devices that can be
+     *         opened concurrently were opened already.
+     *     CAMERA_DISCONNECTED:
+     *         This external camera device has been disconnected, and is no
+     *         longer available. This interface is now stale, and a new instance
+     *         must be acquired if the device is reconnected. All subsequent
+     *         calls on this interface must return CAMERA_DISCONNECTED.
+     * @return session The interface to the newly-opened camera session,
+     *     or null if status is not OK.
+     */
+    open(ICameraDeviceCallback callback) generates
+            (Status status, ICameraDeviceSession session);
+
+    /**
+     * dumpState:
+     *
+     * Print out debugging state for the camera device. This may be called by
+     * the framework when the camera service is asked for a debug dump, which
+     * happens when using the dumpsys tool, or when capturing a bugreport.
+     *
+     * The passed-in file descriptor can be used to write debugging text using
+     * dprintf() or write(). The text must be in ASCII encoding only.
+     *
+     * In case this camera device has been disconnected, the dump must not fail,
+     * but may simply print out 'Device disconnected' or equivalent.
+     *
+     * Performance requirements:
+     *
+     * This must be a non-blocking call. The HAL should return from this call
+     * in 1ms, must return from this call in 10ms. This call must avoid
+     * deadlocks, as it may be called at any point during camera operation.
+     * Any synchronization primitives used (such as mutex locks or semaphores)
+     * must be acquired with a timeout.
+     */
+    dumpState(handle fd);
+
+};

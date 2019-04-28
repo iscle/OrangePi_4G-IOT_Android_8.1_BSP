@@ -1,0 +1,102 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.audio@2.0;
+
+import android.hardware.audio.common@2.0;
+
+enum Result : int32_t {
+    OK,
+    NOT_INITIALIZED,
+    INVALID_ARGUMENTS,
+    INVALID_STATE,
+    NOT_SUPPORTED
+};
+
+@export(name="audio_drain_type_t", value_prefix="AUDIO_DRAIN_")
+enum AudioDrain : int32_t {
+    /** drain() returns when all data has been played. */
+    ALL,
+    /**
+     * drain() returns a short time before all data from the current track has
+     * been played to give time for gapless track switch.
+     */
+    EARLY_NOTIFY
+};
+
+/**
+ * A substitute for POSIX timespec.
+ */
+struct TimeSpec {
+    uint64_t tvSec;   // seconds
+    uint64_t tvNSec;  // nanoseconds
+};
+
+/**
+ * IEEE 802 MAC address.
+ */
+typedef uint8_t[6] MacAddress;
+
+struct ParameterValue {
+    string key;
+    string value;
+};
+
+/**
+ * Specifies a device in case when several devices of the same type
+ * can be connected (e.g. BT A2DP, USB).
+ */
+struct DeviceAddress {
+    AudioDevice device;  // discriminator
+    union Address {
+        MacAddress mac;     // used for BLUETOOTH_A2DP_*
+        uint8_t[4] ipv4;    // used for IP
+        struct Alsa {
+            int32_t card;
+            int32_t device;
+        } alsa;             // used for USB_*
+    } address;
+    string busAddress;      // used for BUS
+    string rSubmixAddress;  // used for REMOTE_SUBMIX
+};
+
+/**
+ * Mmap buffer descriptor returned by IStream.createMmapBuffer().
+ * Used by streams opened in mmap mode.
+ */
+struct MmapBufferInfo {
+    memory  sharedMemory;         // mmap memory buffer
+    int32_t bufferSizeFrames;     // total buffer size in frames
+    int32_t burstSizeFrames;      // transfer size granularity in frames
+};
+
+/**
+ * Mmap buffer read/write position returned by IStream.getMmapPosition().
+ * Used by streams opened in mmap mode.
+ */
+struct MmapPosition {
+    int64_t  timeNanoseconds; // time stamp in ns, CLOCK_MONOTONIC
+    int32_t  positionFrames;  // increasing 32 bit frame count reset when IStream.stop() is called
+};
+
+/**
+ * The message queue flags used to synchronize reads and writes from
+ * message queues used by StreamIn and StreamOut.
+ */
+enum MessageQueueFlagBits : uint32_t {
+    NOT_EMPTY = 1 << 0,
+    NOT_FULL = 1 << 1
+};

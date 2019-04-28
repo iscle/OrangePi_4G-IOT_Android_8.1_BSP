@@ -1,0 +1,112 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.radio@1.1;
+
+import IRadioResponse;
+import @1.0::IRadio;
+
+/**
+ * This interface is used by telephony and telecom to talk to cellular radio.
+ * All the functions have minimum one parameter:
+ * serial: which corresponds to serial no. of request. Serial numbers must only be memorized for the
+ * duration of a method call. If clients provide colliding serials (including passing the same
+ * serial to different methods), multiple responses (one for each method call) must still be served.
+ * setResponseFunctions must work with @1.1::IRadioResponse and @1.1::IRadioIndication.
+ */
+interface IRadio extends @1.0::IRadio {
+    /**
+     * Provide Carrier specific information to the modem that must be used to
+     * encrypt the IMSI and IMPI. Sent by the framework during boot, carrier
+     * switch and everytime the framework receives a new certificate.
+     *
+     * @param serial Serial number of request.
+     * @param message ImsiEncryptionInfo as defined in types.hal.
+     *
+     *
+     * Response callback is
+     * IRadioResponse.setCarrierInfoForImsiEncryptionResponse()
+     */
+     oneway setCarrierInfoForImsiEncryption(int32_t serial, ImsiEncryptionInfo imsiEncryptionInfo);
+
+    /**
+     * Set SIM card power state.
+     * Request is equivalent to inserting or removing the card.
+     *
+     * The radio modem must generate IRadioIndication.simStatusChanged() as if the SIM had been
+     * inserted or removed.
+     *
+     * @param serial Serial number of request
+     * @param powerUp POWER_DOWN if powering down the SIM card,
+     *                POWER_UP if powering up the SIM card,
+     *                POWER_UP_PASS_THROUGH if powering up the SIM card in pass through mode.
+     * When SIM card is in POWER_UP_PASS_THROUGH, the modem does not send any command to it
+     * (for example SELECT of MF, or TERMINAL CAPABILITY), and the SIM card is controlled
+     * completely by Telephony sending APDUs directly. The SIM card state must be
+     * RIL_CARDSTATE_PRESENT and the number of card apps will be 0.
+     * No new error code is generated. Emergency calls are supported in the same way as if the
+     * SIM card is absent.
+     * POWER_UP_PASS_THROUGH mode is valid only for the specific card session where it is activated,
+     * and normal behavior occurs at the next SIM initialization, unless POWER_UP_PASS_THROUGH mode
+     * is requested again.
+     * The device is required to power down the SIM card before it can switch the mode between
+     * POWER_UP and POWER_UP_PASS_THROUGH.
+     * At device power up, the SIM interface is powered up automatically. Each subsequent request
+     * to this method is processed only after the completion of the previous one.
+     *
+     * Response callback is IRadioResponse.setSimCardPowerResponse_1_1()
+     */
+    oneway setSimCardPower_1_1(int32_t serial, CardPowerState powerUp);
+
+    /**
+     * Starts a network scan
+     *
+     * @param serial Serial number of request.
+     * @param request Defines the radio networks/bands/channels which need to be scanned.
+     *
+     * Response function is IRadioResponse.startNetworkScanResponse()
+     */
+    oneway startNetworkScan(int32_t serial, NetworkScanRequest request);
+
+    /**
+     * Stops ongoing network scan
+     *
+     * @param serial Serial number of request.
+     *
+     * Response function is IRadioResponse.stopNetworkScanResponse()
+     */
+    oneway stopNetworkScan(int32_t serial);
+
+    /**
+     * Start a Keepalive session (for IPsec)
+     *
+     * @param serial Serial number of request.
+     * @param keepalive A request structure containing all necessary info to describe a keepalive
+     *
+     * Response function is IRadioResponse.startKeepaliveResponse()
+     */
+    oneway startKeepalive(int32_t serial, KeepaliveRequest keepalive);
+
+    /**
+     * Stop an ongoing Keepalive session (for IPsec)
+     *
+     * @param serial Serial number of request.
+     * @param sessionHandle The handle that was provided by IRadioResponse.startKeepaliveResponse
+     *
+     * Response function is IRadioResponse.stopKeepaliveResponse()
+     */
+    oneway stopKeepalive(int32_t serial, int32_t sessionHandle);
+};

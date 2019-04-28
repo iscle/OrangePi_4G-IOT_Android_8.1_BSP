@@ -1,0 +1,113 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.camera.device@1.0;
+
+interface ICameraDeviceCallback {
+
+    /**
+     * Notify the camera service of a particular event occurring
+     * The meaning of each parameter is defined by the value of msgType, and
+     * documented in the definition of NotifyCallbackMsg.
+     *
+     * @param msgType The type of the event.
+     * @param ext1 The first parameter for the event, if needed.
+     * @param ext2 The second parameter for the event, if needed.
+     */
+    notifyCallback(NotifyCallbackMsg msgType, int32_t ext1, int32_t ext2);
+
+    /**
+     * Define a memory buffer from the provided handle and size, and return a
+     * unique identifier for the HAL to use to reference it with.
+     *
+     * @param descriptor A native handle that must have exactly one file
+     *     descriptor in it; the file descriptor must be memory mappable to
+     *     bufferSize * bufferCount bytes.
+     * @param bufferSize The number of bytes a single buffer consists of.
+     * @param bufferCount The number of contiguous buffers that the descriptor
+     *     contains.
+     *
+     * @return memId A positive integer identifier for this memory buffer, for
+     *     use with data callbacks and unregistering memory. 0 must be returned
+     *     in case of error, such as if the descriptor does not contain exactly
+     *     one FD.
+     */
+    registerMemory(handle descriptor, uint32_t bufferSize, uint32_t bufferCount)
+            generates (MemoryId memId);
+
+    /**
+     * Unregister a previously registered memory buffer
+     */
+    unregisterMemory(MemoryId memId);
+
+    /**
+     * Send a buffer of image data to the camera service
+     *
+     * @param msgType The kind of image buffer data this call represents.
+     * @param data A memory handle to the buffer containing the data.
+     * @param bufferIndex The offset into the memory handle where the buffer
+     *     starts.
+     *
+     */
+    dataCallback(DataCallbackMsg msgType, MemoryId data, uint32_t bufferIndex,
+            CameraFrameMetadata metadata);
+
+    /**
+     * Send a buffer of image data to the camera service, with a timestamp
+     *
+     * @param msgType The kind of image buffer data this call represents.
+     * @param data A memory handle to the buffer containing the data.
+     * @param bufferIndex The offset into the memory handle where the buffer
+     *     starts.
+     * @param timestamp The time this buffer was captured by the camera, in
+     *     nanoseconds.
+     *
+     */
+    dataCallbackTimestamp(DataCallbackMsg msgType, MemoryId data, uint32_t bufferIndex,
+            int64_t timestamp);
+
+    /**
+     * Send a buffer of image data to the camera service, with a timestamp
+     *
+     * @param msgType The kind of image buffer data this call represents.
+     * @param handle The handle of image buffer data this call represents.
+     * @param data A memory handle to the buffer containing the data.
+     * @param bufferIndex The offset into the memory handle where the buffer
+     *     starts.
+     * @param timestamp The time this buffer was captured by the camera, in
+     *     nanoseconds.
+     *
+     */
+    handleCallbackTimestamp(DataCallbackMsg msgType, handle frameData, MemoryId data,
+            uint32_t bufferIndex, int64_t timestamp);
+
+    /**
+     * Send a batch of image data buffer to the camera service, with timestamps
+     *
+     * This callback can be used to send multiple frames to camera framework in one callback, which
+     * reduce number of callbacks in performance intensive use cases, such as high speed video
+     * recording. The HAL must not mix use of this method with handleCallbackTimestamp in one
+     * recording session (between startRecording and stopRecording)
+     *
+     * @param msgType The kind of image buffer data this call represents.
+     * @param batch a vector messages. Each message contains a image buffer and a timestamp. The
+     *     messages must be ordered in time from lower index to higher index, so that timestamp of
+     *     i-th message is always smaller than i+1-th message.
+     *
+     */
+    handleCallbackTimestampBatch(DataCallbackMsg msgType, vec<HandleTimestampMessage> batch);
+
+};

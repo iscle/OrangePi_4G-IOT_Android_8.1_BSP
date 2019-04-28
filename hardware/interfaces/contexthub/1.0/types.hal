@@ -1,0 +1,196 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.contexthub@1.0;
+
+enum Result : uint32_t {
+    OK,                  // Success
+    UNKNOWN_FAILURE,     // Failure, unknown reason
+    BAD_PARAMS,          // Parameters not sane
+    NOT_INIT,            // Not initialized
+    TRANSACTION_FAILED,  // Transaction failed
+    TRANSACTION_PENDING, // Pending transaction, cannot accept a new request
+};
+
+enum NanoAppFlags : uint32_t {
+    SIGNED    = 1 << 0,
+    ENCRYPTED = 1 << 1,
+};
+
+struct NanoAppBinary {
+    uint64_t appId;            // Nanoapp identifier
+    uint32_t appVersion;       // Version of the app (semantics defined by app)
+    bitfield<NanoAppFlags> flags;
+
+    // The version of the CHRE API that this nanoApp was compiled against. See
+    // the CHRE API header file chre/version.h for more information. The hub
+    // implementation must use this to confirm compatibility before loading
+    // this nanoApp.
+    uint8_t targetChreApiMajorVersion;
+    uint8_t targetChreApiMinorVersion;
+
+    // Implementation-specific binary nanoapp data. This does not include the
+    // common nanoapp header that contains the app ID, etc., as this data is
+    // explicitly passed through the other fields in this struct.
+    vec<uint8_t> customBinary;
+};
+
+enum SensorType : uint32_t {
+    RESERVED,
+    ACCELEROMETER,
+    GYROSCOPE,
+    MAGNETOMETER,
+    BAROMETER,
+    PROXIMITY_SENSOR,
+    AMBIENT_LIGHT_SENSOR,
+    STATIONARY_DETECT,
+    INSTANT_MOTION_DETECT,
+
+    GPS = 0x100,
+    // Reserving this space for variants on GPS
+
+    WIFI = 0x200,
+    // Reserving this space for variants on WIFI
+
+    AUDIO = 0x300,
+    // Reserving this space for variants on Audio
+
+    CAMERA = 0x400,
+    // Reserving this space for variants on Camera
+
+    BLE = 0x500,
+    // Reserving this space for variants on Bluetooth Low Energy
+
+    WWAN = 0x600,
+    // Reserving this space for variants on WWAN
+
+    PRIVATE_SENSOR_BASE = 0x10000,
+    // Sensor types beyond PRIVATE_SENSOR_BASE are custom types
+};
+
+struct PhysicalSensor{
+    SensorType sensorType;       // From the definitions above eg: 100
+    string type;                 // Type as a string. eg: "GPS"
+    string name;                 // Identifier eg: "Bosch BMI160"
+    string vendor;               // Vendor : eg "STM"
+    uint32_t version;            // Version : eg 0x1001
+    uint32_t fifoReservedCount;  // Batching possible in hardware. Please
+                                 // note that here hardware does not include
+                                 // the context hub itself. Thus, this
+                                 // definition may be different from say the
+                                 // number advertised in the sensors HAL
+                                 // which allows for batching in a hub.
+    uint32_t fifoMaxCount;       // Maximum number of batchable events.
+    uint64_t minDelayMs;         // In milliseconds, corresponding to highest
+                                 // sampling freq.
+    uint64_t maxDelayMs;         // In milliseconds, corresponds to minimum
+                                 // sampling frequency
+    float peakPowerMw;           // At max frequency & no batching, power
+                                 // in milliwatts
+};
+
+struct ContextHub {
+    string name;                // Descriptive name eg: "Awesome Hub #1"
+    string vendor;              // Hub hardware vendor eg: "Qualcomm"
+    string toolchain;           // Toolchain to make binaries eg: "gcc ARM"
+    uint32_t platformVersion;   // Version of the hardware : eg 0x20
+    uint32_t toolchainVersion;  // Version of the toolchain : eg: 0x484
+    uint32_t hubId;             // A device unique ID for this hub
+
+    float peakMips;             // Peak MIPS platform can deliver
+    float stoppedPowerDrawMw;   // If stopped, retention power, milliwatts
+    float sleepPowerDrawMw;     // If sleeping, retention power, milliwatts
+    float peakPowerDrawMw;      // For a busy CPU, power in milliwatts
+
+    vec<PhysicalSensor> connectedSensors; // Array of connected sensors
+
+    uint32_t maxSupportedMsgLen;// This is the maximum size of the message that can
+                                // be sent to the hub in one chunk (in bytes)
+
+    // Machine-readable CHRE platform ID, returned to nanoapps in the CHRE API
+    // function call chreGetPlatformId(). This field pairs with
+    // chreApiMajorVersion, chreApiMinorVersion, and chrePatchVersion to fully
+    // specify the CHRE implementation version. See also the CHRE API header
+    // file chre/version.h.
+    uint64_t chrePlatformId;
+
+    // The version of the CHRE implementation returned to nanoApps in the CHRE
+    // API function call chreGetVersion(). The major and minor version specify
+    // the implemented version of the CHRE API, while the patch version
+    // describes the implementation version within the scope of the platform
+    // ID. See also the CHRE API header file chre/version.h.
+    uint8_t chreApiMajorVersion;
+    uint8_t chreApiMinorVersion;
+    uint16_t chrePatchVersion;
+};
+
+enum HostEndPoint : uint16_t {
+    BROADCAST = 0xFFFF, // The message endpoint is a broadcast end point.
+                        // This value must never be used for a message from
+                        // the host to the hub.
+                        // If BROADCAST is specified as a destination for a
+                        // message from the context hub to the ContextHub
+                        // service, the message must be broadcast to all
+                        // registered clients by the Context Hub service.
+    UNSPECIFIED = 0xFFFE, // The message endpoint is unspecified. This value
+                          // must not be used for messages from the hub to host.
+                          // This value may be used for messages from the host
+                          // to the hub.
+};
+
+struct ContextHubMsg {
+    uint64_t appName;      // Intended recipient (appId)
+    uint16_t hostEndPoint; // identifier for the endpoint. (also see enum HostEndPoint)
+    uint32_t msgType;      // Identifier for message
+    vec<uint8_t> msg;      // Message body
+};
+
+enum HubMemoryType : uint32_t {
+    MAIN      = 0, // Main memory
+    SECONDARY = 1, // Secondary memory
+    TCM       = 2, // Tightly coupled memory
+};
+
+enum HubMemoryFlag : uint32_t {
+    READ  = 1 << 0, // Readable
+    WRITE = 1 << 1, // Writable
+    EXEC  = 1 << 2, // Executable
+};
+
+struct MemRange {
+    uint32_t totalBytes; // Total capacity in bytes
+    uint32_t freeBytes;  // Free capacity in bytes
+    HubMemoryType type;  // Type of memory, see HubMemoryType
+    bitfield<HubMemoryFlag> flags;
+};
+
+enum AsyncEventType : uint32_t {
+    RESTARTED = 1,   // Hub restarted unexpectedly
+};
+
+enum TransactionResult : int32_t {
+    SUCCESS,      // Successful completion of transaction
+    FAILURE,      // Failed transaction
+};
+
+struct HubAppInfo {
+    uint64_t appId;         // Identifier of the app
+    uint32_t version;       // Version of the app
+    vec<MemRange> memUsage; // Memory used by this app
+    bool enabled;           // true if the app is currently enabled and running,
+                            // or false if in the loaded but disabled state
+};
+

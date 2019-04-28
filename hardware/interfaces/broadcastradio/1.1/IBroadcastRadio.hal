@@ -1,0 +1,64 @@
+/*
+ * Copyright (C) 2017 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.broadcastradio@1.1;
+
+import @1.0::IBroadcastRadio;
+
+interface IBroadcastRadio extends @1.0::IBroadcastRadio {
+
+    /**
+     * Retrieve implementation properties.
+     * @return properties A Properties structure containing implementation
+     *                    description and capabilities.
+     */
+    getProperties_1_1() generates (Properties properties);
+
+    /**
+     * Fetch image from radio module.
+     *
+     * This call is meant to make V1_0::MetaData lightweight - instead of
+     * passing an image data blob in the MetadataType.RAW field, the HAL
+     * implementation only passes the identifier, so the client may cache images
+     * or even not fetch them.
+     *
+     * The identifier may be any arbitrary number - sequential, sha256 prefix,
+     * or any other unique value selected by the vendor.
+     *
+     * The data should be a valid PNG, JPEG, GIF or BMP file.
+     * Image data with an invalid format must be handled gracefully in the same
+     * way as a missing image.
+     *
+     * The image identifier may become invalid after some time from passing it
+     * with metadata struct (due to resource cleanup at the HAL implementation).
+     * However, it must remain valid for a currently tuned program at least
+     * until currentProgramInfoChanged or programListChanged is called and
+     * metadata changes for the current program.
+     *
+     * There is still a race condition possible (if the HAL deletes the old
+     * image immediately after notifying about the new one) between
+     * currentProgramInfoChanged callback propagating through the framework and
+     * the HAL implementation removing previous image. In such case, client
+     * application may expect the new currentProgramInfoChanged callback with
+     * updated image identifier.
+     *
+     * @param id Identifier of an image;
+     *           value of 0 is reserved and should be treated as invalid image.
+     * @return image A binary blob with image data
+     *               or a zero-length vector if identifier doesn't exist.
+     */
+    getImage(int32_t id) generates (vec<uint8_t> image);
+};

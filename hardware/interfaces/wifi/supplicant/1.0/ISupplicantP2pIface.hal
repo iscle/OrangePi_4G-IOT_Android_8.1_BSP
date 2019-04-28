@@ -1,0 +1,689 @@
+/*
+ * Copyright 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.wifi.supplicant@1.0;
+
+import ISupplicantIface;
+import ISupplicantP2pIfaceCallback;
+
+/**
+ * Interface exposed by the supplicant for each P2P mode network
+ * interface (e.g p2p0) it controls.
+ */
+interface ISupplicantP2pIface extends ISupplicantIface {
+  enum WpsProvisionMethod : uint32_t {
+    /**
+     * Push button method.
+     */
+    PBC,
+    /**
+     * Display pin method configuration - pin is generated and displayed on
+     * device.
+     */
+    DISPLAY,
+    /**
+     * Keypad pin method configuration - pin is entered on device.
+     */
+    KEYPAD
+  };
+
+  /**
+   * Use to specify a range of frequencies.
+   * For example: 2412-2432,2462,5000-6000, etc.
+   */
+  struct FreqRange {
+      uint32_t min;
+      uint32_t max;
+  };
+
+  /**
+   * Enum describing the modes of Miracast supported
+   * via driver commands.
+   */
+  enum MiracastMode : uint8_t {
+    DISABLED = 0,
+    /**
+     * Operating as source.
+     */
+    SOURCE = 1,
+    /**
+     * Operating as sink.
+     */
+    SINK = 2
+  };
+
+  /**
+   * Register for callbacks from this interface.
+   *
+   * These callbacks are invoked for events that are specific to this interface.
+   * Registration of multiple callback objects is supported. These objects must
+   * be automatically deleted when the corresponding client process is dead or
+   * if this interface is removed.
+   *
+   * @param callback An instance of the |ISupplicantP2pIfaceCallback| HIDL
+   *        interface object.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   */
+  registerCallback(ISupplicantP2pIfaceCallback callback)
+      generates (SupplicantStatus status);
+
+  /**
+   * Gets the MAC address of the device.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   * @return deviceAddress MAC address of the device.
+   */
+  getDeviceAddress()
+      generates (SupplicantStatus status, MacAddress deviceAddress);
+
+  /**
+   * Set the postfix to be used for P2P SSID's.
+   *
+   * @param postfix String to be appended to SSID.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_ARGS_INVALID|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   */
+  setSsidPostfix(vec<uint8_t> postfix) generates (SupplicantStatus status);
+
+  /**
+   * Set the Maximum idle time in seconds for P2P groups.
+   * This value controls how long a P2P group is maintained after there
+   * is no other members in the group. As a group owner, this means no
+   * associated stations in the group. As a P2P client, this means no
+   * group owner seen in scan results.
+   *
+   * @param groupIfName Group interface name to use.
+   * @param timeoutInSec Timeout value in seconds.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   */
+  setGroupIdle(string groupIfName, uint32_t timeoutInSec)
+      generates (SupplicantStatus status);
+
+  /**
+   * Turn on/off power save mode for the interface.
+   *
+   * @param groupIfName Group interface name to use.
+   * @param enable Indicate if power save is to be turned on/off.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_DISABLED|
+   */
+  setPowerSave(string groupIfName, bool enable)
+      generates (SupplicantStatus status);
+
+  /**
+   * Initiate a P2P service discovery with an optional timeout.
+   *
+   * @param timeoutInSec Max time to be spent is peforming discovery.
+   *        Set to 0 to indefinely continue discovery untill and explicit
+   *        |stopFind| is sent.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   *         |SupplicantStatusCode.FAILURE_IFACE_DISABLED|
+   */
+  find(uint32_t timeoutInSec) generates (SupplicantStatus status);
+
+  /**
+   * Stop an ongoing P2P service discovery.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   *         |SupplicantStatusCode.FAILURE_IFACE_DISABLED|
+   */
+  stopFind() generates (SupplicantStatus status);
+
+  /**
+   * Flush P2P peer table and state.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   */
+  flush() generates (SupplicantStatus status);
+
+  /**
+   * Start P2P group formation with a discovered P2P peer. This includes
+   * optional group owner negotiation, group interface setup, provisioning,
+   * and establishing data connection.
+   *
+   * @param peerAddress MAC address of the device to connect to.
+   * @method provisionMethod Provisioning method to use.
+   * @param preSelectedPin Pin to be used, if |provisionMethod| uses one of the
+   *        preselected |PIN*| methods.
+   * @param joinExistingGroup Indicates that this is a command to join an
+   *        existing group as a client. It skips the group owner negotiation
+   *        part. This must send a Provision Discovery Request message to the
+   *        target group owner before associating for WPS provisioning.
+   * @param persistent Used to request a persistent group to be formed.
+   * @param goIntent Used to override the default Intent for this group owner
+   *        negotiation (Values from 1-15). Refer to section 4.1.6 in
+   *        Wi-Fi Peer-to-Peer (P2P) Technical Specification Version 1.7.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_ARGS_INVALID|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   * @return generatedPin Pin generated, if |provisionMethod| uses one of the
+   *         generated |PIN*| methods.
+   */
+  connect(MacAddress peerAddress,
+          WpsProvisionMethod provisionMethod,
+          string preSelectedPin,
+          bool joinExistingGroup,
+          bool persistent,
+          uint32_t goIntent)
+      generates (SupplicantStatus status, string generatedPin);
+
+  /**
+   * Cancel an ongoing P2P group formation and joining-a-group related
+   * operation. This operation unauthorizes the specific peer device (if any
+   * had been authorized to start group formation), stops P2P find (if in
+   * progress), stops pending operations for join-a-group, and removes the
+   * P2P group interface (if one was used) that is in the WPS provisioning
+   * step. If the WPS provisioning step has been completed, the group is not
+   * terminated.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_NOT_STARTED|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   */
+  cancelConnect() generates (SupplicantStatus status);
+
+  /**
+   * Send P2P provision discovery request to the specified peer. The
+   * parameters for this command are the P2P device address of the peer and the
+   * desired configuration method.
+   *
+   * @param peerAddress MAC address of the device to send discovery.
+   * @method provisionMethod Provisioning method to use.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   */
+  provisionDiscovery(MacAddress peerAddress,
+                     WpsProvisionMethod provisionMethod)
+      generates (SupplicantStatus status);
+
+  /**
+   * Set up a P2P group owner manually (i.e., without group owner
+   * negotiation with a specific peer). This is also known as autonomous
+   * group owner. Optional |persistentNetworkId| may be used to specify
+   * restart of a persistent group.
+   *
+   * @param persistent Used to request a persistent group to be formed.
+   * @param persistentNetworkId Used to specify the restart of a persistent
+   *        group. Set to UINT32_MAX for a non-persistent group.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   */
+  addGroup(bool persistent, SupplicantNetworkId persistentNetworkId)
+      generates (SupplicantStatus status);
+
+  /**
+   * Terminate a P2P group. If a new virtual network interface was used for
+   * the group, it must also be removed. The network interface name of the
+   * group interface is used as a parameter for this command.
+   *
+   * @param groupIfName Group interface name to use.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   */
+  removeGroup(string groupIfName) generates (SupplicantStatus status);
+
+  /**
+   * Reject connection attempt from a peer (specified with a device
+   * address). This is a mechanism to reject a pending group owner negotiation
+   * with a peer and request to automatically block any further connection or
+   * discovery of the peer.
+   *
+   * @param peerAddress MAC address of the device to reject.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   *         |SupplicantStatusCode.FAILURE_IFACE_DISABLED|
+   */
+  reject(MacAddress peerAddress) generates (SupplicantStatus status);
+
+  /**
+   * Invite a device to a persistent group.
+   * If the peer device is the group owner of the persistent group, the peer
+   * parameter is not needed. Otherwise it is used to specify which
+   * device to invite. |goDeviceAddress| parameter may be used to override
+   * the group owner device address for Invitation Request should it not be
+   * known for some reason (this should not be needed in most cases).
+   *
+   * @param groupIfName Group interface name to use.
+   * @param goDeviceAddress MAC address of the group owner device.
+   * @param peerAddress MAC address of the device to invite.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   */
+  invite(string groupIfName, MacAddress goDeviceAddress, MacAddress peerAddress)
+      generates (SupplicantStatus status);
+
+  /**
+   * Reinvoke a device from a persistent group.
+   *
+   * @param persistentNetworkId Used to specify the persistent group.
+   * @param peerAddress MAC address of the device to reinvoke.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   */
+  reinvoke(SupplicantNetworkId persistentNetworkId, MacAddress peerAddress)
+      generates (SupplicantStatus status);
+
+  /**
+   * Configure Extended Listen Timing.
+   *
+   * If enabled, listen state must be entered every |intervalInMillis| for at
+   * least |periodInMillis|. Both values have acceptable range of 1-65535
+   * (with interval obviously having to be larger than or equal to duration).
+   * If the P2P module is not idle at the time the Extended Listen Timing
+   * timeout occurs, the Listen State operation must be skipped.
+   *
+   * @param periodInMillis Period in milliseconds.
+   * @param intervalInMillis Interval in milliseconds.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_ARGS_INVALID|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   */
+  configureExtListen(uint32_t periodInMillis,
+                     uint32_t intervalInMillis)
+      generates (SupplicantStatus status);
+
+  /**
+   * Set P2P Listen channel.
+   *
+   * When specifying a social channel on the 2.4 GHz band (1/6/11) there is no
+   * need to specify the operating class since it defaults to 81. When
+   * specifying a social channel on the 60 GHz band (2), specify the 60 GHz
+   * operating class (180).
+   *
+   * @param channel Wifi channel. eg, 1, 6, 11.
+   * @param operatingClass Operating Class indicates the channel set of the AP
+   *        indicated by this BSSID
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   */
+  setListenChannel(uint32_t channel, uint32_t operatingClass)
+      generates (SupplicantStatus status);
+
+  /**
+   * Set P2P disallowed frequency ranges.
+   *
+   * Specify ranges of frequencies that are disallowed for any p2p operations.
+
+   * @param ranges List of ranges which needs to be disallowed.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   */
+  setDisallowedFrequencies(vec<FreqRange> ranges)
+      generates (SupplicantStatus status);
+
+  /**
+   * Gets the operational SSID of the device.
+   *
+   * @param peerAddress MAC address of the peer.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   * @return ssid SSID of the device
+   */
+  getSsid(MacAddress peerAddress)
+      generates (SupplicantStatus status, Ssid ssid);
+
+  /**
+   * Gets the capability of the group which the device is a
+   * member of.
+   *
+   * @param peerAddress MAC address of the peer.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   * @return capabilityMask Combination of |P2pGroupCapabilityMask| values.
+   */
+  getGroupCapability(MacAddress peerAddress)
+      generates (SupplicantStatus status,
+                 bitfield<P2pGroupCapabilityMask> capabilities);
+
+  /**
+   * This command can be used to add a bonjour service.
+   *
+   * @param query Hex dump of the query data.
+   * @param return Hex dump of the response data.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   */
+  addBonjourService(vec<uint8_t> query, vec<uint8_t> response)
+      generates (SupplicantStatus status);
+
+  /**
+   * This command can be used to remove a bonjour service.
+   *
+   * @param query Hex dump of the query data.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NOT_STARTED|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   */
+  removeBonjourService(vec<uint8_t> query) generates (SupplicantStatus status);
+
+  /**
+   * This command can be used to add a UPNP service.
+   *
+   * @param version Version to be used.
+   * @package serviceName Service name to be used.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   */
+  addUpnpService(uint32_t version, string serviceName)
+      generates (SupplicantStatus status);
+
+  /**
+   * This command can be used to remove a UPNP service.
+   *
+   * @param version Version to be used.
+   * @package serviceName Service name to be used.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NOT_STARTED|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   */
+  removeUpnpService(uint32_t version, string serviceName)
+      generates (SupplicantStatus status);
+
+  /**
+   * This command can be used to flush all services from the
+   * device.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   */
+  flushServices() generates (SupplicantStatus status);
+
+  /**
+   * Schedule a P2P service discovery request. The parameters for this command
+   * are the device address of the peer device (or 00:00:00:00:00:00 for
+   * wildcard query that is sent to every discovered P2P peer that supports
+   * service discovery) and P2P Service Query TLV(s) as hexdump.
+   *
+   * @param peerAddress MAC address of the device to discover.
+   * @param query Hex dump of the query data.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   * @return identifier Identifier for the request. Can be used to cancel the
+   *         request.
+   */
+  requestServiceDiscovery(MacAddress peerAddress, vec<uint8_t> query)
+      generates (SupplicantStatus status, uint64_t identifier);
+
+  /**
+   * Cancel a previous service discovery request.
+   *
+   * @return identifier Identifier for the request to cancel.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_NOT_STARTED|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   */
+  cancelServiceDiscovery(uint64_t identifier)
+      generates (SupplicantStatus status);
+
+  /**
+   * Send driver command to set Miracast mode.
+   *
+   * @param mode Mode of Miracast.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   */
+  setMiracastMode(MiracastMode mode)
+      generates (SupplicantStatus status);
+
+  /**
+   * Initiate WPS Push Button setup.
+   * The PBC operation requires that a button is also pressed at the
+   * AP/Registrar at about the same time (2 minute window).
+   *
+   * @param groupIfName Group interface name to use.
+   * @param bssid BSSID of the AP. Use zero'ed bssid to indicate wildcard.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   */
+  startWpsPbc(string groupIfName, Bssid bssid)
+      generates (SupplicantStatus status);
+
+  /**
+   * Initiate WPS Pin Keypad setup.
+   *
+   * @param groupIfName Group interface name to use.
+   * @param pin 8 digit pin to be used.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   */
+  startWpsPinKeypad(string groupIfName, string pin)
+      generates (SupplicantStatus status);
+
+  /**
+   * Initiate WPS Pin Display setup.
+   *
+   * @param groupIfName Group interface name to use.
+   * @param bssid BSSID of the AP. Use zero'ed bssid to indicate wildcard.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   * @return generatedPin 8 digit pin generated.
+   */
+  startWpsPinDisplay(string groupIfName, Bssid bssid)
+      generates (SupplicantStatus status, string generatedPin);
+
+  /**
+   * Cancel any ongoing WPS operations.
+   *
+   * @param groupIfName Group interface name to use.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+
+   */
+  cancelWps(string groupIfName) generates (SupplicantStatus status);
+
+  /**
+   * Enable/Disable Wifi Display.
+   *
+   * @param enable true to enable, false to disable.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   */
+  enableWfd(bool enable) generates (SupplicantStatus status);
+
+  /**
+   * Set Wifi Display device info.
+   *
+   * @param info WFD device info as described in section 5.1.2 of WFD technical
+   *        specification v1.0.0.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   */
+  setWfdDeviceInfo(uint8_t[6] info) generates (SupplicantStatus status);
+
+  /**
+   * Creates a NFC handover request message.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   * @return request Bytes representing the handover request as specified in
+   *         section 3.1.1 of NFC Connection Handover 1.2 Technical
+   *         Specification.
+   */
+  createNfcHandoverRequestMessage()
+      generates (SupplicantStatus status, vec<uint8_t> request);
+
+  /**
+   * Creates a NFC handover select message.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   * @return select Bytes representing the handover select as specified in
+   *         section 3.1.2 of NFC Connection Handover 1.2 Technical
+   *         Specification.
+   */
+  createNfcHandoverSelectMessage()
+      generates (SupplicantStatus status, vec<uint8_t> select);
+
+  /**
+   * Report the response of the NFC handover request.
+   *
+   * @param request Bytes representing the handover request as specified in
+   *        section 3.1.1 of NFC Connection Handover 1.2 Technical
+   *        Specification.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   */
+  reportNfcHandoverResponse(vec<uint8_t> request)
+      generates (SupplicantStatus status);
+
+  /**
+   * Report the initiation of the NFC handover select.
+   *
+   * @param select Bytes representing the handover select as specified in
+   *        section 3.1.2 of NFC Connection Handover 1.2 Technical
+   *        Specification.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   */
+  reportNfcHandoverInitiation(vec<uint8_t> select)
+      generates (SupplicantStatus status);
+
+  /**
+   * Persist the current configuration to disk.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   */
+  saveConfig() generates (SupplicantStatus status);
+};

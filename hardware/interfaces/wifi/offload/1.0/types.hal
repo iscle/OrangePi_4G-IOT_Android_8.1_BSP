@@ -1,0 +1,226 @@
+/*
+ * Copyright 2017 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package android.hardware.wifi.offload@1.0;
+
+/**
+ * Defines a bitmap of security modes
+ */
+enum SecurityMode : uint8_t {
+    OPEN                    = 0x1 << 1,
+    WEP                     = 0x1 << 2,
+    PSK                     = 0x1 << 3,
+    EAP                     = 0x1 << 4,
+};
+
+/**
+ * SSID of the Access Point, maximum 32 characters
+ */
+typedef vec<uint8_t> Ssid;
+
+/**
+ * Preferred network information
+ * SSID and associated security mode(s)
+ */
+struct NetworkInfo {
+    Ssid ssid;
+    /* SecurityMode flags that are associated with this SSID
+     * More than one security mode can be supported, see SecurityMode */
+    bitfield<SecurityMode> flags;
+};
+
+/**
+ * This is a bit mask describing the capabilities of a BSS.
+ * See IEEE Std 802.11: 8.4.1.4
+ */
+enum Capability : uint16_t {
+    ESS                     = 1 << 0,
+    IBSS                    = 1 << 1,
+    CF_POLLABLE             = 1 << 2,
+    CF_PLL_REQ              = 1 << 3,
+    PRIVACY                 = 1 << 4,
+    SHORT_PREAMBLE          = 1 << 5,
+    PBCC                    = 1 << 6,
+    CHANNEL_AGILITY         = 1 << 7,
+    SPECTURM_MGMT           = 1 << 8,
+    QOS                     = 1 << 9,
+    SHORT_SLOT_TIME         = 1 << 10,
+    APSD                    = 1 << 11,
+    RADIO_MEASUREMENT       = 1 << 12,
+    DSSS_OFDM               = 1 << 13,
+    DELAYED_BLOCK_ACK       = 1 << 14,
+    IMMEDIATE_BLOCK_ACK     = 1 << 15,
+};
+
+/**
+ * Scan Results returned by the offload Hal
+ */
+struct ScanResult {
+    /* Information about this BSS
+     * SSID and security modes supported */
+    NetworkInfo networkInfo;
+    /* BSSID of the BSS */
+    uint8_t[6] bssid;
+    /* Can have multiple bits set, see Capability */
+    bitfield<Capability> capability;
+    /* Frequency scanned, in mHz */
+    uint32_t frequency;
+    /* Signal strength in dBm */
+    int8_t rssi;
+    /* TSF found in beacon/probe response */
+    uint64_t tsf;
+};
+
+
+/**
+ * Parameters for performing offload scans
+ */
+struct ScanParam {
+    /* Specify a list of SSIDs to scan, an empty list implies no preferred
+     * networks to scan */
+    vec<Ssid> ssidList;
+    /* Frequencies to scan, in mHz, an empty frequency list implies a full scan */
+    vec<uint32_t> frequencyList;
+    /* Periodicity of the scans to be performed by the offload module
+     * A value of zero indicates disable periodic scans. For this revision,
+     * where offload module is performing scans in disconnected mode, this value
+     * should not be zero. In future versions, periodic scans can be eliminated */
+    uint32_t disconnectedModeScanIntervalMs;
+};
+
+/**
+ * Instruction on how to filter the scan result before performing network
+ * selection and waking up the AP to connect
+ */
+struct ScanFilter {
+    /* Preferred network List of SSIDs and their security mode of interest
+     * The filter will drop the remaining scan results in the scan event.
+     * An empty list implies no filtering of scan result based on SSID and
+     * security mode. */
+    vec<NetworkInfo> preferredNetworkInfoList;
+    /* Minimum qualifying RSSI to be considered for network selection (dBm) */
+    int8_t rssiThreshold;
+};
+
+struct ScanRecord {
+    /* Amount of time spent scanning */
+    uint64_t durationMs;
+    /* Number of channels scanned */
+    uint32_t numChannelsScanned;
+    /* Number of entries aggregated into this record */
+    uint32_t numEntriesAggregated;
+};
+
+/**
+ * Enumerates the type of log that is recorded
+ */
+enum RecordName : uint32_t {
+    CMD_BASE                        = 0x00001000,
+    /* Record name corresponding to initialization */
+    CMD_INT                         = CMD_BASE + 0,
+   /* Record name corresponding to configureScans() API */
+    CMD_CONFIG_SCANS                = CMD_BASE + 1,
+    /* Record name corresponding to subscribeScanResults() API */
+    CMD_SUBSCRIBE_SCAN_RESULTS      = CMD_BASE + 2,
+    /* Record name corresponding to unsubscribeScanResults() API */
+    CMD_UNSUBSCRIBE_SCAN_RESULTS    = CMD_BASE + 3,
+    /* Record name corresponding to getScanStats() API */
+    CMD_GET_SCAN_STATS              = CMD_BASE + 4,
+    /* Record name corresponding to a reset*/
+    CMD_RESET                       = CMD_BASE + 5,
+    /* Add new commands here */
+    EVENT_RECVD_BASE                = 0x00002000,
+    /* Record name corresponding to scan monitor event*/
+    EVENT_RECVD_SCAN_RESULT_ASYNC   = EVENT_RECVD_BASE + 0,
+    /* Record name corresponding to scan response event */
+    EVENT_RECVD_SCAN_RESULT         = EVENT_RECVD_BASE + 1,
+    /* Add new events received here */
+    EVENT_SENT_BASE                 = 0x00003000,
+    /* Record name corresponding to scan event sent */
+    EVENT_SENT_SCAN_RESULT          = EVENT_SENT_BASE + 0,
+    /* Record name corresponding to abort event sent */
+    EVENT_SENT_ABORT                = EVENT_SENT_BASE + 1,
+    /* Record name corresponding to error event sent */
+    EVENT_SENT_ERROR                = EVENT_SENT_BASE + 2,
+    /* Add new events sent here */
+    REQ_BASE                        = 0x00004000,
+    /* Record name corresponding to scan request sent*/
+    REQ_SCAN                        = REQ_BASE + 0,
+    /* Add new requests here */
+};
+
+/**
+ * Defines the structure of each log record
+ */
+struct LogRecord {
+    /* Indicates the log recorded */
+    RecordName recordName;
+    /* Platform reference time in milliseconds when the log is recorded */
+    uint64_t logTimeMs;
+};
+
+/**
+ * Defines the scan statistics to be returned to the framework
+ */
+struct ScanStats {
+    /* Incremented everytime a new scan is requested */
+    uint32_t numScansRequestedByWifi;
+    /* Incremented everytime the scan is serviced by performing a scan*/
+    uint32_t numScansServicedByWifi;
+    /* Incremented everytime the scan is serviced by the scan cache */
+    uint32_t numScansServicedbyCache;
+    /* The last (CHRE reference) time this data structure is updated */
+    uint64_t lastUpdated;
+    /* The last (CHRE reference) time this data structure is read */
+    uint64_t lastRead;
+    /* The total time when the Offload module could be performing scans (T2 - T1)
+     * T1 - time when the framework subscribes for scan result (includes delayMs)
+     * T2 - min (time when the framework unsubscribes for scan result,
+     * currentTime) */
+    uint64_t subscriptionDurationMs;
+    /* Histograms of the channels scanned, 802.11 and with an 8 bit
+     * representation, only 256 channels are available */
+    uint8_t[256] histogramChannelsScanned;
+    /* Scan Record for this subscribe duration */
+    vec<ScanRecord> scanRecord;
+    /* Vector of the logRecord entries */
+    vec<LogRecord> logRecord;
+};
+
+/**
+ * Defines a list of return codes to indicate status of Offload HAL
+ */
+enum OffloadStatusCode : uint32_t {
+    /* No error */
+    OK,
+    /* No Connection to underlying implementation */
+    NO_CONNECTION,
+    /* Operation timeout */
+    TIMEOUT,
+    /* Other errors */
+    ERROR
+};
+
+/**
+ * Generic structures to return the status of an operation
+ */
+struct OffloadStatus {
+  OffloadStatusCode code;
+  /* Error message */
+  string description;
+};
+
+
+

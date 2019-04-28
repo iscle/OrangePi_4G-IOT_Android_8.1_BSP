@@ -1,0 +1,81 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.gnss@1.0;
+
+/** Callback structure for the AGNSS interface. */
+interface IAGnssCallback {
+    /** AGNSS type **/
+    @export(name="", value_prefix="AGPS_")
+    enum AGnssType : uint8_t {
+        TYPE_SUPL         = 1,
+        TYPE_C2K          = 2
+    };
+
+    @export(name="", value_prefix="GNSS_")
+    enum AGnssStatusValue : uint8_t {
+        /** GNSS requests data connection for AGNSS. */
+        REQUEST_AGNSS_DATA_CONN  = 1,
+        /** GNSS releases the AGNSS data connection. */
+        RELEASE_AGNSS_DATA_CONN  = 2,
+        /** AGNSS data connection initiated */
+        AGNSS_DATA_CONNECTED     = 3,
+        /** AGNSS data connection completed */
+        AGNSS_DATA_CONN_DONE     = 4,
+        /** AGNSS data connection failed */
+        AGNSS_DATA_CONN_FAILED   = 5
+    };
+
+    /**
+     * Represents the status of AGNSS augmented to support IPv4.
+     */
+    @export(name="", value_prefix="GPS_")
+    struct AGnssStatusIpV4 {
+        AGnssType type;
+        AGnssStatusValue status;
+        /**
+         * 32-bit IPv4 address.
+         */
+        uint32_t ipV4Addr;
+    };
+
+    /**
+     * Represents the status of AGNSS augmented to support IPv6.
+     */
+    struct AGnssStatusIpV6 {
+        AGnssType type;
+        AGnssStatusValue status;
+        /**
+         * 128-bit IPv6 address.
+         */
+        uint8_t[16] ipV6Addr;
+    };
+
+    /**
+     * Callback with AGNSS(IpV4) status information.
+     *
+     * @param status Will be of type AGnssStatusIpV4.
+     */
+    agnssStatusIpV4Cb(AGnssStatusIpV4 status);
+
+    /**
+     * Callback with AGNSS(IpV6) status information.
+     *
+     * @param status Will be of type AGnssStatusIpV6.
+     */
+    agnssStatusIpV6Cb(AGnssStatusIpV6 status);
+
+};

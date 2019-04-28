@@ -1,0 +1,220 @@
+/*
+ * Copyright 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.wifi.supplicant@1.0;
+
+import ISupplicantNetwork;
+
+/**
+ * Interface exposed by the supplicant for each network interface (e.g wlan0)
+ * it controls.
+ */
+interface ISupplicantIface {
+  /**
+   * Size limits for some of the params used in this interface.
+   */
+  enum ParamSizeLimits : uint32_t {
+      WPS_DEVICE_NAME_MAX_LEN = 32,
+      WPS_MANUFACTURER_MAX_LEN = 64,
+      WPS_MODEL_NAME_MAX_LEN = 32,
+      WPS_MODEL_NUMBER_MAX_LEN = 32,
+      WPS_SERIAL_NUMBER_MAX_LEN = 32
+  };
+
+  /**
+   * Retrieves the name of the network interface.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   * @return name Name of the network interface, e.g., wlan0
+   */
+  getName() generates (SupplicantStatus status, string name);
+
+  /**
+   * Retrieves the type of the network interface.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   * @return type Type of the network interface, e.g., STA.
+   */
+  getType() generates (SupplicantStatus status, IfaceType type);
+
+  /**
+   * Add a new network to the interface.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   * @return network HIDL interface object representing the new network if
+   *         successful, null otherwise.
+   */
+  addNetwork()
+      generates (SupplicantStatus status, ISupplicantNetwork network);
+
+  /**
+   * Remove a network from the interface.
+   *
+   * Use |ISupplicantNetwork.getId()| on the corresponding network HIDL
+   * interface object to retrieve the ID.
+   *
+   * @param id Network ID allocated to the corresponding network.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_UNKNOWN|
+   */
+  removeNetwork(SupplicantNetworkId id)
+      generates (SupplicantStatus status);
+
+  /**
+   * Gets a HIDL interface object for the network corresponding to the
+   * |SupplicantNetworkId|.
+   *
+   * Use |ISupplicantNetwork.getId()| on the corresponding network HIDL
+   * interface object to retrieve the ID.
+   *
+   * @param id Network ID allocated to the corresponding network.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_UNKNOWN|
+   * @return network HIDL interface object representing the new network if
+   *         successful, null otherwise.
+   */
+  getNetwork(SupplicantNetworkId id)
+      generates (SupplicantStatus status, ISupplicantNetwork network);
+
+  /**
+   * Retrieve a list of all the network Id's controlled by the supplicant.
+   *
+   * The corresponding |ISupplicantNetwork| object for any network can be
+   * retrieved using |getNetwork| method.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|
+   * @return networkIds List of all network Id's controlled by the supplicant.
+   */
+  listNetworks()
+      generates (SupplicantStatus status, vec<SupplicantNetworkId> networkIds);
+
+  /**
+   * Set the device name for WPS operations.
+   * User-friendly description of device (up to |WPS_DEVICE_NAME_MAX_LEN|
+   * octets encoded in UTF-8).
+   *
+   * @parm name Name to be set.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|
+   */
+  setWpsDeviceName(string name) generates (SupplicantStatus status);
+
+  /**
+   * Set the device type for WPS operations.
+   *
+   * @parm type Type of device. Refer to section B.1 of Wifi P2P
+   *       Technical specification v1.2.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|
+   */
+  setWpsDeviceType(uint8_t[8] type) generates (SupplicantStatus status);
+
+  /**
+   * Set the manufacturer for WPS operations.
+   * The manufacturer of the device (up to |WPS_MANUFACTURER_MAX_LEN| ASCII
+   * characters).
+   *
+   * @parm manufacturer Manufacture to be set.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|
+   */
+  setWpsManufacturer(string manufacturer) generates (SupplicantStatus status);
+
+  /**
+   * Set the model name for WPS operations.
+   * Model of the device (up to |WPS_MODEL_NAME_MAX_LEN| ASCII characters).
+   *
+   * @parm modelName Model name to be set.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|
+   */
+  setWpsModelName(string modelName) generates (SupplicantStatus status);
+
+  /**
+   * Set the model number for WPS operations.
+   * Additional device description (up to |WPS_MODEL_NUMBER_MAX_LEN| ASCII
+   * characters).
+   *
+   * @parm modelNumber Model number to be set.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|
+   */
+  setWpsModelNumber(string modelNumber) generates (SupplicantStatus status);
+
+  /**
+   * Set the serial number for WPS operations.
+   * Serial number of the device (up to |WPS_SERIAL_NUMBER_MAX_LEN| characters)
+   *
+   * @parm serialNumber Serial number to be set.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|
+   */
+  setWpsSerialNumber(string serialNumber) generates (SupplicantStatus status);
+
+  /**
+   * Set the list of supported config methods for WPS operations.
+   *
+   * @param configMethods Mask of WPS configuration methods supported by the
+   *        device.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|
+   */
+  setWpsConfigMethods(bitfield<WpsConfigMethods> configMethods)
+      generates (SupplicantStatus status);
+};

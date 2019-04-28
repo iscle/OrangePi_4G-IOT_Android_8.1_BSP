@@ -1,0 +1,57 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.usb@1.0;
+
+import IUsbCallback;
+
+interface IUsb {
+    /**
+     * This function is used to change the port role of a specific port.
+     * For example, when PD_SWAP or PR_SWAP is supported.
+     * This is function is asynchronous. The status of the role switch
+     * will be informed through IUsbCallback object's notifyPortStatusChange
+     * method.
+     *
+     * @param portName name of the port for which the role has to be changed
+     * @param role the new port role.
+     */
+    oneway switchRole(string portName, PortRole role);
+
+    /**
+     * This function is used to register a callback function which is
+     * called by the HAL whenever there is a change in the port state.
+     * i.e. DATA_ROLE, POWER_ROLE or MODE.
+     *
+     * Also the same callback object would be called to inform the caller
+     * of the roleSwitch status.
+     *
+     * @param callback IUsbCallback object used to convey status to the
+     * userspace.
+     */
+    oneway setCallback(IUsbCallback callback);
+
+    /**
+     * This functions is used to request the hal for the current status
+     * status of the Type-C ports. This method is async/oneway. The result of the
+     * query would be sent through the IUsbCallback object's notifyRoleSwitchStatus
+     * to the caller. This api would would let the caller know of the number
+     * of type-c ports that are present and their connection status through the
+     * PortStatus type.
+     */
+    oneway queryPortStatus();
+};
+

@@ -1,0 +1,110 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.audio.effect@2.0;
+
+import android.hardware.audio.common@2.0;
+import IEffect;
+
+interface IVisualizerEffect extends IEffect {
+    enum CaptureSizeRange : int32_t {
+        MAX = 1024,  // maximum capture size in samples
+        MIN = 128    // minimum capture size in samples
+    };
+
+    /**
+     * Sets the number PCM samples in the capture.
+     */
+    setCaptureSize(uint16_t captureSize) generates (Result retval);
+
+    /**
+     * Gets the number PCM samples in the capture.
+     */
+    getCaptureSize() generates (Result retval, uint16_t captureSize);
+
+    enum ScalingMode : int32_t {
+        // Keep in sync with SCALING_MODE_... in
+        // frameworks/base/media/java/android/media/audiofx/Visualizer.java
+        NORMALIZED = 0,
+        AS_PLAYED = 1
+    };
+
+    /**
+     * Specifies the way the captured data is scaled.
+     */
+    setScalingMode(ScalingMode scalingMode) generates (Result retval);
+
+    /**
+     * Retrieves the way the captured data is scaled.
+     */
+    getScalingMode() generates (Result retval, ScalingMode scalingMode);
+
+    /**
+     * Informs the visualizer about the downstream latency.
+     */
+    setLatency(uint32_t latencyMs) generates (Result retval);
+
+    /**
+     * Gets the downstream latency.
+     */
+    getLatency() generates (Result retval, uint32_t latencyMs);
+
+    enum MeasurementMode : int32_t {
+        // Keep in sync with MEASUREMENT_MODE_... in
+        // frameworks/base/media/java/android/media/audiofx/Visualizer.java
+        NONE = 0x0,
+        PEAK_RMS = 0x1
+    };
+
+    /**
+     * Specifies which measurements are to be made.
+     */
+    setMeasurementMode(MeasurementMode measurementMode)
+            generates (Result retval);
+
+    /**
+     * Retrieves which measurements are to be made.
+     */
+    getMeasurementMode() generates (
+            Result retval, MeasurementMode measurementMode);
+
+    /**
+     * Retrieves the latest PCM snapshot captured by the visualizer engine.  The
+     * number of samples to capture is specified by 'setCaptureSize' parameter.
+     *
+     * @return retval operation completion status.
+     * @return samples samples in 8 bit unsigned format (0 = 0x80)
+     */
+    capture() generates (Result retval, vec<uint8_t> samples);
+
+    struct Measurement {
+        MeasurementMode mode;    // discriminator
+        union Values {
+            struct PeakAndRms {
+                int32_t peakMb;  // millibels
+                int32_t rmsMb;   // millibels
+            } peakAndRms;
+        } value;
+    };
+    /**
+     * Retrieves the latest measurements. The measurements to be made
+     * are specified by 'setMeasurementMode' parameter.
+     *
+     * @return retval operation completion status.
+     * @return result measurement.
+     */
+    measure() generates (Result retval, Measurement result);
+};

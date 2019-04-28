@@ -1,0 +1,117 @@
+/*
+ * Copyright (C) 2017 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package android.hardware.configstore@1.0;
+
+interface ISurfaceFlingerConfigs {
+    /**
+     * The following two methods define (respectively):
+     *
+     * - The phase offset between hardware vsync and when apps are woken up by the
+     *   Choreographer callback
+     * - The phase offset between hardware vsync and when SurfaceFlinger wakes up
+     *   to consume input
+     *
+     * Their values may be tuned to trade off between display pipeline latency (both
+     * overall latency and the lengths of the app --> SF and SF --> display phases)
+     * and frame delivery jitter (which typically manifests as "jank" or "jerkiness"
+     * while interacting with the device). The default values must produce a
+     * relatively low amount of jitter at the expense of roughly two frames of
+     * app --> display latency, and unless significant testing is performed to avoid
+     * increased display jitter (both manual investigation using systrace [1] and
+     * automated testing using dumpsys gfxinfo [2] are recommended), they should not
+     * be modified.
+     *
+     * [1] https://developer.android.com/studio/profile/systrace.html
+     * [2] https://developer.android.com/training/testing/performance.html
+     */
+    vsyncEventPhaseOffsetNs() generates (OptionalInt64 value);
+    vsyncSfEventPhaseOffsetNs() generates (OptionalInt64 value);
+
+    /**
+     * Instruct the Render Engine to use EGL_IMG_context_priority hint if
+     * availabe.
+     */
+    useContextPriority() generates(OptionalBool value);
+
+    /**
+     * hasWideColorDisplay indicates that the device has
+     * or can support a wide-color display, e.g. color space
+     * greater than sRGB. Typical display may have same
+     * color primaries as DCI-P3.
+     * Indicate support for this feature by setting
+     * TARGET_HAS_WIDE_COLOR_DISPLAY to true in BoardConfig.mk
+     * This also means that the device is color managed.
+     * A color managed device will use the appropriate
+     * display mode depending on the content on the screen.
+     * Default is sRGB.
+     */
+    hasWideColorDisplay() generates (OptionalBool value);
+
+    /**
+     * hwHdrDisplay indicates that the device has
+     * or can support an HDR (High Dynamic Range) display.
+     * Typically an HDR display is also wide-color.
+     * Indicate support for this feature by setting
+     * TARGET_HAS_HDR_DISPLAY to true in BoardConfig.mk
+     */
+    hasHDRDisplay() generates (OptionalBool value);
+
+    /**
+     * Specify the offset in nanoseconds to add to vsync time when timestamping
+     * present fences.
+     */
+    presentTimeOffsetFromVSyncNs() generates(OptionalInt64 value);
+
+    /**
+     * Some hardware can do RGB->YUV conversion more efficiently in hardware
+     * controlled by HWC than in hardware controlled by the video encoder.
+     * This instruct VirtualDisplaySurface to use HWC for such conversion on
+     * GL composition.
+     */
+    useHwcForRGBtoYUV() generates(OptionalBool value);
+
+    /**
+     *  Maximum dimension supported by HWC for virtual display.
+     *  Must be equals to min(max_width, max_height).
+     */
+    maxVirtualDisplaySize() generates (OptionalUInt64 value);
+
+    /**
+     * Indicates if Sync framework is available. Sync framework provides fence
+     * mechanism which significantly reduces buffer processing latency.
+     */
+    hasSyncFramework() generates(OptionalBool value);
+
+    /**
+     * Return true if surface flinger should use vr flinger for compatible vr
+     * apps, false otherwise. Devices that will never be running vr apps should
+     * return false to avoid extra resource usage. Daydream ready devices must
+     * return true for full vr support.
+     */
+    useVrFlinger() generates (OptionalBool value);
+
+    /**
+     * Controls the number of buffers SurfaceFlinger will allocate for use in
+     * FramebufferSurface.
+     */
+    maxFrameBufferAcquiredBuffers() generates(OptionalInt64 value);
+
+    /**
+     * Returns true if surface flinger should start
+     * hardware.graphics.allocator@2.0::IAllocator service.
+     */
+    startGraphicsAllocatorService() generates(OptionalBool value);
+};

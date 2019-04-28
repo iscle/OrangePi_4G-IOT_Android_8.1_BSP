@@ -1,0 +1,294 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.audio@2.0;
+
+import android.hardware.audio.common@2.0;
+import android.hardware.audio.effect@2.0::IEffect;
+
+interface IStream {
+    typedef android.hardware.audio@2.0::Result Result;
+
+    /**
+     * Return the frame size (number of bytes per sample).
+     *
+     * @return frameSize frame size in bytes.
+     */
+    getFrameSize() generates (uint64_t frameSize);
+
+    /**
+     * Return the frame count of the buffer. Calling this method is equivalent
+     * to getting AUDIO_PARAMETER_STREAM_FRAME_COUNT on the legacy HAL.
+     *
+     * @return count frame count.
+     */
+    getFrameCount() generates (uint64_t count);
+
+    /**
+     * Return the size of input/output buffer in bytes for this stream.
+     * It must be a multiple of the frame size.
+     *
+     * @return buffer buffer size in bytes.
+     */
+    getBufferSize() generates (uint64_t bufferSize);
+
+    /**
+     * Return the sampling rate in Hz.
+     *
+     * @return sampleRateHz sample rate in Hz.
+     */
+    getSampleRate() generates (uint32_t sampleRateHz);
+
+    /**
+     * Return supported sampling rates of the stream. Calling this method is
+     * equivalent to getting AUDIO_PARAMETER_STREAM_SUP_SAMPLING_RATES on the
+     * legacy HAL.
+     *
+     * @return sampleRateHz supported sample rates.
+     */
+    getSupportedSampleRates() generates (vec<uint32_t> sampleRates);
+
+    /**
+     * Sets the sampling rate of the stream. Calling this method is equivalent
+     * to setting AUDIO_PARAMETER_STREAM_SAMPLING_RATE on the legacy HAL.
+     *
+     * @param sampleRateHz sample rate in Hz.
+     * @return retval operation completion status.
+     */
+    setSampleRate(uint32_t sampleRateHz) generates (Result retval);
+
+    /**
+     * Return the channel mask of the stream.
+     *
+     * @return mask channel mask.
+     */
+    getChannelMask() generates (AudioChannelMask mask);
+
+    /**
+     * Return supported channel masks of the stream. Calling this method is
+     * equivalent to getting AUDIO_PARAMETER_STREAM_SUP_CHANNELS on the legacy
+     * HAL.
+     *
+     * @return masks supported audio masks.
+     */
+    getSupportedChannelMasks() generates (vec<AudioChannelMask> masks);
+
+    /**
+     * Sets the channel mask of the stream. Calling this method is equivalent to
+     * setting AUDIO_PARAMETER_STREAM_CHANNELS on the legacy HAL.
+     *
+     * @param format audio format.
+     * @return retval operation completion status.
+     */
+    setChannelMask(AudioChannelMask mask) generates (Result retval);
+
+    /**
+     * Return the audio format of the stream.
+     *
+     * @return format audio format.
+     */
+    getFormat() generates (AudioFormat format);
+
+    /**
+     * Return supported audio formats of the stream. Calling this method is
+     * equivalent to getting AUDIO_PARAMETER_STREAM_SUP_FORMATS on the legacy
+     * HAL.
+     *
+     * @return formats supported audio formats.
+     */
+    getSupportedFormats() generates (vec<AudioFormat> formats);
+
+    /**
+     * Sets the audio format of the stream. Calling this method is equivalent to
+     * setting AUDIO_PARAMETER_STREAM_FORMAT on the legacy HAL.
+     *
+     * @param format audio format.
+     * @return retval operation completion status.
+     */
+    setFormat(AudioFormat format) generates (Result retval);
+
+    /**
+     * Convenience method for retrieving several stream parameters in
+     * one transaction.
+     *
+     * @return sampleRateHz sample rate in Hz.
+     * @return mask channel mask.
+     * @return format audio format.
+     */
+    getAudioProperties() generates (
+            uint32_t sampleRateHz, AudioChannelMask mask, AudioFormat format);
+
+    /**
+     * Applies audio effect to the stream.
+     *
+     * @param effectId effect ID (obtained from IEffectsFactory.createEffect) of
+     *                 the effect to apply.
+     * @return retval operation completion status.
+     */
+    addEffect(uint64_t effectId) generates (Result retval);
+
+    /**
+     * Stops application of the effect to the stream.
+     *
+     * @param effectId effect ID (obtained from IEffectsFactory.createEffect) of
+     *                 the effect to remove.
+     * @return retval operation completion status.
+     */
+    removeEffect(uint64_t effectId) generates (Result retval);
+
+    /**
+     * Put the audio hardware input/output into standby mode.
+     * Driver must exit from standby mode at the next I/O operation.
+     *
+     * @return retval operation completion status.
+     */
+    standby() generates (Result retval);
+
+    /**
+     * Return the set of device(s) which this stream is connected to.
+     *
+     * @return device set of device(s) which this stream is connected to.
+     */
+    getDevice() generates (AudioDevice device);
+
+    /**
+     * Connects the stream to the device.
+     *
+     * This method must only be used for HALs that do not support
+     * 'IDevice.createAudioPatch' method. Calling this method is
+     * equivalent to setting AUDIO_PARAMETER_STREAM_ROUTING in the legacy HAL
+     * interface.
+     *
+     * @param address device to connect the stream to.
+     * @return retval operation completion status.
+     */
+    setDevice(DeviceAddress address) generates (Result retval);
+
+    /**
+     * Notifies the stream about device connection state. Calling this method is
+     * equivalent to setting AUDIO_PARAMETER_DEVICE_[DIS]CONNECT on the legacy
+     * HAL.
+     *
+     * @param address audio device specification.
+     * @param connected whether the device is connected.
+     * @return retval operation completion status.
+     */
+    setConnectedState(DeviceAddress address, bool connected)
+            generates (Result retval);
+
+    /**
+     * Sets the HW synchronization source. Calling this method is equivalent to
+     * setting AUDIO_PARAMETER_STREAM_HW_AV_SYNC on the legacy HAL.
+     *
+     * @param hwAvSync HW synchronization source
+     * @return retval operation completion status.
+     */
+    setHwAvSync(AudioHwSync hwAvSync) generates (Result retval);
+
+    /**
+     * Generic method for retrieving vendor-specific parameter values.
+     * The framework does not interpret the parameters, they are passed
+     * in an opaque manner between a vendor application and HAL.
+     *
+     * @param keys parameter keys.
+     * @return retval operation completion status.
+     * @return parameters parameter key value pairs.
+     */
+    getParameters(vec<string> keys)
+            generates (Result retval, vec<ParameterValue> parameters);
+
+    /**
+     * Generic method for setting vendor-specific parameter values.
+     * The framework does not interpret the parameters, they are passed
+     * in an opaque manner between a vendor application and HAL.
+     *
+     * @param parameters parameter key value pairs.
+     * @return retval operation completion status.
+     */
+    setParameters(vec<ParameterValue> parameters) generates (Result retval);
+
+    /**
+     * Dumps information about the stream into the provided file descriptor.
+     * This is used for the dumpsys facility.
+     *
+     * @param fd dump file descriptor.
+     */
+    debugDump(handle fd);
+
+    /**
+     * Called by the framework to start a stream operating in mmap mode.
+     * createMmapBuffer() must be called before calling start().
+     * Function only implemented by streams operating in mmap mode.
+     *
+     * @return retval OK in case the success.
+     *                NOT_SUPPORTED on non mmap mode streams
+     *                INVALID_STATE if called out of sequence
+     */
+    start() generates (Result retval);
+
+    /**
+     * Called by the framework to stop a stream operating in mmap mode.
+     * Function only implemented by streams operating in mmap mode.
+     *
+     * @return retval OK in case the succes.
+     *                NOT_SUPPORTED on non mmap mode streams
+     *                INVALID_STATE if called out of sequence
+     */
+    stop() generates (Result retval) ;
+
+    /**
+     * Called by the framework to retrieve information on the mmap buffer used for audio
+     * samples transfer.
+     * Function only implemented by streams operating in mmap mode.
+     *
+     * @param minSizeFrames minimum buffer size requested. The actual buffer
+     *                     size returned in struct MmapBufferInfo can be larger.
+     * @return retval OK in case the success.
+     *                NOT_SUPPORTED on non mmap mode streams
+     *                NOT_INITIALIZED in case of memory allocation error
+     *                INVALID_ARGUMENTS if the requested buffer size is too large
+     *                INVALID_STATE if called out of sequence
+     * @return info    a MmapBufferInfo struct containing information on the MMMAP buffer created.
+     */
+    createMmapBuffer(int32_t minSizeFrames)
+            generates (Result retval, MmapBufferInfo info);
+
+    /**
+     * Called by the framework to read current read/write position in the mmap buffer
+     * with associated time stamp.
+     * Function only implemented by streams operating in mmap mode.
+     *
+     * @return retval OK in case the success.
+     *                NOT_SUPPORTED on non mmap mode streams
+     *                INVALID_STATE if called out of sequence
+     * @return position a MmapPosition struct containing current HW read/write position in frames
+     *                  with associated time stamp.
+     */
+    getMmapPosition()
+            generates (Result retval, MmapPosition position);
+
+    /**
+     * Called by the framework to deinitialize the stream and free up
+     * all the currently allocated resources. It is recommended to close
+     * the stream on the client side as soon as it is becomes unused.
+     *
+     * @return retval OK in case the success.
+     *                NOT_SUPPORTED if called on IStream instead of input or
+     *                              output stream interface.
+     *                INVALID_STATE if the stream was already closed.
+     */
+    close() generates (Result retval);
+};

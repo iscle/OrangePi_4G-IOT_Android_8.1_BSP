@@ -1,0 +1,118 @@
+/*
+ * Copyright 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.wifi@1.0;
+
+import IWifiChip;
+import IWifiEventCallback;
+
+/**
+ * This is the root of the HAL module and is the interface returned when
+ * loading an implementation of the Wi-Fi HAL. There must be at most one
+ * module loaded in the system.
+ */
+interface IWifi {
+  /**
+   * Requests notifications of significant events for the HAL. Multiple calls to
+   * this must register multiple callbacks each of which must receive all
+   * events. |IWifiEventCallback| object registration must be independent of the
+   * state of the rest of the HAL and must persist though stops/starts. These
+   * objects must be deleted when the corresponding client process is dead.
+   *
+   * @param callback An instance of the |IWifiEventCallback| HIDL interface
+   *        object.
+   * @return status WifiStatus of the operation.
+   *         Possible status codes:
+   *         |WifiStatusCode.SUCCESS|,
+   *         |WifiStatusCode.UNKNOWN|
+   */
+  @entry
+  @callflow(next={"*"})
+  registerEventCallback(IWifiEventCallback callback)
+      generates (WifiStatus status);
+
+  /**
+   * Get the current state of the HAL.
+   *
+   * @return started true if started, false otherwise.
+   */
+  isStarted() generates (bool started);
+
+  /**
+   * Perform any setup that is required to make use of the module. If the module
+   * is already started then this must be a noop.
+   * Must trigger |IWifiEventCallback.onStart| on success.
+   *
+   * @return status WifiStatus of the operation.
+   *         Possible status codes:
+   *         |WifiStatusCode.SUCCESS|,
+   *         |WifiStatusCode.NOT_AVAILABLE|,
+   *         |WifiStatusCode.UNKNOWN|
+   */
+  @entry
+  @callflow(next={"registerEventCallback", "start", "stop", "getChip"})
+  start() generates (WifiStatus status);
+
+  /**
+   * Tear down any state, ongoing commands, etc. If the module is already
+   * stopped then this must be a noop. If the HAL is already stopped or it
+   * succeeds then onStop must be called. After calling this all IWifiChip
+   * objects will be considered invalid.
+   * Must trigger |IWifiEventCallback.onStop| on success.
+   * Must trigger |IWifiEventCallback.onFailure| on failure.
+   *
+   * Calling stop then start is a valid way of resetting state in the HAL,
+   * driver, firmware.
+   *
+   * @return status WifiStatus of the operation.
+   *         Possible status codes:
+   *         |WifiStatusCode.SUCCESS|,
+   *         |WifiStatusCode.NOT_STARTED|,
+   *         |WifiStatusCode.UNKNOWN|
+   */
+  @exit
+  @callflow(next={"registerEventCallback", "start", "stop"})
+  stop() generates (WifiStatus status);
+
+  /**
+   * Retrieve the list of all chip Id's on the device.
+   * The corresponding |IWifiChip| object for any chip can be
+   * retrieved using |getChip| method.
+   *
+   * @return status WifiStatus of the operation.
+   *         Possible status codes:
+   *         |WifiStatusCode.SUCCESS|,
+   *         |WifiStatusCode.NOT_STARTED|,
+   *         |WifiStatusCode.UNKNOWN|
+   * @return chipIds List of all chip Id's on the device.
+   */
+  @callflow(next={"*"})
+  getChipIds() generates (WifiStatus status, vec<ChipId> chipIds);
+
+  /**
+   * Gets a HIDL interface object for the chip corresponding to the
+   * provided chipId.
+   *
+   * @return status WifiStatus of the operation.
+   *         Possible status codes:
+   *         |WifiStatusCode.SUCCESS|,
+   *         |WifiStatusCode.NOT_STARTED|,
+   *         |WifiStatusCode.UNKNOWN|
+   * @return chip HIDL interface object representing the chip.
+   */
+  @callflow(next={"*"})
+  getChip(ChipId chipId) generates (WifiStatus status, IWifiChip chip);
+};

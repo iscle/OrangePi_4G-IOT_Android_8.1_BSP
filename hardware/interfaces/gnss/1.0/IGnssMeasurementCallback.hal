@@ -1,0 +1,609 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.gnss@1.0;
+
+/** The callback interface to report measurements from the HAL. */
+interface IGnssMeasurementCallback {
+    /**
+     * Flags to indicate what fields in GnssClock are valid.
+     */
+    @export(name="", value_prefix="GNSS_CLOCK_")
+    enum GnssClockFlags : uint16_t {
+        /** A valid 'leap second' is stored in the data structure. */
+        HAS_LEAP_SECOND        = 1 << 0,
+        /** A valid 'time uncertainty' is stored in the data structure. */
+        HAS_TIME_UNCERTAINTY   = 1 << 1,
+        /** A valid 'full bias' is stored in the data structure. */
+        HAS_FULL_BIAS          = 1 << 2,
+        /** A valid 'bias' is stored in the data structure. */
+        HAS_BIAS               = 1 << 3,
+        /** A valid 'bias uncertainty' is stored in the data structure. */
+        HAS_BIAS_UNCERTAINTY   = 1 << 4,
+        /** A valid 'drift' is stored in the data structure. */
+        HAS_DRIFT              = 1 << 5,
+        /** A valid 'drift uncertainty' is stored in the data structure. */
+        HAS_DRIFT_UNCERTAINTY  = 1 << 6
+    };
+
+    /**
+     * Flags to indicate what fields in GnssMeasurement are valid.
+     */
+    @export(name="", value_prefix="GNSS_MEASUREMENT_")
+    enum GnssMeasurementFlags : uint32_t {
+        /** A valid 'snr' is stored in the data structure. */
+        HAS_SNR                        = 1 << 0,
+        /** A valid 'carrier frequency' is stored in the data structure. */
+        HAS_CARRIER_FREQUENCY          = 1 << 9,
+        /** A valid 'carrier cycles' is stored in the data structure. */
+        HAS_CARRIER_CYCLES             = 1 << 10,
+        /** A valid 'carrier phase' is stored in the data structure. */
+        HAS_CARRIER_PHASE              = 1 << 11,
+        /** A valid 'carrier phase uncertainty' is stored in the data structure. */
+        HAS_CARRIER_PHASE_UNCERTAINTY  = 1 << 12,
+        /** A valid automatic gain control is stored in the data structure. */
+        HAS_AUTOMATIC_GAIN_CONTROL     = 1 << 13
+    };
+
+    /**
+     * Enumeration of available values for the GNSS Measurement's multipath
+     * indicator.
+     */
+    @export(name="", value_prefix="GNSS_MULTIPATH_")
+    enum GnssMultipathIndicator : uint8_t {
+        /** The indicator is not available or unknown. */
+        INDICATOR_UNKNOWN      = 0,
+        /** The measurement is indicated to be affected by multipath. */
+        INDICATOR_PRESENT      = 1,
+        /** The measurement is indicated to be not affected by multipath. */
+        INDICATIOR_NOT_PRESENT = 2
+    };
+
+    /**
+     * Flags indicating the GNSS measurement state.
+     *
+     * The expected behavior here is for GNSS HAL to set all the flags that applies.
+     * For example, if the state for a satellite is only C/A code locked and bit
+     * synchronized, and there is still millisecond ambiguity, the state must be
+     * set as:
+     *
+     * STATE_CODE_LOCK | STATE_BIT_SYNC |  STATE_MSEC_AMBIGUOUS
+     *
+     * If GNSS is still searching for a satellite, the corresponding state must be
+     * set to STATE_UNKNOWN(0).
+     */
+    @export(name="", value_prefix="GNSS_MEASUREMENT_")
+    enum GnssMeasurementState : uint32_t {
+        STATE_UNKNOWN                = 0,
+        STATE_CODE_LOCK              = 1 << 0,
+        STATE_BIT_SYNC               = 1 << 1,
+        STATE_SUBFRAME_SYNC          = 1 << 2,
+        STATE_TOW_DECODED            = 1 << 3,
+        STATE_MSEC_AMBIGUOUS         = 1 << 4,
+        STATE_SYMBOL_SYNC            = 1 << 5,
+        STATE_GLO_STRING_SYNC        = 1 << 6,
+        STATE_GLO_TOD_DECODED        = 1 << 7,
+        STATE_BDS_D2_BIT_SYNC        = 1 << 8,
+        STATE_BDS_D2_SUBFRAME_SYNC   = 1 << 9,
+        STATE_GAL_E1BC_CODE_LOCK     = 1 << 10,
+        STATE_GAL_E1C_2ND_CODE_LOCK  = 1 << 11,
+        STATE_GAL_E1B_PAGE_SYNC      = 1 << 12,
+        STATE_SBAS_SYNC              = 1 << 13,
+        STATE_TOW_KNOWN              = 1 << 14,
+        STATE_GLO_TOD_KNOWN          = 1 << 15,
+    };
+
+    /**
+     * Flags indicating the Accumulated Delta Range's states.
+     */
+    @export(name="", value_prefix="GNSS_")
+    enum GnssAccumulatedDeltaRangeState : uint16_t {
+        ADR_STATE_UNKNOWN    = 0,
+        ADR_STATE_VALID      = 1 << 0,
+        ADR_STATE_RESET      = 1 << 1,
+        ADR_STATE_CYCLE_SLIP = 1 << 2,
+    };
+
+    /**
+     * Represents an estimate of the GNSS clock time.
+     */
+    struct GnssClock {
+        /**
+         * A set of flags indicating the validity of the fields in this data
+         * structure.
+         */
+        bitfield<GnssClockFlags> gnssClockFlags;
+
+        /**
+         * Leap second data.
+         * The sign of the value is defined by the following equation:
+         *      utcTimeNs = timeNs - (fullBiasNs + biasNs) - leapSecond *
+         *      1,000,000,000
+         *
+         * If this data is available, gnssClockFlags must contain
+         * HAS_LEAP_SECOND.
+         */
+        int16_t leapSecond;
+
+        /**
+         * The GNSS receiver internal clock value. This is the local hardware clock
+         * value.
+         *
+         * For local hardware clock, this value is expected to be monotonically
+         * increasing while the hardware clock remains powered on. (For the case of a
+         * HW clock that is not continuously on, see the
+         * hwClockDiscontinuityCount field). The receiver's estimate of GNSS time
+         * can be derived by subtracting the sum of fullBiasNs and biasNs (when
+         * available) from this value.
+         *
+         * This GNSS time must be the best estimate of current GNSS time
+         * that GNSS receiver can achieve.
+         *
+         * Sub-nanosecond accuracy can be provided by means of the 'biasNs' field.
+         * The value contains the timeUncertaintyNs in it.
+         *
+         * This field is mandatory.
+         */
+        int64_t timeNs;
+
+        /**
+         * 1-Sigma uncertainty associated with the clock's time in nanoseconds.
+         * The uncertainty is represented as an absolute (single sided) value.
+         *
+         * If the data is available, gnssClockFlags must contain
+         * HAS_TIME_UNCERTAINTY. Ths value is ideally zero, as the time
+         * 'latched' by timeNs is defined as the reference clock vs. which all
+         * other times (and corresponding uncertainties) are measured.
+         */
+        double timeUncertaintyNs;
+
+        /**
+         * The difference between hardware clock ('time' field) inside GNSS receiver
+         * and the true GNSS time since 0000Z, January 6, 1980, in nanoseconds.
+         *
+         * The sign of the value is defined by the following equation:
+         *      local estimate of GNSS time = timeNs - (fullBiasNs + biasNs)
+         *
+         * This value is mandatory if the receiver has estimated GNSS time. If the
+         * computed time is for a non-GNSS constellation, the time offset of that
+         * constellation to GNSS has to be applied to fill this value. The error
+         * estimate for the sum of this and the biasNs is the biasUncertaintyNs,
+         * and the caller is responsible for using this uncertainty (it can be very
+         * large before the GNSS time has been solved for.) If the data is available
+         * gnssClockFlags must contain HAS_FULL_BIAS.
+         */
+        int64_t fullBiasNs;
+
+        /**
+         * Sub-nanosecond bias.
+         * The error estimate for the sum of this and the fullBiasNs is the
+         * biasUncertaintyNs.
+         *
+         * If the data is available gnssClockFlags must contain HAS_BIAS. If GNSS
+         * has computed a position fix. This value is mandatory if the receiver has
+         * estimated GNSS time.
+         */
+        double biasNs;
+
+        /**
+         * 1-Sigma uncertainty associated with the local estimate of GNSS time (clock
+         * bias) in nanoseconds. The uncertainty is represented as an absolute
+         * (single sided) value.
+         *
+         * If the data is available gnssClockFlags must contain
+         * HAS_BIAS_UNCERTAINTY. This value is mandatory if the receiver
+         * has estimated GNSS time.
+         */
+        double biasUncertaintyNs;
+
+        /**
+         * The clock's drift in nanoseconds (per second).
+         *
+         * A positive value means that the frequency is higher than the nominal
+         * frequency, and that the (fullBiasNs + biasNs) is growing more positive
+         * over time.
+         *
+         * The value contains the 'drift uncertainty' in it.
+         * If the data is available gnssClockFlags must contain HAS_DRIFT.
+         *
+         * This value is mandatory if the receiver has estimated GNSS time.
+         */
+        double driftNsps;
+
+        /**
+         * 1-Sigma uncertainty associated with the clock's drift in nanoseconds (per
+         * second).
+         * The uncertainty is represented as an absolute (single sided) value.
+         *
+         * If the data is available gnssClockFlags must contain
+         * HAS_DRIFT_UNCERTAINTY. If GNSS has computed a position fix this
+         * field is mandatory and must be populated.
+         */
+        double driftUncertaintyNsps;
+
+        /**
+         * When there are any discontinuities in the HW clock, this field is
+         * mandatory.
+         *
+         * A "discontinuity" is meant to cover the case of a switch from one source
+         * of clock to another.  A single free-running crystal oscillator (XO)
+         * will generally not have any discontinuities, and this can be set and
+         * left at 0.
+         *
+         * If, however, the timeNs value (HW clock) is derived from a composite of
+         * sources, that is not as smooth as a typical XO, or is otherwise stopped &
+         * restarted, then this value shall be incremented each time a discontinuity
+         * occurs.  (E.g. this value can start at zero at device boot-up and
+         * increment each time there is a change in clock continuity. In the
+         * unlikely event that this value reaches full scale, rollover (not
+         * clamping) is required, such that this value continues to change, during
+         * subsequent discontinuity events.)
+         *
+         * While this number stays the same, between GnssClock reports, it can be
+         * safely assumed that the timeNs value has been running continuously, e.g.
+         * derived from a single, high quality clock (XO like, or better, that is
+         * typically used during continuous GNSS signal sampling.)
+         *
+         * It is expected, esp. during periods where there are few GNSS signals
+         * available, that the HW clock be discontinuity-free as long as possible,
+         * as this avoids the need to use (waste) a GNSS measurement to fully
+         * re-solve for the GNSS clock bias and drift, when using the accompanying
+         * measurements, from consecutive GnssData reports.
+         */
+        uint32_t hwClockDiscontinuityCount;
+
+    };
+
+    /**
+     * Represents a GNSS Measurement, it contains raw and computed information.
+     *
+     * All signal measurement information (e.g. svTime,
+     * pseudorangeRate, multipathIndicator) reported in this struct must be
+     * based on GNSS signal measurements only. You must not synthesize measurements
+     * by calculating or reporting expected measurements based on known or estimated
+     * position, velocity, or time.
+     */
+    struct GnssMeasurement{
+        /**
+         * A set of flags indicating the validity of the fields in this data
+         * structure.
+         */
+        bitfield<GnssMeasurementFlags> flags;
+
+        /**
+         * Satellite vehicle ID number, as defined in GnssSvInfo::svid
+         * This is a mandatory value.
+         */
+        int16_t svid;
+
+        /**
+         * Defines the constellation of the given SV.
+         */
+        GnssConstellationType constellation;
+
+        /**
+         * Time offset at which the measurement was taken in nanoseconds.
+         * The reference receiver's time is specified by GnssData::clock::timeNs.
+         *
+         * The sign of timeOffsetNs is given by the following equation:
+         *      measurement time = GnssClock::timeNs + timeOffsetNs
+         *
+         * It provides an individual time-stamp for the measurement, and allows
+         * sub-nanosecond accuracy.
+         * This is a mandatory value.
+         */
+        double timeOffsetNs;
+
+        /**
+         * Per satellite sync state. It represents the current sync state for the
+         * associated satellite.
+         * Based on the sync state, the 'received GNSS tow' field must be interpreted
+         * accordingly.
+         *
+         * This is a mandatory value.
+         */
+        bitfield<GnssMeasurementState> state;
+
+        /**
+         * The received GNSS Time-of-Week at the measurement time, in nanoseconds.
+         * For GNSS & QZSS, this is the received GNSS Time-of-Week at the
+         * measurement time, in nanoseconds. The value is relative to the
+         * beginning of the current GNSS week.
+         *
+         * Given the highest sync state that can be achieved, per each satellite,
+         * valid range for this field can be:
+         * Searching       : [ 0       ] : STATE_UNKNOWN
+         * C/A code lock   : [ 0 1ms   ] : STATE_CODE_LOCK set
+         * Bit sync        : [ 0 20ms  ] : STATE_BIT_SYNC set
+         * Subframe sync   : [ 0  6s   ] : STATE_SUBFRAME_SYNC set
+         * TOW decoded     : [ 0 1week ] : STATE_TOW_DECODED set
+         * TOW Known       : [ 0 1week ] : STATE_TOW_KNOWN set
+         *
+         * Note: TOW Known refers to the case where TOW is possibly not decoded
+         * over the air but has been determined from other sources. If TOW
+         * decoded is set then TOW Known must also be set.
+         *
+         * Note: If there is any ambiguity in integer millisecond,
+         * GNSS_MEASUREMENT_STATE_MSEC_AMBIGUOUS must be set accordingly, in the
+         * 'state' field.
+         *
+         * This value must be populated if 'state' != STATE_UNKNOWN.
+         *
+         * For Glonass, this is the received Glonass time of day, at the
+         * measurement time in nanoseconds.
+         *
+         * Given the highest sync state that can be achieved, per each satellite,
+         * valid range for this field can be:
+         * Searching           : [ 0       ] : STATE_UNKNOWN set
+         * C/A code lock       : [ 0   1ms ] : STATE_CODE_LOCK set
+         * Symbol sync         : [ 0  10ms ] : STATE_SYMBOL_SYNC set
+         * Bit sync            : [ 0  20ms ] : STATE_BIT_SYNC set
+         * String sync         : [ 0    2s ] : STATE_GLO_STRING_SYNC set
+         * Time of day decoded : [ 0  1day ] : STATE_GLO_TOD_DECODED set
+         * Time of day known   : [ 0  1day ] : STATE_GLO_TOD_KNOWN set
+         *
+         * Note: Time of day known refers to the case where it is possibly not
+         * decoded over the air but has been determined from other sources. If
+         * Time of day decoded is set then Time of day known must also be set.
+         *
+         * For Beidou, this is the received Beidou time of week,
+         * at the measurement time in nanoseconds.
+         *
+         * Given the highest sync state that can be achieved, per each satellite,
+         * valid range for this field can be:
+         * Searching            : [ 0       ] : STATE_UNKNOWN set.
+         * C/A code lock        : [ 0   1ms ] : STATE_CODE_LOCK set.
+         * Bit sync (D2)        : [ 0   2ms ] : STATE_BDS_D2_BIT_SYNC set.
+         * Bit sync (D1)        : [ 0  20ms ] : STATE_BIT_SYNC set.
+         * Subframe (D2)        : [ 0  0.6s ] : STATE_BDS_D2_SUBFRAME_SYNC set.
+         * Subframe (D1)        : [ 0    6s ] : STATE_SUBFRAME_SYNC set.
+         * Time of week decoded : [ 0 1week ] : STATE_TOW_DECODED set.
+         * Time of week known   : [ 0 1week ] : STATE_TOW_KNOWN set
+         *
+         * Note: TOW Known refers to the case where TOW is possibly not decoded
+         * over the air but has been determined from other sources. If TOW
+         * decoded is set then TOW Known must also be set.
+         *
+         * For Galileo, this is the received Galileo time of week,
+         * at the measurement time in nanoseconds.
+         *
+         * E1BC code lock       : [ 0  4ms ] : STATE_GAL_E1BC_CODE_LOCK set.
+         * E1C 2nd code lock    : [ 0 100ms] : STATE_GAL_E1C_2ND_CODE_LOCK set.
+         * E1B page             : [ 0   2s ] : STATE_GAL_E1B_PAGE_SYNC set.
+         * Time of week decoded : [ 0 1week] : STATE_TOW_DECODED is set.
+         * Time of week known   : [ 0 1week] : STATE_TOW_KNOWN set
+         *
+         * Note: TOW Known refers to the case where TOW is possibly not decoded
+         * over the air but has been determined from other sources. If TOW
+         * decoded is set then TOW Known must also be set.
+         *
+         * For SBAS, this is received SBAS time, at the measurement time in
+         * nanoseconds.
+         *
+         * Given the highest sync state that can be achieved, per each satellite,
+         * valid range for this field can be:
+         * Searching    : [ 0     ] : STATE_UNKNOWN
+         * C/A code lock: [ 0 1ms ] : STATE_CODE_LOCK is set
+         * Symbol sync  : [ 0 2ms ] : STATE_SYMBOL_SYNC is set
+         * Message      : [ 0  1s ] : STATE_SBAS_SYNC is set
+         */
+        int64_t receivedSvTimeInNs;
+
+        /**
+         * 1-Sigma uncertainty of the Received GNSS Time-of-Week in nanoseconds.
+         *
+         * This value must be populated if 'state' != STATE_UNKNOWN.
+         */
+        int64_t receivedSvTimeUncertaintyInNs;
+
+        /**
+         * Carrier-to-noise density in dB-Hz, typically in the range [0, 63].
+         * It contains the measured C/N0 value for the signal at the antenna port.
+         *
+         * This is a mandatory value.
+         */
+        double cN0DbHz;
+
+        /**
+         * Pseudorange rate at the timestamp in m/s. The correction of a given
+         * Pseudorange Rate value includes corrections for receiver and satellite
+         * clock frequency errors. Ensure that this field is independent (see
+         * comment at top of GnssMeasurement struct.)
+         *
+         * It is mandatory to provide the 'uncorrected' 'pseudorange rate', and
+         * provide GnssClock's 'drift' field as well. When providing the
+         * uncorrected pseudorange rate, do not apply the corrections described above.)
+         *
+         * The value includes the 'pseudorange rate uncertainty' in it.
+         * A positive 'uncorrected' value indicates that the SV is moving away from
+         * the receiver.
+         *
+         * The sign of the 'uncorrected' 'pseudorange rate' and its relation to the
+         * sign of 'doppler shift' is given by the equation:
+         *      pseudorange rate = -k * doppler shift   (where k is a constant)
+         *
+         * This must be the most accurate pseudorange rate available, based on
+         * fresh signal measurements from this channel.
+         *
+         * It is mandatory that this value be provided at typical carrier phase PRR
+         * quality (few cm/sec per second of uncertainty, or better) - when signals
+         * are sufficiently strong & stable, e.g. signals from a GNSS simulator at >=
+         * 35 dB-Hz.
+         */
+        double pseudorangeRateMps;
+
+        /**
+         * 1-Sigma uncertainty of the pseudorangeRateMps.
+         * The uncertainty is represented as an absolute (single sided) value.
+         *
+         * This is a mandatory value.
+         */
+        double pseudorangeRateUncertaintyMps;
+
+        /**
+         * Accumulated delta range's state. It indicates whether ADR is reset or
+         * there is a cycle slip(indicating loss of lock).
+         *
+         * This is a mandatory value.
+         */
+        bitfield<GnssAccumulatedDeltaRangeState> accumulatedDeltaRangeState;
+
+        /**
+         * Accumulated delta range since the last channel reset in meters.
+         * A positive value indicates that the SV is moving away from the receiver.
+         *
+         * The sign of the 'accumulated delta range' and its relation to the sign of
+         * 'carrier phase' is given by the equation:
+         * accumulated delta range = -k * carrier phase (where k is a constant)
+         *
+         * This value must be populated if 'accumulated delta range state' !=
+         * ADR_STATE_UNKNOWN.
+         * However, it is expected that the data is only accurate when:
+         *      'accumulated delta range state' == ADR_STATE_VALID.
+         */
+        double accumulatedDeltaRangeM;
+
+        /**
+         * 1-Sigma uncertainty of the accumulated delta range in meters.
+         * This value must be populated if 'accumulated delta range state' !=
+         * ADR_STATE_UNKNOWN.
+         */
+        double accumulatedDeltaRangeUncertaintyM;
+
+        /**
+         * Carrier frequency of the signal tracked, for example it can be the
+         * GPS central frequency for L1 = 1575.45 MHz, or L2 = 1227.60 MHz, L5 =
+         * 1176.45 MHz, varying GLO channels, etc. If the field is not set, it
+         * is the primary common use central frequency, e.g. L1 = 1575.45 MHz
+         * for GPS.
+         *
+         * For an L1, L5 receiver tracking a satellite on L1 and L5 at the same
+         * time, two raw measurement structs must be reported for this same
+         * satellite, in one of the measurement structs, all the values related
+         * to L1 must be filled, and in the other all of the values related to
+         * L5 must be filled.
+         *
+         * If the data is available, gnssClockFlags must contain
+         * HAS_CARRIER_FREQUENCY.
+         */
+        float carrierFrequencyHz;
+
+        /**
+         * The number of full carrier cycles between the satellite and the
+         * receiver. The reference frequency is given by the field
+         * 'carrierFrequencyHz'. Indications of possible cycle slips and
+         * resets in the accumulation of this value can be inferred from the
+         * accumulatedDeltaRangeState flags.
+         *
+         * If the data is available, gnssClockFlags must contain
+         * HAS_CARRIER_CYCLES.
+         */
+        int64_t carrierCycles;
+
+        /**
+         * The RF phase detected by the receiver, in the range [0.0, 1.0].
+         * This is usually the fractional part of the complete carrier phase
+         * measurement.
+         *
+         * The reference frequency is given by the field 'carrierFrequencyHz'.
+         * The value contains the 'carrier-phase uncertainty' in it.
+         *
+         * If the data is available, gnssClockFlags must contain
+         * HAS_CARRIER_PHASE.
+         */
+        double carrierPhase;
+
+        /**
+         * 1-Sigma uncertainty of the carrier-phase.
+         * If the data is available, gnssClockFlags must contain
+         * HAS_CARRIER_PHASE_UNCERTAINTY.
+         */
+        double carrierPhaseUncertainty;
+
+        /**
+         * An enumeration that indicates the 'multipath' state of the event.
+         *
+         * The multipath Indicator is intended to report the presence of overlapping
+         * signals that manifest as distorted correlation peaks.
+         *
+         * - if there is a distorted correlation peak shape, report that multipath
+         *   is MULTIPATH_INDICATOR_PRESENT.
+         * - if there is no distorted correlation peak shape, report
+         *   MULTIPATH_INDICATOR_NOT_PRESENT
+         * - if signals are too weak to discern this information, report
+         *   MULTIPATH_INDICATOR_UNKNOWN
+         *
+         * Example: when doing the standardized overlapping Multipath Performance
+         * test (3GPP TS 34.171) the Multipath indicator must report
+         * MULTIPATH_INDICATOR_PRESENT for those signals that are tracked, and
+         * contain multipath, and MULTIPATH_INDICATOR_NOT_PRESENT for those
+         * signals that are tracked and do not contain multipath.
+         */
+        GnssMultipathIndicator multipathIndicator;
+
+        /**
+         * Signal-to-noise ratio at correlator output in dB.
+         * If the data is available, GnssMeasurementFlags must contain HAS_SNR.
+         * This is the power ratio of the "correlation peak height above the
+         * observed noise floor" to "the noise RMS".
+         */
+        double snrDb;
+
+        /**
+         * Automatic gain control (AGC) level. AGC acts as a variable gain
+         * amplifier adjusting the power of the incoming signal. The AGC level
+         * may be used to indicate potential interference. When AGC is at a
+         * nominal level, this value must be set as 0. Higher gain (and/or lower
+         * input power) must be output as a positive number. Hence in cases of
+         * strong jamming, in the band of this signal, this value must go more
+         * negative.
+         *
+         * Note: Different hardware designs (e.g. antenna, pre-amplification, or
+         * other RF HW components) may also affect the typical output of of this
+         * value on any given hardware design in an open sky test - the
+         * important aspect of this output is that changes in this value are
+         * indicative of changes on input signal power in the frequency band for
+         * this measurement.
+         */
+        double agcLevelDb;
+    };
+
+    /**
+     * Represents a reading of GNSS measurements. For devices where GnssSystemInfo's
+     * yearOfHw is set to 2016+, it is mandatory that these be provided, on
+     * request, when the GNSS receiver is searching/tracking signals.
+     *
+     * - Reporting of GNSS constellation measurements is mandatory.
+     * - Reporting of all tracked constellations are encouraged.
+     */
+    struct GnssData {
+        /** Number of GnssMeasurement elements. */
+        uint32_t measurementCount;
+
+        /** The array of measurements. */
+        GnssMeasurement[GnssMax:SVS_COUNT] measurements;
+
+        /** The GNSS clock time reading. */
+        GnssClock clock;
+    };
+
+    /**
+     * Callback for the hal to pass a GnssData structure back to the client.
+     *
+     * @param data Contains a reading of GNSS measurements.
+     */
+    GnssMeasurementCb(GnssData data);
+};

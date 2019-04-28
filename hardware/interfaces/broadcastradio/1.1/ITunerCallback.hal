@@ -1,0 +1,96 @@
+/*
+ * Copyright (C) 2017 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.broadcastradio@1.1;
+
+import @1.0::ITunerCallback;
+
+/**
+ * Some methods of @1.1::ITunerCallback are updated versions of those from
+ * @1.0:ITunerCallback. All 1.1 HAL implementations must call both
+ * (eg. tuneComplete and tuneComplete_1_1), while 1.1 clients may ignore 1.0
+ * ones, to avoid receiving a callback twice.
+ */
+interface ITunerCallback extends @1.0::ITunerCallback {
+    /**
+     * Method called by the HAL when a tuning operation completes
+     * following a step(), scan() or tune() command.
+     *
+     * This callback supersedes V1_0::tuneComplete.
+     * The 1.0 callback must not be called when HAL implementation detects
+     * 1.1 client (by casting V1_0::ITunerCallback to V1_1::ITunerCallback).
+     *
+     * In case of success, currentProgramInfoChanged must be called too.
+     * It means the success case may (or may not) be handled by the client in
+     * currentProgramInfoChanged, instead of here.
+     *
+     * @param result OK if tune succeeded or TIMEOUT in case of time out.
+     * @param selector A ProgramSelector structure describing the tuned station.
+     */
+    oneway tuneComplete_1_1(Result result, ProgramSelector selector);
+
+    /**
+     * Called by the HAL when background scan feature becomes available or not.
+     *
+     * @param isAvailable true, if the tuner turned temporarily background-
+     *                    capable, false in the other case.
+     */
+    oneway backgroundScanAvailable(bool isAvailable);
+
+    /**
+     * Called by the HAL when background scan initiated by startBackgroundScan
+     * finishes. If the list was changed, programListChanged must be called too.
+     * @param result OK if the scan succeeded, client may retrieve the actual
+     *               list with ITuner::getProgramList.
+     *               UNAVAILABLE if the scan was interrupted due to
+     *               hardware becoming temporarily unavailable.
+     *               NOT_INITIALIZED other error, ie. HW failure.
+     */
+    oneway backgroundScanComplete(ProgramListResult result);
+
+    /**
+     * Called each time the internally cached program list changes. HAL may not
+     * call it immediately, ie. it may wait for a short time to accumulate
+     * multiple list change notifications into a single event.
+     *
+     * This callback is only for notifying about insertions and deletions,
+     * not about metadata changes.
+     *
+     * It may be triggered either by an explicitly issued background scan,
+     * or a scan issued by the device internally.
+     *
+     * Client may retrieve the actual list with ITuner::getProgramList.
+     */
+    oneway programListChanged();
+
+    /**
+     * Method called by the HAL when current program information (including
+     * metadata) is updated.
+     *
+     * Client may retrieve the actual program info with
+     * ITuner::getProgramInformation_1_1.
+     *
+     * This may be called together with tuneComplete_1_1 or afSwitch_1_1.
+     *
+     * This callback supersedes V1_0::newMetadata and V1_0::afSwitch;
+     * partly V1_0::tuneComplete.
+     * 1.0 callbacks must not be called when HAL implementation detects
+     * 1.1 client (by casting V1_0::ITunerCallback to V1_1::ITunerCallback).
+     *
+     * @param info current program information
+     */
+    oneway currentProgramInfoChanged(ProgramInfo info);
+};

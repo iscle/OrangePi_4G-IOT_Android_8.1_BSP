@@ -1,0 +1,35 @@
+# Copyright 2013 The Android Open Source Project
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+-include hardware/broadcom/wlan/bcmdhd/config/config-bcm.mk
+
+BCM_FW_SRC_FILE_STA := fw_bcm4343.bin
+BCM_FW_SRC_FILE_AP  := fw_bcm4343_apsta.bin
+
+ifneq (,$(WIFI_FW_VER))
+ifneq (,$(filter a0, $(WIFI_FW_VER)))
+PRODUCT_COPY_FILES += \
+    hardware/broadcom/wlan/bcmdhd/firmware/bcm4343/$(BCM_FW_SRC_FILE_STA):$(TARGET_COPY_OUT_VENDOR)/firmware/fw_bcmdhd.bin \
+    hardware/broadcom/wlan/bcmdhd/firmware/bcm4343/$(BCM_FW_SRC_FILE_AP):$(TARGET_COPY_OUT_VENDOR)/firmware/fw_bcmdhd_apsta.bin
+endif
+ifneq (,$(filter a1, $(WIFI_FW_VER)))
+PRODUCT_COPY_FILES += \
+    hardware/broadcom/wlan/bcmdhd/firmware/bcm4343/fw_bcm4343_a1.bin:$(TARGET_COPY_OUT_VENDOR)/firmware/fw_bcmdhd.bin_a1 \
+    hardware/broadcom/wlan/bcmdhd/firmware/bcm4343/fw_bcm4343_a1_apsta.bin:$(TARGET_COPY_OUT_VENDOR)/firmware/fw_bcmdhd_apsta.bin_a1
+endif
+else
+PRODUCT_COPY_FILES += \
+    hardware/broadcom/wlan/bcmdhd/firmware/bcm4343/$(BCM_FW_SRC_FILE_STA):$(TARGET_COPY_OUT_VENDOR)/firmware/fw_bcmdhd.bin \
+    hardware/broadcom/wlan/bcmdhd/firmware/bcm4343/$(BCM_FW_SRC_FILE_AP):$(TARGET_COPY_OUT_VENDOR)/firmware/fw_bcmdhd_apsta.bin
+endif

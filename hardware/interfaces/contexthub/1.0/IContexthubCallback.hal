@@ -1,0 +1,79 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.contexthub@1.0;
+
+interface IContexthubCallback {
+    /**
+     * This callback is passed by the Contexthub service to the HAL
+     * implementation to allow the HAL to send asynchronous messages back
+     * to the service and registered clients of the ContextHub service.
+     *
+     * @params msg : message
+     *
+     */
+     handleClientMsg(ContextHubMsg msg);
+
+    /**
+     * This callback is passed by the Contexthub service to the HAL
+     * implementation to allow the HAL to send the response for a
+     * transaction.
+     *
+     * @params txnId : transaction id whose result is being sent
+     *                 passed in by the service at start of transacation.
+     *         result: result of transaction.
+     *
+     */
+     handleTxnResult(uint32_t txnId, TransactionResult result);
+
+    /**
+     * This callback is passed by the Contexthub service to the HAL
+     * implementation to allow the HAL to send an asynchronous event
+     * to the ContextHub service.
+     *
+     * @params msg : message
+     *
+     */
+     handleHubEvent(AsyncEventType evt);
+
+    /**
+     * This callback is passed by the Contexthub service to the HAL
+     * implementation to allow the HAL to send a notification to the service
+     * that a nanp-app has aborted.
+     * This method must be called when a nanoapp invokes chreAbort(...)).
+     *
+     * @params appId : app identifier
+     *               : abortCode code passed by the nanoApp.
+     *
+     * Also see chreAbort(...)
+     *
+     */
+     handleAppAbort(uint64_t appId, uint32_t abortCode);
+
+     /**
+      * This callback is passed by the Contexthub service to the HAL
+      * implementation to allow the HAL to send information about the
+      * currently loaded and active nanoapps on the hub.
+      *
+      * @params appInfo : vector of HubAppinfo structure for each nanoApp
+      *                   on the hub that can be enabled, disabled and
+      *                   unloaded by the service. Any nanoApps that cannot
+      *                   be controlled by the service must not be reported.
+      *                   All nanoApps that can be controlled by the service
+      *                   must be reported.
+      */
+      handleAppsInfo(vec<HubAppInfo> appInfo);
+};

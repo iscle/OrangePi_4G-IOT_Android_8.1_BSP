@@ -1,0 +1,133 @@
+/*
+ * Copyright 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.wifi.supplicant@1.0;
+
+import ISupplicantNetwork;
+import ISupplicantP2pNetworkCallback;
+
+/**
+ * Interface exposed by the supplicant for each P2P mode network
+ * configuration it controls.
+ */
+interface ISupplicantP2pNetwork extends ISupplicantNetwork {
+  /**
+   * Register for callbacks from this network.
+   *
+   * These callbacks are invoked for events that are specific to this network.
+   * Registration of multiple callback objects is supported. These objects must
+   * be automatically deleted when the corresponding client process is dead or
+   * if this network is removed.
+   *
+   * @param callback An instance of the |ISupplicantP2pNetworkCallback| HIDL
+   *        interface object.
+   * @return status P2ptus of the operation.
+   *         Possible status codes:
+   *         |SupplicantP2ptusCode.SUCCESS|,
+   *         |SupplicantP2ptusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantP2ptusCode.FAILURE_NETWORK_INVALID|
+   */
+  registerCallback(ISupplicantP2pNetworkCallback callback)
+      generates (SupplicantStatus status);
+
+  /**
+   * Getters for the various network params.
+   */
+  /**
+   * Get SSID for this network.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   * @return ssid value set.
+   */
+  getSsid() generates (SupplicantStatus status, Ssid ssid);
+
+  /**
+   * Get the BSSID set for this network.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   * @return bssid value set.
+   */
+  getBssid() generates (SupplicantStatus status, Bssid bssid);
+
+  /**
+   * Check if the network is currently active one.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   * @return isCurrent true if current, false otherwise.
+   */
+  isCurrent() generates (SupplicantStatus status, bool isCurrent);
+
+  /**
+   * Check if the network is marked persistent.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   * @return isPersistent true if persistent, false otherwise.
+   */
+  isPersistent() generates (SupplicantStatus status, bool isPersistent);
+
+  /**
+   * Check if the device is the group owner of the network.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   * @return isGo true if group owner, false otherwise.
+   */
+  isGo() generates (SupplicantStatus status, bool isGo);
+
+  /**
+   * Set the list of P2P Clients in a persistent group (GO).
+   * This is a list of P2P Clients (P2P Device Address) that have joined
+   * the persistent group. This is maintained on the GO for persistent
+   * group entries (disabled == 2).
+   *
+   * @param clients MAC address of the clients.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantP2ptusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   */
+  setClientList(vec<MacAddress> clients) generates (SupplicantStatus status);
+
+  /**
+   * Get the list of P2P Clients in a persistent group (GO).
+   * This is a list of P2P Clients (P2P Device Address) that have joined
+   * the persistent group. This is maintained on the GO for persistent
+   * group entries (disabled == 2).
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantP2ptusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   * @return clients MAC address of the clients.
+   */
+  getClientList() generates (SupplicantStatus status, vec<MacAddress> clients);
+};

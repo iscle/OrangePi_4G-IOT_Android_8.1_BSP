@@ -1,0 +1,76 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.audio.effect@2.0;
+
+import android.hardware.audio.common@2.0;
+import IEffect;
+
+interface IVirtualizerEffect extends IEffect {
+    /**
+     * Returns whether setting virtualization strength is supported.
+     */
+    isStrengthSupported() generates (bool strengthSupported);
+
+    enum StrengthRange : uint16_t {
+        MIN = 0,
+        MAX = 1000
+    };
+
+    /**
+     * Sets virtualization strength.
+     *
+     * @param strength strength of the effect. The valid range for strength
+     *                 strength is [0, 1000], where 0 per mille designates the
+     *                 mildest effect and 1000 per mille designates the
+     *                 strongest.
+     * @return retval operation completion status.
+     */
+    setStrength(uint16_t strength) generates (Result retval);
+
+    /**
+     * Gets virtualization strength.
+     */
+    getStrength() generates (Result retval, uint16_t strength);
+
+    struct SpeakerAngle {
+        AudioChannelMask mask; // speaker channel mask (1 bit set).
+        // all angles are expressed in degrees and
+        // are relative to the listener.
+        int16_t azimuth; // 0 is the direction the listener faces
+                         // 180 is behind the listener
+                         // -90 is to their left
+        int16_t elevation; // 0 is the horizontal plane
+                           // +90 is above the listener, -90 is below
+    };
+    /**
+     * Retrieves virtual speaker angles for the given channel mask on the
+     * specified device.
+     */
+    getVirtualSpeakerAngles(AudioChannelMask mask, AudioDevice device)
+            generates (Result retval, vec<SpeakerAngle> speakerAngles);
+
+    /**
+     * Forces the virtualizer effect for the given output device.
+     */
+    forceVirtualizationMode(AudioDevice device) generates (Result retval);
+
+    /**
+     * Returns audio device reflecting the current virtualization mode,
+     * AUDIO_DEVICE_NONE when not virtualizing.
+     */
+    getVirtualizationMode() generates (Result retval, AudioDevice device);
+};

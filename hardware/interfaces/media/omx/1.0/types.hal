@@ -1,0 +1,278 @@
+/*
+ * Copyright (C) 2017 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.media.omx@1.0;
+
+import android.hardware.media@1.0::types;
+
+// Aliases
+typedef uint32_t BufferId;
+
+/**
+ * Ref: system/core/include/utils/Errors.h
+ * Ref: bionic/libc/kernel/uapi/asm-generic/errno-base.h
+ * Ref: bionic/libc/kernel/uapi/asm-generic/errno.h
+ * Ref: frameworks/av/include/media/stagefright/MediaError.h
+ * Ref: frameworks/av/media/libstagefright/omx/OMXUtils.cpp: StatusFromOMXError
+ */
+enum Status : int32_t {
+    OK                      = 0,
+    NO_ERROR                = 0,
+
+    NAME_NOT_FOUND          = -2,
+    WOULD_BLOCK             = -11,
+    NO_MEMORY               = -12,
+    ALREADY_EXISTS          = -17,
+    NO_INIT                 = -19,
+    BAD_VALUE               = -22,
+    DEAD_OBJECT             = -32,
+    INVALID_OPERATION       = -38,
+    TIMED_OUT               = -110,
+    ERROR_UNSUPPORTED       = -1010,
+    UNKNOWN_ERROR           = -2147483648,
+
+    BUFFER_NEEDS_REALLOCATION = 0x1,
+    RELEASE_ALL_BUFFERS       = 0x2,
+};
+
+/**
+ * Ref: frameworks/av/include/media/IOMX.h: omx_message
+ *
+ * Data structure for an OMX message. This is essentially a union of different
+ * message types.
+ */
+struct Message {
+
+    /**
+     * There are four main types of messages.
+     */
+    enum Type : uint32_t {
+        EVENT,
+        EMPTY_BUFFER_DONE,
+        FILL_BUFFER_DONE,
+        FRAME_RENDERED,
+    };
+
+    /**
+     * @see OMX_EVENTTYPE in the OpenMax IL standard.
+     */
+    struct EventData {
+        uint32_t event; // TODO: if there are common core events, convert to an enum or point to std
+        uint32_t data1;
+        uint32_t data2;
+        uint32_t data3;
+        uint32_t data4;
+    };
+
+    struct BufferData {
+        BufferId buffer;
+    };
+
+    struct ExtendedBufferData {
+        BufferId buffer;
+        uint32_t rangeOffset;
+        uint32_t rangeLength;
+        uint32_t flags; // TODO: if common flags exist, define an enum of point to std
+        uint64_t timestampUs;
+    };
+
+    struct RenderData {
+        uint64_t timestampUs;
+        int64_t systemTimeNs;
+    };
+
+    union Data {
+        // if type == EVENT
+        EventData eventData;
+
+        // if type == EMPTY_BUFFER_DONE
+        BufferData bufferData;
+
+        // if type == FILL_BUFFER_DONE
+        ExtendedBufferData extendedBufferData;
+
+        // if type == FRAME_RENDERED
+        RenderData renderData;
+    };
+
+    /**
+     * The type of the message.
+     */
+    Type type;
+
+    /**
+     * The fence associated with the message.
+     */
+    Fence fence;
+
+    /**
+     * The union of data, discriminated by type.
+     */
+    Data data;
+};
+
+/**
+ * Ref: frameworks/native/include/ui/GraphicBuffer.h
+ * Ref: system/core/include/system/window.h
+ * Ref: frameworks/native/include/binder/IMemory.h
+ * Ref: frameworks/native/libs/binder/IMemory.cpp
+ * Ref: frameworks/av/include/media/OMXBuffer.h
+ *
+ * Data structure for buffer information. This is essentially a union of
+ * different buffer types.
+ */
+struct CodecBuffer {
+
+    /**
+     * There are four main types of buffers.
+     */
+    enum Type : int32_t {
+        INVALID = 0,
+        PRESET,
+        SHARED_MEM,
+        ANW_BUFFER,
+        NATIVE_HANDLE,
+    };
+
+    struct PresetAttributes {
+        uint32_t rangeOffset;
+        uint32_t rangeLength;
+    };
+
+    union Attributes {
+        // if bufferType == PRESET
+        PresetAttributes preset;
+
+        // if bufferType == SHARED_MEM
+        // No additional attributes.
+
+        // if bufferType == ANW_BUFFER
+        AnwBufferAttributes anwBuffer;
+
+        // if bufferType == NATIVE_HANDLE
+        // No additional attributes.
+    };
+
+    /**
+     * Type of the buffer.
+     */
+    Type type;
+
+    /**
+     * Attributes that can be put into a union.
+     */
+    Attributes attr;
+
+    /**
+     * Used only for types ANW_BUFFER and NATIVE_HANDLE.
+     *
+     * (A native handle cannot be put into a union as HIDL currently does not
+     * support discriminated unions.)
+     */
+    handle nativeHandle;
+
+    /**
+     * Used only for type SHARED_MEM.
+     */
+    memory sharedMemory;
+
+};
+
+/**
+ * Ref: frameworks/av/include/media/IOMX.h
+ *
+ * Enumeration of port modes.
+ */
+enum PortMode : int32_t {
+    PRESET_START = 0,
+    PRESET_BYTE_BUFFER,
+    PRESET_ANW_BUFFER,
+    PRESET_SECURE_BUFFER,
+    PRESET_END,
+    DYNAMIC_START = 100,
+    DYNAMIC_ANW_BUFFER,
+    DYNAMIC_NATIVE_HANDLE,
+    DYNAMIC_END
+};
+
+/**
+ * Ref: frameworks/native/include/media/hardware/VideoAPI.h
+ *
+ * Framework defined color aspects. These are based mainly on ISO 23001-8 spec. As this standard
+ * continues to evolve, new values may be defined in the future. Use OTHER for these future values
+ * as well as for values not listed here, as those are not supported by the framework.
+ */
+struct ColorAspects {
+    enum Range : uint32_t {
+        UNSPECIFIED,  // Unspecified
+        FULL,         // Full range
+        LIMITED,      // Limited range (if defined), or not full range
+
+        OTHER = 0xff, // Not one of the above values
+    };
+
+    // Color primaries
+    enum Primaries : uint32_t {
+        UNSPECIFIED,  // Unspecified
+        BT709_5,      // Rec.ITU-R BT.709-5 or equivalent
+        BT470_6M,     // Rec.ITU-R BT.470-6 System M or equivalent
+        BT601_6_625,  // Rec.ITU-R BT.601-6 625 or equivalent
+        BT601_6_525,  // Rec.ITU-R BT.601-6 525 or equivalent
+        GENERIC_FILM, // Generic Film
+        BT2020,       // Rec.ITU-R BT.2020 or equivalent
+
+        OTHER = 0xff, // Not one of the above values
+    };
+
+    // Transfer characteristics
+    enum Transfer : uint32_t {
+        UNSPECIFIED,  // Unspecified
+        LINEAR,       // Linear transfer characteristics
+        SRGB,         // sRGB or equivalent
+        SMPTE170M,    // SMPTE 170M or equivalent (e.g. BT.601/709/2020)
+        GAMMA22,      // Assumed display gamma 2.2
+        GAMMA28,      // Assumed display gamma 2.8
+        ST2084,       // SMPTE ST 2084 for 10/12/14/16 bit systems
+        HLG,          // ARIB STD-B67 hybrid-log-gamma
+
+        // values unlikely to be required by Android follow here
+        SMPTE240M = 0x40, // SMPTE 240M
+        XVYCC,        // IEC 61966-2-4
+        BT1361,       // Rec.ITU-R BT.1361 extended gamut
+        ST428,        // SMPTE ST 428-1
+
+        OTHER = 0xff, // Not one of the above values
+    };
+
+    // YUV <-> RGB conversion
+    enum MatrixCoeffs : uint32_t {
+        UNSPECIFIED,    // Unspecified
+        BT709_5,        // Rec.ITU-R BT.709-5 or equivalent
+        BT470_6M,       // KR=0.30, KB=0.11 or equivalent
+        BT601_6,        // Rec.ITU-R BT.601-6 625 or equivalent
+        SMPTE240M,      // SMPTE 240M or equivalent
+        BT2020,         // Rec.ITU-R BT.2020 non-constant luminance
+        BT2020CONSTANT, // Rec.ITU-R BT.2020 constant luminance
+
+        OTHER = 0xff,   // Not one of the above values
+    };
+
+    Range range;
+    Primaries primaries;
+    Transfer transfer;
+    MatrixCoeffs matrixCoeffs;
+};
+

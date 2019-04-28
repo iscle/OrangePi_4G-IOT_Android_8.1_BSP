@@ -1,0 +1,97 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.automotive.evs@1.0;
+
+
+/**
+ * Structure describing the basic properties of an EVS camera
+ *
+ * The HAL is responsible for filling out this structure for each
+ * EVS camera in the system.
+ */
+struct CameraDesc {
+    string      cameraId;
+    uint32_t    vendorFlags;    // Opaque value from driver
+};
+
+
+/**
+ * Structure describing the basic properties of an EVS display
+ *
+ * The HAL is responsible for filling out this structure to describe
+ * the EVS display. As an implementation detail, this may be a physical
+ * display or a virtual display that is overlaid or mixed with another
+ * presentation device.
+ */
+struct DisplayDesc {
+    string      displayId;
+    uint32_t    vendorFlags;    // Opaque value from driver
+};
+
+
+/**
+ * Structure representing an image buffer through our APIs
+ *
+ * In addition to the handle to the graphics memory, we need to retain
+ * the properties of the buffer for easy reference and reconstruction of
+ * an ANativeWindowBuffer object on the remote side of API calls.
+ * (Not least because OpenGL expect an ANativeWindowBuffer* for us as a
+ * texture via eglCreateImageKHR().
+ * See also related types from android.hardware.graphics.common
+ * TODO:  b/34722508  Review details of interaction of this structure with gralloc and OpenGL.
+ *        Specifically consider if format and/or usage should become enumerated types.
+ */
+struct BufferDesc {
+    uint32_t    width;      // Units of pixels
+    uint32_t    height;     // Units of pixels
+    uint32_t    stride;     // Units of pixels to match gralloc
+    uint32_t    pixelSize;  // Units of bytes
+    uint32_t    format;     // May contain values from android_pixel_format_t
+    uint32_t    usage;      // May contain values from from Gralloc.h
+    uint32_t    bufferId;   // Opaque value from driver
+    handle      memHandle;  // gralloc memory buffer handle
+};
+
+
+/**
+ * States for control of the EVS display
+ *
+ * The DisplayInfo structure describes the basic properties of an EVS display. Any EVS
+ * implementation is required to have one. The HAL is responsible for filling out this
+ * structure to describe the EVS display. As an implementation detail, this may be a
+ * physical display or a virtual display that is overlaid or mixed with another
+ * presentation device.
+ */
+enum DisplayState : uint32_t {
+    NOT_OPEN = 0,           // Display has not been requested by any application
+    NOT_VISIBLE,            // Display is inhibited
+    VISIBLE_ON_NEXT_FRAME,  // Will become visible with next frame
+    VISIBLE,                // Display is currently active
+    DEAD,                   // Driver is in an undefined state.  Interface should be closed.
+    NUM_STATES              // Must be last
+};
+
+
+/** Error codes used in EVS HAL interface. */
+enum EvsResult : uint32_t {
+    OK = 0,
+    INVALID_ARG,
+    STREAM_ALREADY_RUNNING,
+    BUFFER_NOT_AVAILABLE,
+    OWNERSHIP_LOST,
+    UNDERLYING_SERVICE_ERROR,
+};

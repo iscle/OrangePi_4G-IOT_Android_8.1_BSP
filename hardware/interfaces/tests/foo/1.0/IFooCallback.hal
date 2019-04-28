@@ -1,0 +1,53 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.tests.foo@1.0;
+
+//import IFoo;
+
+interface IFooCallback {
+    //heyItsMe(IFoo cb);
+    heyItsYou(IFooCallback cb);
+    heyItsYouIsntIt(IFooCallback cb) generates (bool yesOrNo);
+    oneway heyItsTheMeaningOfLife(uint8_t tmol);
+
+    // The next two methods are for instrumentation purposes.
+
+    // Block the caller for up to ns nanosesonds and return the number
+    // of nanoseconds it took to invoke each of the three methods
+    // above, both from the point of view of the caller (callerBlockedNs) and
+    // from the point of view of IFooCallback itself (timeNs).  timeNs measures
+    // how long a method's body took to execute, regardless of whether the
+    // method was oneway or two-way.  callerBlockedNs reflects the amount of
+    // time the caller was blocked before the method returned.  For two-way
+    // methods, callerBlockedNs should be slightly higher than timeNs.  For
+    // one-way calls, callerBlockedNs will be very low, and unrelated to
+    // timeNs.
+
+    struct InvokeInfo {
+        bool invoked;
+	int64_t callerBlockedNs;
+	int64_t timeNs;
+    };
+    reportResults(int64_t ns) generates (int64_t leftNs, InvokeInfo[3] invokeInfo);
+
+    // This method is used by the caller of IFooCallback to tell IFooCallback
+    // how long the three methods above took, from the point of view of that
+    // caller.  IFooCallback adds this information to the one reported by
+    // reportResults in InvokeInfo.
+
+    youBlockedMeFor(int64_t[3] callerBlockedInfo);
+};

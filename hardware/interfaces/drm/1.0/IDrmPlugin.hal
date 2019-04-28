@@ -1,0 +1,542 @@
+/**
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package android.hardware.drm@1.0;
+
+import IDrmPluginListener;
+
+/**
+ * Ref: frameworks/native/include/media/drm/DrmAPI.h:DrmPlugin
+ *
+ * IDrmPlugin is used to interact with a specific drm plugin that was
+ * created by IDrm::createPlugin. A drm plugin provides methods for
+ * obtaining drm keys that may be used by a codec to decrypt protected
+ * video content.
+ */
+interface IDrmPlugin {
+
+    /**
+     * Open a new session with the DrmPlugin object. A session ID is returned
+     * in the sessionId parameter.
+     * @return status the status of the call. The status must be OK or one of
+     * the following errors: ERROR_DRM_NOT_PROVISIONED if the device requires
+     * provisioning before it can open a session, ERROR_DRM_RESOURCE_BUSY if
+     * there are insufficent resources available to open a session,
+     * ERROR_DRM_CANNOT_HANDLE, if openSession is not supported at the time of
+     * the call or ERROR_DRM_INVALID_STATE if the HAL is in a state where a
+     * session cannot be opened.
+     * @return sessionId the session ID for the newly opened session
+     */
+    openSession() generates (Status status, SessionId sessionId);
+
+    /**
+     * Close a session on the DrmPlugin object
+     *
+     * @param sessionId the session id the call applies to
+     * @return status the status of the call.  The status must be OK or one of
+     * the following errors: ERROR_DRM_SESSION_NOT_OPENED if the session is not
+     * opened, BAD_VALUE if the sessionId is invalid or ERROR_DRM_INVALID_STATE
+     * if the HAL is in a state where the session cannot be closed.
+     */
+    closeSession(SessionId sessionId) generates (Status status);
+
+    /**
+     * A key request/response exchange occurs between the app and a License
+     * Server to obtain the keys required to decrypt the content.
+     * getKeyRequest() is used to obtain an opaque key request blob that is
+     * delivered to the license server.
+     *
+     * @param scope may be a sessionId or a keySetId, depending on the
+     * specified keyType. When the keyType is OFFLINE or STREAMING,
+     * scope should be set to the sessionId the keys will be provided to.
+     * When the keyType is RELEASE, scope should be set to the keySetId
+     * of the keys being released.
+     * @param initData container-specific data, its meaning is interpreted
+     * based on the mime type provided in the mimeType parameter. It could
+     * contain, for example, the content ID, key ID or other data obtained
+     * from the content metadata that is required to generate the key request.
+     * initData may be empty when keyType is RELEASE.
+     * @param mimeType identifies the mime type of the content
+     * @param keyType specifies if the keys are to be used for streaming,
+     * offline or a release
+     * @param optionalParameters included in the key request message to
+     * allow a client application to provide additional message parameters to
+     * the server.
+     *
+     * @return status the status of the call.  The status must be OK or one of
+     * the following errors: ERROR_DRM_SESSION_NOT_OPENED if the session is not
+     * opened, ERROR_DRM_NOT_PROVISIONED if the device requires provisioning
+     * before it can generate a key request, ERROR_DRM_CANNOT_HANDLE if
+     * getKeyRequest is not supported at the time of the call, BAD_VALUE if any
+     * parameters are invalid or ERROR_DRM_INVALID_STATE if the HAL is in a state
+     * where a key request cannot be generated.
+     * @return request if successful, the opaque key request blob is returned
+     * @return requestType indicates type information about the returned
+     * request. The type may be one of INITIAL, RENEWAL or RELEASE. An
+     * INITIAL request is the first key request for a license. RENEWAL is a
+     * subsequent key request used to refresh the keys in a license. RELEASE
+     * corresponds to a keyType of RELEASE, which indicates keys are being
+     * released.
+     * @return defaultUrl the URL that the request may be sent to, if
+     * provided by the drm HAL. The app may choose to override this
+     * URL.
+     */
+    getKeyRequest(vec<uint8_t> scope, vec<uint8_t> initData,
+            string mimeType, KeyType keyType, KeyedVector optionalParameters)
+        generates (Status status, vec<uint8_t> request,
+                KeyRequestType requestType, string defaultUrl);
+
+    /**
+     * After a key response is received by the app, it is provided to the
+     * Drm plugin using provideKeyResponse.
+     *
+     * @param scope may be a sessionId or a keySetId depending on the type
+     * of the response. Scope should be set to the sessionId when the response
+     * is for either streaming or offline key requests. Scope should be set to
+     * the keySetId when the response is for a release request.
+     * @param response the response from the key server that is being
+     * provided to the drm HAL.
+     *
+     * @return status the status of the call.  The status must be OK or one of
+     * the following errors: ERROR_DRM_SESSION_NOT_OPENED if the session is not
+     * opened, ERROR_DRM_NOT_PROVISIONED if the device requires provisioning
+     * before it can handle the key response, ERROR_DRM_DEVICE_REVOKED if the
+     * device has been disabled by the license policy, ERROR_DRM_CANNOT_HANDLE
+     * if provideKeyResponse is not supported at the time of the call, BAD_VALUE
+     * if any parameters are invalid or ERROR_DRM_INVALID_STATE if the HAL is
+     * in a state where a key response cannot be handled.
+     * @return keySetId when the response is for an offline key request, a
+     * keySetId is returned in the keySetId vector parameter that can be used
+     * to later restore the keys to a new session with the method restoreKeys.
+     * When the response is for a streaming or release request, no keySetId is
+     * returned.
+     */
+    provideKeyResponse(vec<uint8_t> scope, vec<uint8_t> response)
+        generates (Status status, vec<uint8_t> keySetId);
+
+    /**
+     * Remove the current keys from a session
+     *
+     * @param sessionId the session id the call applies to
+     * @return status the status of the call.  The status must be OK or one of
+     * the following errors: ERROR_DRM_SESSION_NOT_OPENED if the session is not
+     * opened, BAD_VALUE if the sessionId is invalid or ERROR_DRM_INVALID_STATE
+     * if the HAL is in a state where the keys cannot be removed.
+     */
+    removeKeys(SessionId sessionId) generates (Status status);
+
+    /**
+     * Restore persisted offline keys into a new session
+     *
+     * @param sessionId the session id the call applies to
+     * @param keySetId identifies the keys to load, obtained from a prior
+     * call to provideKeyResponse().
+     * @return status the status of the call. The status must be OK or one of
+     * the following errors: ERROR_DRM_SESSION_NOT_OPENED if the session is not
+     * opened, BAD_VALUE if any parameters are invalid or ERROR_DRM_INVALID_STATE
+     * if the HAL is in a state where keys cannot be restored.
+     */
+    restoreKeys(SessionId sessionId,
+            vec<uint8_t> keySetId) generates (Status status);
+
+    /**
+     * Request an informative description of the license for the session. The
+     * status is in the form of {name, value} pairs. Since DRM license policies
+     * vary by vendor, the specific status field names are determined by each
+     * DRM vendor. Refer to your DRM provider documentation for definitions of
+     * the field names for a particular drm scheme.
+     *
+     * @param sessionId the session id the call applies to
+     * @return status the status of the call. The status must be OK or one of
+     * the following errors: ERROR_DRM_SESSION_NOT_OPENED if the session is not
+     * opened, BAD_VALUE if the sessionId is invalid or ERROR_DRM_INVALID_STATE
+     * if the HAL is in a state where key status cannot be queried.
+     * @return infoList a list of name value pairs describing the license
+     */
+    queryKeyStatus(SessionId sessionId)
+        generates (Status status, KeyedVector infoList);
+
+    /**
+     * A provision request/response exchange occurs between the app and a
+     * provisioning server to retrieve a device certificate. getProvisionRequest
+     * is used to obtain an opaque provisioning request blob that is delivered
+     * to the provisioning server.
+     *
+     * @param certificateType the type of certificate requested, e.g. "X.509"
+     * @param certificateAuthority identifies the certificate authority. A
+     * certificate authority (CA) is an entity which issues digital certificates
+     * for use by other parties. It is an example of a trusted third party.
+     * @return status the status of the call. The status must be OK or one of
+     * the following errors: ERROR_DRM_CANNOT_HANDLE if the drm scheme does not
+     * require provisioning or ERROR_DRM_INVALID_STATE if the HAL is in a state
+     * where the provision request cannot be generated.
+     * @return request if successful the opaque certificate request blob
+     * is returned
+     * @return defaultUrl URL that the provisioning request should be
+     * sent to, if known by the HAL implementation.  If the HAL implementation
+     * does not provide a defaultUrl, the returned string must be empty.
+     */
+    getProvisionRequest(string certificateType, string certificateAuthority)
+        generates (Status status, vec<uint8_t> request, string defaultUrl);
+
+    /**
+     * After a provision response is received by the app from a provisioning
+     * server, it is provided to the Drm HAL using provideProvisionResponse.
+     * The HAL implementation must receive the provision request and
+     * store the provisioned credentials.
+     *
+     * @param response the opaque provisioning response received by the
+     * app from a provisioning server.
+
+     * @return status the status of the call. The status must be OK or one of
+     * the following errors: ERROR_DRM_DEVICE_REVOKED if the device has been
+     * disabled by the license policy, BAD_VALUE if any parameters are invalid
+     * or ERROR_DRM_INVALID_STATE if the HAL is in a state where the provision
+     * response cannot be handled.
+     * @return certificate the public certificate resulting from the provisioning
+     * operation, if any. An empty vector indicates that no certificate was
+     * returned.
+     * @return wrappedKey an opaque object containing encrypted private key
+     * material to be used by signRSA when computing an RSA signature on a
+     * message, see the signRSA method.
+     */
+    provideProvisionResponse(vec<uint8_t> response) generates (Status status,
+            vec<uint8_t> certificate, vec<uint8_t> wrappedKey);
+
+    /**
+     * SecureStop is a way of enforcing the concurrent stream limit per
+     * subscriber. It can securely monitor the lifetime of sessions across
+     * device reboots by periodically persisting the session lifetime
+     * status in secure storage.
+     *
+     * A signed version of the sessionID is written to persistent storage on the
+     * device when each MediaCrypto object is created and periodically during
+     * playback. The sessionID is signed by the device private key to prevent
+     * tampering.
+     *
+     * When playback is completed the session is destroyed, and the secure
+     * stops are queried by the app. The app then delivers the secure stop
+     * message to a server which verifies the signature to confirm that the
+     * session and its keys have been removed from the device. The persisted
+     * record on the device is removed after receiving and verifying the
+     * signed response from the server.
+     */
+
+    /**
+     * Get all secure stops on the device
+     *
+     * @return status the status of the call. The status must be OK or
+     * ERROR_DRM_INVALID_STATE if the HAL is in a state where the secure stops
+     * cannot be returned.
+     * @return secureStops a list of the secure stop opaque objects
+     */
+    getSecureStops() generates
+        (Status status, vec<SecureStop> secureStops);
+
+    /**
+     * Get all secure stops by secure stop ID
+     *
+     * @param secureStopId the ID of the secure stop to return. The
+     * secure stop ID is delivered by the key server as part of the key
+     * response and must also be known by the app.
+     *
+     * @return status the status of the call. The status must be OK or one of
+     * the following errors: BAD_VALUE if the secureStopId is invalid or
+     * ERROR_DRM_INVALID_STATE if the HAL is in a state where the secure stop
+     * cannot be returned.
+     * @return secureStop the secure stop opaque object
+     */
+
+    getSecureStop(SecureStopId secureStopId)
+        generates (Status status, SecureStop secureStop);
+
+    /**
+     * Release all secure stops on the device
+     *
+     * @return status the status of the call. The status must be OK or
+     * ERROR_DRM_INVALID_STATE if the HAL is in a state where the secure
+     * stops cannot be released.
+     */
+    releaseAllSecureStops() generates (Status status);
+
+    /**
+     * Release a secure stop by secure stop ID
+     *
+     * @param secureStopId the ID of the secure stop to release. The
+     * secure stop ID is delivered by the key server as part of the key
+     * response and must also be known by the app.
+     *
+     * @return status the status of the call. The status must be OK or one of
+     * the following errors: BAD_VALUE if the secureStopId is invalid or
+     * ERROR_DRM_INVALID_STATE if the HAL is in a state where the secure stop
+     * cannot be released.
+     */
+    releaseSecureStop(vec<uint8_t> secureStopId) generates (Status status);
+
+    /**
+     * A drm scheme can have properties that are settable and readable
+     * by an app. There are a few forms of property access methods,
+     * depending on the data type of the property.
+     *
+     * Property values defined by the public API are:
+     *   "vendor" [string] identifies the maker of the drm scheme
+     *   "version" [string] identifies the version of the drm scheme
+     *   "description" [string] describes the drm scheme
+     *   'deviceUniqueId' [byte array] The device unique identifier is
+     *   established during device provisioning and provides a means of
+     *   uniquely identifying each device.
+     *
+     * Since drm scheme properties may vary, additional field names may be
+     * defined by each DRM vendor. Refer to your DRM provider documentation
+     * for definitions of its additional field names.
+     */
+
+    /**
+     * Read a string property value given the property name.
+     *
+     * @param propertyName the name of the property
+     * @return status the status of the call. The status must be OK or one of
+     * the following errors: BAD_VALUE if the property name is invalid,
+     * ERROR_DRM_CANNOT_HANDLE if the property is not supported, or
+     * ERROR_DRM_INVALID_STATE if the HAL is in a state where the property
+     * cannot be obtained.
+     * @return value the property value string
+     */
+    getPropertyString(string propertyName)
+        generates (Status status, string value);
+
+    /**
+     * Read a byte array property value given the property name.
+     *
+     * @param propertyName the name of the property
+     * @return status the status of the call. The status must be OK or one of
+     * the following errors: BAD_VALUE if the property name is invalid,
+     * ERROR_DRM_CANNOT_HANDLE if the property is not supported, or
+     * ERROR_DRM_INVALID_STATE if the HAL is in a state where the property
+     * cannot be obtained.
+     * @return value the property value byte array
+     */
+    getPropertyByteArray(string propertyName)
+        generates (Status status, vec<uint8_t> value);
+
+    /**
+     * Write a property string value given the property name
+     *
+     * @param propertyName the name of the property
+     * @param value the value to write
+     * @return status the status of the call. The status must be OK or one of
+     * the following errors: BAD_VALUE if the property name is invalid,
+     * ERROR_DRM_CANNOT_HANDLE if the property is not supported, or
+     * ERROR_DRM_INVALID_STATE if the HAL is in a state where the property
+     * cannot be set.
+     */
+    setPropertyString(string propertyName, string value)
+        generates (Status status);
+
+    /**
+     * Write a property byte array value given the property name
+     *
+     * @param propertyName the name of the property
+     * @param value the value to write
+     * @return status the status of the call. The status must be OK or one of
+     * the following errors: BAD_VALUE if the property name is invalid,
+     * ERROR_DRM_CANNOT_HANDLE if the property is not supported, or
+     * ERROR_DRM_INVALID_STATE if the HAL is in a state where the property
+     * cannot be set.
+     */
+    setPropertyByteArray(string propertyName, vec<uint8_t> value )
+        generates (Status status);
+
+    /**
+     * The following methods implement operations on a CryptoSession to support
+     * encrypt, decrypt, sign verify operations on operator-provided
+     * session keys.
+     */
+
+    /**
+     * Set the cipher algorithm to be used for the specified session.
+     *
+     * @param sessionId the session id the call applies to
+     * @param algorithm the algorithm to use. The string conforms to JCA
+     * Standard Names for Cipher Transforms and is case insensitive. An
+     * example algorithm is "AES/CBC/PKCS5Padding".
+     * @return status the status of the call. The status must be OK or one of
+     * the following errors: ERROR_DRM_SESSION_NOT_OPENED if the session is not
+     * opened, BAD_VALUE if any parameters are invalid or ERROR_DRM_INVALID_STATE
+     * if the HAL is in a state where the algorithm cannot be set.
+     */
+    setCipherAlgorithm(SessionId sessionId, string algorithm)
+        generates (Status status);
+
+    /**
+     * Set the MAC algorithm to be used for computing hashes in a session.
+     *
+     * @param sessionId the session id the call applies to
+     * @param algorithm the algorithm to use. The string conforms to JCA
+     * Standard Names for Mac Algorithms and is case insensitive. An example MAC
+     * algorithm string is "HmacSHA256".
+     * @return status the status of the call. The status must be OK or one of the
+     * following errors: ERROR_DRM_SESSION_NOT_OPENED if the session is not
+     * opened, BAD_VALUE if any parameters are invalid or ERROR_DRM_INVALID_STATE
+     * if the HAL is in a state where the algorithm cannot be set.
+     */
+    setMacAlgorithm(SessionId sessionId, string algorithm)
+        generates (Status status);
+
+    /**
+     * Encrypt the provided input buffer with the cipher algorithm specified by
+     * setCipherAlgorithm and the key selected by keyId, and return the
+     * encrypted data.
+     *
+     * @param sessionId the session id the call applies to
+     * @param keyId the ID of the key to use for encryption
+     * @param input the input data to encrypt
+     * @param iv the initialization vector to use for encryption
+     * @return status the status of the call. The status must be OK or one of the
+     * following errors: ERROR_DRM_SESSION_NOT_OPENED if the session is not opened,
+     * BAD_VALUE if any parameters are invalid or ERROR_DRM_INVALID_STATE
+     * if the HAL is in a state where the encrypt operation cannot be performed.
+     * @return output the decrypted data
+     */
+    encrypt(SessionId sessionId, vec<uint8_t> keyId, vec<uint8_t> input,
+            vec<uint8_t> iv) generates (Status status, vec<uint8_t> output);
+
+    /**
+     * Decrypt the provided input buffer with the cipher algorithm
+     * specified by setCipherAlgorithm and the key selected by keyId,
+     * and return the decrypted data.
+     *
+     * @param sessionId the session id the call applies to
+     * @param keyId the ID of the key to use for decryption
+     * @param input the input data to decrypt
+     * @param iv the initialization vector to use for decryption
+     * @return status the status of the call. The status must be OK or one of
+     * the following errors: ERROR_DRM_SESSION_NOT_OPENED if the session is not
+     * opened, BAD_VALUE if any parameters are invalid or ERROR_DRM_INVALID_STATE
+     * if the HAL is in a state where the decrypt operation cannot be
+     * performed.
+     * @return output the decrypted data
+     */
+    decrypt(SessionId sessionId, vec<uint8_t> keyId, vec<uint8_t> input,
+            vec<uint8_t> iv) generates (Status status, vec<uint8_t> output);
+
+    /**
+     * Compute a signature over the provided message using the mac algorithm
+     * specified by setMacAlgorithm and the key selected by keyId and return
+     * the signature.
+     *
+     * @param sessionId the session id the call applies to
+     * @param keyId the ID of the key to use for decryption
+     * @param message the message to compute a signature over
+     * @return status the status of the call. The status must be OK or one of
+     * the following errors: ERROR_DRM_SESSION_NOT_OPENED if the session is not
+     * opened, BAD_VALUE if any parameters are invalid or ERROR_DRM_INVALID_STATE
+     * if the HAL is in a state where the sign operation cannot be
+     * performed.
+     * @return signature the computed signature
+     */
+    sign(SessionId sessionId, vec<uint8_t> keyId, vec<uint8_t> message)
+        generates (Status status, vec<uint8_t> signature);
+
+    /**
+     * Compute a hash of the provided message using the mac algorithm specified
+     * by setMacAlgorithm and the key selected by keyId, and compare with the
+     * expected result.
+     *
+     * @param sessionId the session id the call applies to
+     * @param keyId the ID of the key to use for decryption
+     * @param message the message to compute a hash of
+     * @param signature the signature to verify
+     * @return status the status of the call. The status must be OK or one of
+     * the following errors: ERROR_DRM_SESSION_NOT_OPENED if the session is not
+     * opened, BAD_VALUE if any parameters are invalid or ERROR_DRM_INVALID_STATE
+     * if the HAL is in a state where the verify operation cannot be
+     * performed.
+     * @return match true if the signature is verified positively,
+     * false otherwise.
+     */
+    verify(SessionId sessionId, vec<uint8_t> keyId, vec<uint8_t> message,
+            vec<uint8_t> signature) generates (Status status, bool match);
+
+    /**
+     * Compute an RSA signature on the provided message using the specified
+     * algorithm.
+     *
+     * @param sessionId the session id the call applies to
+     * @param algorithm the signing algorithm, such as "RSASSA-PSS-SHA1"
+     * or "PKCS1-BlockType1"
+     * @param message the message to compute the signature on
+     * @param wrappedKey the private key returned during provisioning as
+     * returned by provideProvisionResponse.
+     * @return status the status of the call. The status must be OK or one of
+     * the following errors: ERROR_DRM_SESSION_NOT_OPENED if the session is
+     * not opened, BAD_VALUE if any parameters are invalid or
+     * ERROR_DRM_INVALID_STATE if the HAL is in a state where the signRSA
+     * operation cannot be performed.
+     * @return signature the RSA signature computed over the message
+     */
+    signRSA(SessionId sessionId, string algorithm, vec<uint8_t> message,
+        vec<uint8_t> wrappedkey)
+        generates (Status status, vec<uint8_t> signature);
+
+    /**
+     * Plugins call the following methods to deliver events to the
+     * java app.
+     */
+
+    /**
+     * Set a listener for a drm session. This allows the drm HAL to
+     * make asynchronous calls back to the client of IDrm.
+     *
+     * @param listener instance of IDrmPluginListener to receive the events
+     */
+    setListener(IDrmPluginListener listener);
+
+    /**
+     * Legacy event sending method, it sends events of various types using a
+     * single overloaded set of parameters. This form is deprecated.
+     *
+     * @param eventType the type of the event
+     * @param sessionId identifies the session the event originated from
+     * @param data event-specific data blob
+     */
+    sendEvent(EventType eventType, SessionId sessionId, vec<uint8_t> data);
+
+    /**
+     * Send a license expiration update to the listener. The expiration
+     * update indicates how long the current license is valid before it
+     * needs to be renewed.
+     *
+     * @param sessionId identifies the session the event originated from
+     * @param expiryTimeInMS the time when the keys need to be renewed.
+     * The time is in milliseconds, relative to the Unix epoch. A time of 0
+     * indicates that the keys never expire.
+     */
+     sendExpirationUpdate(SessionId sessionId, int64_t expiryTimeInMS);
+
+    /**
+     * Send a keys change event to the listener. The keys change event
+     * indicates the status of each key in the session. Keys can be
+     * indicated as being usable, expired, outputnotallowed or statuspending.
+     *
+     * @param sessionId identifies the session the event originated from
+     * @param keyStatusList indicates the status for each key ID in the
+     * session.
+     * @param hasNewUsableKey indicates if the event includes at least one
+     * key that has become usable.
+     */
+    sendKeysChange(SessionId sessionId, vec<KeyStatus> keyStatusList,
+            bool hasNewUsableKey);
+};

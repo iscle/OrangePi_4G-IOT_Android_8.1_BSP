@@ -1,0 +1,196 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.sensors@1.0;
+
+interface ISensors {
+    /**
+     * Enumerate all available (static) sensors.
+     */
+    getSensorsList() generates (vec<SensorInfo> list);
+
+    /**
+     * Place the module in a specific mode. The following modes are defined
+     *
+     *  SENSOR_HAL_NORMAL_MODE - Normal operation. Default state of the module.
+     *
+     *  SENSOR_HAL_DATA_INJECTION_MODE - Loopback mode.
+     *    Data is injected for the supported sensors by the sensor service in
+     *    this mode.
+     *
+     * @return OK on success
+     *         BAD_VALUE if requested mode is not supported
+     *         PERMISSION_DENIED if operation is not allowed
+     */
+    setOperationMode(OperationMode mode) generates (Result result);
+
+    /**
+     * Activate/de-activate one sensor.
+     *
+     * After sensor de-activation, existing sensor events that have not
+     * been picked up by poll() must be abandoned immediately so that
+     * subsequent activation will not get stale sensor events (events
+     * that are generated prior to the latter activation).
+     *
+     * @param  sensorHandle is the handle of the sensor to change.
+     * @param  enabled set to true to enable, or false to disable the sensor.
+     *
+     * @return result OK on success, BAD_VALUE if sensorHandle is invalid.
+     */
+    activate(int32_t sensorHandle, bool enabled) generates (Result result);
+
+    /**
+     * Generate a vector of sensor events containing at most "maxCount"
+     * entries.
+     *
+     * Additionally a vector of SensorInfos is returned for any dynamic sensors
+     * connected as notified by returned events of type DYNAMIC_SENSOR_META.
+     *
+     * If there is no sensor event when this function is being called, block
+     * until there are sensor events available.
+     *
+     * @param  maxCount max number of samples can be returned, must be > 0.
+     *         Actual number of events returned in data must be <= maxCount
+     *         and > 0.
+     * @return result OK on success or BAD_VALUE if maxCount <= 0.
+     * @return data vector of Event contains sensor events.
+     * @return dynamicSensorsAdded vector of SensorInfo contains dynamic sensor
+     *         added. Each element corresponds to a dynamic sensor meta events
+     *         in data.
+     */
+    poll(int32_t maxCount)
+        generates (
+                Result result,
+                vec<Event> data,
+                vec<SensorInfo> dynamicSensorsAdded);
+
+    /**
+     * Sets a sensor’s parameters, including sampling frequency and maximum
+     * report latency. This function can be called while the sensor is
+     * activated, in which case it must not cause any sensor measurements to
+     * be lost: transitioning from one sampling rate to the other cannot cause
+     * lost events, nor can transitioning from a high maximum report latency to
+     * a low maximum report latency.
+     * See the Batching sensor results page for details:
+     * http://source.android.com/devices/sensors/batching.html
+     *
+     * @param  sensorHandle handle of sensor to be changed.
+     * @param  samplingPeriodNs specifies sensor sample period in nanoseconds.
+     * @param  maxReportLatencyNs allowed delay time before an event is sampled
+     *         to time of report.
+     * @return result OK on success, BAD_VALUE if any parameters are invalid.
+     */
+    batch(int32_t sensorHandle,
+          int64_t samplingPeriodNs,
+          int64_t maxReportLatencyNs) generates (Result result);
+
+    /**
+     * Trigger a flush of internal FIFO.
+     *
+     * Flush adds a FLUSH_COMPLETE metadata event to the end of the "batch mode"
+     * FIFO for the specified sensor and flushes the FIFO.  If the FIFO is empty
+     * or if the sensor doesn't support batching (FIFO size zero), return
+     * SUCCESS and add a trivial FLUSH_COMPLETE event added to the event stream.
+     * This applies to all sensors other than one-shot sensors. If the sensor
+     * is a one-shot sensor, flush must return BAD_VALUE and not generate any
+     * flush complete metadata.  If the sensor is not active at the time flush()
+     * is called, flush() return BAD_VALUE.
+     *
+     * @param   sensorHandle handle of sensor to be flushed.
+     * @return  result OK on success and BAD_VALUE if sensorHandle is invalid.
+     */
+    flush(int32_t sensorHandle) generates (Result result);
+
+    /**
+     * Inject a single sensor event or push operation environment parameters to
+     * device.
+     *
+     * When device is in NORMAL mode, this function is called to push operation
+     * environment data to device. In this operation, Event is always of
+     * SensorType::AdditionalInfo type. See operation evironment parameters
+     * section in AdditionalInfoType.
+     *
+     * When device is in DATA_INJECTION mode, this function is also used for
+     * injecting sensor events.
+     *
+     * Regardless of OperationMode, injected SensorType::ADDITIONAL_INFO
+     * type events should not be routed back to poll() function.
+     *
+     * @see AdditionalInfoType
+     * @see OperationMode
+     * @param   event sensor event to be injected
+     * @return  result OK on success; PERMISSION_DENIED if operation is not
+     *          allowed; INVALID_OPERATION, if this functionality is
+     *          unsupported; BAD_VALUE if sensor event cannot be injected.
+     */
+    injectSensorData(Event event) generates (Result result);
+
+    /**
+     * Register direct report channel.
+     *
+     * Register a direct channel with supplied shared memory information. Upon
+     * return, the sensor hardware is responsible for resetting the memory
+     * content to initial value (depending on memory format settings).
+     *
+     * @param   mem shared memory info data structure.
+     * @return  result OK on success; BAD_VALUE if shared memory information is
+     *          not consistent; NO_MEMORY if shared memory cannot be used by
+     *          sensor system; INVALID_OPERATION if functionality is not
+     *          supported.
+     * @return  channelHandle a positive integer used for referencing registered
+     *          direct channel (>0) in configureDirectReport and
+     *          unregisterDirectChannel if result is OK, -1 otherwise.
+     */
+    registerDirectChannel(SharedMemInfo mem)
+            generates (Result result, int32_t channelHandle);
+
+    /**
+     * Unregister direct report channel.
+     *
+     * Unregister a direct channel previously registered using
+     * registerDirectChannel, and remove all active sensor report configured in
+     * still active sensor report configured in the direct channel.
+     *
+     * @param   channelHandle handle of direct channel to be unregistered.
+     * @return  result OK if direct report is supported; INVALID_OPERATION
+     *          otherwise.
+     */
+    unregisterDirectChannel(int32_t channelHandle) generates (Result result);
+
+    /**
+     * Configure direct sensor event report in direct channel.
+     *
+     * This function start, modify rate or stop direct report of a sensor in a
+     * certain direct channel.
+     *
+     * @param   sensorHandle handle of sensor to be configured. When combined
+     *          with STOP rate, sensorHandle can be -1 to denote all active
+     *          sensors in the direct channel specified by channel Handle.
+     * @param   channelHandle handle of direct channel to be configured.
+     * @param   rate rate level, see RateLevel enum.
+     *
+     * @return  result OK on success; BAD_VALUE if parameter is invalid (such as
+     *          rate level is not supported by sensor, channelHandle does not
+     *          exist, etc); INVALID_OPERATION if functionality is not
+     *          supported.
+     * @return  reportToken positive integer to identify multiple sensors of
+     *          the same type in a single direct channel. Ignored if rate is
+     *          STOP. See SharedMemFormat.
+     */
+    configDirectReport(
+            int32_t sensorHandle, int32_t channelHandle, RateLevel rate)
+            generates (Result result, int32_t reportToken);
+};

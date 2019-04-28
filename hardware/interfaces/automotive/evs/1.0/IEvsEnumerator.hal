@@ -1,0 +1,85 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.automotive.evs@1.0;
+
+import types;
+import IEvsCamera;
+import IEvsDisplay;
+
+
+/**
+ * Provides the mechanism for EVS camera discovery
+ */
+interface IEvsEnumerator {
+
+    /**
+     * Returns a list of all EVS cameras available to the system
+     */
+    getCameraList() generates (vec<CameraDesc> cameras);
+
+    /**
+     * Get the IEvsCamera associated with a cameraId from a CameraDesc
+     *
+     * Given a camera's unique cameraId from CameraDesc, returns the
+     * IEvsCamera interface associated with the specified camera. When
+     * done using the camera, the caller may release it by calling closeCamera().
+     * Note: Reliance on the sp<> going out of scope is not recommended
+     * because the resources may not be released right away due to asynchronos
+     * behavior in the hardware binder (ref b/36122635).
+     */
+    openCamera(string cameraId) generates (IEvsCamera carCamera);
+
+    /**
+     * Return the specified IEvsCamera interface as no longer in use
+     *
+     * When the IEvsCamera object is no longer required, it must be released.
+     * NOTE: Video streaming must be cleanly stopped before making this call.
+     */
+    closeCamera(IEvsCamera carCamera);
+
+
+    /**
+     * Get exclusive access to IEvsDisplay for the system
+     *
+     * There can be at most one EVS display object for the system and this function
+     * requests access to it. If the EVS display is not available or is already in use,
+     * a null pointer is returned.
+     * When done using the display, the caller may release it by calling closeDisplay().
+     * TODO(b/36122635) Reliance on the sp<> going out of scope is not recommended because the
+     * resources may not be released right away due to asynchronos behavior in the hardware binder.
+     */
+    openDisplay() generates (IEvsDisplay display);
+
+    /**
+     * Return the specified IEvsDisplay interface as no longer in use
+     *
+     * When the IEvsDisplay object is no longer required, it must be released.
+     * NOTE: All buffers must have been returned to the display before making this call.
+     */
+    closeDisplay(IEvsDisplay display);
+
+    /**
+     * This call requests the current state of the display
+     *
+     * If there is no open display, this returns DisplayState::NOT_OPEN. otherwise, it returns
+     * the actual state of the active display.  This call is replicated on the IEvsEnumerator
+     * interface in order to allow secondary clients to monitor the state of the EVS display
+     * without acquiring exclusive ownership of the display.
+     */
+    getDisplayState() generates (DisplayState state);
+};
+

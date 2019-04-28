@@ -1,0 +1,214 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package android.hardware.usb@1.0;
+
+
+enum Status : uint32_t {
+    SUCCESS = 0,
+
+    /**
+     * error value when the HAL operation fails for reasons not listed here.
+     */
+    ERROR = 1,
+
+    /**
+     * error value returned when input argument is invalid.
+     */
+    INVALID_ARGUMENT = 2,
+
+    /**
+     * error value returned when role string is unrecognized.
+     */
+    UNRECOGNIZED_ROLE = 3,
+};
+
+/**
+ * Denotes the Port role type.
+ * Passed as an argument for functions used to query or change port roles.
+ */
+enum PortRoleType : uint32_t {
+    /**
+     * Denotes the data role of the port.
+     * The port can either be a "host" or a "device" for data.
+     * This maps to the PortDataRole enum.
+     */
+    DATA_ROLE = 0,
+
+    /**
+     * Denotes the power role of the port.
+     * The port can either be a "source" or "sink" for power.
+     * This maps to PortPowerRole enum.
+     */
+    POWER_ROLE = 1,
+
+    /**
+     * USB ports can be a pure DFP port which can only act
+     * as a host. A UFP port which can only act as a device.
+     * Or a dual role ports which can either can as a host or
+     * a device. This property is used to mention them.
+     */
+    MODE = 2,
+};
+
+@export
+enum PortDataRole : uint32_t {
+    /**
+     * Indicates that the port does not have a data role.
+     * In case of DRP, the current data role of the port is only resolved
+     * when the type-c handshake happens.
+     */
+    NONE = 0,
+
+    /**
+     * Indicates that the port is acting as a host for data.
+     */
+    HOST = 1,
+
+    /**
+     * Indicated that the port is acting as a device for data.
+     */
+    DEVICE = 2,
+
+    NUM_DATA_ROLES = 3,
+};
+
+@export
+enum PortPowerRole : uint32_t {
+    /**
+     * Indicates that the port does not have a power role.
+     * In case of DRP, the current power role of the port is only resolved
+     * when the type-c handshake happens.
+     */
+    NONE = 0,
+
+    /**
+     * Indicates that the port is supplying power to the other port.
+     */
+    SOURCE = 1,
+
+    /**
+     * Indicates that the port is sinking power from the other port.
+     */
+    SINK = 2,
+
+    NUM_POWER_ROLES = 3,
+};
+
+@export
+enum PortMode : uint32_t {
+    /**
+     * Indicates that the port does not have a mode.
+     * In case of DRP, the current mode of the port is only resolved
+     * when the type-c handshake happens.
+     */
+    NONE = 0,
+    /**
+     * Indicates that port can only act as device for data and sink for power.
+     */
+    UFP = 1,
+
+    /**
+     * Indicates the port can only act as host for data and source for power.
+     */
+    DFP = 2,
+
+    /**
+     * Indicates can either act as UFP or DFP at a given point of time.
+     */
+    DRP = 3,
+
+    NUM_MODES = 4,
+};
+
+/**
+ * Used as a container to send port role information.
+ */
+struct PortRole {
+    /**
+     * Indicates the type of Port Role.
+     * Maps to the PortRoleType enum.
+     */
+    PortRoleType type;
+
+    /**
+     * when type is HAL_USB_DATA_ROLE pass values from enum PortDataRole.
+     * when type is HAL_USB_POWER_ROLE pass values from enum PortPowerRole.
+     * when type is HAL_USB_MODE pass values from enum PortMode.
+     */
+    uint32_t role;
+};
+
+/**
+ * Used as the container to report data back to the caller.
+ * Represents the current connection status of a single USB port.
+ */
+struct PortStatus {
+     /**
+      * Name of the port.
+      * Used as the port's id by the caller.
+      */
+     string portName;
+
+     /**
+      * Data role of the port.
+      */
+     PortDataRole currentDataRole;
+
+     /**
+      * Power Role of thte port.
+      */
+     PortPowerRole currentPowerRole;
+
+     /**
+      * Mode in which the port is connected.
+      * Can be UFP or DFP.
+      */
+     PortMode currentMode;
+
+     /**
+      * True indicates that the port's mode can
+      * be changed. False otherwise.
+      */
+     bool canChangeMode;
+
+     /**
+      * True indicates that the port's data role
+      * can be changed. False otherwise.
+      * For example, true if Type-C PD PD_SWAP
+      * is supported.
+      */
+     bool canChangeDataRole;
+
+     /**
+      * True indicates that the port's power role
+      * can be changed. False otherwise.
+      * For example, true if Type-C PD PR_SWAP
+      * is supported.
+      */
+     bool canChangePowerRole;
+
+     /**
+      * Identifies the type of the local port.
+      *
+      * UFP - Indicates that port can only act as device for
+      *       data and sink for power.
+      * DFP - Indicates the port can only act as host for data
+      *       and source for power.
+      * DRP - Indicates can either act as UFP or DFP at a
+      *       given point of time.
+      */
+      PortMode supportedModes;
+};

@@ -1,0 +1,68 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.tests.extension.light@2.0;
+
+import android.hardware.light@2.0;
+
+enum Default : int32_t {
+    // for calls to setLight from the framework that don't know about this
+    // extension or its requirements
+    INTERPOLATION_OMEGA = 2
+};
+
+/**
+ * One possibility is renaming an old type. Another possibility is taking
+ * advantages of the different namespaces.
+ */
+enum ExtBrightness : Brightness {
+    /**
+     * Say we're really going to use the phone as a heater.
+     */
+    EXTREME,
+
+    /**
+     * Sometimes at night, we need it to be day.
+     */
+     THE_SUN,
+};
+
+/**
+ * Structs can't inherit eachother in hidl. Use composition instead. In this
+ * case, I won't use inheritence because I want to replace Brightness with
+ * ExtBrightness.
+ */
+struct ExtLightState {
+    LightState state;
+
+    /**
+     * This is the secret sauce that will really make this extension shine.
+     * No other person has such a cool feature in their hals. Don't forget
+     * to describe all details of parameters. An interface is a contract, and
+     * specifying this contract to the letter is what allows that contracted
+     * to be maintained. :)
+     *
+     * So, this parameter represents the speed at which brightness is changed
+     * to the new value in the three dimensional space with coordinates RGB
+     * from the red, blue, and green.
+     */
+    int32_t interpolationOmega;
+
+    /**
+     * Include new values.
+     */
+    ExtBrightness brightness;
+};

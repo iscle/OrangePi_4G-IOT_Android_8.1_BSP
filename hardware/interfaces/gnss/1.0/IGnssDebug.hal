@@ -1,0 +1,188 @@
+package android.hardware.gnss@1.0;
+
+/** Extended interface for DEBUG support. */
+interface IGnssDebug {
+    enum SatelliteEphemerisType : uint8_t {
+        /** Ephemeris is known for this satellite. */
+        EPHEMERIS,
+        /**
+         * Ephemeris is not known, but Almanac (approximate location) is known.
+         */
+        ALMANAC_ONLY,
+        /**
+         * Both ephemeris & almanac are not known (e.g. during a cold start
+         * blind search.)
+         */
+        NOT_AVAILABLE
+    };
+
+    enum SatelliteEphemerisSource : uint8_t {
+        /**
+         * The ephemeris (or almanac only) information was demodulated from the
+         * signal received on the device
+         */
+        DEMODULATED,
+        /**
+         * The ephemeris (or almanac only) information was received from a SUPL
+         * server.
+         */
+        SUPL_PROVIDED,
+        /**
+         * The ephemeris (or almanac only) information was provided by another
+         * server.
+         */
+        OTHER_SERVER_PROVIDED,
+        /**
+         * The ephemeris (or almanac only) information was provided by another
+         * method, e.g. injected via a local debug tool, from build defaults
+         * (e.g. almanac), or is from a satellite
+         * with SatelliteEphemerisType::NOT_AVAILABLE.
+         */
+        OTHER
+    };
+
+    enum SatelliteEphemerisHealth : uint8_t {
+        /** The ephemeris is known good. */
+        GOOD,
+        /** The ephemeris is known bad. */
+        BAD,
+        /** The ephemeris is unknown to be good or bad. */
+        UNKNOWN
+    };
+
+    /**
+     * Provides the current best known position from any
+     * source (GNSS or injected assistance).
+     */
+    struct PositionDebug {
+        /**
+         * Validity of the data in this struct. False only if no
+         * latitude/longitude information is known.
+         */
+        bool valid;
+        /** Latitude expressed in degrees */
+        double latitudeDegrees;
+        /** Longitude expressed in degrees */
+        double longitudeDegrees;
+        /** Altitude above ellipsoid expressed in meters */
+        float altitudeMeters;
+        /** Represents horizontal speed in meters per second. */
+        float speedMetersPerSec;
+        /** Represents heading in degrees. */
+        float bearingDegrees;
+        /**
+         * Estimated horizontal accuracy of position expressed in meters,
+         * radial, 68% confidence.
+         */
+        double horizontalAccuracyMeters;
+        /**
+         * Estimated vertical accuracy of position expressed in meters, with
+         * 68% confidence.
+         */
+        double verticalAccuracyMeters;
+        /**
+         * Estimated speed accuracy in meters per second with 68% confidence.
+         */
+        double speedAccuracyMetersPerSecond;
+        /**
+         * estimated bearing accuracy degrees with 68% confidence.
+         */
+        double bearingAccuracyDegrees;
+        /**
+         * Time duration before this report that this position information was
+         * valid.  This can, for example, be a previous injected location with
+         * an age potentially thousands of seconds old, or
+         * extrapolated to the current time (with appropriately increased
+         * accuracy estimates), with a (near) zero age.
+         */
+        float ageSeconds;
+    };
+
+    /**
+     * Provides the current best known UTC time estimate.
+     * If no fresh information is available, e.g. after a delete all,
+     * then whatever the effective defaults are on the device must be
+     * provided (e.g. Jan. 1, 2017, with an uncertainty of 5 years) expressed
+     * in the specified units.
+     */
+    struct TimeDebug {
+        /** UTC time estimate. */
+        GnssUtcTime timeEstimate;
+        /** 68% error estimate in time. */
+        float timeUncertaintyNs;
+        /**
+         * 68% error estimate in local clock drift,
+         * in nanoseconds per second (also known as parts per billion - ppb.)
+         */
+        float frequencyUncertaintyNsPerSec;
+    };
+
+    /**
+     * Provides a single satellite info that has decoded navigation data.
+     */
+    struct SatelliteData {
+        /** Satellite vehicle ID number */
+        int16_t svid;
+        /** Defines the constellation type of the given SV. */
+        GnssConstellationType constellation;
+
+        /**
+         * Defines the standard broadcast ephemeris or almanac availability for
+         * the satellite.  To report status of predicted orbit and clock
+         * information, see the serverPrediction fields below.
+         */
+        SatelliteEphemerisType ephemerisType;
+        /** Defines the ephemeris source of the satellite. */
+        SatelliteEphemerisSource ephemerisSource;
+        /**
+         * Defines whether the satellite is known healthy
+         * (safe for use in location calculation.)
+         */
+        SatelliteEphemerisHealth ephemerisHealth;
+        /**
+         * Time duration from this report (current time), minus the
+         * effective time of the ephemeris source (e.g. TOE, TOA.)
+         * Set to 0 when ephemerisType is NOT_AVAILABLE.
+         */
+        float ephemerisAgeSeconds;
+
+        /**
+         * True if a server has provided a predicted orbit and clock model for
+         * this satellite.
+         */
+        bool serverPredictionIsAvailable;
+        /**
+         * Time duration from this report (current time) minus the time of the
+         * start of the server predicted information.  For example, a 1 day
+         * old prediction would be reported as 86400 seconds here.
+         */
+        float serverPredictionAgeSeconds;
+    };
+
+    /**
+     * Provides a set of debug information that is filled by the GNSS chipset
+     * when the method getDebugData() is invoked.
+     */
+    struct DebugData {
+        /** Current best known position. */
+        PositionDebug position;
+        /** Current best know time estimate */
+        TimeDebug time;
+        /**
+         * Provides a list of the available satellite data, for all
+         * satellites and constellations the device can track,
+         * including GnssConstellationType UNKNOWN.
+         */
+        vec<SatelliteData> satelliteDataArray;
+    };
+
+    /**
+     * This methods requests position, time and satellite ephemeris debug information
+     * from the HAL.
+     *
+     * @return ret debugData information from GNSS Hal that contains the current best
+     * known position, best known time estimate and a complete list of
+     * constellations that the device can track.
+     */
+    getDebugData() generates (DebugData debugData);
+};

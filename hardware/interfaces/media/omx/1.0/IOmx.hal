@@ -1,0 +1,85 @@
+/*
+ * Copyright (C) 2017 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.media.omx@1.0;
+
+import android.hardware.graphics.bufferqueue@1.0::IGraphicBufferProducer;
+import android.hardware.media@1.0::types;
+
+import IOmxNode;
+import IOmxObserver;
+import IGraphicBufferSource;
+
+/**
+ * Ref: frameworks/av/include/media/IOMX.h: IOMX
+ *
+ * IOmx has the ability to create OMX nodes.
+ */
+interface IOmx {
+
+    /**
+     * Information for an IOmxNode component.
+     */
+    struct ComponentInfo {
+        string mName;
+        vec<string> mRoles;
+    };
+
+    /**
+     * List available components.
+     *
+     * @return status The status of the call.
+     * @return nodeList The list of ComponentInfo.
+     */
+    listNodes(
+        ) generates (
+            Status status,
+            vec<ComponentInfo> nodeList
+        );
+
+
+    /**
+     * Allocate an IOmxNode instance with the specified node name.
+     *
+     * @param name The name of the node to create.
+     * @param observer An observer object that will receive messages from
+     * the created instance.
+     * @return status The status of the call.
+     * @return omxNode The allocated instance of `IOmxNode`.
+     */
+    allocateNode(
+            string name,
+            IOmxObserver observer
+        ) generates (
+            Status status,
+            IOmxNode omxNode
+        );
+
+    /**
+     * Create an input surface for recording.
+     *
+     * @return status The status of the call.
+     * @return producer The associated producer end of the buffer queue.
+     * @return source The associated `IGraphicBufferSource`.
+     */
+    createInputSurface(
+        ) generates (
+            Status status,
+            IGraphicBufferProducer producer,
+            IGraphicBufferSource source
+        );
+};
+

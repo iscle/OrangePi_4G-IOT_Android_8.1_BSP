@@ -1,0 +1,59 @@
+// Copyright 2006 The Android Open Source Project
+
+subdirs = [
+    "audio",
+]
+
+cc_library_headers {
+    name: "libhardware_legacy_headers",
+    vendor_available: true,
+    export_include_dirs: ["include"],
+
+    header_libs: ["libcutils_headers"],
+    export_header_lib_headers: ["libcutils_headers"],
+}
+
+cc_library {
+    name: "libpower",
+
+    srcs: ["power.c"],
+    export_include_dirs: ["include"],
+    shared_libs: ["libcutils", "liblog"],
+    vendor_available: true,
+    vndk: {
+        enabled: true,
+    },
+}
+
+cc_library_shared {
+    name: "libhardware_legacy",
+    vendor_available: true,
+    vndk: {
+        enabled: true,
+    },
+
+    shared_libs: [
+        "libbase",
+        "libdl",
+        "libcutils",
+        "liblog",
+    ],
+
+    header_libs: [
+        "libhardware_legacy_headers",
+    ],
+    export_header_lib_headers: ["libhardware_legacy_headers"],
+
+    export_include_dirs: ["include"],
+
+    cflags: [
+        "-DQEMU_HARDWARE",
+        "-Wno-unused-parameter",
+        "-Wno-gnu-designator",
+    ],
+
+    srcs: [
+        "power.c",
+        "uevent.c",
+    ],
+}

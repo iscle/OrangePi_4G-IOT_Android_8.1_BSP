@@ -1,0 +1,159 @@
+/*
+ * Copyright 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.wifi.supplicant@1.0;
+
+import ISupplicantCallback;
+import ISupplicantIface;
+
+/**
+ * Interface exposed by the supplicant HIDL service registered
+ * with the hardware service manager.
+ * This is the root level object for any the supplicant interactions.
+ */
+interface ISupplicant {
+  /**
+   * Debug levels for the supplicant.
+   * Only log messages with a level greater than the set level
+   * (via |setDebugParams|) will be logged.
+   */
+  enum DebugLevel : uint32_t {
+    EXCESSIVE = 0,
+    MSGDUMP = 1,
+    DEBUG = 2,
+    INFO = 3,
+    WARNING = 4,
+    ERROR = 5
+  };
+
+  /**
+   * Structure describing the type and name of an iface
+   * controlled by the supplicant.
+   */
+  struct IfaceInfo {
+    /**
+     * Type of the network interface.
+     */
+    IfaceType type;
+    /**
+     * Name of the network interface, e.g., wlan0
+     */
+    string name;
+  };
+
+  /**
+   * Gets a HIDL interface object for the interface corresponding to iface
+   * name which the supplicant already controls.
+   *
+   * @param ifaceInfo Combination of the iface type and name retrieved
+   *        using |listInterfaces|.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_UNKOWN|
+   * @return iface HIDL interface object representing the interface if
+   *         successful, null otherwise.
+   */
+  getInterface(IfaceInfo ifaceInfo)
+      generates (SupplicantStatus status, ISupplicantIface iface);
+
+  /**
+   * Retrieve a list of all the interfaces controlled by the supplicant.
+   *
+   * The corresponding |ISupplicantIface| object for any interface can be
+   * retrieved using |getInterface| method.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|
+   * @return ifaces List of all interfaces controlled by the supplicant.
+   */
+  listInterfaces() generates (SupplicantStatus status, vec<IfaceInfo> ifaces);
+
+  /**
+   * Register for callbacks from the supplicant service.
+   *
+   * These callbacks are invoked for global events that are not specific
+   * to any interface or network. Registration of multiple callback
+   * objects is supported. These objects must be deleted when the corresponding
+   * client process is dead.
+   *
+   * @param callback An instance of the |ISupplicantCallback| HIDL interface
+   *        object.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|
+   */
+  registerCallback(ISupplicantCallback callback)
+      generates (SupplicantStatus status);
+
+  /**
+   * Set debug parameters for the supplicant.
+   *
+   * @param level Debug logging level for the supplicant.
+   *        (one of |DebugLevel| values).
+   * @param timestamp Determines whether to show timestamps in logs or
+   *        not.
+   * @param showKeys Determines whether to show keys in debug logs or
+   *        not.
+   *        CAUTION: Do not set this param in production code!
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|
+   */
+  setDebugParams(DebugLevel level, bool showTimestamp, bool showKeys)
+      generates (SupplicantStatus status);
+
+  /**
+   * Get the debug level set.
+   *
+   * @return level one of |DebugLevel| values.
+   */
+  getDebugLevel() generates (DebugLevel level);
+
+  /**
+   * Get whether the timestamps are shown in the debug logs or not.
+   *
+   * @return enabled true if set, false otherwise.
+   */
+  isDebugShowTimestampEnabled() generates (bool enabled);
+
+  /**
+   * Get whether the keys are shown in the debug logs or not.
+   *
+   * @return enabled true if set, false otherwise.
+   */
+  isDebugShowKeysEnabled() generates (bool enabled);
+
+  /**
+   * Set concurrency priority.
+   *
+   * When both P2P and STA mode ifaces are active, this must be used
+   * to prioritize either STA or P2P connection to resolve conflicts
+   * arising during single channel concurrency.
+   *
+   * @param type The type of iface to prioritize.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|
+   */
+  setConcurrencyPriority(IfaceType type) generates (SupplicantStatus status);
+};

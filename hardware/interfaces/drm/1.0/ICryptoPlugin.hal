@@ -1,0 +1,114 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package android.hardware.drm@1.0;
+
+import android.hardware.drm@1.0::types;
+
+/**
+ * Ref: frameworks/native/include/media/hardware/CryptoAPI.h:CryptoPlugin
+ *
+ * ICryptoPlugin is the HAL for vendor-provided crypto plugins.
+ * It allows crypto sessions to be opened and operated on, to
+ * load crypto keys for a codec to decrypt protected video content.
+ */
+interface ICryptoPlugin {
+    /**
+     * Check if the specified mime-type requires a secure decoder
+     * component.
+     *
+     * @param mime The content mime-type
+     * @return secureRequired must be true only if a secure decoder is required
+     * for the specified mime-type
+     */
+    requiresSecureDecoderComponent(string mime)
+        generates(bool secureRequired);
+
+    /**
+     * Notify a plugin of the currently configured resolution
+     *
+     * @param width - the display resolutions's width
+     * @param height - the display resolution's height
+     */
+    notifyResolution(uint32_t width, uint32_t height);
+
+    /**
+     * Associate a mediadrm session with this crypto session
+     *
+     * @param sessionId the MediaDrm session ID to associate with this crypto
+     * session
+     * @return status the status of the call, status must be
+     * ERROR_DRM_SESSION_NOT_OPENED if the session is not opened, or
+     * ERROR_DRM_CANNOT_HANDLE if the operation is not supported by the drm
+     * scheme.
+     */
+    setMediaDrmSession(vec<uint8_t> sessionId) generates(Status status);
+
+    /**
+     * Set a shared memory base for subsequent decrypt operations. The buffer
+     * base is a hidl_memory which maps shared memory in the HAL module.
+     * After the shared buffer base is established, the decrypt() method
+     * receives SharedBuffer instances which specify the buffer address range
+     * for decrypt source and destination addresses.
+     *
+     * There can be multiple shared buffers per crypto plugin. The buffers
+     * are distinguished by the bufferId.
+     *
+     * @param base the base IMemory of the memory buffer identified by
+     * bufferId
+     * @param bufferId identifies the specific shared buffer for which
+     * the base is being set.
+     */
+    setSharedBufferBase(memory base, uint32_t bufferId);
+
+    /**
+     * Decrypt an array of subsamples from the source memory buffer to the
+     * destination memory buffer.
+     *
+     * @param secure a flag to indicate if a secure decoder is being used. This
+     * enables the plugin to configure buffer modes to work consistently with
+     * a secure decoder.
+     * @param the keyId for the key that should be used to do the
+     * the decryption. The keyId refers to a key in the associated
+     * MediaDrm instance.
+     * @param iv the initialization vector to use
+     * @param mode the crypto mode to use
+     * @param pattern the crypto pattern to use
+     * @param subSamples a vector of subsamples indicating the number
+     * of clear and encrypted bytes to process. This allows the decrypt
+     * call to operate on a range of subsamples in a single call
+     * @param source the input buffer for the decryption
+     * @param offset the offset of the first byte of encrypted data from
+     * the base of the source buffer
+     * @param destination the output buffer for the decryption
+     * @return status the status of the call. The status must be OK or one of
+     * the following errors: ERROR_DRM_NO_LICENSE if no license keys have been
+     * loaded, ERROR_DRM_LICENSE_EXPIRED if the license keys have expired,
+     * ERROR_DRM_RESOURCE_BUSY if the resources required to perform the
+     * decryption are not available, ERROR_DRM_INSUFFICIENT_OUTPUT_PROTECTION
+     * if required output protections are not active,
+     * ERROR_DRM_SESSION_NOT_OPENED if the decrypt session is not opened,
+     * ERROR_DRM_DECRYPT if the decrypt operation fails, and
+     * ERROR_DRM_CANNOT_HANDLE in other failure cases.
+     * @return bytesWritten the number of bytes output from the decryption
+     * @return detailedError if the error is a vendor-specific error, the
+     * vendor's crypto HAL may provide a detailed error string to help
+     * describe the error.
+     */
+    decrypt(bool secure, uint8_t[16] keyId, uint8_t[16] iv, Mode mode,
+        Pattern pattern, vec<SubSample> subSamples,
+            SharedBuffer source, uint64_t offset, DestinationBuffer destination)
+        generates(Status status, uint32_t bytesWritten, string detailedError);
+};

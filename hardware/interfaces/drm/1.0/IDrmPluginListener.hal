@@ -1,0 +1,67 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.drm@1.0;
+
+import android.hardware.drm@1.0::types;
+
+/**
+ * Ref: frameworks/native/include/media/drm/DrmAPI.h:DrmPluginListener
+ */
+
+/**
+ * IDrmPluginListener is a listener interface for Drm events sent from an
+ * IDrmPlugin instance.
+ */
+interface IDrmPluginListener {
+
+    /**
+     * Legacy event sending method, it sends events of various types using a
+     * single overloaded set of parameters. This form is deprecated.
+     *
+     * @param eventType the type of the event
+     * @param sessionId identifies the session the event originated from
+     * @param data event-specific data blob
+     */
+    oneway sendEvent(EventType eventType, SessionId sessionId,
+            vec<uint8_t> data);
+
+    /**
+     * Send a license expiration update to the listener. The expiration
+     * update indicates how long the current keys are valid before they
+     * need to be renewed.
+     *
+     * @param sessionId identifies the session the event originated from
+     * @param expiryTimeInMS the time when the keys need to be renewed.
+     * The time is in milliseconds, relative to the Unix epoch. A time
+     * of 0 indicates that the keys never expire.
+     */
+    oneway sendExpirationUpdate(SessionId sessionId, int64_t expiryTimeInMS);
+
+    /**
+     * Send a keys change event to the listener. The keys change event
+     * indicates the status of each key in the session. Keys can be
+     * indicated as being usable, expired, outputnotallowed or statuspending.
+     *
+     * @param sessionId identifies the session the event originated from
+     * @param keyStatusList indicates the status for each key ID in the
+     * session.
+     * @param hasNewUsableKey indicates if the event includes at least one
+     * key that has become usable.
+     */
+    oneway sendKeysChange(SessionId sessionId, vec<KeyStatus> keyStatusList,
+            bool hasNewUsableKey);
+};

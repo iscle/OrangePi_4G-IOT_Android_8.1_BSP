@@ -1,0 +1,1177 @@
+/*
+ * Copyright (C) 2017 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.renderscript@1.0;
+
+import android.hardware.renderscript@1.0::types;
+
+// TODO: is there any way to keep this documentation in sync with the
+// corresponding Java doc?
+//
+// TODO: Some of the documentation was taken from Java docs, whereas others were
+// undocumented. Because of this, there's somewhat two different styles of
+// comments. Look into having a consistent convention.
+//
+// TODO: There was some confusion as to why some paramters use vec<> and others
+// use Ptr/Size. The convention is that vec<> is used whenever the paramter is
+// only an input parameter. HIDL is not supposed to include any output
+// parameters, so a more explicit Ptr/Size is used.
+
+interface IContext {
+
+    /**
+     * TODO: Do we need to define "selectors"? It may be a property of the
+     * "adapted allocation" that's returned.
+     *
+     * Creates an arbitrary window into the base allocation. The type describes
+     * the shape of the window. Any dimensions present in the type must be
+     * equal to or smaller than the dimensions in the source allocation. A
+     * dimension present in the allocation that is not present in the type must
+     * be constrained away with the selectors. If a dimension is present in
+     * both the type and allocation, one of two things must happen. If the type
+     * is smaller than the allocation, a window must be created, the selected
+     * value in the adapter for that dimension must act as the base address,
+     * and the type must describe the size of the view starting at that point.
+     * If the type and allocation dimension are of the same size, then setting
+     * the selector for the dimension must be an error.
+     *
+     * @param type Type describing data layout
+     * @param baseAlloc Allocation
+     * @return subAlloc AllocationAdapter
+     */
+    @callflow(next={"*"})
+    allocationAdapterCreate(Type type, Allocation baseAlloc)
+                 generates (AllocationAdapter subAlloc);
+
+    /**
+     * TODO: Need to relate "offset" back to the terminology in
+     * allocationAdapterCreate() -- the latter uses the terms "selector" and
+     * "selected value". Can we use consistent terminology? Are "offset" and
+     * "selector" actually two different things?
+     *
+     * TODO: Explain the flattened layout in the offsets vec
+     *
+     * Sets the offsets for an Allocation Adapter.
+     *
+     * @param alloc AllocationAdapter
+     * @param offsets Collection of offsets
+     */
+    @callflow(next={"*"})
+    allocationAdapterOffset(AllocationAdapter alloc, vec<uint32_t> offsets);
+
+    /**
+     * TODO: add more explanation here.
+     *
+     * Returns the Type of the Allocation.
+     *
+     * @param allocation Allocation
+     * @return type Allocation's Type
+     */
+    @callflow(next={"*"})
+    allocationGetType(Allocation allocation) generates (Type type);
+
+    /**
+     * TODO: more clarification needed describing if the pointer can be aliased
+     * or if the data can outlive the allocation.
+     *
+     * Creates an Allocation for use by scripts with a given Type and a backing
+     * pointer. For use with ALLOCATION_USAGE_SHARED.
+     *
+     * @param type Type describing data layout
+     * @param mips AllocationMipmapControl specifies desired mipmap behavior for
+     *             the allocation
+     * @param usage Bit field specifying how the Allocation is utilized
+     * @param ptr Pointer to client-side data
+     * @return allocation Created Allocation
+     */
+    @callflow(next={"*"})
+    allocationCreateTyped(Type type, AllocationMipmapControl mips,
+                          bitfield<AllocationUsageType> usage, Ptr ptr)
+               generates (Allocation allocation);
+
+    /**
+     * Creates an Allocation from a Bitmap.
+     *
+     * @param type Type describing data layout
+     * @param mips AllocationMipmapControl specifies desired mipmap behavior for
+     *             the allocation
+     * @param bitmap Bitmap source for the allocation data
+     * @param usage Bit field specifying how the Allocation is utilized
+     * @return allocation Created Allocation containing bitmap data
+     */
+    @callflow(next={"*"})
+    allocationCreateFromBitmap(Type type, AllocationMipmapControl mips,
+                               vec<uint8_t> bitmap,
+                               bitfield<AllocationUsageType> usage)
+                    generates (Allocation allocation);
+
+    /**
+     * Creates a Cubemapped Allocation from a Bitmap.
+     *
+     * @param type Type describing data layout
+     * @param mips AllocationMipmapControl specifies desired mipmap behavior
+     *             for the allocation
+     * @param bitmap Bitmap with cubemap faces layed out in the following
+     *               format: right, left, top, bottom, front, back
+     * @param usage Bit field specifying how the Allocation is used
+     * @return allocation Created Allocation containing cubemap data
+     */
+    @callflow(next={"*"})
+    allocationCubeCreateFromBitmap(Type type, AllocationMipmapControl mips,
+                                   vec<uint8_t> bitmap,
+                                   bitfield<AllocationUsageType> usage)
+                        generates (Allocation allocation);
+
+    /**
+     * Returns the handle to a raw buffer that is being managed by the screen
+     * compositor. This operation is only valid for Allocations with
+     * USAGE_IO_INPUT.
+     *
+     * @param allocation Allocation
+     * @return nativeWindow NativeWindow object associated with allocation
+     */
+    @callflow(next={"*"})
+    allocationGetNativeWindow(Allocation allocation)
+                   generates (NativeWindow nativeWindow);
+
+    /**
+     * TODO: more clarification needed
+     *
+     * Sets the NativeWindow of an Allocation. This operation is only valid
+     * for Allocations with USAGE_IO_INPUT.
+     *
+     * @param allocation Allocation to be modified
+     * @pram nativeWindow NativeWindow to associate with allocation
+     */
+    @callflow(next={"*"})
+    allocationSetNativeWindow(Allocation allocation, NativeWindow nativewindow);
+
+    /**
+     * Initialize BufferQueue with specified max number of buffers.
+     *
+     * @param alloc Allocation
+     * @param numBuffer Maximum number of buffers
+     */
+    @callflow(next={"*"})
+    allocationSetupBufferQueue(Allocation alloc, uint32_t numBuffer);
+
+    /**
+     * TODO: clearly define baseAlloc vs subAlloc
+     *
+     * Shares the BufferQueue with another Allocation. Both must be
+     * USAGE_IO_INPUT Allocations.
+     *
+     * @param baseAlloc Base Allocation
+     * @param subAlloc Allocation to use the same buffer queue as the Base
+     *                 Allocation
+     */
+    @callflow(next={"*"})
+    allocationShareBufferQueue(Allocation baseAlloc, Allocation subAlloc);
+
+    /**
+     * Copies from the Allocation into a Bitmap. The bitmap must match the
+     * dimensions of the Allocation.
+     *
+     * HIDL is always running in Passthrough mode for RenderScript, so the
+     * buffer is modified directly by the driver.
+     *
+     * @param allocation Allocation
+     * @param data Buffer to be copied into
+     * @param sizeBytes Size of the buffer pointed to by "data"
+     */
+    @callflow(next={"*"})
+    allocationCopyToBitmap(Allocation allocation, Ptr data, Size sizeBytes);
+
+    /**
+     * TODO: should we consolidate all [123]DWrite functions or [123]DRead
+     * functions into the same API call? Our current plan is to be very similar
+     * to the dispatch table API. How much should we deviate from the original
+     * API?
+     * TODO: better description on Vec3/Vec4 and padding.
+     *
+     * Copies data into a 1D region of this Allocation.
+     *
+     * When this HAL entry is executed, all Vec3 elements have been explicitly
+     * padded as Vec4 elements.
+     *
+     * The size of the region is: count * Element's size.
+     *
+     * @param allocation Allocation to be modified
+     * @param offset The offset of the first element to be copied
+     * @param lod Selected mipmap level of detail
+     * @param count Number of elements to be copied
+     * @param data Source data to be copied to Allocation
+     */
+    @callflow(next={"*"})
+    allocation1DWrite(Allocation allocation, uint32_t offset, uint32_t lod,
+                      uint32_t count, vec<uint8_t> data);
+
+    /**
+     * Copies a value into a single sub-Element of this Allocation.
+     *
+     * @param allocation Allocation to be updated
+     * @param x X position of the first element in the Allocation to be updated
+     * @param y Y position of the first element in the Allocation to be
+     *          updated; for a 1D Allocation, this value must be 0
+     * @param z Z position of the first element in the Allocation to be
+     *          updated; for a 1D or 2D Allocation, this value must be 0
+     * @param lod Selected mipmap level of detail
+     * @param data Data to be copied from
+     * @param compIdx Component number to identify which sub-Element is updated
+     */
+    @callflow(next={"*"})
+    allocationElementWrite(Allocation allocation, uint32_t x, uint32_t y,
+                           uint32_t z, uint32_t lod, vec<uint8_t> data,
+                           Size compIdx);
+
+    /**
+     * Copies from an array into a rectangular region in this Allocation.
+     *
+     * When this HAL entry is executed, all Vec3 elements have been explicitly
+     * padded as Vec4 elements.
+     *
+     * The size of the region is: w * h * Element's size.
+     *
+     * @param allocation Allocation to be modified
+     * @param xoff X offset of the region to update in this Allocation
+     * @param yoff Y offset of the region to update in this Allocation
+     * @param lod Selected mipmap level of detail
+     * @param face AllocationCubemapFace
+     * @param w Width of the region to update
+     * @param h Height of the region to update
+     * @param data Data to be placed into the Allocation
+     * @param stride For 1D Allocation, the stride must be the number of bytes
+     *               of this Allocation. For 2D and 3D Allocations, the stride
+     *               must be the stride in X dimension measuring in bytes.
+     */
+    @callflow(next={"*"})
+    allocation2DWrite(Allocation allocation, uint32_t xoff, uint32_t yoff,
+                      uint32_t lod, AllocationCubemapFace face, uint32_t w,
+                      uint32_t h, vec<uint8_t> data, Size stride);
+
+    /**
+     * Copies from an array into a 3D region in this Allocation.
+     *
+     * When this HAL entry is executed, all Vec3 elements have been explicitly
+     * padded as Vec4 elements.
+     *
+     * The size of the region is: w * h * d * Element's size.
+     *
+     * @param allocation Allocation to be modified
+     * @param xoff X offset of the region to update in this Allocation
+     * @param yoff Y offset of the region to update in this Allocation
+     * @param zoff Z offset of the region to update in this Allocation
+     * @param lod Selected mipmap level of detail
+     * @param w Width of the region to update
+     * @param h Height of the region to update
+     * @param d Depth of the region to update
+     * @param data Data to be placed in the Allocation
+     * @param stride For 1D Allocation, the stride must be the number of bytes
+     *               of this Allocation. For 2D and 3D Allocations, the stride
+     *               must be the stride in X dimension measuring in bytes.
+     */
+    @callflow(next={"*"})
+    allocation3DWrite(Allocation allocation, uint32_t xoff, uint32_t yoff,
+                      uint32_t zoff, uint32_t lod, uint32_t w, uint32_t h,
+                      uint32_t d, vec<uint8_t> data, Size stride);
+
+    /**
+     * Generates a mipmap chain. This is only valid if the Type of the
+     * Allocation includes mipmaps.
+     *
+     * This function generates a complete set of mipmaps from the top level
+     * LOD.
+     *
+     * If the Allocation is also using other memory spaces, a call to
+     * allocationSyncAll(context, allocation, usage) is required.
+     *
+     * @param allocation Allocation which has its top LOD read and lower LOD
+     *                   written to
+     */
+    @callflow(next={"*"})
+    allocationGenerateMipmaps(Allocation allocation);
+
+    /**
+     * Copies all of an Allocation's data into an array.
+     *
+     * All Vec3 elements of an Allocation are padded to be Vec4, so the data
+     * returned by this function automatically includes padding.
+     *
+     * HIDL is always running in Passthrough mode for RenderScript, so the
+     * buffer is modified directly by the driver.
+     *
+     * @param allocation Allocation to be read
+     * @param data Buffer to be copied into
+     * @param sizeBytes Size of the buffer pointed to by "data"
+     */
+    @callflow(next={"*"})
+    allocationRead(Allocation allocation, Ptr data, Size sizeBytes);
+
+    /**
+     * Copies a 1D region of this Allocation into an array.
+     *
+     * All Vec3 elements of an Allocation are padded to be Vec4, so the data
+     * returned by this function automatically includes padding.
+     *
+     * The size of the region is: count * Element's size.
+     *
+     * HIDL is always running in Passthrough mode for RenderScript, so the
+     * buffer is modified directly by the driver.
+     *
+     * @param allocation Allocation to be read
+     * @param xoff X offset of the first element to be copied
+     * @param lod Mipmap level of detail
+     * @param count The number of elements to be copied
+     * @param data Buffer to be copied into
+     * @param sizeBytes Size of the buffer pointed to by "data"
+     */
+    @callflow(next={"*"})
+    allocation1DRead(Allocation allocation, uint32_t xoff, uint32_t lod,
+                     uint32_t count, Ptr data, Size sizeBytes);
+
+    /**
+     * Returns the value of a single sub-Element of this Allocation.
+     *
+     * HIDL is always running in Passthrough mode for RenderScript, so the
+     * buffer is modified directly by the driver.
+     *
+     * @param allocation Allocation to be read
+     * @param x X position of the first element in the Allocation to be read
+     * @param y Y position of the first element in the Allocation to be read
+     * @param z Z position of the first element in the Allocation to be read
+     * @param lod Mipmap level of detail
+     * @param data Buffer to be copied into
+     * @param sizeBytes Size of the buffer pointed to by "data"
+     * @param compIdx Component number to identify which sub-Element is updated
+     */
+    @callflow(next={"*"})
+    allocationElementRead(Allocation allocation, uint32_t x, uint32_t y,
+                          uint32_t z, uint32_t lod, Ptr data, Size sizeBytes,
+                          Size compIdx);
+
+    /**
+     * Copies from a rectangular region in this Allocation to an array.
+     *
+     * All Vec3 elements of an Allocation are padded to be Vec4, so the data
+     * returned by this function automatically includes padding.
+     *
+     * The size of the region is: w * h * Element's size.
+     *
+     * HIDL is always running in Passthrough mode for RenderScript, so the
+     * buffer is modified directly by the driver.
+     *
+     * @param allocation Allocation to be read
+     * @param xoff X offset of the region to copy in this array
+     * @param yoff Y offset of the region to copy in this array
+     * @param lod Mipmap level of detail
+     * @param face AllocationCubemapFace
+     * @param w Width of the region to copy
+     * @param h Height of the region to copy
+     * @param data Buffer to be copied into
+     * @param sizeBytes Size of the buffer pointed to by "data"
+     * @param stride For 1D Allocation, the stride must be the number of bytes
+     *               of this Allocation. For 2D and 3D Allocations, the stride
+     *               must be the stride in X dimension measuring in bytes.
+     */
+    @callflow(next={"*"})
+    allocation2DRead(Allocation allocation, uint32_t xoff, uint32_t yoff,
+                     uint32_t lod, AllocationCubemapFace face, uint32_t w,
+                     uint32_t h, Ptr data, Size sizeBytes, Size stride);
+
+    /**
+     * Copies from a rectangular cuboid region in this Allocation to an array.
+     *
+     * All Vec3 elements of an Allocation are padded to be Vec4, so the data
+     * returned by this function automatically includes padding.
+     *
+     * The size of the region is: w * h * d * Element's size.
+     *
+     * HIDL is always running in Passthrough mode for RenderScript, so the
+     * buffer is modified directly by the driver.
+     *
+     * @param allocation Allocation to be read
+     * @param xoff X offset of the region to copy in this array
+     * @param yoff Y offset of the region to copy in this array
+     * @param zoff Z offset of the region to copy in this array
+     * @param lod Mipmap level of detail
+     * @param w Width of the region to copy
+     * @param h Height of the region to copy
+     * @param d Depth of the region to copy
+     * @param data Buffer to be copied into
+     * @param sizeBytes Size of the buffer pointed to by "data"
+     * @param stride For 1D Allocation, the stride must be the number of bytes
+     *               of this Allocation. For 2D and 3D Allocations, the stride
+     *               must be the stride in X dimension measuring in bytes.
+     */
+    @callflow(next={"*"})
+    allocation3DRead(Allocation allocation, uint32_t xoff, uint32_t yoff,
+                     uint32_t zoff, uint32_t lod, uint32_t w, uint32_t h,
+                     uint32_t d, Ptr data, Size sizeBytes, Size stride);
+
+    /**
+     * Propagates changes from one usage of the Allocation to the other usages
+     * of the Allocation.
+     *
+     * @param allocation First usage of the Allocation
+     * @param usageType Allocation usage type
+     */
+    @callflow(next={"*"})
+    allocationSyncAll(Allocation allocation, AllocationUsageType usageType);
+
+    /**
+     * TODO: describe the functionality of resize1D better
+     * TODO: original Java Doc description seems to contradict itself ("with
+     * null contents and the region is otherwise undefined")
+     * TODO: should "new elements" be "new cells"?
+     * TODO: what does "objects are created" mean?
+     * TODO: what does "new dimension" mean? IS the type of the resized
+     * allocation different than the type before resizing?
+     *
+     * Resizes a 1D allocation. The contents of the allocation are preserved.
+     * If new elements are allocated, objects are created with null contents
+     * and the new region is otherwise undefined.
+     *
+     * If the new region is smaller, the references of any object outside the
+     * new region must be released.
+     *
+     * A new type must be created with the new dimension.
+     *
+     * @param allocation Allocation to be resized
+     * @param dimX New size along the x dimension of the Allocation
+     */
+    @callflow(next={"*"})
+    allocationResize1D(Allocation allocation, uint32_t dimX);
+
+    /**
+     * TODO: There are allocationCopy2DRange and 3DRange, but no 1DRange. Should
+     * the interface be cleaned up more?
+     *
+     * Copies a rectangular region from an Allocation into a rectangular region
+     * in this Allocation.
+     *
+     * @param dstAlloc Allocation to be updated
+     * @param dstXoff X offset of the region to update
+     * @param dstYoff Y offset of the region to update
+     * @param dstMip Selected mipmap level of the Allocation to update
+     * @param dstFace Destination AllocationCubemapFace
+     * @param width Width of the region to update
+     * @param height Height of the region to update
+     * @param srcAlloc Source Allocation, to be read
+     * @param srcXoff X offset of the region in the source Allocation
+     * @param srcYoff Y offset of the region in the source Allocation
+     * @param srcMip Selected mipmap level of the source Allocation
+     * @param srcFace Source AllocationCubemapFace
+     */
+    @callflow(next={"*"})
+    allocationCopy2DRange(Allocation dstAlloc, uint32_t dstXoff,
+                          uint32_t dstYoff, uint32_t dstMip,
+                          AllocationCubemapFace dstFace, uint32_t width,
+                          uint32_t height, Allocation srcAlloc,
+                          uint32_t srcXoff, uint32_t srcYoff, uint32_t srcMip,
+                          AllocationCubemapFace srcFace);
+
+    /**
+     * Copies a rectangular cuboid region into the allocation from another
+     * Allocation.
+     *
+     * @param dstAlloc Allocation to be updated
+     * @param dstXoff X offset of the region to update
+     * @param dstYoff Y offset of the region to update
+     * @param dstZoff Z offset of the region to update
+     * @param dstMip Selected mipmap level of the Allocation to update
+     * @param width Width of the region to update
+     * @param height Height of the region to update
+     * @param depth Depth of the region to update
+     * @param srcAlloc Source Allocation, to be read
+     * @param srcXoff Source X offset of the region in the source Allocation
+     * @param srcYoff Source Y offset of the region in the source Allocation
+     * @param srcZoff Source Z offset of the region in the souce Allocation
+     * @param srcMip Selected mipmap level of the Allocation to read
+     */
+    @callflow(next={"*"})
+    allocationCopy3DRange(Allocation dstAlloc, uint32_t dstXoff,
+                          uint32_t dstYoff, uint32_t dstZoff, uint32_t dstMip,
+                          uint32_t width, uint32_t height, uint32_t depth,
+                          Allocation srcAlloc, uint32_t srcXoff,
+                          uint32_t srcYoff, uint32_t srcZoff, uint32_t srcMip);
+
+    /**
+     * TODO: define buffer and output stream
+     *
+     * Sends a buffer to the output stream. The contents of the Allocation may
+     * be undefined after this operation. This operation is only valid if
+     * USAGE_IO_OUTPUT is set on the Allocation.
+     *
+     * @param allocation Allocation to be sent
+     */
+    @callflow(next={"*"})
+    allocationIoSend(Allocation allocation);
+
+    /**
+     * Receives the latest input into the Allocation. This operation is only
+     * valid if USAGE_IO_INPUT is set on the Allocation, otherwise an error
+     * must be reported and no operations may be executed.
+     *
+     * @param allocation Allocation to be updated
+     */
+    @callflow(next={"*"})
+    allocationIoReceive(Allocation allocation);
+
+    /**
+     * TODO: describe default values for lod, face, and z better.
+     * TODO: what cases can invalidate the pointer? Resize? It should be
+     * clarified that this method should always return a valid pointer, but the
+     * returned pointer might become invalid later.
+     *
+     * Retrieves the pointer to the actual data an Allocation contains as well
+     * as the data's stride.
+     *
+     * If Allocation lacks the corresponding dimension for lod, face, or z, an
+     * error message must be sent to the message queue and nullptr must be
+     * returned for dataPtr and 0 for stride. All missing values must be 0 or
+     * NONE in the corresponding enum.
+     *
+     * @param allocation Allocation
+     * @param lod Mipmap level of detail
+     * @param face AllocationCubemapFace
+     * @param z Z position
+     * @return pointer Pointer to the server-side data; if this points to an
+     *                 invalid location in memory (because the buffer was
+     *                 freed), this may result in undefined behavior
+     * @return stride For 1D Allocation, the stride must be the number of bytes
+     *                of this Allocation. For 2D and 3D Allocations, the stride
+     *                must be the stride in X dimension measuring in bytes.
+     */
+    @callflow(next={"*"})
+    allocationGetPointer(Allocation allocation, uint32_t lod,
+                         AllocationCubemapFace face, uint32_t z)
+              generates (Ptr dataPtr, Size stride);
+
+    /**
+     * Retrieves an Element's metadata from native code.
+     *
+     * @param element Element to be read
+     * @return elemData Element data
+     */
+    @callflow(next={"*"})
+    elementGetNativeMetadata(Element element)
+                  generates (vec<uint32_t> elemData);
+
+    /**
+     * TODO: define Sub-Element handles better.
+     *
+     * Retrieves an Element's sub Elements, specifically their identifiers,
+     * names, and sizes.
+     *
+     * @param element Element to be read
+     * @param numSubElem Number of sub-Elements
+     * @return ids Sub-Element handles
+     * @return names Sub-Element Names
+     * @return arraySizes Sizes of sub-Element arrays
+     */
+    @callflow(next={"*"})
+    elementGetSubElements(Element element, Size numSubElem)
+               generates (vec<Element> ids, vec<string> names,
+                          vec<Size> arraySizes);
+
+    /**
+     * TODO: can normalization flag be removed?
+     *
+     * Creates an Element.
+     *
+     * @param dt Data type
+     * @param dk Data kind
+     * @param norm Flag for normalization
+     * @param size Vector length, with scalar = 1
+     * @return element Created Element
+     */
+    @callflow(next={"*"})
+    elementCreate(DataType dt, DataKind dk, bool norm, uint32_t size)
+       generates (Element element);
+
+    /**
+     * Creates a complex Element.
+     *
+     * @param einsPtr Container of input Elements
+     * @param namesPtr Container of input names
+     * @param arraySizesPtr Container of array sizes
+     * @return element Created Element
+     */
+    @callflow(next={"*"})
+    elementComplexCreate(vec<Element> einsPtr, vec<string> names,
+                         vec<Size> arraySizesPtr)
+              generates (Element element);
+
+    /**
+     * Retrives a Type's metadata from native code.
+     *
+     * @param type Type describing data layout
+     * @return metadata Type's native metadata
+     */
+    @callflow(next={"*"})
+    typeGetNativeMetadata(Type type) generates (vec<OpaqueHandle> metadata);
+
+    /**
+     * Creates a new Type.
+     *
+     * If Type is 1D, Y and Z must be 0. If Type is 2D, Z must be 0.
+     *
+     * @param element Element of the Type
+     * @param dimX X dimension
+     * @param dimY Y dimension
+     * @param dimZ Z dimension
+     * @param mipmaps Flag indicating whether Type has mipmaps
+     * @param faces Flag indicating whether Type has faces
+     * @param yuv Enumeration specifying which type of YUV format, if any, Type
+     *            uses
+     * @return type Created Type
+     */
+    @callflow(next={"*"})
+    typeCreate(Element element, uint32_t dimX, uint32_t dimY, uint32_t dimZ,
+               bool mipmaps, bool faces, YuvFormat yuv)
+    generates (Type type);
+
+    /**
+     * Destroys provided RenderScript context, including all objects created in
+     * this context.
+     */
+    @exit
+    contextDestroy();
+
+    /**
+     * TODO: provide overview of messaging model and figure out if this should
+     * be part of HAL or not.
+     * TODO: what is the "client" for purposes of this interface?
+     * TODO: consider using send/receive to be more similar to other calls
+     * TODO: define the purpose of size more
+     *
+     * Fills the provided buffer with message data. "size" should be at least
+     * as large as the message size. Returns the MessageType and size of the
+     * message are returned.
+     *
+     * @param data A pointer to a buffer to be filled with a message
+     * @param size Size in bytes of the buffer pointed to by "data"
+     * @return messageType Type of message sent to the client
+     * @return receiveLen Length of the message in bytes
+     */
+    @callflow(next={"*"})
+    contextGetMessage(Ptr data, Size size)
+           generates (MessageToClientType messageType, Size receiveLen);
+
+    /**
+     * TODO: define subID better.
+     *
+     * Gets the metadata of a message to ensure entire message can be properly
+     * received. Can be used to determine size of data to allocate when calling
+     * contextGetMessage.
+     *
+     * @return messageType Type of message sent to the client
+     * @return receiveLen Length of message
+     * @return subID Message sub identifier
+     */
+    @callflow(next={"*"})
+    contextPeekMessage()
+            generates (MessageToClientType messageType, Size receiveLen,
+                       uint32_t subID);
+
+    /**
+     * TODO: Define "previous commands" better
+     * TODO: Is the message identifier the same as subID?
+     *
+     * Places a message into the message queue to be sent back to the message
+     * handler once all previous commands have been executed. The message data
+     * is copied into the queue and can be discarded by the client after this
+     * call.
+     *
+     * @param id Message identifier
+     * @param data Message data
+     */
+    @callflow(next={"*"})
+    contextSendMessage(uint32_t id, vec<uint8_t> data);
+
+    /**
+     * TODO: Can this be done automatically as part of context creation? What
+     * happens if we perform message operations before doing this?
+     *
+     * Initializes the messaging thread, so that the front-end API can receive
+     * messages from the driver. This call also waits for the messaging FIFO to
+     * start up.
+     */
+    @callflow(next={"*"})
+    contextInitToClient();
+
+    /**
+     * TODO: Why doesn't this happen automatically as part of context
+     * destruction? What happens if the FIFO is not empty?
+     *
+     * Deinitializes a the messaging thread. Shuts down the FIFO.
+     */
+    @callflow(next={"*"})
+    contextDeinitToClient();
+
+    /**
+     * TODO: do we need to mark asynchronous operations in this interface
+     * definition?
+     *
+     * Waits for any pending asynchronous operations (such as copies to a RS
+     * allocation or RS script executions) to complete.
+     */
+    @callflow(next={"*"})
+    contextFinish();
+
+    /**
+     * Prints the currently available debugging information about the state of
+     * the RS context to the logcat.
+     */
+    @callflow(next={"*"})
+    contextLog();
+
+    /**
+     * TODO: full path? relative path? Investigate further.
+     *
+     * Sets the cache directory of the context.
+     *
+     * @param cacheDir Name of the application's cache directory
+     */
+    @callflow(next={"*"})
+    contextSetCacheDir(string cacheDir);
+
+    /**
+     * TODO: does this apply to the GPU as well?
+     *
+     * Changes the priority of the cpu worker threads for this context.
+     *
+     * @param priority Priority of the thread
+     */
+    @callflow(next={"*"})
+    contextSetPriority(ThreadPriorities priority);
+
+    /**
+     * TODO: does this need to be part of the HAL? What if the object already
+     * has a name?
+     *
+     * Assigns a name to a base object.
+     *
+     * @param obj Object to be named
+     * @param name Assigned name
+     */
+    @callflow(next={"*"})
+    assignName(ObjectBase obj, string name);
+
+    /**
+     * TODO: what if the object has no name?
+     *
+     * Returns the name of an object.
+     *
+     * @param obj Object to be read
+     * @return name Name of the object
+     */
+    @callflow(next={"*"})
+    getName(ObjectBase obj) generates (string name);
+
+    /**
+     * TODO: starting here we have a set of interfaces for use with
+     * ScriptGroups. At the very least we should indicate for each one that's
+     * what it's for. Should we include ScriptGroup in the interface names?
+     * TODO: sweep whole file and remove prefix "v" from all parameter names
+     * TODO: there are some places where we use Size for size, and others where
+     * we use int32_t. Is there a reason it's int32_t? In some cases, it
+     * requires a negative value.
+     *
+     * Creates a Closure which represents a function call to a ForEach Kernel
+     * combined with arguments and values for global variables.
+     *
+     * @param kernelID Kernel identifier
+     * @param returnValue Allocation used in output of Closure
+     * @param fieldIDS Collection of Script's Field identifiers
+     * @param values Collection of Script's data values
+     * @param sizes Collection of Script's data sizes
+     * @param depClosures Collection of Closures
+     * @param depFieldIDS Collection of Script's dependent Field identifiers
+     * @return closure Created Closure
+     */
+    @callflow(next={"*"})
+    closureCreate(ScriptKernelID kernelID, Allocation returnValue,
+                  vec<ScriptFieldID> fieldIDS, vec<int64_t> values,
+                  vec<int32_t> sizes, vec<Closure> depClosures,
+                  vec<ScriptFieldID> depFieldIDS)
+       generates (Closure closure);
+
+    /**
+     * Creates a Closure which represents a function call to a invocable
+     * function, combined with arguments and values for global variables.
+     *
+     * @param invokeID Invokable function identifier
+     * @param params Collection of Invoke script parameters
+     * @param fieldIDS Collection of Script Field identifiers
+     * @param values Collection of values
+     * @param sizes Collection of sizes
+     * @return closure Created Closure
+     */
+    @callflow(next={"*"})
+    invokeClosureCreate(ScriptInvokeID invokeID, vec<uint8_t> params,
+                        vec<ScriptFieldID> fieldIDS, vec<int64_t> values,
+                        vec<int32_t> sizes)
+             generates (Closure closure);
+
+    /**
+     * Sets the argument of a Closure at specified index and size to provided
+     * value.
+     *
+     * @param closure Closure to be modified
+     * @param index Index
+     * @param value Value
+     * @param size Size
+     */
+    @callflow(next={"*"})
+    closureSetArg(Closure closure, uint32_t index, Ptr value, int32_t size);
+
+    /**
+     * Sets a global variable in a Closure.
+     *
+     * @param closure Closure
+     * @param fieldID Global's Field identifier
+     * @param value Value
+     * @param size Size
+     */
+    @callflow(next={"*"})
+    closureSetGlobal(Closure closure, ScriptFieldID fieldID, int64_t value,
+                     int32_t size);
+
+    /**
+     * TODO: should slot be unsigned? (applies to other two ID interfaces, too)
+     *
+     * Creates a Script Kernel ID.
+     *
+     * @param script Script
+     * @param slot Slot
+     * @param sig Bitfield describing Kernel signature and operation
+     * @return scriptKernelID Script's Kernel identifier
+     */
+    @callflow(next={"*"})
+    scriptKernelIDCreate(Script script, int32_t slot,
+                         bitfield<MetadataSignatureBitval> sig)
+              generates (ScriptKernelID scriptKernelID);
+
+    /**
+     * Creates a Script Invoke ID.
+     *
+     * @param script Script
+     * @param slot Slot
+     * @return scriptInvokeID Invoke Script's identifier
+     */
+    @callflow(next={"*"})
+    scriptInvokeIDCreate(Script script, int32_t slot)
+              generates (ScriptInvokeID scriptInvokeID);
+
+    /**
+     * TODO: describe the return value better. What is it?
+     *
+     * Creates a Script Field ID.
+     *
+     * @param script Script
+     * @param slot Slot
+     * @return scriptFieldID Script's Field identifier
+     */
+    @callflow(next={"*"})
+    scriptFieldIDCreate(Script script, int32_t slot)
+             generates (ScriptFieldID scriptFieldID);
+
+    /**
+     * TODO: add more description
+     *
+     * Creates a Script Group.
+     *
+     * @param kernels Collection of Scripts' Kernel identifiers
+     * @param srcK Source Kernel identifiers
+     * @param dstK Destination Kernel identifiers
+     * @param dstF Destination Script Field identifiers
+     * @param types Collection of Types describing data layout
+     * @return scriptGroup Created Script Group
+     */
+    @callflow(next={"*"})
+    scriptGroupCreate(vec<ScriptKernelID> kernels, vec<ScriptKernelID> srcK,
+                      vec<ScriptKernelID> dstK, vec<ScriptFieldID> dstF,
+                      vec<Type> types)
+           generates (ScriptGroup scriptGroup);
+
+    /**
+     * Creates a Script Group.
+     *
+     * @param name Name
+     * @param cacheDir Cache directory
+     * @param closures Collection of Closures
+     * @return scriptGroup2 Created Script Group
+     */
+    @callflow(next={"*"})
+    scriptGroup2Create(string name, string cacheDir, vec<Closure> closures)
+            generates (ScriptGroup2 scriptGroup2);
+
+    /**
+     * TODO: if SetInput/Output corresponds to the Java API setInput() and
+     * setOutput(), which are documented as deprecated in API 23, do we need to
+     * support them? Or can we fallback to the CPU when they're used? Or can't
+     * we tell whether they're used early enough to do fallback?
+     *
+     * Sets an output of the ScriptGroup. This specifies an Allocation to be
+     * used for the kernels that require an output Allocation visible after the
+     * ScriptGroup is executed.
+     *
+     * @param sg Script Group
+     * @param kid Script's Kernel identifier to be changed
+     * @param alloc Allocation to be filled by output
+     */
+    @callflow(next={"*"})
+    scriptGroupSetOutput(ScriptGroup sg, ScriptKernelID kid, Allocation alloc);
+
+    /**
+     * Sets an input of the Script Group. This specifies an Allocation to be
+     * used for kernels that require an input Allocation provided from outside
+     * of the Script Group.
+     *
+     * @param sg Script Group
+     * @param kid Script's Kernel identifier to be changed
+     * @param alloc Allocation to be read as input
+     */
+    @callflow(next={"*"})
+    scriptGroupSetInput(ScriptGroup sg, ScriptKernelID kid, Allocation alloc);
+
+    /**
+     * Executes a Script Group.
+     *
+     * @param sg Script Group to be executed.
+     */
+    @callflow(next={"*"})
+    scriptGroupExecute( ScriptGroup sg);
+
+    /**
+     * Frees any native resources associated with this object. The primary use
+     * is to force immediate cleanup of resources when it is believed the GC
+     * may not respond quickly enough.
+     *
+     * @param handle Opaque handle to the server-side object to be destroyed
+     */
+    @callflow(next={"*"})
+    objDestroy(ObjectBase obj);
+
+    /**
+     * Creates a Sampler.
+     *
+     * @param magFilter Magnification value for the filter
+     * @param minFilter Minification value for the filter
+     * @param wrapS S wrapping mode for the sampler
+     * @param wrapT T wrapping mode for the sampler
+     * @param wrapR R wrapping mode for the sampler
+     * @param aniso Anisotropy setting for the sampler
+     * @return sampler Created Sampler
+     */
+    @callflow(next={"*"})
+    samplerCreate(SamplerValue magFilter, SamplerValue minFilter,
+                  SamplerValue wrapS, SamplerValue wrapT, SamplerValue wrapR,
+                  float aniso)
+       generates (Sampler sampler);
+
+    /**
+     * Binds an Allocation to a global pointer in the Script.
+     *
+     * @param script Script to be bound to
+     * @param allocation Allocation to be bound
+     * @param slot Slot of a global variable
+     */
+    @callflow(next={"*"})
+    scriptBindAllocation(Script script, Allocation allocation, uint32_t slot);
+
+    /**
+     * TODO: is this necessary?
+     *
+     * Sets the timezone of a Script.
+     *
+     * @param script Script to be altered
+     * @param timeZone Time Zone value as text
+     */
+    @callflow(next={"*"})
+    scriptSetTimeZone(Script script, string timeZone);
+
+    /**
+     * TODO: can scriptInvoke be combined with scriptInvokeV?
+     *
+     * Launches an invokable function.
+     *
+     * @param vs Script to be invoked
+     * @param slot Slot of invokable function
+     */
+    @callflow(next={"*"})
+    scriptInvoke(Script vs, uint32_t slot);
+
+    /**
+     * Invokes a Script with values.
+     *
+     * @param vs Script to be invoked
+     * @param slot Slot
+     * @param data Data buffer of packed arguments
+     */
+    @callflow(next={"*"})
+    scriptInvokeV(Script vs, uint32_t slot, vec<uint8_t> data);
+
+    /**
+     * TODO: add documentation for params
+     * TODO: Should we rename "ScriptCall" to "LaunchOptions"?
+     *
+     * Launches a ForEach kernel.
+     *
+     * @param vs Script
+     * @param slot Slot of ForEach Kernel
+     * @param vains Collection of input Allocations or null
+     * @param vaout Output Allocation or null
+     * @param params Collection of parameters
+     * @param sc Pointer to a ScriptCall, nullptr if unused
+     */
+    @callflow(next={"*"})
+    scriptForEach(Script vs, uint32_t slot, vec<Allocation> vains,
+                  Allocation vaout, vec<uint8_t> params, Ptr sc);
+
+    /**
+     * Launches a Reduction kernel.
+     *
+     * @param vs Script
+     * @param slot Slot of Reduction Kernel
+     * @param vains Collection of input Allocations
+     * @param vaout Output Allocation
+     * @param sc Pointer to a ScriptCall, nullptr if unused
+     */
+    @callflow(next={"*"})
+    scriptReduce(Script vs, uint32_t slot, vec<Allocation> vains,
+                 Allocation vaout, Ptr sc);
+
+    /**
+     * Sets a Script's integer variable to a value.
+     *
+     * @param vs RenderScript Script
+     * @param slot Slot number of variable to be updated
+     * @param value Value to be pushed to variable
+     */
+    @callflow(next={"*"})
+    scriptSetVarI(Script vs, uint32_t slot, int32_t value);
+
+    /**
+     * Sets a Script's Object variable to a value
+     *
+     * @param vs RenderScript Script
+     * @param slot Slot number of variable to be updated
+     * @param obj ObjectBase
+     */
+    @callflow(next={"*"})
+    scriptSetVarObj( Script vs,  uint32_t slot, ObjectBase obj);
+
+    /**
+     * Sets a Script's long variable to a value.
+     *
+     * @param vs RenderScript Script
+     * @param slot Slot number of variable to be updated
+     * @param value Value to be pushed to variable
+     */
+    @callflow(next={"*"})
+    scriptSetVarJ(Script vs, uint32_t slot, int64_t value);
+
+    /**
+     * Sets a Script's float variable to a value.
+     *
+     * @param vs RenderScript Script
+     * @param slot Slot number of variable to be updated
+     * @param value Value to be pushed to variable
+     */
+    @callflow(next={"*"})
+    scriptSetVarF(Script vs, uint32_t slot, float value);
+
+    /**
+     * Sets a Script's double variable to a value.
+     *
+     * @param vs RenderScript Script
+     * @param slot Slot number of variable to be updated
+     * @param value Value to be pushed to variable
+     */
+    @callflow(next={"*"})
+    scriptSetVarD(Script vs, uint32_t slot, double value);
+
+    /**
+     * Sets a Script's struct variable to a value.
+     *
+     * @param vs RenderScript Script
+     * @param slot Slot number of variable to be updated
+     * @param data Data to be pushed to variable
+     */
+    @callflow(next={"*"})
+    scriptSetVarV(Script vs, uint32_t slot, vec<uint8_t> data);
+
+    /**
+     * TODO: Why do we have typed setters but only untyped getter?
+     *
+     * Retrieves the value from a global variable in a script.
+     *
+     * @param vs RenderScript Script
+     * @param slot Slot number of variable to be read
+     * @param len Size of data to be filled
+     * @return data Data to be updated
+     */
+    @callflow(next={"*"})
+    scriptGetVarV(Script vs, uint32_t slot, Size len)
+       generates (vec<uint8_t> data);
+
+    /**
+     * TODO: Is this a value to be replicated for each member of the array? Or
+     * is there a representation for each separate member?
+     *
+     * Sets the value of a global array of structs, given the Element and
+     * dimension.
+     *
+     * @param vs RenderScript Script
+     * @param slot Slot number of variable to be updated
+     * @param data Data
+     * @param ve Element
+     * @param dims Collection of dimensions
+     */
+    @callflow(next={"*"})
+    scriptSetVarVE(Script vs, uint32_t slot, vec<uint8_t> data, Element ve,
+                   vec<uint32_t> dims);
+
+    /**
+     * TODO: is cacheDir redundant with createCache() function? Can we remove
+     * it?
+     * TODO: define resName more clearly
+     *
+     * Creates a RenderScript C99 kernel script.
+     *
+     * @param resName Resource name of the bitcode
+     * @param cacheDir Cache directory name
+     * @param text The kernel's bitcode as a uint8_t vector
+     * @return script Created Script
+     */
+    @callflow(next={"*"})
+    scriptCCreate(string resName, string cacheDir, vec<uint8_t> text)
+       generates (Script script);
+
+    /**
+     * Creates a RenderScript Intrinsic script.
+     *
+     * @param id Intrinsic Script identifier
+     * @param elem Element
+     * @return script Created Script
+     */
+    @callflow(next={"*"})
+    scriptIntrinsicCreate(ScriptIntrinsicID id, Element elem)
+               generates (Script script);
+
+};

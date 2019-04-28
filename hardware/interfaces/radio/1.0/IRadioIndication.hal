@@ -1,0 +1,464 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.radio@1.0;
+
+/**
+ * Interface declaring unsolicited radio indications.
+ */
+interface IRadioIndication {
+    /**
+     * Indicates when radio state changes.
+     *
+     * @param type Type of radio indication
+     * @param radioState Current radio state
+     */
+    oneway radioStateChanged(RadioIndicationType type, RadioState radioState);
+
+    /**
+     * Indicates when call state has changed.
+     * Callee must invoke IRadio.getCurrentCalls()
+     * Must be invoked on, for example,
+     * "RING", "BUSY", "NO CARRIER", and also call state
+     * transitions (DIALING->ALERTING ALERTING->ACTIVE)
+     *
+     * Redundent or extraneous invocations are tolerated
+     *
+     * @param type Type of radio indication
+     */
+    oneway callStateChanged(RadioIndicationType type);
+
+    /**
+     * Indicates when voice or data network state changed
+     * Callee must invoke IRadio.getVoiceRegistrationState(), IRadio.getDataRegistrationState(),
+     * and IRadio.getOperator()
+     *
+     * @param type Type of radio indication
+     */
+    oneway networkStateChanged(RadioIndicationType type);
+
+    /**
+     * Indicates when new SMS is received.
+     * Callee must subsequently confirm the receipt of the SMS with a
+     * acknowledgeLastIncomingGsmSms()
+     *
+     * Server must not send newSms() nor newSmsStatusReport() messages until a
+     * acknowledgeLastIncomingGsmSms() has been received
+     *
+     * @param type Type of radio indication
+     * @param pdu PDU of SMS-DELIVER represented as byte array.
+     *        The PDU starts with the SMSC address per TS 27.005 (+CMT:)
+     */
+    oneway newSms(RadioIndicationType type, vec<uint8_t> pdu);
+
+    /**
+     * Indicates when new SMS Status Report is received.
+     * Callee must subsequently confirm the receipt of the SMS with a
+     * acknowledgeLastIncomingGsmSms()
+     *
+     * Server must not send newSms() nor newSmsStatusReport() messages until a
+     * acknowledgeLastIncomingGsmSms() has been received
+     *
+     * @param type Type of radio indication
+     * @param pdu PDU of SMS-STATUS-REPORT represented as byte array.
+     *        The PDU starts with the SMSC address per TS 27.005 (+CMT:)
+     */
+    oneway newSmsStatusReport(RadioIndicationType type, vec<uint8_t> pdu);
+
+    /**
+     * Indicates when new SMS has been stored on SIM card
+     *
+     * @param type Type of radio indication
+     * @param recordNumber Record number on the sim
+     */
+    oneway newSmsOnSim(RadioIndicationType type, int32_t recordNumber);
+
+    /**
+     * Indicates when a new USSD message is received.
+     * The USSD session is assumed to persist if the type code is REQUEST, otherwise
+     * the current session (if any) is assumed to have terminated.
+     *
+     * @param type Type of radio indication
+     * @param modeType USSD type code
+     * @param msg Message string in UTF-8, if applicable
+     */
+    oneway onUssd(RadioIndicationType type, UssdModeType modeType, string msg);
+
+    /**
+     * Indicates when radio has received a NITZ time message.
+     *
+     * @param type Type of radio indication
+     * @param nitzTime NITZ time string in the form "yy/mm/dd,hh:mm:ss(+/-)tz,dt"
+     * @param receivedTime milliseconds since boot that the NITZ time was received
+     */
+    oneway nitzTimeReceived(RadioIndicationType type, string nitzTime, uint64_t receivedTime);
+
+    /**
+     * Indicates current signal strength of the radio.
+     *
+     * @param type Type of radio indication
+     * @param signalStrength SignalStrength information as defined in types.hal
+     */
+    oneway currentSignalStrength(RadioIndicationType type, SignalStrength signalStrength);
+
+    /**
+     * Indicates data call contexts have changed.
+     *
+     * @param type Type of radio indication
+     * @param dcList array of SetupDataCallResult identical to that
+     *        returned by IRadio.getDataCallList(). It is the complete list
+     *        of current data contexts including new contexts that have been
+     *        activated. A data call is only removed from this list when the
+     *        framework sends a IRadio.deactivateDataCall() or the radio
+     *        is powered off/on
+     */
+    oneway dataCallListChanged(RadioIndicationType type, vec<SetupDataCallResult> dcList);
+
+    /**
+     * Reports supplementary service related notification from the network.
+     *
+     * @param type Type of radio indication
+     * @param suppSvc SuppSvcNotification as defined in types.hal
+     */
+    oneway suppSvcNotify(RadioIndicationType type, SuppSvcNotification suppSvc);
+
+    /**
+     * Indicates when STK session is terminated by SIM.
+     *
+     * @param type Type of radio indication
+     */
+    oneway stkSessionEnd(RadioIndicationType type);
+
+    /**
+     * Indicates when SIM issue a STK proactive command to applications
+     *
+     * @param type Type of radio indication
+     * @param cmd SAT/USAT proactive represented as byte array starting with command tag.
+     *        Refer ETSI TS 102.223 section 9.4 for command types
+     */
+    oneway stkProactiveCommand(RadioIndicationType type, string cmd);
+
+    /**
+     * Indicates when SIM notifies applcations some event happens.
+     *
+     * @param type Type of radio indication
+     * @param cmd SAT/USAT commands or responses
+     *        sent by ME to SIM or commands handled by ME, represented as byte array
+     *        starting with first byte of response data for command tag. Refer
+     *        ETSI TS 102.223 section 9.4 for command types
+     */
+    oneway stkEventNotify(RadioIndicationType type, string cmd);
+
+    /**
+     * Indicates when SIM wants application to setup a voice call.
+     *
+     * @param type Type of radio indication
+     * @param timeout Timeout value in millisec for setting up voice call
+     */
+    oneway stkCallSetup(RadioIndicationType type, int64_t timeout);
+
+    /**
+     * Indicates that SMS storage on the SIM is full. Sent when the network
+     * attempts to deliver a new SMS message. Messages cannot be saved on the
+     * SIM until space is freed. In particular, incoming Class 2 messages must not
+     * be stored
+     *
+     * @param type Type of radio indication
+     */
+    oneway simSmsStorageFull(RadioIndicationType type);
+
+    /**
+     * Indicates that file(s) on the SIM have been updated, or the SIM
+     * has been reinitialized.
+     * Note: If the SIM state changes as a result of the SIM refresh (eg,
+     * SIM_READY -> SIM_LOCKED_OR_ABSENT), simStatusChanged()
+     * must be sent.
+     *
+     * @param type Type of radio indication
+     * @param refreshResult Result of sim refresh
+     */
+    oneway simRefresh(RadioIndicationType type, SimRefreshResult refreshResult);
+
+    /**
+     * Ring indication for an incoming call (eg, RING or CRING event).
+     * There must be at least one callRing() at the beginning
+     * of a call and sending multiple is optional. If the system property
+     * ro.telephony.call_ring.multiple is false then the upper layers
+     * must generate the multiple events internally. Otherwise the vendor
+     * code must generate multiple callRing() if
+     * ro.telephony.call_ring.multiple is true or if it is absent.
+     *
+     * The rate of these events is controlled by ro.telephony.call_ring.delay
+     * and has a default value of 3000 (3 seconds) if absent.
+     *
+     * @param type Type of radio indication
+     * @param isGsm true for GSM & false for CDMA
+     * @param record Cdma Signal Information
+     */
+    oneway callRing(RadioIndicationType type, bool isGsm, CdmaSignalInfoRecord record);
+
+    /**
+     * Indicates that SIM state changes.
+     * Callee must invoke getIccCardStatus()
+     *
+     * @param type Type of radio indication
+     */
+    oneway simStatusChanged(RadioIndicationType type);
+
+    /**
+     * Indicates when new CDMA SMS is received
+     * Callee must subsequently confirm the receipt of the SMS with
+     * acknowledgeLastIncomingCdmaSms()
+     * Server must not send cdmaNewSms() messages until
+     * acknowledgeLastIncomingCdmaSms() has been received
+     *
+     * @param type Type of radio indication
+     * @param msg Cdma Sms Message
+     */
+    oneway cdmaNewSms(RadioIndicationType type, CdmaSmsMessage msg);
+
+    /**
+     * Indicates when new Broadcast SMS is received
+     *
+     * @param type Type of radio indication
+     * @param data If received from GSM network, "data" is byte array of 88 bytes
+     *        which indicates each page of a CBS Message sent to the MS by the
+     *        BTS as coded in 3GPP 23.041 Section 9.4.1.2.
+     *        If received from UMTS network, "data" is byte array of 90 up to 1252
+     *        bytes which contain between 1 and 15 CBS Message pages sent as one
+     *        packet to the MS by the BTS as coded in 3GPP 23.041 Section 9.4.2.2
+     */
+    oneway newBroadcastSms(RadioIndicationType type, vec<uint8_t> data);
+
+    /**
+     * Indicates that SMS storage on the RUIM is full. Messages
+     * cannot be saved on the RUIM until space is freed.
+     *
+     * @param type Type of radio indication
+     */
+    oneway cdmaRuimSmsStorageFull(RadioIndicationType type);
+
+    /**
+     * Indicates a restricted state change (eg, for Domain Specific Access Control).
+     * Radio must send this msg after radio off/on cycle no matter it is changed or not.
+     *
+     * @param type Type of radio indication
+     * @param state Bitmask of restricted state as defined by PhoneRestrictedState
+     */
+    oneway restrictedStateChanged(RadioIndicationType type, PhoneRestrictedState state);
+
+    /**
+     * Indicates that the radio system selection module has
+     * autonomously entered emergency callback mode.
+     *
+     * @param type Type of radio indication
+     */
+    oneway enterEmergencyCallbackMode(RadioIndicationType type);
+
+    /**
+     * Indicates when CDMA radio receives a call waiting indication.
+     *
+     * @param type Type of radio indication
+     * @param callWaitingRecord Cdma CallWaiting information
+     */
+    oneway cdmaCallWaiting(RadioIndicationType type, CdmaCallWaiting callWaitingRecord);
+
+    /**
+     * Indicates when CDMA radio receives an update of the progress of an OTASP/OTAPA call.
+     *
+     * @param type Type of radio indication
+     * @param status Cdma OTA provision status
+     */
+    oneway cdmaOtaProvisionStatus(RadioIndicationType type, CdmaOtaProvisionStatus status);
+
+   /**
+    * Indicates when CDMA radio receives one or more info recs.
+    *
+    * @param type Type of radio indication
+    * @param records New Cdma Information
+    */
+   oneway cdmaInfoRec(RadioIndicationType type, CdmaInformationRecords records);
+
+   /**
+    * Indicates that nework doesn't have in-band information, need to
+    * play out-band tone.
+    *
+    * @param type Type of radio indication
+    * @param start true = start play ringback tone, false = stop playing ringback tone
+    */
+   oneway indicateRingbackTone(RadioIndicationType type, bool start);
+
+   /**
+    * Indicates that framework/application must reset the uplink mute state.
+    *
+    * @param type Type of radio indication
+    */
+   oneway resendIncallMute(RadioIndicationType type);
+
+   /**
+    * Indicates when CDMA subscription source changed.
+    *
+    * @param type Type of radio indication
+    * @param cdmaSource New Cdma SubscriptionSource
+    */
+   oneway cdmaSubscriptionSourceChanged(RadioIndicationType type,
+           CdmaSubscriptionSource cdmaSource);
+
+   /**
+    * Indicates when PRL (preferred roaming list) changes.
+    *
+    * @param type Type of radio indication
+    * @param version PRL version after PRL changes
+    */
+   oneway cdmaPrlChanged(RadioIndicationType type, int32_t version);
+
+   /**
+    * Indicates when Emergency Callback Mode Ends.
+    * Indicates that the radio system selection module has
+    * proactively exited emergency callback mode.
+    *
+    * @param type Type of radio indication
+    */
+   oneway exitEmergencyCallbackMode(RadioIndicationType type);
+
+   /**
+    * Indicates the ril connects and returns the version
+    *
+    * @param type Type of radio indication
+    */
+   oneway rilConnected(RadioIndicationType type);
+
+   /**
+    * Indicates that voice technology has changed. Responds with new rat.
+    *
+    * @param type Type of radio indication
+    * @param rat Current new voice rat
+    */
+   oneway voiceRadioTechChanged(RadioIndicationType type, RadioTechnology rat);
+
+   /**
+    * Same information as returned by getCellInfoList().
+    *
+    * @param type Type of radio indication
+    * @param records Current cell information known to radio
+    */
+   oneway cellInfoList(RadioIndicationType type, vec<CellInfo> records);
+
+   /**
+    * Indicates when IMS registration state has changed.
+    * To get IMS registration state and IMS SMS format, callee needs to invoke
+    * getImsRegistrationState()
+    *
+    * @param type Type of radio indication
+    */
+   oneway imsNetworkStateChanged(RadioIndicationType type);
+
+   /**
+    * Indicated when there is a change in subscription status.
+    * This event must be sent in the following scenarios
+    *  - subscription readiness at modem, which was selected by telephony layer
+    *  - when subscription is deactivated by modem due to UICC card removal
+    *  - when network invalidates the subscription i.e. attach reject due to authentication reject
+    *
+    * @param type Type of radio indication
+    * @param activate false for subscription deactivated, true for subscription activated
+    */
+   oneway subscriptionStatusChanged(RadioIndicationType type, bool activate);
+
+   /**
+    * Indicates when Single Radio Voice Call Continuity (SRVCC)
+    * progress state has changed
+    *
+    * @param type Type of radio indication
+    * @param state New Srvcc State
+    */
+   oneway srvccStateNotify(RadioIndicationType type, SrvccState state);
+
+   /**
+    * Indicates when the hardware configuration associated with the RILd changes.
+    *
+    * @param type Type of radio indication
+    * @param configs Array of hardware configs
+    */
+   oneway hardwareConfigChanged(RadioIndicationType type, vec<HardwareConfig> configs);
+
+   /**
+    * Sent when setRadioCapability() completes.
+    * Returns the phone radio capability exactly as
+    * getRadioCapability() and must be the
+    * same set as sent by setRadioCapability().
+    *
+    * @param type Type of radio indication
+    * @param rc Current radio capability
+    */
+   oneway radioCapabilityIndication(RadioIndicationType type, RadioCapability rc);
+
+   /**
+    * Indicates when Supplementary service(SS) response is received when DIAL/USSD/SS is changed to
+    * SS by call control.
+    *
+    * @param type Type of radio indication
+    */
+   oneway onSupplementaryServiceIndication(RadioIndicationType type, StkCcUnsolSsResult ss);
+
+   /**
+    * Indicates when there is an ALPHA from UICC during Call Control.
+    *
+    * @param type Type of radio indication
+    * @param alpha ALPHA string from UICC in UTF-8 format
+    */
+   oneway stkCallControlAlphaNotify(RadioIndicationType type, string alpha);
+
+   /**
+    * Indicates when there is an incoming Link Capacity Estimate (LCE) info report.
+    *
+    * @param type Type of radio indication
+    * @param lce LceData information
+    */
+   oneway lceData(RadioIndicationType type, LceDataInfo lce);
+
+   /**
+    * Indicates when there is new Carrier PCO data received for a data call. Ideally
+    * only new data must be forwarded, though this is not required. Multiple
+    * boxes of carrier PCO data for a given call must result in a series of
+    * pcoData() calls.
+    *
+    * @param type Type of radio indication
+    * @param pco New PcoData
+    */
+   oneway pcoData(RadioIndicationType type, PcoDataInfo pco);
+
+   /**
+    * Indicates when there is a modem reset.
+    *
+    * When modem restarts, one of the following radio state transitions must happen
+    * 1) RadioState:ON->RadioState:UNAVAILABLE->RadioState:ON or
+    * 2) RadioState:OFF->RadioState:UNAVAILABLE->RadioState:OFF
+    * This message must be sent either just before the Radio State changes to RadioState:UNAVAILABLE
+    * or just after but must never be sent after the Radio State changes from RadioState:UNAVAILABLE
+    * to RadioState:ON/RadioState:OFF again.
+    * It must NOT be sent after the Radio state changes to RadioState:ON/RadioState:OFF after the
+    * modem restart as that may be interpreted as a second modem reset by the
+    * framework.
+    *
+    * @param type Type of radio indication
+    * @param reason the reason for the reset. It
+    *        may be a crash signature if the restart was due to a crash or some
+    *        string such as "user-initiated restart" or "AT command initiated
+    *        restart" that explains the cause of the modem restart
+    */
+   oneway modemReset(RadioIndicationType type, string reason);
+};

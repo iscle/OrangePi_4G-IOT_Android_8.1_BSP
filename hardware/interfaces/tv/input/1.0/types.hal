@@ -1,0 +1,141 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.tv.input@1.0;
+
+import android.hardware.audio.common@2.0;
+
+enum Result : int32_t {
+    OK,
+    UNKNOWN,
+    NO_RESOURCE,
+    INVALID_ARGUMENTS,
+    INVALID_STATE,
+};
+
+/** Type of physical TV input. */
+@export(name="", value_prefix="TV_INPUT_TYPE_")
+enum TvInputType : int32_t {
+    OTHER = 1,         // Generic hardware.
+    TUNER = 2,         // Tuner. e.g. built-in terrestrial tuner
+    COMPOSITE = 3,
+    SVIDEO = 4,
+    SCART = 5,
+    COMPONENT = 6,
+    VGA = 7,
+    DVI = 8,
+    HDMI = 9,          // Physical HDMI port. e.g. HDMI 1
+    DISPLAY_PORT = 10,
+};
+
+/**
+ * Status of cable connection.
+ * This status is for devices having availability to detect the cable in a mechanical way,
+ * regardless of whether the connected external device is electrically on or not.
+ * If the device does not have such capability, you must use UNKNOWN.
+ */
+@export(name="", value_prefix="CABLE_CONNECTION_STATUS_")
+enum CableConnectionStatus : int32_t {
+    UNKNOWN = 0,
+    CONNECTED = 1,
+    DISCONNECTED = 2,
+};
+
+struct TvInputDeviceInfo {
+    int32_t deviceId;
+    TvInputType type;
+    uint32_t portId;                             // HDMI port ID number. e.g. 2 for HDMI 2
+    CableConnectionStatus cableConnectionStatus; // Cable connection status.
+    AudioDevice audioType;                       // Audio device type. e.g AudioDevice::IN_HDMI
+    uint8_t[32] audioAddress;                    // Audio device address. "" if N/A. If the text
+                                                 // length is less than 32, the remaining part
+                                                 // must be filled with 0s.
+};
+
+@export(name="", value_prefix="EVENT_")
+enum TvInputEventType : int32_t {
+    /**
+     * Hardware notifies the framework that a device is available.
+     *
+     * Note that DEVICE_AVAILABLE and DEVICE_UNAVAILABLE events do not represent
+     * hotplug events (i.e. plugging cable into or out of the physical port).
+     * These events notify the framework whether the port is available or not.
+     * For a concrete example, when a user plugs in or pulls out the HDMI cable
+     * from a HDMI port, it does not generate DEVICE_AVAILABLE and/or
+     * DEVICE_UNAVAILABLE events. However, if a user inserts a pluggable USB
+     * tuner into the Android device, it must generate a DEVICE_AVAILABLE event
+     * and when the port is removed, it must generate a DEVICE_UNAVAILABLE
+     * event.
+     *
+     * For hotplug events, please see STREAM_CONFIGURATION_CHANGED for more
+     * details.
+     *
+     * HAL implementation must register devices by using this event when the
+     * device boots up. The framework must recognize device reported via this
+     * event only.
+     */
+    DEVICE_AVAILABLE = 1,
+
+    /**
+     * Hardware notifies the framework that a device is unavailable.
+     *
+     * HAL implementation must generate this event when a device registered
+     * by DEVICE_AVAILABLE is no longer available. For example,
+     * the event can indicate that a USB tuner is plugged out from the Android
+     * device.
+     *
+     * Note that this event is not for indicating cable plugged out of the port;
+     * for that purpose, the implementation must use
+     * STREAM_CONFIGURATION_CHANGED event. This event represents the port itself
+     * being no longer available.
+     */
+    DEVICE_UNAVAILABLE = 2,
+
+    /**
+     * Stream configurations are changed. Client must regard all open streams
+     * at the specific device are closed, and must call
+     * getStreamConfigurations() again, opening some of them if necessary.
+     *
+     * HAL implementation must generate this event when the available stream
+     * configurations change for any reason. A typical use case of this event
+     * is to notify the framework that the input signal has changed resolution,
+     * or that the cable is plugged out so that the number of available streams
+     * is 0.
+     *
+     * The implementation must use this event to indicate hotplug status of the
+     * port. the framework regards input devices with no available streams as
+     * disconnected, so the implementation can generate this event with no
+     * available streams to indicate that this device is disconnected, and vice
+     * versa.
+     */
+    STREAM_CONFIGURATIONS_CHANGED = 3,
+};
+
+struct TvInputEvent {
+    TvInputEventType type;
+    /**
+     * DEVICE_AVAILABLE: all fields are relevant.
+     * DEVICE_UNAVAILABLE: only deviceId is relevant.
+     * STREAM_CONFIGURATIONS_CHANGED: only deviceId is relevant.
+     */
+    TvInputDeviceInfo deviceInfo;
+};
+
+struct TvStreamConfig {
+    int32_t streamId;
+    uint32_t maxVideoWidth;  // Max width of the stream.
+    uint32_t maxVideoHeight; // Max height of the stream.
+};

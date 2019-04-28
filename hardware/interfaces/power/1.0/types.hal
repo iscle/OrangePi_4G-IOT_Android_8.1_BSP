@@ -1,0 +1,160 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package android.hardware.power@1.0;
+
+/** Power hint identifiers passed to powerHint() */
+enum PowerHint : uint32_t {
+   /**
+    * Foreground app has started or stopped requesting a VSYNC pulse
+    * from SurfaceFlinger. If the app has started requesting VSYNC
+    * then CPU and GPU load is expected soon, and it may be appropriate
+    * to raise speeds of CPU, memory bus, etc. The data parameter is
+    * non-zero to indicate VSYNC pulse is now requested, or zero for
+    * VSYNC pulse no longer requested.
+    */
+    VSYNC = 0x00000001,
+
+
+   /**
+    * User is interacting with the device, for example, touchscreen
+    * events are incoming. CPU and GPU load may be expected soon,
+    * and it may be appropriate to raise speeds of CPU, memory bus,
+    * etc. The data parameter is the estimated length of the interaction
+    * in milliseconds, or 0 if unknown.
+    */
+    INTERACTION = 0x00000002,
+
+
+    /**
+     * DO NOT USE VIDEO_ENCODE/_DECODE!  They will be removed in
+     * KLP.
+     */
+    VIDEO_ENCODE = 0x00000003,
+    VIDEO_DECODE = 0x00000004,
+
+   /**
+    * Low power mode is activated or deactivated. Low power mode
+    * is intended to save battery at the cost of performance. The data
+    * parameter is non-zero when low power mode is activated, and zero
+    * when deactivated.
+    */
+    LOW_POWER = 0x00000005,
+
+   /**
+    * Sustained Performance mode is actived or deactivated. Sustained
+    * performance mode is intended to provide a consistent level of
+    * performance for a prolonged amount of time. The data parameter is
+    * non-zero when sustained performance mode is activated, and zero
+    * when deactivated.
+    */
+    SUSTAINED_PERFORMANCE = 0x00000006,
+
+   /**
+    * VR Mode is activated or deactivated. VR mode is intended to
+    * provide minimum guarantee for performance for the amount of time the
+    * device can sustain it. The data parameter is non-zero when the mode
+    * is activated and zero when deactivated.
+    */
+    VR_MODE = 0x00000007,
+
+   /**
+    * This hint indicates that an application has been launched. Can be used
+    * for device specific optimizations during application launch. The data
+    * parameter is non-zero when the application starts to launch and zero when
+    * it has been launched.
+    */
+    LAUNCH = 0x00000008,
+};
+
+enum Feature : uint32_t {
+    /**
+     * Enabling/Disabling this feature will allow/disallow the system
+     * to wake up by tapping the screen twice.
+     */
+    POWER_FEATURE_DOUBLE_TAP_TO_WAKE = 0x00000001
+};
+
+enum Status : uint32_t {
+    SUCCESS = 0,
+    FILESYSTEM_ERROR = 1
+};
+/**
+ * Platform-level sleep state stats:
+ * PowerStateVoter struct is useful for describing the individual voters
+ * when a Platform-level sleep state is chosen by aggregation of votes from
+ * multiple clients/system conditions.
+ *
+ * This helps in attirbuting what in the device is blocking the device from
+ * entering the lowest Platform-level sleep state.
+ */
+struct PowerStateVoter {
+    /**
+     * Name of the voter.
+     */
+     string name;
+
+    /**
+     * Total time in msec the voter voted for the platform sleep state since
+     * boot.
+     */
+     uint64_t totalTimeInMsecVotedForSinceBoot;
+
+    /**
+     * Number of times the voter voted for the platform sleep state since boot.
+     */
+     uint64_t totalNumberOfTimesVotedSinceBoot;
+};
+
+/**
+ * Platform-level sleep state stats:
+ * PowerStatePlatformSleepState represents the Platform-level sleep state
+ * the device is capable of getting into.
+ *
+ * SoCs usually have more than one Platform-level sleep state.
+ */
+struct PowerStatePlatformSleepState {
+    /**
+     * Platform-level Sleep state name.
+     */
+    string name;
+
+    /**
+     * Time spent in msec at this platform-level sleep state since boot.
+     */
+    uint64_t residencyInMsecSinceBoot;
+
+    /**
+     * Total number of times system entered this state.
+     */
+    uint64_t totalTransitions;
+
+    /**
+     * This platform-level sleep state can only be reached during system suspend
+     */
+    bool supportedOnlyInSuspend;
+
+    /**
+     * voters is useful if the Platform-level sleep state
+     * is chosen by aggregation votes from multiple clients/system conditions.
+     * All the voters have to say yes or all the system conditions need to be
+     * met to enter a platform-level sleep state.
+     *
+     * Vector of size zero implies either the info is not available
+     * or the system does not follow a voting mechanism to choose this
+     * Platform-level sleep state.
+     */
+    vec<PowerStateVoter> voters;
+};

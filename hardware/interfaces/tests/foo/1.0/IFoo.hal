@@ -1,0 +1,163 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.tests.foo@1.0;
+
+import IFooCallback;
+import IMyTypes.SomeStruct;
+import ISimple;
+import ITheirTypes.FloatArray;
+
+interface IFoo {
+
+    enum SomeBaseEnum : uint8_t {
+        bar = 66
+    };
+
+    enum SomeEnum : SomeBaseEnum {
+        quux = 33,
+        goober = 192,
+        blah = goober
+    };
+
+    enum BitField : uint8_t {
+        V0 = 1 << 0,
+        V1 = 1 << 1,
+        V2 = 1 << 2,
+        V3 = 1 << 3,
+        VALL = V0 | V1 | V2 | V3,
+    };
+
+    struct Fumble {
+        Outer.Inner data;
+    };
+
+    typedef Fumble Gumble;
+
+    struct Goober {
+        int32_t q;
+        string name;
+        string address;
+        double[10] numbers;
+        Fumble fumble;
+        Gumble gumble;
+        // vec<double> lotsOfFumbles;
+        // handle loveHandle;
+    };
+
+    typedef float[3] ThreeFloats;
+    typedef float[5] FiveFloats;
+
+    struct Quux {
+        string first;
+        string last;
+    };
+
+    typedef Quux[3] ThreeQuuxes;
+
+    struct MultiDimensional {
+        ThreeQuuxes[5] quuxMatrix;
+    };
+
+    typedef string[3] ThreeStrings;
+    typedef string[5] FiveStrings;
+
+    struct StringMatrix3x5 {
+        FiveStrings[3] s;
+    };
+
+    struct StringMatrix5x3 {
+        ThreeStrings[5] s;
+    };
+
+    struct MyStruct {
+        SomeStruct innerStruct;
+        FloatArray myFloatArray;
+    };
+
+    struct MyHandle {
+        handle h;
+        int32_t guard;
+    };
+
+    struct MyMask {
+        bitfield<BitField> value;
+    };
+
+    typedef bitfield<BitField> Mask;
+
+    struct Everything {
+        union U {
+            int8_t number;
+            int8_t[1][2] multidimArray;
+            pointer p;
+            Fumble anotherStruct;
+            bitfield<BitField> bf;
+        } u;
+
+        int8_t number;
+        handle h;
+        fmq_sync<uint8_t> descSync;
+        fmq_unsync<uint8_t> descUnsync;
+        memory mem;
+        pointer p;
+        string s;
+        vec<string> vs;
+        string[2][2] multidimArray;
+        string[3] sArray;
+        Quux anotherStruct;
+        bitfield<BitField> bf;
+    };
+
+    doThis(float param);
+    doThatAndReturnSomething(int64_t param) generates (int32_t result);
+    doQuiteABit(int32_t a, int64_t b, float c, double d) generates (double something);
+    doSomethingElse(int32_t[15] param) generates (int32_t[32] something);
+    doStuffAndReturnAString() generates (string something);
+    mapThisVector(vec<int32_t> param) generates (vec<int32_t> something);
+    oneway callMe(IFooCallback cb);
+    useAnEnum(SomeEnum zzz) generates (SomeEnum sleepy);
+
+    haveAGooberVec(vec<Goober> param);
+    haveAGoober(Goober g);
+    haveAGooberArray(Goober[20] lots);
+
+    haveATypeFromAnotherFile(Abc def);
+
+    haveSomeStrings(string[3] array) generates (string[2] result);
+    haveAStringVec(vec<string> vector) generates (vec<string> result);
+
+    transposeMe(FiveFloats[3] in) generates (ThreeFloats[5] out);
+    callingDrWho(MultiDimensional in) generates (MultiDimensional out);
+
+    transpose(StringMatrix5x3 in) generates (StringMatrix3x5 out);
+    transpose2(ThreeStrings[5] in) generates (FiveStrings[3] out);
+
+    sendVec(vec<uint8_t> data) generates (vec<uint8_t> data);
+
+    sendVecVec() generates (vec<vec<uint8_t>> vecvec);
+
+    haveAVectorOfInterfaces(vec<ISimple> in) generates (vec<ISimple> out);
+
+    haveAVectorOfGenericInterfaces(vec<interface> in)
+        generates (vec<interface> out);
+
+    echoNullInterface(IFooCallback cb) generates (bool receivedNull, IFooCallback cb);
+
+    createMyHandle() generates (MyHandle h);
+    createHandles(uint32_t size) generates (vec<handle> handles);
+    closeHandles();
+};

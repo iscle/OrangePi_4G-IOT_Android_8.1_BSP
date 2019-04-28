@@ -1,0 +1,78 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.gnss@1.0;
+
+import IAGnssCallback;
+
+/**
+ * Extended interface for AGNSS support.
+ */
+interface IAGnss {
+    @export(name="", value_prefix="APN_IP_")
+    enum ApnIpType : uint8_t {
+        INVALID  = 0,
+        IPV4     = 1,
+        IPV6     = 2,
+        IPV4V6   = 3
+    };
+
+    /**
+     * Opens the AGNSS interface and provides the callback routines to the
+     * implementation of this interface.
+     *
+     * @param callback Handle to the AGNSS status callback interface.
+     */
+    setCallback(IAGnssCallback callback);
+
+    /**
+     * Notifies that the AGNSS data connection has been closed.
+     *
+     * @return success True if the operation is successful.
+     */
+    dataConnClosed() generates (bool success);
+
+    /**
+     * Notifies that a data connection is not available for AGNSS.
+     *
+     * @return success True if the operation is successful.
+     */
+    dataConnFailed() generates (bool success);
+
+    /**
+     * Sets the hostname and port for the AGNSS server.
+     *
+     * @param type Specifies if SUPL or C2K.
+     * @param hostname Hostname of the AGNSS server.
+     * @param port Port number associated with the server.
+     *
+     * @return success True if the operation is successful.
+     */
+    setServer(AGnssType type, string hostname, int32_t port)
+        generates (bool success);
+
+    /**
+     * Notifies that a data connection is available and sets the name of the
+     * APN, and its IP type, to be used for SUPL connections.
+     *
+     * @param apn Access Point Name(follows regular APN naming convention).
+     * @param apnIpType Specifies if SUPL or C2K.
+     *
+     * @return success True if the operation is successful.
+     */
+    dataConnOpen(string apn, ApnIpType apnIpType)
+        generates (bool success);
+};

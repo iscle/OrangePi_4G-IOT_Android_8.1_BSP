@@ -1,0 +1,172 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.contexthub@1.0;
+
+import IContexthubCallback;
+
+/**
+ * The Context Hub HAL provides an interface to a separate low-power processing
+ * domain that has direct access to contextual information, such as sensors.
+ * Native applications that run within a context hub are known as nanoapps, and
+ * they execute within the Context Hub Runtime Environment (CHRE), which is
+ * standardized via the CHRE API, defined elsewhere.
+ */
+interface IContexthub {
+    /**
+     * Enumerate all available context hubs on the system.
+     *
+     * @return hubs list of hubs on this system.
+     */
+    getHubs() generates (vec<ContextHub> hubs);
+
+    /**
+     * Register a callback for the HAL implementation to send asynchronous
+     * messages to the service from a context hub. There can be a maximum of
+     * one callback registered with the HAL. A call to this function when a
+     * callback has already been registered must override the previous
+     * registration.
+     *
+     * @param hubId    identifier for the hub
+     *        callback an implementation of the IContextHubCallbacks
+     *
+     * @return result OK on success
+     *                BAD_VALUE if parameters are not sane
+     *
+     */
+     registerCallback(uint32_t hubId, IContexthubCallback cb) generates (Result result);
+
+    /**
+     * Send a message to a hub
+     *
+     * @param hubId identifier for hub to send message to
+     *        msg   message to be sent
+     *
+     * @return result OK if successful, error code otherwise
+     *                BAD_VALUE if parameters are not sane
+     *                TRANSACTION_FAILED if message send failed
+     */
+    sendMessageToHub(uint32_t hubId, ContextHubMsg msg)
+            generates (Result result);
+
+    /**
+     * Loads a nanoApp. After loading, the nanoApp's init method must be called.
+     * After the init method for nanoApp returns success, this must be indicated
+     * to the service by an asynchronous call to handleTxnResult.
+     *
+     * Loading a nanoapp must not take more than 30 seconds.
+     *
+     * Depending on the implementation, nanoApps loaded via this API may or may
+     * not persist across reboots of the hub. If they do persist, the
+     * implementation must initially place nanoApps in the disabled state upon a
+     * reboot, and not start them until a call is made to enableNanoApp(). In
+     * this case, the app must also be unloaded upon a factory reset of the
+     * device.
+     *
+     * @param hubId identifer of the contextHub
+     *        appBinary contains the binary representation of the nanoApp, plus
+     *                  metadata
+     *        transactionId transactionId for this call
+     *
+     * @return result OK if transation started
+     *                BAD_VALUE if parameters are not sane
+     *                TRANSACTION_PENDING if hub is busy with another
+     *                                    load/unload transaction
+     *                TRANSACTION_FAILED if load failed synchronously
+     *
+     */
+    loadNanoApp(uint32_t hubId,
+                NanoAppBinary appBinary,
+                uint32_t transactionId)
+            generates (Result result);
+
+    /**
+     * Unloads a nanoApp. Before the unload, the apps deinit method is called.
+     * After this, success must be indicated to the service through an
+     * asynchronous call to handleTxnResult.
+     *
+     * Unloading a nanoapp must not take more than 5 seconds.
+     *
+     * @param hubId identifer of the contextHub
+     *        appId appIdentifier returned by the HAL
+     *        msg   message to be sent
+     *
+     * @return result OK if transation started
+     *                BAD_VALUE if parameters are not sane
+     *                TRANSACTION_PENDING if hub is busy with another
+     *                                    load/unload transaction
+     *                TRANSACTION_FAILED if unload failed synchronously
+     *
+     */
+    unloadNanoApp(uint32_t hubId, uint64_t appId, uint32_t transactionId)
+            generates (Result result);
+
+    /**
+     * Enables a nanoApp. The app's init method is called.
+     * After this, success must be indicated to the service through an
+     * asynchronous message.
+     *
+     * Enabling a nanoapp must not take more than 5 seconds.
+     *
+     * @param hubId identifer of the contextHub
+     *        appId appIdentifier returned by the HAL
+     *        msg   message to be sent
+     *
+     * @return result OK if transation started
+     *                BAD_VALUE if parameters are not sane
+     *                TRANSACTION_PENDING if hub is busy with another
+     *                                    load/unload transaction
+     *                FAILED_TRANSACTION if load fails immediately
+     *
+     */
+    enableNanoApp(uint32_t hubId, uint64_t appId, uint32_t transactionId)
+            generates (Result result);
+
+    /**
+     * Disables a nanoApp. The app's deinit method is called.
+     * After this, success must be indicated to the service through an
+     * asynchronous message.
+     *
+     * Disabling a nanoapp must not take more than 5 seconds.
+     *
+     * @param hubId identifer of the contextHub
+     *        appId appIdentifier returned by the HAL
+     *        msg   message to be sent
+     *
+     * @return result OK if transation started
+     *                BAD_VALUE if parameters are not sane
+     *                TRANSACTION_PENDING if hub is busy with another
+     *                                    load/unload transaction
+     *                FAILED_TRANSACTION if load fails immediately
+     *
+     */
+    disableNanoApp(uint32_t hubId, uint64_t appId, uint32_t transactionId)
+            generates (Result result);
+
+    /**
+     * Queries for Loaded apps on the hub
+     *
+     * @param hubId identifer of the contextHub
+     *
+     * @return apps all nanoApps on the hub.
+     *              All nanoApps that can be modified by the service must
+     *              be returned. A non-modifiable nanoapps must not be
+     *              returned. A modifiable nanoApp is one that can be
+     *              unloaded/disabled/enabled by the service.
+     *
+     */
+    queryApps(uint32_t hubId) generates (Result result);
+};

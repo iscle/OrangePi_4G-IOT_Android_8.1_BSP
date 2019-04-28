@@ -1,0 +1,289 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.camera.device@1.0;
+
+enum CameraFacing : uint32_t {
+    /** The facing of the camera is opposite to that of the screen. */
+    BACK = 0,
+    /** The facing of the camera is the same as that of the screen. */
+    FRONT = 1,
+    /**
+     * The facing of the camera is not fixed relative to the screen.
+     * The cameras with this facing are external cameras, e.g. USB cameras.
+     */
+    EXTERNAL = 2
+};
+
+/**
+ * Basic information about a camera device, always accessible via
+ * ICameraDevice::getCameraInfo().
+ */
+struct CameraInfo {
+    /**
+     * The direction that this device faces.
+     */
+    CameraFacing facing;
+
+    /**
+     * The orientation of the camera image. The value is the angle that the
+     * camera image needs to be rotated clockwise so it shows correctly on the
+     * display in its natural orientation. It must be 0, 90, 180, or 270.
+     *
+     * For example, suppose a device has a naturally tall screen. The
+     * back-facing camera sensor is mounted in landscape. You are looking at the
+     * screen. If the top side of the camera sensor is aligned with the right
+     * edge of the screen in natural orientation, the value must be 90. If the
+     * top side of a front-facing camera sensor is aligned with the right of the
+     * screen, the value must be 270.
+     *
+     * An external camera device must leave this set to 0.
+     *
+     */
+    uint32_t orientation;
+
+};
+
+/**
+ * Message types for ICameraDevice@1.0::enableMsgType()/disableMsgType()
+ *
+ * A set of bit masks for specifying how the received preview frames are
+ * handled before the previewCallback() call.
+ *
+ * The least significant 3 bits of an "int" value are used for this purpose:
+ *
+ * ..... 0 0 0
+ *       ^ ^ ^
+ *       | | |---------> determine whether the callback is enabled or not
+ *       | |-----------> determine whether the callback is one-shot or not
+ *       |-------------> determine whether the frame is copied out or not
+ *
+ * WARNING: When a frame is sent directly without copying, it is the frame
+ * receiver's responsiblity to make sure that the frame data won't get
+ * corrupted by subsequent preview frames filled by the camera. This flag is
+ * recommended only when copying out data brings significant performance price
+ * and the handling/processing of the received frame data is always faster than
+ * the preview frame rate so that data corruption won't occur.
+ *
+ * For instance,
+ * 1. 0x00 disables the callback. In this case, copy out and one shot bits
+ *    are ignored.
+ * 2. 0x01 enables a callback without copying out the received frames. A
+ *    typical use case is the Camcorder application to avoid making costly
+ *    frame copies.
+ * 3. 0x05 is enabling a callback with frame copied out repeatedly. A typical
+ *    use case is the Camera application.
+ * 4. 0x07 is enabling a callback with frame copied out only once. A typical
+ *    use case is the Barcode scanner application.
+ */
+enum FrameCallbackFlag : uint32_t {
+    ENABLE_MASK = 0x01,
+    ONE_SHOT_MASK = 0x02,
+    COPY_OUT_MASK = 0x04,
+    /** Typical use cases */
+    NOOP = 0x00,
+    CAMCORDER = 0x01,
+    CAMERA = 0x05,
+    BARCODE_SCANNER = 0x07
+};
+
+typedef bitfield<FrameCallbackFlag> FrameCallbackFlags;
+
+/**
+ * Subset of commands in /system/core/include/system/camera.h relevant for
+ * ICameraDevice@1.0::sendCommand()
+ */
+enum CommandType : uint32_t {
+    START_SMOOTH_ZOOM = 1,
+    STOP_SMOOTH_ZOOM = 2,
+
+    /**
+     * Start the face detection. This must be called only after preview is
+     * started.  The camera must notify the listener of CAMERA_MSG_FACE and the
+     * detected faces in the preview frame. The detected faces may be the same
+     * as the previous ones. Apps must call CAMERA_CMD_STOP_FACE_DETECTION to
+     * stop the face detection. This method is supported if CameraParameters
+     * KEY_MAX_NUM_HW_DETECTED_FACES or KEY_MAX_NUM_SW_DETECTED_FACES is bigger
+     * than 0. Hardware and software face detection must not be running at the
+     * same time. If the face detection has started, apps must not send this
+     * again.
+     *
+     * In hardware face detection mode, CameraParameters KEY_WHITE_BALANCE,
+     * KEY_FOCUS_AREAS and KEY_METERING_AREAS have no effect.
+     *
+     * arg1 is the face detection type. It can be CAMERA_FACE_DETECTION_HW or
+     * CAMERA_FACE_DETECTION_SW. If the type of face detection requested is not
+     * supported, the HAL must return BAD_VALUE.
+     */
+    START_FACE_DETECTION = 6,
+
+    /**
+     * Stop the face detection.
+     */
+    STOP_FACE_DETECTION = 7,
+
+    /**
+     * Enable/disable focus move callback (CAMERA_MSG_FOCUS_MOVE). Passing
+     * arg1 = 0 must disable, while passing arg1 = 1 must enable the callback.
+     */
+    ENABLE_FOCUS_MOVE_MSG = 8,
+
+    /**
+     * Configure an explicit format to use for video recording metadata mode.
+     * This can be used to switch the format from the
+     * default IMPLEMENTATION_DEFINED gralloc format to some other
+     * device-supported format, and the default dataspace from the BT_709 color
+     * space to some other device-supported dataspace. arg1 is the HAL pixel
+     * format, and arg2 is the HAL dataSpace. This command returns
+     * INVALID_OPERATION error if it is sent after video recording is started,
+     * or the command is not supported at all.
+     *
+     * If the gralloc format is set to a format other than
+     * IMPLEMENTATION_DEFINED, then HALv3 devices must use gralloc usage flags
+     * of SW_READ_OFTEN.
+     */
+    SET_VIDEO_FORMAT = 11
+};
+
+/**
+ * Message types for ICameraDevice1Callback::notifyCallback()
+ */
+enum NotifyCallbackMsg : uint32_t {
+    ERROR = 0x0001,
+    SHUTTER = 0x0002,
+    FOCUS = 0x0004,
+    ZOOM = 0x0008,
+    // Notify on autofocus start and stop. This is useful in continuous
+    // autofocus - FOCUS_MODE_CONTINUOUS_VIDEO and FOCUS_MODE_CONTINUOUS_PICTURE.
+    FOCUS_MOVE = 0x0800
+};
+
+/**
+ * Message types for ICameraDevice1Callback::dataCallback() and
+ * ICameraDevice1Callback::dataCallbackTimestamp()
+ */
+enum DataCallbackMsg : uint32_t {
+    PREVIEW_FRAME = 0x0010,
+    VIDEO_FRAME = 0x0020,
+    POSTVIEW_FRAME = 0x0040,
+    RAW_IMAGE = 0x0080,
+    COMPRESSED_IMAGE = 0x0100,
+    RAW_IMAGE_NOTIFY = 0x0200,
+    // Preview frame metadata. This can be combined with
+    // CAMERA_MSG_PREVIEW_FRAME in dataCallback. For example, the apps can
+    // request FRAME and METADATA. Or the apps can request only FRAME or only
+    // METADATA.
+    PREVIEW_METADATA = 0x0400
+};
+
+/**
+ * Information for a single detected face.
+ */
+ struct CameraFace {
+    /**
+     * Bounds of the face [left, top, right, bottom]. (-1000, -1000) represents
+     * the top-left of the camera field of view, and (1000, 1000) represents the
+     * bottom-right of the field of view. The width and height cannot be 0 or
+     * negative. This is supported by both hardware and software face detection.
+     *
+     * The direction is relative to the sensor orientation, that is, what the
+     * sensor sees. The direction is not affected by the rotation or mirroring
+     * of CAMERA_CMD_SET_DISPLAY_ORIENTATION.
+     */
+    int32_t[4] rect;
+
+    /**
+     * The confidence level of the face. The range is 1 to 100. 100 is the
+     * highest confidence. This is supported by both hardware and software
+     * face detection.
+     */
+    int32_t score;
+
+    /**
+     * An unique id per face while the face is visible to the tracker. If
+     * the face leaves the field-of-view and comes back, it will get a new
+     * id. If the value is 0, id is not supported.
+     */
+    int32_t id;
+
+    /**
+     * The coordinates of the center of the left eye. The range is -1000 to
+     * 1000. -2000, -2000 if this is not supported.
+     */
+    int32_t[2] leftEye;
+
+    /**
+     * The coordinates of the center of the right eye. The range is -1000 to
+     * 1000. -2000, -2000 if this is not supported.
+     */
+    int32_t[2] rightEye;
+
+    /**
+     * The coordinates of the center of the mouth. The range is -1000 to 1000.
+     * -2000, -2000 if this is not supported.
+     */
+    int32_t[2] mouth;
+
+};
+
+/**
+ * The metadata of the frame data, such as face detection result.
+ */
+struct CameraFrameMetadata {
+    /**
+     * A vector of the detected faces.
+     */
+    vec<CameraFace> faces;
+};
+
+/**
+ * A simple integer handle to use to reference a particular memory buffer
+ * between the HAL and the framework.
+ */
+typedef uint32_t MemoryId;
+
+/*
+ * Struct containing arguments of ICameraDeviceCallback::handleCallbackTimestamp.
+ * Used to send a batch of messages in ICameraDeviceCallback::handleCallbackTimestampBatch.
+ */
+struct HandleTimestampMessage {
+    // The handle of image buffer data.
+    handle frameData;
+
+    // A memory handle to the buffer containing the data
+    MemoryId data;
+
+    // The offset into the memory handle where the buffer starts.
+    uint32_t bufferIndex;
+
+    // The time this buffer was captured by the camera, in nanoseconds
+    int64_t timestamp;
+};
+
+/*
+ * Struct containing arguments of ICameraDevice::releaseRecordingFrameHandle.
+ * Used by camera framework to send a batch of recording frames back to camera HAL.
+ */
+struct VideoFrameMessage {
+    // The handle of image buffer data.
+    handle frameData;
+
+    // A memory handle to the buffer containing the data
+    MemoryId data;
+
+    // The offset into the memory handle where the buffer starts.
+    uint32_t bufferIndex;
+};

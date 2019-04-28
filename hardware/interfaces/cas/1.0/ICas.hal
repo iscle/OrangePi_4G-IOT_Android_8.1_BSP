@@ -1,0 +1,122 @@
+/*
+ * Copyright (C) 2017 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package android.hardware.cas@1.0;
+
+import android.hardware.cas@1.0::types;
+
+/**
+  * ICas is the API to control the cas system and is accessible from both
+ * Java and native level. It is used to manage sessions, provision/refresh
+ * the cas system, and process the EMM/ECM messages. It also allows bi-directional,
+ * scheme-specific communications between the client and the cas system.
+ */
+
+interface ICas {
+    /**
+     * Provide the CA private data from a CA_descriptor in the conditional
+     * access table to a CasPlugin.
+     *
+     * @param pvtData a byte array containing the private data, the format of
+     * which is scheme-specific and opaque to the framework.
+     * @return status the status of the call.
+     */
+    setPrivateData(vec<uint8_t> pvtData) generates (Status status);
+
+    /**
+     * Open a session to descramble one or more streams scrambled by the
+     * conditional access system.
+     *
+     * @return status the status of the call.
+     * @return sessionId the id of the newly opened session.
+     */
+    openSession() generates(Status status, HidlCasSessionId sessionId);
+
+    /**
+     * Close a session.
+     *
+     * @param sessionId the id of the session to be closed.
+     * @return status the status of the call.
+     */
+    closeSession(HidlCasSessionId sessionId) generates (Status status);
+
+    /**
+     * Provide the CA private data from a CA_descriptor in the program map
+     * table to a session.
+     *
+     * @param sessionId the id of the session which the private data applies to.
+     * @param pvtData a byte array containing the private data, the format of
+     * which is scheme-specific and opaque to the framework.
+     * @return status the status of the call.
+     */
+    setSessionPrivateData(HidlCasSessionId sessionId, vec<uint8_t> pvtData)
+        generates (Status status);
+
+    /**
+     * Process an ECM from the ECM stream for this session’s elementary stream.
+     *
+     * @param sessionId the id of the session which the ecm data applies to.
+     * @param ecm a byte array containing the ecm data.
+     * @return status the status of the call.
+     */
+    processEcm(HidlCasSessionId sessionId, vec<uint8_t> ecm)
+        generates (Status status);
+
+    /**
+     * Process an in-band EMM from the EMM stream.
+     *
+     * @param emm a byte array containing the emm data.
+     * @return status the status of the call.
+     */
+    processEmm(vec<uint8_t> emm) generates (Status status);
+
+    /**
+     * Send an scheme-specific event to the CasPlugin.
+     *
+     * @param event an integer denoting a scheme-specific event to be sent.
+     * @param arg a scheme-specific integer argument for the event.
+     * @param data a byte array containing scheme-specific data for the event.
+     * @return status the status of the call.
+     */
+    sendEvent(int32_t event, int32_t arg, vec<uint8_t> eventData)
+        generates (Status status);
+
+    /**
+     * Initiate a provisioning operation for a CA system.
+     *
+     * @param provisionString string containing information needed for the
+     * provisioning operation, the format of which is scheme and implementation
+     * specific.
+     * @return status the status of the call.
+     */
+    provision(string provisionString) generates (Status status);
+
+    /**
+     * Notify the CA system to refresh entitlement keys.
+     *
+     * @param refreshType the type of the refreshment.
+     * @param refreshData private data associated with the refreshment.
+     * @return status the status of the call.
+     */
+    refreshEntitlements(int32_t refreshType, vec<uint8_t> refreshData)
+        generates (Status status);
+
+    /**
+     * Release the descrambler instance.
+     *
+     * @return status the status of the call.
+     */
+    release() generates (Status status);
+};

@@ -1,0 +1,56 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.health@1.0;
+
+interface IHealth {
+    /**
+     * This function lets you change healthd configuration from default if
+     * desired. It must be called exactly once at startup time.
+     *
+     * The configuration values are described in 'struct HealthConfig'.
+     * To use default configuration, simply return without modifying the
+     * fields of the config parameter.
+     *
+     * @param default healthd configuration.
+     */
+    init(HealthConfig config) generates (HealthConfig configOut);
+
+    /**
+     * This function is a hook to update/change device's HealthInfo (as described
+     * in 'struct HealthInfo').
+     *
+     * 'HealthInfo' describes device's battery and charging status, typically
+     * read from kernel. These values may be modified in this call.
+     *
+     * @param   Device Health info as described in 'struct HealthInfo'.
+     * @return  skipLogging Indication to the caller to add 'or' skip logging the health
+     *          information. Return 'true' to skip logging the update.
+     * @return  infoOut HealthInfo to be sent to client code. (May or may
+     *          not be modified).
+     */
+    update(HealthInfo info) generates (bool skipLogging, HealthInfo infoOut);
+
+    /**
+     * This function is called by healthd when framework queries for remaining
+     * energy in the Battery through BatteryManager APIs.
+     *
+     * @return  result Result of querying enery counter for the battery.
+     * @return  energy Battery remaining energy in nanowatt-hours.
+     *          Must be '0' if result is anything other than Result::SUCCESS.
+     */
+    energyCounter() generates (Result result, int64_t energy);
+};

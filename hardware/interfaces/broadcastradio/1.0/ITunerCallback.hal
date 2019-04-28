@@ -1,0 +1,80 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.broadcastradio@1.0;
+
+
+interface ITunerCallback {
+
+    /**
+     * Method called by the HAL when a HW failure occurs.
+     * The framework MUST close the ITuner interface and open a new one.
+     */
+    oneway hardwareFailure();
+
+    /**
+     * Method called by the HAL when a new configuration is applied
+     * in response to IDevice.openTuner() or ITuner.setConfiguration().
+     * @param result OK if the configuration has been applied,
+     *               INVALID_ARGUMENTS if not or TIMEOUT in case of time out.
+     * @param config A BandConfig structure describing the new configuration
+     *               applied.
+     */
+    oneway configChange(Result result, BandConfig config);
+
+    /**
+     * Method called by the HAL when a tuning operation completes
+     * following a step(), scan() or tune() command.
+     * @param result OK if tune succeeded or TIMEOUT in case of time out.
+     * @param info A ProgramInfo structure describing the tuned station.
+     */
+    oneway tuneComplete(Result result, ProgramInfo info);
+
+    /**
+     * Method called by the HAL when a frequency switch occurs.
+     * @param info A ProgramInfo structure describing the new tuned station.
+     */
+    oneway afSwitch(ProgramInfo info);
+
+    /**
+     * Method called by the HAL when the antenna connection state changes.
+     * @param connected True if the antenna is connected, false otherwise.
+     */
+    oneway antennaStateChange(bool connected);
+
+    /**
+     * Method called by the HAL when a traffic announcement starts or
+     * stops.
+     * @param active True if the announcement starts, false if it stops.
+     */
+    oneway trafficAnnouncement(bool active);
+
+    /**
+     * Method called by the HAL when an emergency announcement starts
+     * or stops.
+     * @param active True if the announcement starts, false if it stops.
+     */
+    oneway emergencyAnnouncement(bool active);
+
+    /**
+     * Method called by the HAL when metadata for current station
+     * are updated.
+     * @param channel The channel the metadata is associated with.
+     * @param subChannel The sub channel the metadata is associated with.
+     * @param metadata A list of all updated metada.
+     */
+    oneway newMetadata(uint32_t channel, uint32_t subChannel, vec<MetaData>  metadata);
+};

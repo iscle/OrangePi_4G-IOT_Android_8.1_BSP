@@ -1,0 +1,478 @@
+/*
+ * Copyright 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.wifi.supplicant@1.0;
+
+import ISupplicantIface;
+import ISupplicantStaIfaceCallback;
+
+/**
+ * Interface exposed by the supplicant for each station mode network
+ * interface (e.g wlan0) it controls.
+ */
+interface ISupplicantStaIface extends ISupplicantIface {
+  /**
+   * Access Network Query Protocol info ID elements
+   * for IEEE Std 802.11u-2011.
+   */
+  enum AnqpInfoId : uint16_t {
+    VENUE_NAME = 258,
+    ROAMING_CONSORTIUM = 261,
+    IP_ADDR_TYPE_AVAILABILITY = 262,
+    NAI_REALM = 263,
+    ANQP_3GPP_CELLULAR_NETWORK = 264,
+    DOMAIN_NAME = 268
+  };
+
+  /**
+   * Access Network Query Protocol subtype elements
+   * for Hotspot 2.0.
+   */
+  enum Hs20AnqpSubtypes : uint32_t {
+    OPERATOR_FRIENDLY_NAME = 3,
+    WAN_METRICS = 4,
+    CONNECTION_CAPABILITY = 5,
+    OSU_PROVIDERS_LIST = 8,
+  };
+
+  /**
+   * Enum describing the types of RX filter supported
+   * via driver commands.
+   */
+  enum RxFilterType : uint8_t {
+    V4_MULTICAST = 0,
+    V6_MULTICAST = 1
+  };
+
+  /**
+   * Enum describing the modes of BT coexistence supported
+   * via driver commands.
+   */
+  enum BtCoexistenceMode : uint8_t {
+    ENABLED = 0,
+    DISABLED = 1,
+    SENSE = 2
+  };
+
+  enum ExtRadioWorkDefaults : uint32_t {
+    TIMEOUT_IN_SECS = 10
+  };
+
+  /**
+   * Register for callbacks from this interface.
+   *
+   * These callbacks are invoked for events that are specific to this interface.
+   * Registration of multiple callback objects is supported. These objects must
+   * be automatically deleted when the corresponding client process is dead or
+   * if this interface is removed.
+   *
+   * @param callback An instance of the |ISupplicantStaIfaceCallback| HIDL
+   *        interface object.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   */
+  registerCallback(ISupplicantStaIfaceCallback callback)
+      generates (SupplicantStatus status);
+
+  /**
+   * Reconnect to the currently active network, even if we are already
+   * connected.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_DISABLED|
+   */
+  reassociate() generates (SupplicantStatus status);
+
+  /**
+   * Reconnect to the currently active network, if we are currently
+   * disconnected.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_DISABLED|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_NOT_DISCONNECTED|
+   */
+  reconnect() generates (SupplicantStatus status);
+
+  /**
+   * Disconnect from the current active network.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_DISABLED|
+   */
+  disconnect() generates (SupplicantStatus status);
+
+  /**
+   * Turn on/off power save mode for the interface.
+   *
+   * @param enable Indicate if power save is to be turned on/off.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_DISABLED|
+   */
+  setPowerSave(bool enable) generates (SupplicantStatus status);
+
+  /**
+   * Initiate TDLS discover with the provided peer MAC address.
+   *
+   * @param macAddress MAC address of the peer.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   */
+  initiateTdlsDiscover(MacAddress macAddress)
+      generates (SupplicantStatus status);
+
+  /**
+   * Initiate TDLS setup with the provided peer MAC address.
+   *
+   * @param macAddress MAC address of the peer.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   */
+  initiateTdlsSetup(MacAddress macAddress)
+      generates (SupplicantStatus status);
+
+  /**
+   * Initiate TDLS teardown with the provided peer MAC address.
+   *
+   * @param macAddress MAC address of the peer.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   */
+  initiateTdlsTeardown(MacAddress macAddress)
+      generates (SupplicantStatus status);
+
+  /**
+   * Initiate ANQP (for IEEE 802.11u Interworking/Hotspot 2.0) queries with the
+   * specified access point.
+   * The ANQP data fetched must be returned in the
+   * |ISupplicantStaIfaceCallback.onAnqpQueryDone| callback.
+   *
+   * @param macAddress MAC address of the access point.
+   * @param infoElements List of information elements to query for.
+   * @param subtypes List of HS20 subtypes to query for.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   */
+  initiateAnqpQuery(MacAddress macAddress,
+                    vec<AnqpInfoId> infoElements,
+                    vec<Hs20AnqpSubtypes> subTypes)
+      generates (SupplicantStatus status);
+
+  /**
+   * Initiate the Hotspot 2.0 icon query with the specified accesss point.
+   * The icon data fetched must be returned in the
+   * |ISupplicantStaIfaceCallback.onHs20IconQueryDone| callback.
+   *
+   * @param macAddress MAC address of the access point.
+   * @param fileName Name of the file to request from the access point.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   */
+  initiateHs20IconQuery(MacAddress macAddress, string fileName)
+      generates (SupplicantStatus status);
+
+  /**
+   * Send driver command to get MAC address of the device.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   * @return macAddr MAC address of the device.
+   */
+  getMacAddress()
+      generates (SupplicantStatus status, MacAddress macAddr);
+
+  /**
+   * Send driver command to start RX filter.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   */
+  startRxFilter() generates (SupplicantStatus status);
+
+  /**
+   * Send driver command to stop RX filter.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   */
+  stopRxFilter() generates (SupplicantStatus status);
+
+  /**
+   * Send driver command to add the specified RX filter.
+   *
+   * @param type Type of filter.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   */
+  addRxFilter(RxFilterType type)
+      generates (SupplicantStatus status);
+
+  /**
+   * Send driver command to remove the specified RX filter.
+   *
+   * @param type Type of filter.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   */
+  removeRxFilter(RxFilterType type)
+      generates (SupplicantStatus status);
+
+  /**
+   * Send driver command to set Bluetooth coexistence mode.
+   *
+   * @param mode Mode of Bluetooth coexistence.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   */
+  setBtCoexistenceMode(BtCoexistenceMode mode)
+      generates (SupplicantStatus status);
+
+  /**
+   * Send driver command to set Bluetooth coexistence scan mode.
+   * When this mode is on, some of the low-level scan parameters
+   * used by the driver are changed to reduce interference
+   * with A2DP streaming.
+   *
+   * @param enable true to enable, false to disable.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   */
+  setBtCoexistenceScanModeEnabled(bool enable)
+      generates (SupplicantStatus status);
+
+  /**
+   * Send driver command to set suspend optimizations for power save.
+   *
+   * @param enable true to enable, false to disable.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   */
+  setSuspendModeEnabled(bool enable)
+      generates (SupplicantStatus status);
+
+  /**
+   * Send driver command to set country code.
+   *
+   * @param code 2 byte country code (as defined in ISO 3166) to set.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   */
+  setCountryCode(int8_t[2] code)
+      generates (SupplicantStatus status);
+
+  /**
+   * Initiate WPS setup in registrar role to learn the current AP configuration.
+   *
+   * @param bssid BSSID of the AP.
+   * @param pin Pin of the AP.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   */
+  startWpsRegistrar(Bssid bssid, string pin)
+      generates (SupplicantStatus status);
+
+  /**
+   * Initiate WPS Push Button setup.
+   * The PBC operation requires that a button is also pressed at the
+   * AP/Registrar at about the same time (2 minute window).
+   *
+   * @param bssid BSSID of the AP. Use zero'ed bssid to indicate wildcard.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   */
+  startWpsPbc(Bssid bssid) generates (SupplicantStatus status);
+
+  /**
+   * Initiate WPS Pin Keypad setup.
+   *
+   * @param pin 8 digit pin to be used.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   */
+  startWpsPinKeypad(string pin) generates (SupplicantStatus status);
+
+  /**
+   * Initiate WPS Pin Display setup.
+   *
+   * @param bssid BSSID of the AP. Use zero'ed bssid to indicate wildcard.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   * @return generatedPin 8 digit pin generated.
+   */
+  startWpsPinDisplay(Bssid bssid)
+      generates (SupplicantStatus status, string generatedPin);
+
+  /**
+   * Cancel any ongoing WPS operations.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   */
+  cancelWps() generates (SupplicantStatus status);
+
+  /**
+   * Use external processing for SIM/USIM operations
+   *
+   * @param useExternalSim true to use external, false otherwise.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|
+   */
+  setExternalSim(bool useExternalSim) generates (SupplicantStatus status);
+
+  /**
+   * External programs can request supplicant to not start offchannel
+   * operations during other tasks that may need exclusive control of the
+   * radio.
+   *
+   * This method can be used to reserve a slot for radio access. If freq is
+   * specified, other radio work items on the same channel can be completed in
+   * parallel. Otherwise, all other radio work items are blocked during
+   * execution. Timeout must be set to |ExtRadioWorkDefaults.TIMEOUT_IN_SECS|
+   * seconds by default to avoid blocking supplicant operations on the iface
+   * for excessive time. If a longer (or shorter) safety timeout is needed,
+   * that may be specified with the optional timeout parameter. This command
+   * returns an identifier for the radio work item.
+   *
+   * Once the radio work item has been started,
+   * |ISupplicant.onExtRadioWorkStart| callback is indicated that the external
+   * processing can start.
+   *
+   * @param name Name for the radio work being added.
+   * @param freqInMhz Frequency to specify. Set to 0 for all channels.
+   * @param timeoutInSec Timeout tospecify. Set to 0 for default timeout.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|
+   * @return id Identifier for this radio work.
+   */
+  addExtRadioWork(string name, uint32_t freqInMhz, uint32_t timeoutInSec)
+      generates (SupplicantStatus status, uint32_t id);
+
+  /**
+   * Indicates to supplicant that the external radio work has completed.
+   * This allows other radio works to be performed. If this method is not
+   * invoked (e.g., due to the external program terminating), supplicant
+   * must time out the radio work item on the iface and send
+   * |ISupplicantCallback.onExtRadioWorkTimeout| event to indicate
+   * that this has happened.
+   *
+   * This method may also be used to cancel items that have been scheduled
+   * via |addExtRadioWork|, but have not yet been started (notified via
+   * |ISupplicantCallback.onExtRadioWorkStart|).
+   *
+   * @return id Identifier generated for the radio work addition
+   *         (using |addExtRadioWork|).
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|
+   */
+  removeExtRadioWork(uint32_t id) generates (SupplicantStatus status);
+
+  /**
+   * Enable/Disable auto reconnect to networks.
+   * Use this to prevent wpa_supplicant from trying to connect to networks
+   * on its own.
+   *
+   * @param enable true to enable, false to disable.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_INVALID|,
+   *         |SupplicantStatusCode.FAILURE_IFACE_DISABLED|
+   */
+  enableAutoReconnect(bool enable) generates (SupplicantStatus status);
+};

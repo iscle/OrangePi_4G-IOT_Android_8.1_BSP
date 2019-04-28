@@ -1,0 +1,348 @@
+/**
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.drm@1.0;
+
+enum Status : uint32_t {
+    /**
+     * The DRM plugin must return OK when an operation completes without any
+     * errors.
+     */
+    OK,
+
+    /**
+     * The DRM plugin must return ERROR_DRM_NO_LICENSE, when decryption is
+     * attempted and no license keys have been provided.
+     */
+    ERROR_DRM_NO_LICENSE,
+
+    /**
+     * ERROR_DRM_LICENSE_EXPIRED must be returned when an attempt is made
+     * to use a license and the keys in that license have expired.
+     */
+    ERROR_DRM_LICENSE_EXPIRED,
+
+    /**
+     * The DRM plugin must return ERROR_DRM_SESSION_NOT_OPENED when an
+     * attempt is made to use a session that has not been opened.
+     */
+    ERROR_DRM_SESSION_NOT_OPENED,
+
+    /**
+     * The DRM plugin must return ERROR_DRM_CANNOT_HANDLE when an unsupported
+     * data format or operation is attempted.
+     */
+    ERROR_DRM_CANNOT_HANDLE,
+
+    /**
+     * ERROR_DRM_INVALID_STATE must be returned when the device is in a state
+     * where it is not able to perform decryption.
+     */
+    ERROR_DRM_INVALID_STATE,
+
+    /**
+     * The DRM plugin must return BAD_VALUE whenever an illegal parameter is
+     * passed to one of the interface functions.
+     */
+    BAD_VALUE,
+
+    /**
+     * The DRM plugin must return ERROR_DRM_NOT_PROVISIONED from getKeyRequest,
+     * openSession or provideKeyResponse when the device has not yet been
+     * provisioned.
+     */
+    ERROR_DRM_NOT_PROVISIONED,
+
+    /**
+     * ERROR_DRM_RESOURCE_BUSY must be returned when resources, such as drm
+     * sessions or secure buffers are not available to perform a requested
+     * operation because they are already in use.
+     */
+    ERROR_DRM_RESOURCE_BUSY,
+
+    /**
+     * The DRM Plugin must return ERROR_DRM_INSUFFICIENT_OUTPUT_PROTECTION
+     * when the output protection level enabled on the device is not
+     * sufficient to meet the requirements in the license policy.  HDCP is an
+     * example of a form of output protection.
+     */
+    ERROR_DRM_INSUFFICIENT_OUTPUT_PROTECTION,
+
+    /**
+     * The DRM Plugin must return ERROR_DRM_DEVICE_REVOKED from
+     * provideProvisionResponse and provideKeyResponse if the response indicates
+     * that the device has been revoked. Device revocation means that the device
+     * is no longer permitted to play content.
+     */
+    ERROR_DRM_DEVICE_REVOKED,
+
+    /**
+     * The DRM Plugin must return ERROR_DRM_DECRYPT if the CryptoPlugin
+     * decrypt operation fails.
+     */
+    ERROR_DRM_DECRYPT,
+
+    /**
+     * ERROR_DRM_UNKNOWN must be returned when a fatal failure occurs and no
+     * other defined error is appropriate.
+     */
+    ERROR_DRM_UNKNOWN,
+};
+
+
+/**
+ * EventType enumerates the events that can be delivered by sendEvent
+ */
+enum EventType : uint32_t {
+    /**
+     * This event type indicates that the app needs to request a certificate
+     * from the provisioning server. The request message data is obtained using
+     * getProvisionRequest().
+     */
+    PROVISION_REQUIRED,
+
+     /**
+     * This event type indicates that the app needs to request keys from a
+     * license server. The request message data is obtained using getKeyRequest.
+     */
+    KEY_NEEDED,
+
+    /**
+     * This event type indicates that the licensed usage duration for keys in a
+     * session has expired. The keys are no longer valid.
+     */
+    KEY_EXPIRED,
+
+    /**
+     * This event may indicate some specific vendor-defined condition, see your
+     * DRM provider documentation for details.
+     */
+    VENDOR_DEFINED,
+
+    /**
+     * This event indicates that a session opened by the app has been reclaimed
+     * by the resource manager.
+     */
+    SESSION_RECLAIMED,
+};
+
+enum KeyType : uint32_t {
+    /**
+     * Drm keys can be for offline content or for online streaming.
+     * Offline keys are persisted on the device and may be used when the device
+     * is disconnected from the network.
+     */
+    OFFLINE,
+
+    /**
+     * Keys for streaming are not persisted and require the device to be
+     * connected to the network for periodic renewal.
+     */
+    STREAMING,
+
+    /**
+     * The Release type is used to request that offline keys be no longer
+     * restricted to offline use.
+     */
+    RELEASE,
+};
+
+/**
+ * Enumerate KeyRequestTypes to allow an app to determine the type of a key
+ * request returned from getKeyRequest.
+ */
+enum KeyRequestType : uint32_t {
+    /**
+     * Key request type is for an initial license request
+     */
+    INITIAL,
+
+    /**
+     * Key request type is for license renewal. Renewal requests are used
+     * to extend the validity period for streaming keys.
+     */
+    RENEWAL,
+
+    /**
+     * Key request type is a release. A key release causes offline keys
+     * to become available for streaming.
+     */
+    RELEASE,
+
+    /**
+     * Key request type is unknown due to some error condition.
+     */
+    UNKNOWN,
+};
+
+/**
+ * Enumerate KeyStatusTypes which indicate the state of a key
+ */
+enum KeyStatusType : uint32_t {
+    /**
+     * The key is currently usable to decrypt media data.
+     */
+    USABLE,
+
+    /**
+     * The key is no longer usable to decrypt media data because its expiration
+     * time has passed.
+     */
+    EXPIRED,
+
+    /**
+     * The key is not currently usable to decrypt media data because its output
+     * requirements cannot currently be met.
+     */
+    OUTPUTNOTALLOWED,
+
+    /**
+     * The status of the key is not yet known and is being determined.
+     */
+    STATUSPENDING,
+
+    /**
+     * The key is not currently usable to decrypt media data because of an
+     * internal error in processing unrelated to input parameters.
+     */
+    INTERNALERROR,
+};
+
+typedef vec<uint8_t> SessionId;
+
+/**
+ * Used by sendKeysChange to report the usability status of each key to the
+ * app.
+ */
+struct KeyStatus
+{
+    vec<uint8_t> keyId;
+    KeyStatusType type;
+};
+
+/**
+ * Simulates a KeyedVector<String8, String8>
+ */
+struct KeyValue {
+    string key;
+    string value;
+};
+
+typedef vec<KeyValue> KeyedVector;
+
+/**
+ * Encapsulates a secure stop opaque object
+ */
+struct SecureStop {
+    vec<uint8_t> opaqueData;
+};
+
+typedef vec<uint8_t> SecureStopId;
+
+
+/**
+ * Enumerate the supported crypto modes
+ */
+enum Mode : uint32_t {
+    UNENCRYPTED = 0, // Samples are unencrypted
+    AES_CTR     = 1, // Samples are encrypted with AES CTR mode
+    AES_CBC_CTS = 2, // Samples are encrypted with AES CBC CTS mode
+    AES_CBC     = 3, // Samples are encrypted with AES CBC mode
+};
+
+/**
+ * A subsample consists of some number of bytes of clear (unencrypted)
+ * data followed by a number of bytes of encrypted data.
+ */
+struct SubSample {
+    uint32_t numBytesOfClearData;
+    uint32_t numBytesOfEncryptedData;
+};
+
+/**
+ * A crypto Pattern is a repeating sequence of encrypted and clear blocks
+ * occuring within the bytes indicated by mNumBytesOfEncryptedDatad bytes
+ * of a subsample. Patterns are used to reduce the CPU overhead of
+ * decrypting samples. As an example, HLS uses 1:9 patterns where every
+ * 10th block is encrypted.
+ */
+struct Pattern {
+    /**
+     * The number of blocks to be encrypted in the pattern. If zero,
+     * pattern encryption is inoperative.
+     */
+    uint32_t encryptBlocks;
+
+    /**
+     * The number of blocks to be skipped (left clear) in the pattern. If
+     * zero, pattern encryption is inoperative.
+     */
+    uint32_t skipBlocks;
+};
+
+enum BufferType : uint32_t {
+    SHARED_MEMORY = 0,
+    NATIVE_HANDLE = 1,
+};
+
+/**
+ * SharedBuffer describes a decrypt buffer which is defined by a bufferId, an
+ * offset and a size.  The offset is relative to the shared memory base for the
+ * memory region identified by bufferId, which is established by
+ * setSharedMemoryBase().
+ */
+struct SharedBuffer {
+    /**
+     * The unique buffer identifier
+     */
+    uint32_t bufferId;
+
+    /**
+     * The offset from the shared memory base
+     */
+    uint64_t offset;
+
+    /**
+     * The size of the shared buffer in bytes
+     */
+    uint64_t size;
+};
+
+
+/**
+ * A decrypt destination buffer can be either normal user-space shared
+ * memory for the non-secure decrypt case, or it can be a secure buffer
+ * which is referenced by a native-handle. The native handle is allocated
+ * by the vendor's buffer allocator.
+ */
+struct DestinationBuffer {
+    /**
+     * The type of the buffer
+     */
+    BufferType type;
+
+    /**
+     * If type == SHARED_MEMORY, the decrypted data must be written
+     * to user-space non-secure shared memory.
+     */
+    SharedBuffer nonsecureMemory;
+
+    /**
+     * If type == NATIVE_HANDLE, the decrypted data must be written
+     * to secure memory referenced by the vendor's buffer allocator.
+     */
+    handle secureMemory;
+};

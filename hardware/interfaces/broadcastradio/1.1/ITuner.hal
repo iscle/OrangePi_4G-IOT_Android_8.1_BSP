@@ -1,0 +1,151 @@
+/*
+ * Copyright (C) 2017 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.broadcastradio@1.1;
+
+import @1.0::ITuner;
+
+interface ITuner extends @1.0::ITuner {
+
+    /**
+     * Tune to a specified program.
+     *
+     * For AM/FM, it must be called when a valid configuration has been applied.
+     * Automatically cancels pending scan, step or tune.
+     *
+     * If method returns OK, ITunerCallback.tuneComplete_1_1() MUST be called:
+     * - once successfully tuned;
+     * - after a time out;
+     * - after a full band scan, if no station found.
+     *
+     * The tuned field of ProgramInfo should indicate if tuned to a valid
+     * station or not.
+     *
+     * @param program Program to tune to.
+     * @return result OK if successfully started tunning.
+     *                INVALID_ARGUMENTS if invalid arguments are passed.
+     *                NOT_INITIALIZED if another error occurs.
+     */
+    tuneByProgramSelector(ProgramSelector program) generates (Result result);
+
+    /**
+     * Cancels announcement.
+     *
+     * If it was traffic announcement, trafficAnnouncement(false) callback
+     * should be called (just like it was ended in a normal way). Similarly for
+     * emergency announcement. If there was no announcement, then no action
+     * should be taken.
+     *
+     * There is a race condition between calling cancelAnnouncement and the
+     * actual announcement being finished, so trafficAnnouncement /
+     * emergencyAnnouncement callback should be tracked with proper locking.
+     *
+     * @return result OK if successfully cancelled announcement or there was
+     *                no announcement.
+     *                NOT_INITIALIZED if another error occurs.
+     */
+    cancelAnnouncement() generates (Result result);
+
+    /**
+     * Retrieve current station information.
+     * @return result OK if scan successfully started
+     *                NOT_INITIALIZED if another error occurs
+     * @return info Current program information.
+     */
+    getProgramInformation_1_1() generates (Result result, ProgramInfo info);
+
+    /**
+     * Initiates a background scan to update internally cached program list.
+     *
+     * HAL client may not need to initiate the scan explicitly with this call,
+     * ie. HAL implementation MAY perform the scan on boot. It's a common
+     * practice in devices with two physical tuners with background scanning.
+     *
+     * Device must call backgroundScanComplete if the result is OK, even if the
+     * scan fails later (it must pass proper result through the callback).
+     * Otherwise, backgroundScanComplete must not be called as a result of this
+     * certain attempt. It may still be called as a response to another call to
+     * startBackgroundScan, former or latter.
+     *
+     * Device may utilize an already running (but not finished) scan for
+     * subsequent calls to startBackgroundScan, issuing a single
+     * backgroundScanComplete callback.
+     *
+     * If a device supports continuous background scanning, it may succeed
+     * (return OK and call backgroundScanComplete) without any additional
+     * operation performed.
+     *
+     * Foreground scanning may be implemented in the front end app with
+     * @1.0::ITuner scan operation.
+     *
+     * @return result OK if the scan was properly scheduled (this does not mean
+     *                it successfully finished).
+     *                UNAVAILABLE if the background scan is unavailable,
+     *                ie. temporarily due to ongoing foreground
+     *                playback in single-tuner device.
+     *                NOT_INITIALIZED other error, ie. HW failure.
+     */
+    startBackgroundScan() generates (ProgramListResult result);
+
+    /**
+     * Retrieve station list.
+     *
+     * This call does not trigger actual scan, but operates on the list cached
+     * internally at the driver level.
+     *
+     * @param vendorFilter vendor-specific filter for the stations to be retrieved.
+     *               An empty vector MUST result in full list for a given tuner.
+     * @return result OK if the list was successfully retrieved.
+     *                INVALID_ARGUMENTS if invalid arguments are passed
+     *                NOT_READY if the scan is in progress.
+     *                NOT_STARTED if the scan has not been started, client may
+     *                call startBackgroundScan to fix this.
+     *                NOT_INITIALIZED if any other error occurs.
+     * @return programList List of stations available for user.
+     */
+    getProgramList(vec<VendorKeyValue> vendorFilter)
+        generates (ProgramListResult result, vec<ProgramInfo> programList);
+
+    /**
+     * Forces the analog playback for the supporting radio technology.
+     *
+     * User may disable digital playback for FM HD Radio or hybrid FM/DAB with
+     * this option. This is purely user choice, ie. does not reflect digital-
+     * analog handover managed from the HAL implementation side.
+     *
+     * Some radio technologies may not support this, ie. DAB.
+     *
+     * @param isForced true to force analog, false for a default behaviour.
+     * @return result OK if the setting was successfully done.
+     *                INVALID_STATE if the switch is not supported at current
+     *                configuration.
+     *                NOT_INITIALIZED if any other error occurs.
+     */
+    setAnalogForced(bool isForced) generates (Result result);
+
+    /**
+     * Checks, if the analog playback is forced, see setAnalogForced.
+     *
+     * The isForced value is only valid if result was OK.
+     *
+     * @return result OK if the call succeeded and isForced is valid.
+     *                INVALID_STATE if the switch is not supported at current
+     *                configuration.
+     *                NOT_INITIALIZED if any other error occurs.
+     * @return isForced true if analog is forced, false otherwise.
+     */
+    isAnalogForced() generates (Result result, bool isForced);
+};

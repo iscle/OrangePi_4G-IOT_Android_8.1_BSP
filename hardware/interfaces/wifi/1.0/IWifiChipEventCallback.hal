@@ -1,0 +1,92 @@
+/*
+ * Copyright 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.wifi@1.0;
+
+interface IWifiChipEventCallback {
+  /**
+   * Callback indicating that the chip has been reconfigured successfully. At
+   * this point the interfaces available in the mode must be able to be
+   * configured. When this is called any previous iface objects must be
+   * considered invalid.
+   *
+   * @param modeId The mode that the chip switched to, corresponding to the id
+   *        property of the target ChipMode.
+   */
+  oneway onChipReconfigured(ChipModeId modeId);
+
+  /**
+   * Callback indicating that a chip reconfiguration failed. This is a fatal
+   * error and any iface objects available previously must be considered
+   * invalid. The client can attempt to recover by trying to reconfigure the
+   * chip again using |IWifiChip.configureChip|.
+   *
+   * @param status Failure reason code.
+   */
+  oneway onChipReconfigureFailure(WifiStatus status);
+
+  /**
+   * Callback indicating that a new iface has been added to the chip.
+   *
+   * @param type Type of iface added.
+   * @param name Name of iface added.
+   */
+  oneway onIfaceAdded(IfaceType type, string name);
+
+  /**
+   * Callback indicating that an existing iface has been removed from the chip.
+   *
+   * @param type Type of iface removed.
+   * @param name Name of iface removed.
+   */
+  oneway onIfaceRemoved(IfaceType type, string name);
+
+  /**
+   * Callbacks for reporting debug ring buffer data.
+   *
+   * The ring buffer data collection is event based:
+   * - Driver calls this callback when new records are available, the
+   *   |WifiDebugRingBufferStatus| passed up to framework in the callback
+   *   indicates to framework if more data is available in the ring buffer.
+   *   It is not expected that driver will necessarily always empty the ring
+   *   immediately as data is available, instead driver will report data
+   *   every X seconds or if N bytes are available based on the parameters
+   *   set via |startLoggingToDebugRingBuffer|.
+   * - In the case where a bug report has to be captured, framework will
+   *   require driver to upload all data immediately. This is indicated to
+   *   driver when framework calls |forceDumpToDebugRingBuffer|.  The driver
+   *   will start sending all available data in the indicated ring by repeatedly
+   *   invoking this callback.
+   *
+   * @return status Status of the corresponding ring buffer. This should
+   *         contain the name of the ring buffer on which the data is
+   *         available.
+   * @return data Raw bytes of data sent by the driver. Must be dumped
+   *         out to a bugreport and post processed.
+   */
+  oneway onDebugRingBufferDataAvailable(
+      WifiDebugRingBufferStatus status, vec<uint8_t> data);
+
+  /**
+   * Callback indicating that the chip has encountered a fatal error.
+   * Client must not attempt to parse either the errorCode or debugData.
+   * Must only be captured in a bugreport.
+   *
+   * @param errorCode Vendor defined error code.
+   * @param debugData Vendor defined data used for debugging.
+   */
+  oneway onDebugErrorAlert(int32_t errorCode, vec<uint8_t> debugData);
+};

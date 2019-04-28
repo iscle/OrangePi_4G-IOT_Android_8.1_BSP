@@ -1,0 +1,244 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.gnss@1.0;
+
+/**
+ * The interface is required for the HAL to communicate certain information
+ * like status and location info back to the platform, the platform implements
+ * the interfaces and passes a handle to the HAL.
+ */
+interface IGnssCallback {
+    /** Flags for the gnssSetCapabilities callback. */
+    @export(name="", value_prefix="GPS_CAPABILITY_")
+    enum Capabilities : uint32_t {
+        /**
+         * GNSS HAL schedules fixes for RECURRENCE_PERIODIC mode.
+         * If this is not set, then the framework will use 1000ms for
+         * minInterval and will call start() and stop() to schedule the GNSS.
+         */
+        SCHEDULING                      = 1 << 0,
+        /** GNSS supports MS-Based AGNSS mode */
+        MSB                             = 1 << 1,
+        /** GNSS supports MS-Assisted AGNSS mode */
+        MSA                             = 1 << 2,
+        /** GNSS supports single-shot fixes */
+        SINGLE_SHOT                     = 1 << 3,
+        /** GNSS supports on demand time injection */
+        ON_DEMAND_TIME                  = 1 << 4,
+        /** GNSS supports Geofencing  */
+        GEOFENCING                      = 1 << 5,
+        /** GNSS supports Measurements for at least GPS. */
+        MEASUREMENTS                    = 1 << 6,
+        /** GNSS supports Navigation Messages */
+        NAV_MESSAGES                    = 1 << 7
+    };
+
+    /** GNSS status event values. */
+    @export(name="", value_prefix="GPS_STATUS_")
+    enum GnssStatusValue : uint8_t {
+        /** GNSS status unknown. */
+        NONE           = 0,
+        /** GNSS has begun navigating. */
+        SESSION_BEGIN  = 1,
+        /** GNSS has stopped navigating. */
+        SESSION_END    = 2,
+        /** GNSS has powered on but is not navigating. */
+        ENGINE_ON      = 3,
+        /** GNSS is powered off. */
+        ENGINE_OFF     = 4
+    };
+
+    /**
+     * Flags that indicate information about the satellite
+     */
+    @export(name="", value_prefix="GNSS_SV_FLAGS_")
+    enum GnssSvFlags : uint8_t {
+        NONE                  = 0,
+        HAS_EPHEMERIS_DATA    = 1 << 0,
+        HAS_ALMANAC_DATA      = 1 << 1,
+        USED_IN_FIX           = 1 << 2,
+        HAS_CARRIER_FREQUENCY = 1 << 3
+    };
+
+    struct GnssSvInfo {
+        /**
+         * Pseudo-random number for the SV, or FCN/OSN number for Glonass. The
+         * distinction is made by looking at constellation field. Values must be
+         * in the range of:
+         *
+         * - GNSS:    1-32
+         * - SBAS:    120-151, 183-192
+         * - GLONASS: 1-24, the orbital slot number (OSN), if known.  Or, if not:
+         *            93-106, the frequency channel number (FCN) (-7 to +6) offset by
+         *            + 100
+         *            i.e. report an FCN of -7 as 93, FCN of 0 as 100, and FCN of +6
+         *            as 106.
+         * - QZSS:    193-200
+         * - Galileo: 1-36
+         * - Beidou:  1-37
+         */
+        int16_t svid;
+
+        /**
+         * Defines the constellation of the given SV.
+         */
+        GnssConstellationType constellation;
+
+        /**
+         * Carrier-to-noise density in dB-Hz, typically in the range [0, 63].
+         * It contains the measured C/N0 value for the signal at the antenna port.
+         *
+         * This is a mandatory value.
+         */
+        float cN0Dbhz;
+
+        /** Elevation of SV in degrees. */
+        float elevationDegrees;
+
+        /** Azimuth of SV in degrees. */
+        float azimuthDegrees;
+
+        /**
+         * Carrier frequency of the signal tracked, for example it can be the
+         * GPS central frequency for L1 = 1575.45 MHz, or L2 = 1227.60 MHz, L5 =
+         * 1176.45 MHz, varying GLO channels, etc. If the field is not set, it
+         * is the primary common use central frequency, e.g. L1 = 1575.45 MHz
+         * for GPS.
+         *
+         * For an L1, L5 receiver tracking a satellite on L1 and L5 at the same
+         * time, two GnssSvInfo structs must be reported for this same
+         * satellite, in one of the structs, all the values related
+         * to L1 must be filled, and in the other all of the values related to
+         * L5 must be filled.
+         *
+         * If the data is available, gnssClockFlags must contain
+         * HAS_CARRIER_FREQUENCY.
+         */
+        float carrierFrequencyHz;
+
+        /**
+         * Contains additional data about the given SV.
+         */
+        bitfield<GnssSvFlags> svFlag;
+    };
+
+    /**
+     * Represents SV status.
+     */
+    struct GnssSvStatus {
+        /**
+         * Number of GNSS SVs currently visible, refers to the SVs stored in sv_list
+         */
+        uint32_t numSvs;
+
+        /**
+         * Pointer to an array of SVs information for all GNSS constellations,
+         * except GNSS, which is reported using svList
+         */
+        GnssSvInfo[GnssMax:SVS_COUNT] gnssSvList;
+
+    };
+
+    /**
+     * Called when a GNSS location is available.
+     *
+     * @param location Location information from HAL.
+     */
+    gnssLocationCb(GnssLocation location);
+
+    /**
+     * Called to communicate the status of the GNSS engine.
+     *
+     * @param status Status information from HAL.
+     */
+    gnssStatusCb(GnssStatusValue status);
+
+    /**
+     * @param svInfo SV status information from HAL.
+     */
+    gnssSvStatusCb(GnssSvStatus svInfo);
+
+    /**
+     * Called when NMEA data is available.
+     * Callback for reporting NMEA sentences.
+     *
+     * @param timestamp Marks the instance of reporting.
+     * @param nmea Follows standard NMEA 0183. Each sentence begins with a '$'
+     * and ends with a carriage return/line feed sequence and can be no longer
+     * than 80 characters of visible text (plus the line terminators). The data
+     * is contained within this single line with data items separated by commas.
+     * The data itself is just ascii text and may extend over multiple sentences
+     * in certain specialized instances but is normally fully contained in one
+     * variable length sentence. The data may vary in the amount of precision
+     * contained in the message. For example time might be indicated to decimal
+     * parts of a second or location may be shown with 3 or even 4 digits after
+     * the decimal point. Programs that read the data must only use the commas
+     * to determine the field boundaries and not depend on column positions.
+     * There is a provision for a checksum at the end of each sentence which may
+     * or may not be checked by the unit that reads the data. The checksum field
+     * consists of a '*' and two hex digits representing an 8 bit exclusive OR
+     * of all characters between, but not including, the '$' and '*'.
+     */
+    gnssNmeaCb(GnssUtcTime timestamp, string nmea);
+
+    /**
+     * Callback to inform framework of the GNSS engine's capabilities.
+     *
+     * @param capabilities Capability parameter is a bit field of
+     * the Capabilities enum.
+     */
+    gnssSetCapabilitesCb(bitfield<Capabilities> capabilities);
+
+    /**
+     * Callback utility for acquiring the GNSS wakelock. This can be used to prevent
+     * the CPU from suspending while handling GNSS events.
+     */
+    gnssAcquireWakelockCb();
+
+    /** Callback utility for releasing the GNSS wakelock. */
+    gnssReleaseWakelockCb();
+
+    /** Callback for requesting NTP time */
+    gnssRequestTimeCb();
+
+    /**
+     * Provides information about how new the underlying GPS/GNSS hardware and
+     * software is.
+     *
+     * This information will be available for Android Test Applications. If a GNSS
+     * HAL does not provide this information, it will be considered "2015 or
+     * earlier".
+     *
+     * If a GNSS HAL does provide this information, then newer years will need to
+     * meet newer CTS standards. E.g. if the date are 2016 or above, then N+ level
+     * GnssMeasurement support will be verified.
+     */
+    struct GnssSystemInfo{
+        /**
+         * year in which the last update was made to the underlying hardware/firmware
+         * used to capture GNSS signals, e.g. 2016
+         */
+        uint16_t yearOfHw;
+    };
+
+    /**
+     * Callback to inform framework of the engine's hardware version information.
+     *
+     * @param info GnssSystemInfo about the GPS/GNSS hardware.
+     */
+    gnssSetSystemInfoCb(GnssSystemInfo info);
+};

@@ -1,0 +1,439 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.audio.effect@2.0;
+
+import android.hardware.audio.common@2.0;
+import IEffectBufferProviderCallback;
+
+interface IEffect {
+    /**
+     * Initialize effect engine--all configurations return to default.
+     *
+     * @return retval operation completion status.
+     */
+    @entry
+    @callflow(next={"*"})
+    init() generates (Result retval);
+
+    /**
+     * Apply new audio parameters configurations for input and output buffers.
+     * The provider callbacks may be empty, but in this case the buffer
+     * must be provided in the EffectConfig structure.
+     *
+     * @param config configuration descriptor.
+     * @param inputBufferProvider optional buffer provider reference.
+     * @param outputBufferProvider optional buffer provider reference.
+     * @return retval operation completion status.
+     */
+    @callflow(next={"*"})
+    setConfig(EffectConfig config,
+            IEffectBufferProviderCallback inputBufferProvider,
+            IEffectBufferProviderCallback outputBufferProvider)
+            generates (Result retval);
+
+    /**
+     * Reset the effect engine. Keep configuration but resets state and buffer
+     * content.
+     *
+     * @return retval operation completion status.
+     */
+    @callflow(next={"*"})
+    reset() generates (Result retval);
+
+    /**
+     * Enable processing.
+     *
+     * @return retval operation completion status.
+     */
+    @callflow(next={"prepareForProcessing"})
+    enable() generates (Result retval);
+
+    /**
+     * Disable processing.
+     *
+     * @return retval operation completion status.
+     */
+    @callflow(next={"close"})
+    disable() generates (Result retval);
+
+    /**
+     * Set the rendering device the audio output path is connected to.  The
+     * effect implementation must set EFFECT_FLAG_DEVICE_IND flag in its
+     * descriptor to receive this command when the device changes.
+     *
+     * Note: this method is only supported for effects inserted into
+     *       the output chain.
+     *
+     * @param device output device specification.
+     * @return retval operation completion status.
+     */
+    @callflow(next={"*"})
+    setDevice(AudioDevice device) generates (Result retval);
+
+    /**
+     * Set and get volume. Used by audio framework to delegate volume control to
+     * effect engine. The effect implementation must set EFFECT_FLAG_VOLUME_CTRL
+     * flag in its descriptor to receive this command. The effect engine must
+     * return the volume that should be applied before the effect is
+     * processed. The overall volume (the volume actually applied by the effect
+     * engine multiplied by the returned value) should match the value indicated
+     * in the command.
+     *
+     * @param volumes vector containing volume for each channel defined in
+     *                EffectConfig for output buffer expressed in 8.24 fixed
+     *                point format.
+     * @return result updated volume values.
+     * @return retval operation completion status.
+     */
+    @callflow(next={"*"})
+    setAndGetVolume(vec<uint32_t> volumes)
+            generates (Result retval, vec<uint32_t> result);
+
+    /**
+     * Notify the effect of the volume change. The effect implementation must
+     * set EFFECT_FLAG_VOLUME_IND flag in its descriptor to receive this
+     * command.
+     *
+     * @param volumes vector containing volume for each channel defined in
+     *                EffectConfig for output buffer expressed in 8.24 fixed
+     *                point format.
+     * @return retval operation completion status.
+     */
+    volumeChangeNotification(vec<uint32_t> volumes)
+            generates (Result retval);
+
+    /**
+     * Set the audio mode. The effect implementation must set
+     * EFFECT_FLAG_AUDIO_MODE_IND flag in its descriptor to receive this command
+     * when the audio mode changes.
+     *
+     * @param mode desired audio mode.
+     * @return retval operation completion status.
+     */
+    @callflow(next={"*"})
+    setAudioMode(AudioMode mode) generates (Result retval);
+
+    /**
+     * Apply new audio parameters configurations for input and output buffers of
+     * reverse stream.  An example of reverse stream is the echo reference
+     * supplied to an Acoustic Echo Canceler.
+     *
+     * @param config configuration descriptor.
+     * @param inputBufferProvider optional buffer provider reference.
+     * @param outputBufferProvider optional buffer provider reference.
+     * @return retval operation completion status.
+     */
+    @callflow(next={"*"})
+    setConfigReverse(EffectConfig config,
+            IEffectBufferProviderCallback inputBufferProvider,
+            IEffectBufferProviderCallback outputBufferProvider)
+            generates (Result retval);
+
+    /**
+     * Set the capture device the audio input path is connected to. The effect
+     * implementation must set EFFECT_FLAG_DEVICE_IND flag in its descriptor to
+     * receive this command when the device changes.
+     *
+     * Note: this method is only supported for effects inserted into
+     *       the input chain.
+     *
+     * @param device input device specification.
+     * @return retval operation completion status.
+     */
+    @callflow(next={"*"})
+    setInputDevice(AudioDevice device) generates (Result retval);
+
+    /**
+     * Read audio parameters configurations for input and output buffers.
+     *
+     * @return retval operation completion status.
+     * @return config configuration descriptor.
+     */
+    @callflow(next={"*"})
+    getConfig() generates (Result retval, EffectConfig config);
+
+    /**
+     * Read audio parameters configurations for input and output buffers of
+     * reverse stream.
+     *
+     * @return retval operation completion status.
+     * @return config configuration descriptor.
+     */
+    @callflow(next={"*"})
+    getConfigReverse() generates (Result retval, EffectConfig config);
+
+    /**
+     * Queries for supported combinations of main and auxiliary channels
+     * (e.g. for a multi-microphone noise suppressor).
+     *
+     * @param maxConfigs maximum number of the combinations to return.
+     * @return retval absence of the feature support is indicated using
+     *                NOT_SUPPORTED code. RESULT_TOO_BIG is returned if
+     *                the number of supported combinations exceeds 'maxConfigs'.
+     * @return result list of configuration descriptors.
+     */
+    @callflow(next={"*"})
+    getSupportedAuxChannelsConfigs(uint32_t maxConfigs)
+            generates (Result retval, vec<EffectAuxChannelsConfig> result);
+
+    /**
+     * Retrieves the current configuration of main and auxiliary channels.
+     *
+     * @return retval absence of the feature support is indicated using
+     *                NOT_SUPPORTED code.
+     * @return result configuration descriptor.
+     */
+    @callflow(next={"*"})
+    getAuxChannelsConfig()
+            generates (Result retval, EffectAuxChannelsConfig result);
+
+    /**
+     * Sets the current configuration of main and auxiliary channels.
+     *
+     * @return retval operation completion status; absence of the feature
+     *                support is indicated using NOT_SUPPORTED code.
+     */
+    @callflow(next={"*"})
+    setAuxChannelsConfig(EffectAuxChannelsConfig config)
+            generates (Result retval);
+
+    /**
+     * Set the audio source the capture path is configured for (Camcorder, voice
+     * recognition...).
+     *
+     * Note: this method is only supported for effects inserted into
+     *       the input chain.
+     *
+     * @param source source descriptor.
+     * @return retval operation completion status.
+     */
+    @callflow(next={"*"})
+    setAudioSource(AudioSource source) generates (Result retval);
+
+    /**
+     * This command indicates if the playback thread the effect is attached to
+     * is offloaded or not, and updates the I/O handle of the playback thread
+     * the effect is attached to.
+     *
+     * @param param effect offload descriptor.
+     * @return retval operation completion status.
+     */
+    @callflow(next={"*"})
+    offload(EffectOffloadParameter param) generates (Result retval);
+
+    /**
+     * Returns the effect descriptor.
+     *
+     * @return retval operation completion status.
+     * @return descriptor effect descriptor.
+     */
+    @callflow(next={"*"})
+    getDescriptor() generates (Result retval, EffectDescriptor descriptor);
+
+    /**
+     * Set up required transports for passing audio buffers to the effect.
+     *
+     * The transport consists of shared memory and a message queue for reporting
+     * effect processing operation status. The shared memory is set up
+     * separately using 'setProcessBuffers' method.
+     *
+     * Processing is requested by setting 'REQUEST_PROCESS' or
+     * 'REQUEST_PROCESS_REVERSE' EventFlags associated with the status message
+     * queue. The result of processing may be one of the following:
+     *   OK if there were no errors during processing;
+     *   INVALID_ARGUMENTS if audio buffers are invalid;
+     *   INVALID_STATE if the engine has finished the disable phase;
+     *   NOT_INITIALIZED if the audio buffers were not set;
+     *   NOT_SUPPORTED if the requested processing type is not supported by
+     *                 the effect.
+     *
+     * @return retval OK if both message queues were created successfully.
+     *                INVALID_STATE if the method was already called.
+     *                INVALID_ARGUMENTS if there was a problem setting up
+     *                                  the queue.
+     * @return statusMQ a message queue used for passing status from the effect.
+     */
+    @callflow(next={"setProcessBuffers"})
+    prepareForProcessing() generates (Result retval, fmq_sync<Result> statusMQ);
+
+    /**
+     * Set up input and output buffers for processing audio data. The effect
+     * may modify both the input and the output buffer during the operation.
+     * Buffers may be set multiple times during effect lifetime.
+     *
+     * The input and the output buffer may be reused between different effects,
+     * and the input buffer may be used as an output buffer. Buffers are
+     * distinguished using 'AudioBuffer.id' field.
+     *
+     * @param inBuffer input audio buffer.
+     * @param outBuffer output audio buffer.
+     * @return retval OK if both buffers were mapped successfully.
+     *                INVALID_ARGUMENTS if there was a problem with mapping
+     *                                  any of the buffers.
+     */
+    @callflow(next={"*"})
+    setProcessBuffers(AudioBuffer inBuffer, AudioBuffer outBuffer) generates (
+            Result retval);
+
+    /**
+     * Execute a vendor specific command on the effect. The command code
+     * and data, as well as result data are not interpreted by Android
+     * Framework and are passed as-is between the application and the effect.
+     *
+     * The effect must use standard POSIX.1-2001 error codes for the operation
+     * completion status.
+     *
+     * Use this method only if the effect is provided by a third party, and
+     * there is no interface defined for it. This method only works for effects
+     * implemented in software.
+     *
+     * @param commandId the ID of the command.
+     * @param data command data.
+     * @param resultMaxSize maximum size in bytes of the result; can be 0.
+     * @return status command completion status.
+     * @return result result data.
+     */
+    command(uint32_t commandId, vec<uint8_t> data, uint32_t resultMaxSize)
+            generates (int32_t status, vec<uint8_t> result);
+
+    /**
+     * Set a vendor-specific parameter and apply it immediately. The parameter
+     * code and data are not interpreted by Android Framework and are passed
+     * as-is between the application and the effect.
+     *
+     * The effect must use INVALID_ARGUMENTS return code if the parameter ID is
+     * unknown or if provided parameter data is invalid. If the effect does not
+     * support setting vendor-specific parameters, it must return NOT_SUPPORTED.
+     *
+     * Use this method only if the effect is provided by a third party, and
+     * there is no interface defined for it. This method only works for effects
+     * implemented in software.
+     *
+     * @param parameter identifying data of the parameter.
+     * @param value the value of the parameter.
+     * @return retval operation completion status.
+     */
+    @callflow(next={"*"})
+    setParameter(vec<uint8_t> parameter, vec<uint8_t> value)
+            generates (Result retval);
+
+    /**
+     * Get a vendor-specific parameter value. The parameter code and returned
+     * data are not interpreted by Android Framework and are passed as-is
+     * between the application and the effect.
+     *
+     * The effect must use INVALID_ARGUMENTS return code if the parameter ID is
+     * unknown. If the effect does not support setting vendor-specific
+     * parameters, it must return NOT_SUPPORTED.
+     *
+     * Use this method only if the effect is provided by a third party, and
+     * there is no interface defined for it.  This method only works for effects
+     * implemented in software.
+     *
+     * @param parameter identifying data of the parameter.
+     * @param valueMaxSize maximum size in bytes of the value.
+     * @return retval operation completion status.
+     * @return result the value of the parameter.
+     */
+    @callflow(next={"*"})
+    getParameter(vec<uint8_t> parameter, uint32_t valueMaxSize)
+            generates (Result retval, vec<uint8_t> value);
+
+    /**
+     * Get supported configs for a vendor-specific feature. The configs returned
+     * are not interpreted by Android Framework and are passed as-is between the
+     * application and the effect.
+     *
+     * The effect must use INVALID_ARGUMENTS return code if the feature ID is
+     * unknown. If the effect does not support getting vendor-specific feature
+     * configs, it must return NOT_SUPPORTED. If the feature is supported but
+     * the total number of supported configurations exceeds the maximum number
+     * indicated by the caller, the method must return RESULT_TOO_BIG.
+     *
+     * Use this method only if the effect is provided by a third party, and
+     * there is no interface defined for it.  This method only works for effects
+     * implemented in software.
+     *
+     * @param featureId feature identifier.
+     * @param maxConfigs maximum number of configs to return.
+     * @param configSize size of each config in bytes.
+     * @return retval operation completion status.
+     * @return configsCount number of configs returned.
+     * @return configsData data for all the configs returned.
+     */
+    @callflow(next={"*"})
+    getSupportedConfigsForFeature(
+            uint32_t featureId,
+            uint32_t maxConfigs,
+            uint32_t configSize) generates (
+                    Result retval,
+                    uint32_t configsCount,
+                    vec<uint8_t> configsData);
+
+    /**
+     * Get the current config for a vendor-specific feature. The config returned
+     * is not interpreted by Android Framework and is passed as-is between the
+     * application and the effect.
+     *
+     * The effect must use INVALID_ARGUMENTS return code if the feature ID is
+     * unknown. If the effect does not support getting vendor-specific
+     * feature configs, it must return NOT_SUPPORTED.
+     *
+     * Use this method only if the effect is provided by a third party, and
+     * there is no interface defined for it.  This method only works for effects
+     * implemented in software.
+     *
+     * @param featureId feature identifier.
+     * @param configSize size of the config in bytes.
+     * @return retval operation completion status.
+     * @return configData config data.
+     */
+    @callflow(next={"*"})
+    getCurrentConfigForFeature(uint32_t featureId, uint32_t configSize)
+            generates (Result retval, vec<uint8_t> configData);
+
+    /**
+     * Set the current config for a vendor-specific feature. The config data
+     * is not interpreted by Android Framework and is passed as-is between the
+     * application and the effect.
+     *
+     * The effect must use INVALID_ARGUMENTS return code if the feature ID is
+     * unknown. If the effect does not support getting vendor-specific
+     * feature configs, it must return NOT_SUPPORTED.
+     *
+     * Use this method only if the effect is provided by a third party, and
+     * there is no interface defined for it.  This method only works for effects
+     * implemented in software.
+     *
+     * @param featureId feature identifier.
+     * @param configData config data.
+     * @return retval operation completion status.
+     */
+    setCurrentConfigForFeature(uint32_t featureId, vec<uint8_t> configData)
+            generates (Result retval);
+
+    /**
+     * Called by the framework to deinitialize the effect and free up
+     * all the currently allocated resources. It is recommended to close
+     * the effect on the client side as soon as it is becomes unused.
+     *
+     * @return retval OK in case the success.
+     *                INVALID_STATE if the effect was already closed.
+     */
+    @exit
+    close() generates (Result retval);
+};

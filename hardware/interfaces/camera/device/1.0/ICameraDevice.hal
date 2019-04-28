@@ -1,0 +1,419 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.camera.device@1.0;
+
+import android.hardware.camera.common@1.0::types;
+import ICameraDeviceCallback;
+import ICameraDevicePreviewCallback;
+
+/**
+ * Camera device HAL, legacy version
+ *
+ * DEPRECATED. New devices are strongly recommended to use Camera HAL v3.2 or
+ * newer.
+ *
+ * Supports the android.hardware.Camera API, and the android.hardware.camera2
+ * API in LEGACY mode only.
+ *
+ * Will be removed in the Android P release.
+ */
+interface ICameraDevice {
+
+    /**
+     * Get camera device resource cost information.
+     *
+     * This method may be called at any time, including before open()
+     *
+     * @return status Status code for the operation, one of:
+     *     OK:
+     *         On success.
+     *     INTERNAL_ERROR:
+     *         An unexpected internal camera HAL error occurred, and the
+     *         resource cost is not available.
+     *     CAMERA_DISCONNECTED:
+     *         An external camera device has been disconnected, and is no longer
+     *         available. This camera device interface is now stale, and a new
+     *         instance must be acquired if the device is reconnected. All
+     *         subsequent calls on this interface must return
+     *         CAMERA_DISCONNECTED.
+     * @return resourceCost
+     *     The resources required to open this camera device, or unspecified
+     *     values if status is not OK.
+     */
+    getResourceCost() generates (Status status, CameraResourceCost resourceCost);
+
+    /**
+     * Get basic camera information.
+     *
+     * This method may be called at any time, including before open()
+     *
+     * @return status Status code for the operation, one of:
+     *     OK:
+     *         On success.
+     *     INTERNAL_ERROR:
+     *         An unexpected internal camera HAL error occurred, and the
+     *         camera information is not available.
+     *     CAMERA_DISCONNECTED:
+     *         An external camera device has been disconnected, and is no longer
+     *         available. This camera device interface is now stale, and a new
+     *         instance must be acquired if the device is reconnected. All
+     *         subsequent calls on this interface must return
+     *         CAMERA_DISCONNECTED.
+     * @return info Basic information about this camera device, or unspecified
+     *     values if status is not OK.
+     */
+    getCameraInfo() generates (Status status, CameraInfo info);
+
+    /**
+     * setTorchMode:
+     *
+     * Turn on or off the torch mode of the flash unit associated with a given
+     * camera ID. If the operation is successful, HAL must notify the framework
+     * torch state by invoking
+     * ICameraProviderCallback::torchModeStatusChange() with the new state.
+     *
+     * The camera device has a higher priority accessing the flash unit. When
+     * there are any resource conflicts, such as when open() is called to fully
+     * activate a camera device, the provider must notify the framework through
+     * ICameraProviderCallback::torchModeStatusChange() that the torch mode has
+     * been turned off and the torch mode state has become
+     * TORCH_MODE_STATUS_NOT_AVAILABLE. When resources to turn on torch mode
+     * become available again, the provider must notify the framework through
+     * ICameraProviderCallback::torchModeStatusChange() that the torch mode
+     * state has become TORCH_MODE_STATUS_AVAILABLE_OFF for set_torch_mode() to
+     * be called.
+     *
+     * When the framework calls setTorchMode() to turn on the torch mode of a
+     * flash unit, if HAL cannot keep multiple torch modes on simultaneously,
+     * HAL must turn off the torch mode that was turned on by
+     * a previous setTorchMode() call and notify the framework that the torch
+     * mode state of that flash unit has become TORCH_MODE_STATUS_AVAILABLE_OFF.
+     *
+     * @param torchMode The new mode to set the device flash unit to.
+     *
+     * @return status Status code for the operation, one of:
+     *     OK:
+     *         On a successful change to the torch state.
+     *     INTERNAL_ERROR:
+     *         The flash unit cannot be operated due to an unexpected internal
+     *         error.
+     *     ILLEGAL_ARGUMENT:
+     *         The camera ID is unknown.
+     *     CAMERA_IN_USE:
+     *         This camera device has been opened, so the torch cannot be
+     *         controlled until it is closed.
+     *     MAX_CAMERAS_IN_USE:
+     *         Due to other camera devices being open, or due to other
+     *         resource constraints, the torch cannot be controlled currently.
+     *     METHOD_NOT_SUPPORTED:
+     *         This provider does not support direct operation of flashlight
+     *         torch mode. The framework must open the camera device and turn
+     *         the torch on through the device interface.
+     *     OPERATION_NOT_SUPPORTED:
+     *         This camera device does not have a flash unit. This must
+     *         be returned if and only if parameter key flash-mode-values is not present.
+     *     CAMERA_DISCONNECTED:
+     *         An external camera device has been disconnected, and is no longer
+     *         available. This camera device interface is now stale, and a new
+     *         instance must be acquired if the device is reconnected. All
+     *         subsequent calls on this interface must return
+     *         CAMERA_DISCONNECTED.
+     *
+     */
+    setTorchMode(TorchMode mode) generates (Status status);
+
+    /**
+     * Dump state of the camera hardware.
+     *
+     * This must be callable at any time, whether the device is open or not.
+     *
+     * @param fd A native handle with one valid file descriptor. The descriptor
+     *     must be able to be used with dprintf() or equivalent to dump the
+     *     state of this camera device into the camera service dumpsys output.
+     *
+     * @return status The status code for this operation.
+     */
+    dumpState(handle fd) generates (Status status);
+
+    /**
+     * Open the camera device for active use.
+     *
+     * All methods besides getResourceCost(), getCameraInfo(), setTorchMode(),
+     * and dump() must not be called unless open() has been called successfully,
+     * and close() has not yet been called.
+     *
+     * @param callback Interface to invoke by the HAL for device callbacks.
+     * @return status Status code for the operation, one of:
+     *     OK:
+     *         On a successful open of the camera device.
+     *     INTERNAL_ERROR:
+     *         The camera device cannot be opened due to an internal
+     *         error.
+     *     ILLEGAL_ARGUMENT:
+     *         The callback handle is invalid (for example, it is null).
+     *     CAMERA_IN_USE:
+     *         This camera device is already open.
+     *     MAX_CAMERAS_IN_USE:
+     *         The maximal number of camera devices that can be
+     *         opened concurrently were opened already.
+     *     CAMERA_DISCONNECTED:
+     *         This external camera device has been disconnected, and is no
+     *         longer available. This interface is now stale, and a new instance
+     *         must be acquired if the device is reconnected. All subsequent
+     *         calls on this interface must return CAMERA_DISCONNECTED.
+     */
+    open(ICameraDeviceCallback callback) generates (Status status);
+
+
+    /*****
+     * All methods below this point must only be called between a successful
+     * open() call and a close() call.
+     */
+
+    /** Set the callback interface through which preview frames are sent */
+    setPreviewWindow(ICameraDevicePreviewCallback window)
+            generates (Status status);
+
+    /**
+     * Enable a message, or set of messages.
+     *
+     * @param msgType The bitfield of messages to enable.
+     */
+    enableMsgType(FrameCallbackFlags msgType);
+
+    /**
+     * Disable a message, or a set of messages.
+     *
+     * Once received a call to disableMsgType(CAMERA_MSG_VIDEO_FRAME), camera
+     * HAL must not rely on its client to call releaseRecordingFrame() to
+     * release video recording frames sent out by the cameral HAL before and
+     * after the disableMsgType(CAMERA_MSG_VIDEO_FRAME) call. Camera HAL
+     * clients must not modify/access any video recording frame after calling
+     * disableMsgType(CAMERA_MSG_VIDEO_FRAME).
+     *
+     * @param msgType The bitfield of messages to disable.
+     */
+    disableMsgType(FrameCallbackFlags msgType);
+
+    /**
+     * Query whether a message, or a set of messages, is enabled. Note that
+     * this is operates as an AND, if any of the messages queried are off, this
+     * must return false.
+     *
+     * @param msgType The bitfield of messages to query.
+     * @return enabled Whether all the specified flags are enabled.
+     */
+    msgTypeEnabled(FrameCallbackFlags msgType) generates (bool enabled);
+
+    /**
+     * Start preview mode.
+     *
+     * @return status The status code for this operation.
+     */
+    startPreview() generates (Status status);
+
+    /**
+     * Stop a previously started preview.
+     */
+    stopPreview();
+
+    /**
+     * Returns true if preview is enabled.
+     *
+     * @return enabled Whether preview is currently enabled.
+     */
+    previewEnabled() generates (bool enabled);
+
+    /**
+     * Request the camera HAL to store meta data or real YUV data in the video
+     * buffers sent out via CAMERA_MSG_VIDEO_FRAME for a recording session. If
+     * it is not called, the default camera HAL behavior is to store real YUV
+     * data in the video buffers.
+     *
+     * This method must be called before startRecording() in order to be
+     * effective.
+     *
+     * If meta data is stored in the video buffers, it is up to the receiver of
+     * the video buffers to interpret the contents and to find the actual frame
+     * data with the help of the meta data in the buffer. How this is done is
+     * outside of the scope of this method.
+     *
+     * Some camera HALs may not support storing meta data in the video buffers,
+     * but all camera HALs must support storing real YUV data in the video
+     * buffers. If the camera HAL does not support storing the meta data in the
+     * video buffers when it is requested to do do, INVALID_OPERATION must be
+     * returned. It is very useful for the camera HAL to pass meta data rather
+     * than the actual frame data directly to the video encoder, since the
+     * amount of the uncompressed frame data can be very large if video size is
+     * large.
+     *
+     * @param enable Set to true to instruct the camera HAL to store meta data
+     *     in the video buffers; false to instruct the camera HAL to store real
+     *     YUV data in the video buffers.
+     *
+     * @return status OK on success.
+     */
+    storeMetaDataInBuffers(bool enable) generates (Status status);
+
+    /**
+     * Start record mode.
+     *
+     * When a record image is available, a CAMERA_MSG_VIDEO_FRAME message is
+     * sent with the corresponding frame. Every record frame must be released by
+     * a camera HAL client via releaseRecordingFrame() before the client calls
+     * disableMsgType(CAMERA_MSG_VIDEO_FRAME). After the client calls
+     * disableMsgType(CAMERA_MSG_VIDEO_FRAME), it is the camera HAL's
+     * responsibility to manage the life-cycle of the video recording frames,
+     * and the client must not modify/access any video recording frames.
+     *
+     * @return status The status code for the operation.
+     */
+    startRecording() generates (Status status);
+
+    /**
+     * Stop a previously started recording.
+     */
+    stopRecording();
+
+    /**
+     * Returns true if recording is enabled.
+     *
+     * @return enabled True if recording is currently active.
+     */
+    recordingEnabled() generates (bool enabled);
+
+    /**
+     * Release a record frame previously returned by CAMERA_MSG_VIDEO_FRAME in
+     * dataCallbackTimestamp.
+     *
+     * It is camera HAL client's responsibility to release video recording
+     * frames sent out by the camera HAL before the camera HAL receives a call
+     * to disableMsgType(CAMERA_MSG_VIDEO_FRAME). After it receives the call to
+     * disableMsgType(CAMERA_MSG_VIDEO_FRAME), it is the camera HAL's
+     * responsibility to manage the life-cycle of the video recording frames.
+     *
+     * @param memId The memory buffer to release a recording frame from.
+     * @param bufferIndex The specific buffer index to return to the HAL.
+     */
+    releaseRecordingFrame(MemoryId memId, uint32_t bufferIndex);
+
+    /**
+     * Release a record frame previously returned by CAMERA_MSG_VIDEO_FRAME in
+     * handleCallbackTimestamp.
+     *
+     * It is camera HAL client's responsibility to release video recording
+     * frames sent out by the camera HAL before the camera HAL receives a call
+     * to disableMsgType(CAMERA_MSG_VIDEO_FRAME). After it receives the call to
+     * disableMsgType(CAMERA_MSG_VIDEO_FRAME), it is the camera HAL's
+     * responsibility to manage the life-cycle of the video recording frames.
+     *
+     * @param memId The memory buffer to release a recording frame from.
+     * @param bufferIndex The specific buffer index to return to the HAL.
+     * @param frame The handle for a released video frame
+     */
+    releaseRecordingFrameHandle(MemoryId memId, uint32_t bufferIndex, handle frame);
+
+    /**
+     * Release a batch of record frames previously returned by CAMERA_MSG_VIDEO_FRAME
+     * in handleCallbackTimestampBatch.
+     *
+     * It is camera HAL client's responsibility to release video recording
+     * frames sent out by the camera HAL before the camera HAL receives a call
+     * to disableMsgType(CAMERA_MSG_VIDEO_FRAME). After it receives the call to
+     * disableMsgType(CAMERA_MSG_VIDEO_FRAME), it is the camera HAL's
+     * responsibility to manage the life-cycle of the video recording frames.
+     *
+     * @param batch A batch of recording frames to be released by camera HAL.
+     */
+    releaseRecordingFrameHandleBatch(vec<VideoFrameMessage> batch);
+
+    /**
+     * Start auto focus.
+     *
+     * The notification callback routine is called with
+     * CAMERA_MSG_FOCUS once when focusing is complete. autoFocus() can be
+     * called again after that if another auto focus is needed.
+     *
+     * @return status The status code for this operation.
+     */
+    autoFocus() generates (Status status);
+
+    /**
+     * Cancels auto-focus function.
+     *
+     * If the auto-focus is still in progress, this function must cancel
+     * it. Whether the auto-focus is in progress or not, this function must
+     * return the focus position to the default. If the camera does not support
+     * auto-focus, this is a no-op.
+     *
+     * @return status The status code for this operation.
+     */
+    cancelAutoFocus() generates (Status status);
+
+    /**
+     * Take a picture.
+     *
+     * @return status The status code for this operation.
+     */
+    takePicture() generates (Status status);
+
+    /**
+     * Cancel a picture that was started with takePicture. Calling this method
+     * when no picture is being taken is a no-op.
+     *
+     * @return status The status code for this operation.
+     */
+    cancelPicture() generates (Status status);
+
+    /**
+     * Set the camera parameters.
+     *
+     * @param params The parameter string, consisting of
+     *    '<key1>=<value1>; ...;<keyN>=<valueN>'.
+     * @return status The status code for this operation:
+     *     OK: Parameter update was successful
+     *     ILLEGAL_ARGUMENT: At least one parameter was invalid or not supported
+     *
+     */
+    setParameters(string params) generates (Status status);
+
+    /**
+     * Retrieve the camera parameters.
+     */
+    getParameters() generates (string parms);
+
+    /**
+     * Send command to camera driver.
+     * The meaning of the arguments is defined by the value of cmd, documented
+     * in the CommandType definition.
+     *
+     * @param cmd The command to invoke.
+     * @param arg1 The first argument for the command, if needed.
+     * @param arg2 The second argument for the command, if needed.
+     *
+     * @return status The status code for this operation.
+     */
+    sendCommand(CommandType cmd, int32_t arg1, int32_t arg2)
+            generates (Status status);
+
+    /**
+     * Release the hardware resources owned by this object, shutting down the
+     * camera device.
+     */
+    close();
+
+};

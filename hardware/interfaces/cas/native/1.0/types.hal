@@ -1,0 +1,88 @@
+/**
+ * Copyright (C) 2017 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.cas.native@1.0;
+
+/**
+ * Enumerates the keys used to scramble the content.
+ */
+enum ScramblingControl : uint32_t {
+    UNSCRAMBLED = 0,
+    RESERVED    = 1,
+    EVENKEY     = 2,
+    ODDKEY      = 3,
+};
+
+/**
+ * A subsample consists of some number of bytes of clear (unscrambled)
+ * data followed by a number of bytes of scrambled data.
+ */
+struct SubSample {
+    uint32_t numBytesOfClearData;
+    uint32_t numBytesOfEncryptedData;
+};
+
+/**
+ * SharedBuffer describes a shared buffer which is defined by a heapBase, an
+ * offset and a size. The offset is relative to the shared memory base for the
+ * memory region identified by heapBase.
+ */
+struct SharedBuffer {
+    /**
+     * The shared memory base handle
+     */
+    memory heapBase;
+
+    /**
+     * The offset from the shared memory base
+     */
+    uint64_t offset;
+
+    /**
+     * The size of the shared buffer in bytes
+     */
+    uint64_t size;
+};
+
+/**
+ * A descrambling destination buffer can be either normal user-space shared
+ * memory for the non-secure descrambling case, or it can be a secure buffer
+ * which is referenced by a native-handle. The native handle is allocated
+ * by the vendor's buffer allocator.
+ */
+enum BufferType : uint32_t {
+    SHARED_MEMORY = 0,
+    NATIVE_HANDLE = 1,
+};
+
+struct DestinationBuffer {
+    /**
+     * The type of the buffer
+     */
+    BufferType type;
+
+    /**
+     * If type == SHARED_MEMORY, the descrambled data must be written
+     * to user-space non-secure shared memory.
+     */
+    SharedBuffer nonsecureMemory;
+
+    /**
+     * If type == NATIVE_HANDLE, the descrambled data must be written
+     * to secure memory referenced by the vendor's buffer allocator.
+     */
+    handle secureMemory;
+};

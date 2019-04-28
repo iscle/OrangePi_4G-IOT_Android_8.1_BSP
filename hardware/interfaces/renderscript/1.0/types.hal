@@ -1,0 +1,253 @@
+/*
+ * Copyright (C) 2017 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// TODO: Currently, most of the types are simply typedefs of uint64_t, so
+// misusing one type as another won't be caught by the compiler. Should we wrap
+// each type in a unique class to have stronger type guarantees?
+// TODO: is there an enum for intrinsics?
+
+package android.hardware.renderscript@1.0;
+
+// OpaqueHandle is an object that is used entirely in the driver but still needs
+// to be identified by the framework.
+typedef uint64_t OpaqueHandle;
+
+// A pointer is an actual local pointer that can be accessed by both the
+// framework and the driver. This is possible because RenderScript is always
+// running in Passthrough mode.
+typedef pointer Ptr;
+
+// This is an abstraction of size_t because it is not supported in HIDL.
+typedef uint64_t Size;
+
+// In RenderScript code, these are all defined as void*, but act only as
+// handles.
+typedef OpaqueHandle Allocation;
+typedef OpaqueHandle AllocationAdapter;
+typedef OpaqueHandle Closure;
+typedef OpaqueHandle Element;
+typedef OpaqueHandle NativeWindow;
+typedef OpaqueHandle ObjectBase;
+typedef OpaqueHandle Sampler;
+typedef OpaqueHandle Script;
+typedef OpaqueHandle ScriptFieldID;
+typedef OpaqueHandle ScriptGroup;
+typedef OpaqueHandle ScriptGroup2;
+typedef OpaqueHandle ScriptInvokeID;
+typedef OpaqueHandle ScriptKernelID;
+typedef OpaqueHandle Type;
+
+// types below are same as those in frameworks/rs/rsDefines.h
+
+@export(name="RsContextType", value_prefix="RS_CONTEXT_TYPE_")
+enum ContextType : int32_t {
+    NORMAL,
+    DEBUG,
+    PROFILE,
+};
+
+@export(name="RsAllocationUsageType", value_prefix="RS_ALLOCATION_USAGE_")
+enum AllocationUsageType : int32_t {
+    SCRIPT                 = 0x0001,
+    GRAPHICS_TEXTURE       = 0x0002,
+    GRAPHICS_VERTEX        = 0x0004,
+    GRAPHICS_CONSTANTS     = 0x0008,
+    GRAPHICS_RENDER_TARGET = 0x0010,
+    IO_INPUT               = 0x0020,
+    IO_OUTPUT              = 0x0040,
+    SHARED                 = 0x0080,
+    OEM                    = 0x8000,
+    ALL                    = 0x80FF,
+};
+
+@export(name="RsAllocationMipmapControl", value_prefix="RS_ALLOCATION_MIPMAP_")
+enum AllocationMipmapControl : int32_t {
+    NONE               = 0,
+    FULL               = 1,
+    ON_SYNC_TO_TEXTURE = 2,
+};
+
+@export(name="RsAllocationCubemapFace",
+        value_prefix="RS_ALLOCATION_CUBEMAP_FACE_")
+enum AllocationCubemapFace : int32_t {
+    POSITIVE_X = 0,
+    NEGATIVE_X = 1,
+    POSITIVE_Y = 2,
+    NEGATIVE_Y = 3,
+    POSITIVE_Z = 4,
+    NEGATIVE_Z = 5,
+};
+
+@export(name="RsDataType", value_prefix="RS_TYPE_")
+enum DataType : int32_t {
+    NONE = 0,
+    FLOAT_16,
+    FLOAT_32,
+    FLOAT_64,
+    SIGNED_8,
+    SIGNED_16,
+    SIGNED_32,
+    SIGNED_64,
+    UNSIGNED_8,
+    UNSIGNED_16,
+    UNSIGNED_32,
+    UNSIGNED_64,
+    BOOLEAN,
+    UNSIGNED_5_6_5,
+    UNSIGNED_5_5_5_1,
+    UNSIGNED_4_4_4_4,
+    MATRIX_4X4,
+    MATRIX_3X3,
+    MATRIX_2X2,
+    ELEMENT = 1000,
+    TYPE,
+    ALLOCATION,
+    SAMPLER,
+    SCRIPT,
+    MESH,
+    PROGRAM_FRAGMENT,
+    PROGRAM_VERTEX,
+    PROGRAM_RASTER,
+    PROGRAM_STORE,
+    FONT,
+    INVALID = 10000,
+};
+
+@export(name="RsDataKind", value_prefix="RS_KIND_")
+enum DataKind : int32_t {
+    USER,
+    PIXEL_L = 7,
+    PIXEL_A,
+    PIXEL_LA,
+    PIXEL_RGB,
+    PIXEL_RGBA,
+    PIXEL_DEPTH,
+    PIXEL_YUV,
+    INVALID = 100,
+};
+
+@export(name="RsYuvFormat", value_prefix="RS_")
+enum YuvFormat : int32_t {
+    YUV_NONE    = 0,
+    YUV_YV12    = 0x32315659, // HAL_PIXEL_FORMAT_YV12 in system/graphics.h
+    YUV_NV21    = 0x11,       // HAL_PIXEL_FORMAT_YCrCb_420_SP
+    YUV_420_888 = 0x23,       // HAL_PIXEL_FORMAT_YCbCr_420_888
+};
+
+@export(name="RsSamplerValue", value_prefix="RS_SAMPLER_")
+enum SamplerValue : int32_t {
+    NEAREST,
+    LINEAR,
+    LINEAR_MIP_LINEAR,
+    WRAP,
+    CLAMP,
+    LINEAR_MIP_NEAREST,
+    MIRRORED_REPEAT,
+    INVALID = 100,
+};
+
+@export(name="RsForEachStrategy", value_prefix="RS_FOR_EACH_STRATEGY_")
+enum ForEachStrategy : int32_t {
+    SERIAL      = 0,
+    DONT_CARE   = 1,
+    DST_LINEAR  = 2,
+    TILE_SMALL  = 3,
+    TILE_MEDIUM = 4,
+    TILE_LARGE  = 5,
+};
+
+// Script to Script
+@export(name="RsScriptCall")
+struct ScriptCall {
+    ForEachStrategy strategy;
+    uint32_t        xStart;
+    uint32_t        xEnd;
+    uint32_t        yStart;
+    uint32_t        yEnd;
+    uint32_t        zStart;
+    uint32_t        zEnd;
+    uint32_t        arrayStart;
+    uint32_t        arrayEnd;
+    uint32_t        array2Start;
+    uint32_t        array2End;
+    uint32_t        array3Start;
+    uint32_t        array3End;
+    uint32_t        array4Start;
+    uint32_t        array4End;
+};
+
+@export(name="RsContextFlags", value_prefix="RS_CONTEXT_")
+enum ContextFlags : int32_t {
+    SYNCHRONOUS     = 1<<0,
+    LOW_LATENCY     = 1<<1,
+    LOW_POWER       = 1<<2,
+    WAIT_FOR_ATTACH = 1<<3,
+};
+
+// types below are same as those in frameworks/rs/rsInternalDefines.h
+
+@export(name="RsMessageToClientType", value_prefix="RS_MESSAGE_TO_CLIENT_")
+enum MessageToClientType : int32_t {
+    NONE       = 0,
+    EXCEPTION  = 1,
+    RESIZE     = 2,
+    ERROR      = 3,
+    USER       = 4,
+    NEW_BUFFER = 5,
+};
+
+@export(name="RsScriptIntrinsicID", value_prefix="RS_SCRIPT_INTRINSIC_")
+enum ScriptIntrinsicID : int32_t {
+    ID_UNDEFINED    = 0,
+    ID_CONVOLVE_3X3 = 1,
+    ID_COLOR_MATRIX = 2,
+    ID_LUT          = 3,
+    ID_CONVOLVE_5X5 = 4,
+    ID_BLUR         = 5,
+    ID_YUV_TO_RGB   = 6,
+    ID_BLEND        = 7,
+    ID_3DLUT        = 8,
+    ID_HISTOGRAM    = 9,
+    // unused 10, 11
+    ID_RESIZE       = 12,
+    ID_BLAS         = 13,
+    ID_EXTBLAS      = 14,
+    ID_OEM_START    = 0x10000000,
+};
+
+@export(name="RsThreadPriorities", value_prefix="RS_THREAD_PRIORITY_")
+enum ThreadPriorities : int32_t {
+    LOW             = 15,
+    NORMAL_GRAPHICS = -8,
+    NORMAL          = -1,
+    LOW_LATENCY     = -4,
+};
+
+// types below are same as those in
+// frameworks/compile/libbcc/include/bcinfo/MetadataExtractor.h
+
+@export(name="", value_prefix="RS_MD_")
+enum MetadataSignatureBitval : int32_t {
+    SIG_None        = 0,
+    SIG_In          = 1<<0,
+    SIG_Out         = 1<<1,
+    SIG_Usr         = 1<<2,
+    SIG_X           = 1<<3,
+    SIG_Y           = 1<<4,
+    SIG_Kernel      = 1<<5,
+    SIG_Z           = 1<<6,
+    SIG_Ctxt        = 1<<7,
+};

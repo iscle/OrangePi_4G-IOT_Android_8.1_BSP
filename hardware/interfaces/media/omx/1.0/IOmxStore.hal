@@ -1,0 +1,215 @@
+/*
+ * Copyright (C) 2017 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.media.omx@1.0;
+
+import IOmx;
+
+/**
+ * Ref: frameworks/av/include/media/IOMX.h: IOMX
+ *
+ * There will be two instances of IOmxStore: "platform" and "vendor".
+ *
+ * The IOmxStore service provided by the platform must present "platform" as the
+ * interface name.
+ *
+ * The IOmxStore service provided by the vendor must present "vendor" as the
+ * instance name.
+ */
+interface IOmxStore {
+
+    /**
+     * Attribute is a key-value pair of strings. The `value` member is generally
+     * a stringified value of the following:
+     *   enum<v1,v2,...,vn>:    v1 | v2 | ... | vn
+     *   num:                   0 | [1-9][0-9]*
+     *   string:                arbitrary string
+     *   size:                  <num>x<num>
+     *   ratio:                 <num>:<num>
+     *   range<type>:           <type> | <type>-<type>
+     *   list<type>:            <type> | <type>,<list<type>>
+     */
+    struct Attribute {
+        string key;
+        string value;
+    };
+
+    /**
+     * Service attribute
+     *
+     * Optional service attributes:
+     *   key: 'max-video-encoder-input-buffers', value-type: num
+     *   key: 'supports-multiple-secure-codecs', value-type: enum<0,1>
+     *   key: 'supports-secure-with-non-secure-codec', value-type: enum<0,1>
+     *
+     * For keys with prefix 'supports-', the value of 0 means "no" (not
+     * supported) while the value of 1 means "yes" (supported).
+     */
+    typedef Attribute ServiceAttribute;
+
+    /**
+     * List attributes that are service-specific (not node-specific).
+     *
+     * @return attributes The list of `Attribute`s that are specific to this
+     *                    service.
+     */
+    listServiceAttributes(
+        ) generates (
+            Status status,
+            vec<ServiceAttribute> attributes
+        );
+
+    /**
+     * Node attribute
+     *
+     * Optional node attributes to describe supported values:
+     *   key: 'bitrate-range', value-type: range<num>
+     *   key: 'max-concurrent-instances', value-type: num
+     *   key: 'max-supported-instances', value-type: num
+     *
+     * Optional node attributes for audio nodes to describe supported values:
+     *   key: 'max-channel-count', value-type: num
+     *   key: 'sample-rate-ranges', value-type: list<range<num>>
+     *
+     * Optional node attributes for video nodes to describe supported values:
+     *   key: 'alignment', value-type: size
+     *   key: 'block-aspect-ratio-range', value-type: range<ratio>
+     *   key: 'block-count-range', value-type: range<num>
+     *   key: 'block-size', value-type: size
+     *   key: 'blocks-per-second-range', value-type: range<num>
+     *   key: 'feature-can-swap-width-height', value-type: enum<0,1>
+     *   key: 'frame-rate-range', value-type: range<num>
+     *   key: 'pixel-aspect-ratio-range', value-type: range<ratio>
+     *   key: 'size-range', value-type: range<size>
+     *
+     * Required node attributes for video nodes that are required by Android to
+     * describe measured values for this device:
+     *   key: 'measured-frame-rate-<width>x<height>-range',
+     *     value-type: range<num>; where width: num, height: num
+     *
+     * Optional node attributes for decoders to describe supported values:
+     *   key: 'feature-adaptive-playback', value: enum<0,1>
+     *   key: 'feature-secure-playback', value: enum<0,1>
+     *   key: 'feature-tunneled-playback', value: enum<0,1>
+     *
+     * Optional node attributes for video decoders to describe supported values:
+     *   key: 'feature-partial-frame', value: enum<0,1>
+     *
+     * Optional node attributes for encoders to describe supported values:
+     *   key: 'complexity-default', value-type: num
+     *   key: 'complexity-range', value-type: range<num>
+     *   key: 'feature-bitrate-modes', value-type: list<enum<VBR,CBR,CQ>>
+     *   key: 'feature-intra-refresh', value-type: enum<0,1>
+     *   key: 'quality-default', value-type: num
+     *   key: 'quality-range', value-type: range<num>
+     *   key: 'quality-scale', value-type: string
+     *
+     * For keys with prefix 'feature-' and value type enum<0,1>, the value of 0
+     * means "optional", while the value of 1 means "required".
+     */
+    typedef Attribute NodeAttribute;
+
+    /**
+     * Information for an IOmxNode node.
+     */
+    struct NodeInfo {
+        /**
+         * Name of this node.
+         *
+         * `name` can be supplied to `IOmx::allocateNode` of a
+         * corresponding `IOmx` instance to create the node.
+         */
+        string name;
+        /**
+         * Name of the `IOmx` instance that can create this node.
+         *
+         * To obtain the `IOmx` instance, call `getOmx(owner)`.
+         */
+        string owner;
+        /**
+         * List of node attributes.
+         */
+        vec<NodeAttribute> attributes;
+    };
+
+    /**
+     * Information about nodes provided for a supported node role
+     */
+    struct RoleInfo {
+        /**
+         * Standard OMX node role.
+         */
+        string role;
+        /**
+         * Corresponding media type (as defined in MediaFormat.MIMETYPE_*
+         * constants for types required by Android).
+         */
+        string type;
+        /**
+         * Whether this role is for an encoder or a decoder.
+         */
+        bool isEncoder;
+        /**
+         * Whether to prefer platform nodes for this role.
+         */
+        bool preferPlatformNodes;
+        /**
+         * List of nodes that support this role, ordered by preference.
+         */
+        vec<NodeInfo> nodes;
+    };
+
+    /**
+     * Return the prefix of names of supported nodes.
+     *
+     * @return prefix The prefix of the names of all nodes supported by this
+     *                service.
+     */
+    getNodePrefix(
+        ) generates (
+            string prefix
+        );
+
+    /**
+     * List roles of supported nodes.
+     *
+     * The name of each node inside `NodeInfo` must start with the prefix
+     * returned by `getNodePrefix()`.
+     *
+     * @return roleList The list of `RoleInfo`s.
+     *
+     * @see RoleInfo
+     */
+    listRoles(
+        ) generates (
+            vec<RoleInfo> roleList
+        );
+
+    /**
+     * Obtain an `IOmx` instance with a specified name.
+     *
+     * @param name The name of the instance.
+     * @return omx The `IOmx` interface associated with `name`. This must be
+     * null if the name is not found.
+     */
+    getOmx(
+            string name
+        ) generates (
+            IOmx omx
+        );
+
+};
+

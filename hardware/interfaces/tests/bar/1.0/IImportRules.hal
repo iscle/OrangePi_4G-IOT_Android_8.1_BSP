@@ -1,0 +1,47 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.tests.bar@1.0;
+
+import android.hardware.tests.foo@1.0;
+
+interface IImportRules {
+    // Note that there is a android.hardware.tests.foo@1.0::Outer in types.hal
+    struct Outer {
+        struct Inner {
+            int32_t data;
+        };
+        string data;
+    };
+
+    rule0a(Outer o); // should be resolved to Outer above
+    rule0a1(IImportRules.Outer o); // should be resolved to Outer above
+    rule0b(@1.0::IImportRules.Outer o);
+    rule0c(android.hardware.tests.foo@1.0::Outer o);
+    rule0d(@1.0::Outer o); // android.hardware.tests.foo@1.0::Outer
+    rule0e(Outer.Inner o); // should be resolved to Outer above
+    rule0f(@1.0::IImportRules.Outer.Inner o);
+    rule0g(android.hardware.tests.foo@1.0::Outer.Inner o);
+    rule0h(@1.0::Outer.Inner o); // android.hardware.tests.foo@1.0::Outer.Inner
+
+    rule1a(Def abc); // should be resolved to Def in types.hal in this package
+    rule1b(android.hardware.tests.foo@1.0::Def abc);
+
+    rule2a(Unrelated related);
+
+    // android.hardware.tests.foo@1.0::IFooCallback, since bar@1.0::IFooCallback is not imported.
+    rule2b(IFooCallback fooCallback);
+};

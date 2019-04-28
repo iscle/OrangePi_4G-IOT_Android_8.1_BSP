@@ -1,0 +1,237 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.gnss@1.0;
+
+import IAGnss;
+import IAGnssRil;
+import IGnssBatching;
+import IGnssCallback;
+import IGnssConfiguration;
+import IGnssDebug;
+import IGnssMeasurement;
+import IGnssNavigationMessage;
+import IGnssGeofencing;
+import IGnssNi;
+import IGnssXtra;
+
+/** Represents the standard GNSS (Global Navigation Satellite System) interface. */
+interface IGnss {
+    /** Requested operational mode for GNSS operation. */
+    @export(name="", value_prefix="GPS_POSITION_MODE_")
+    enum GnssPositionMode : uint8_t {
+        /** Mode for running GNSS standalone (no assistance). */
+        STANDALONE  = 0,
+        /** AGNSS MS-Based mode. */
+        MS_BASED    = 1,
+        /**
+         * AGNSS MS-Assisted mode. This mode is not maintained by the platform anymore.
+         * It is strongly recommended to use MS_BASED instead.
+         */
+        MS_ASSISTED = 2,
+    };
+
+    /** Requested recurrence mode for GNSS operation. */
+    @export(name="", value_prefix="GPS_POSITION_")
+    enum GnssPositionRecurrence : uint32_t {
+        /** Receive GNSS fixes on a recurring basis at a specified period. */
+        RECURRENCE_PERIODIC  = 0,
+        /** Request a single shot GNSS fix. */
+        RECURRENCE_SINGLE    = 1
+    };
+
+    /**
+     * Flags used to specify which aiding data to delete when calling
+     * deleteAidingData().
+     */
+    @export(name="", value_prefix="GPS_")
+    enum GnssAidingData : uint16_t {
+        DELETE_EPHEMERIS    = 0x0001,
+        DELETE_ALMANAC      = 0x0002,
+        DELETE_POSITION     = 0x0004,
+        DELETE_TIME         = 0x0008,
+        DELETE_IONO         = 0x0010,
+        DELETE_UTC          = 0x0020,
+        DELETE_HEALTH       = 0x0040,
+        DELETE_SVDIR        = 0x0080,
+        DELETE_SVSTEER      = 0x0100,
+        DELETE_SADATA       = 0x0200,
+        DELETE_RTI          = 0x0400,
+        DELETE_CELLDB_INFO  = 0x8000,
+        DELETE_ALL          = 0xFFFF
+    };
+
+    /**
+     * Opens the interface and provides the callback routines
+     * to the implementation of this interface.
+     *
+     * @param callback Callback interface for IGnss.
+     *
+     * @return success Returns true on success.
+     */
+    setCallback(IGnssCallback callback) generates (bool success);
+
+    /**
+     * Starts a location output stream using the IGnssCallback
+     * gnssLocationCb(), following the settings from the most recent call to
+     * setPositionMode().
+     *
+     * This output must operate independently of any GNSS location batching
+     * operations, see the IGnssBatching.hal for details.
+     *
+     * @return success Returns true on success.
+     */
+    start() generates (bool success);
+
+    /**
+     * Stops the location output stream.
+     *
+     * @return success Returns true on success.
+     */
+    stop() generates (bool success);
+
+    /**
+     * Closes the interface.
+     */
+    cleanup();
+
+    /**
+     * Injects the current time.
+     *
+     * @param timeMs This is the UTC time received from the NTP server, its value
+     * is given in milliseconds since January 1, 1970.
+     * @param timeReferenceMs The corresponding value of
+     * SystemClock.elapsedRealtime() from the device when the NTP response was
+     * received in milliseconds.
+     * @param uncertaintyMs Uncertainty associated with the value represented by
+     * time. Represented in milliseconds.
+     *
+     * @return success Returns true if the operation is successful.
+     */
+    injectTime(GnssUtcTime timeMs, int64_t timeReferenceMs, int32_t uncertaintyMs)
+        generates (bool success);
+
+    /**
+     * Injects current location from another location provider (typically cell
+     * ID).
+     *
+     * @param latitudeDegrees Measured in Degrees.
+     * @param longitudeDegrees Measured in Degrees.
+     * @param accuracyMeters Measured in meters.
+     *
+     * @return success Returns true if successful.
+     */
+    injectLocation(double latitudeDegrees, double longitudeDegrees, float accuracyMeters)
+        generates (bool success);
+
+    /**
+     * Specifies that the next call to start will not use the
+     * information defined in the flags. GnssAidingData value of DELETE_ALL is
+     * passed for a cold start.
+     *
+     * @param aidingDataFlags Flags specifying the aiding data to be deleted.
+     */
+    deleteAidingData(GnssAidingData aidingDataFlags);
+
+    /**
+     * Sets the GnssPositionMode parameter,its associated recurrence value,
+     * the time between fixes,requested fix accuracy and time to first fix.
+     *
+     * @param mode  Parameter must be one of MS_BASED or STANDALONE.
+     * It is allowed by the platform (and it is recommended) to fallback to
+     * MS_BASED if MS_ASSISTED is passed in, and MS_BASED is supported.
+     * @recurrence GNSS postion recurrence value, either periodic or single.
+     * @param minIntervalMs Represents the time between fixes in milliseconds.
+     * @param preferredAccuracyMeters Represents the requested fix accuracy in meters.
+     * @param preferredTimeMs Represents the requested time to first fix in milliseconds.
+
+     * @return success Returns true if successful.
+     */
+    setPositionMode(GnssPositionMode mode, GnssPositionRecurrence recurrence,
+                    uint32_t minIntervalMs, uint32_t preferredAccuracyMeters,
+                    uint32_t preferredTimeMs)
+        generates (bool success);
+
+    /**
+     * This method returns the IAGnssRil Interface.
+     *
+     * @return aGnssRilIface Handle to the IAGnssRil interface.
+     */
+    getExtensionAGnssRil() generates (IAGnssRil aGnssRilIface);
+
+    /**
+     * This method returns the IGnssGeofencing Interface.
+     *
+     * @return gnssGeofencingIface Handle to the IGnssGeofencing interface.
+     */
+    getExtensionGnssGeofencing() generates(IGnssGeofencing gnssGeofencingIface);
+
+    /**
+     * This method returns the IAGnss Interface.
+     *
+     * @return aGnssIface Handle to the IAGnss interface.
+     */
+    getExtensionAGnss() generates (IAGnss aGnssIface);
+
+    /**
+     * This method returns the IGnssNi interface.
+     *
+     * @return gnssNiIface Handle to the IGnssNi interface.
+     */
+    getExtensionGnssNi() generates (IGnssNi gnssNiIface);
+
+    /**
+     * This method returns the IGnssMeasurement interface.
+     *
+     * @return gnssMeasurementIface Handle to the IGnssMeasurement interface.
+     */
+    getExtensionGnssMeasurement() generates (IGnssMeasurement gnssMeasurementIface);
+
+    /**
+     * This method returns the IGnssNavigationMessage interface.
+     *
+     * @return gnssNavigationIface gnssNavigationIface to the IGnssNavigationMessage interface.
+     */
+    getExtensionGnssNavigationMessage() generates (IGnssNavigationMessage gnssNavigationIface);
+
+    /**
+     * This method returns the IGnssXtra interface.
+     *
+     * @return xtraIface Handle to the IGnssXtra interface.
+     */
+    getExtensionXtra() generates (IGnssXtra xtraIface);
+
+    /**
+     * This method returns the IGnssConfiguration interface.
+     *
+     * @return gnssConfigIface Handle to the IGnssConfiguration interface.
+     */
+    getExtensionGnssConfiguration() generates (IGnssConfiguration gnssConfigIface);
+
+    /**
+     * This method returns the IGnssDebug interface.
+     *
+     * @return debugIface Handle to the IGnssDebug interface.
+     */
+    getExtensionGnssDebug() generates (IGnssDebug debugIface);
+
+    /**
+     * This method returns the IGnssBatching interface.
+     *
+     * @return batchingIface Handle to the IGnssBatching interface.
+     */
+    getExtensionGnssBatching() generates (IGnssBatching batchingIface);
+};

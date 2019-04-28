@@ -1,0 +1,213 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.health@1.0;
+
+/**
+ * Possible return values for optional HAL method(s) like
+ * IHealth::energyCounter()
+ */
+enum Result : int32_t {
+    SUCCESS,
+    NOT_SUPPORTED,
+    UNKNOWN,
+};
+
+/**
+ * Possible values for Battery Status.
+ * Note: These are currently in sync with BatteryManager and must not
+ * be extended / altered.
+ */
+@export(name="", value_prefix="BATTERY_STATUS_")
+enum BatteryStatus : int32_t {
+    UNKNOWN = 1,
+    CHARGING = 2,
+    DISCHARGING = 3,
+    /**
+     * Battery is *not* charging - special case when charger is present
+     * but battery isn't charging
+     */
+    NOT_CHARGING = 4,
+    FULL = 5,
+};
+
+/**
+ * Possible values for Battery Health.
+ * Note: These are currently in sync with BatteryManager and must not
+ * be extended / altered.
+ */
+@export(name="", value_prefix="BATTERY_HEALTH_")
+enum BatteryHealth : int32_t {
+    UNKNOWN = 1,
+    GOOD = 2,
+    OVERHEAT = 3,
+    DEAD = 4,
+    OVER_VOLTAGE = 5,
+    /**
+     * Battery experienced an unknown/unspecifid failure.
+     */
+    UNSPECIFIED_FAILURE = 6,
+    COLD = 7,
+};
+
+struct HealthConfig {
+
+    /**
+     * periodicChoresIntervalFast is used while the device is not in
+     * suspend, or in suspend and connected to a charger (to watch for battery
+     * overheat due to charging)
+     */
+    int32_t periodicChoresIntervalFast;
+
+    /**
+     * periodicChoresIntervalSlow is used when the device is in suspend and
+     * not connected to a charger (to watch for a battery drained to zero
+     * remaining capacity).
+     */
+    int32_t periodicChoresIntervalSlow;
+
+    /**
+     * power_supply sysfs attribute file paths. Set these to specific paths
+     * to use for the associated battery parameters. Clients must search
+     * for appropriate power_supply attribute files to use, for any paths
+     * left empty after the HAL is initialized.
+     */
+
+    /**
+     * batteryStatusPath - file path to read battery charging status.
+     * (POWER_SUPPLY_PROP_STATUS)
+     */
+    string batteryStatusPath;
+
+
+    /**
+     * batteryHealthPath - file path to read battery health.
+     * (POWER_SUPPLY_PROP_HEALTH)
+     */
+    string batteryHealthPath;
+
+    /**
+     * batteryPresentPath - file path to read battery present status.
+     * (POWER_SUPPLY_PROP_PRESENT)
+     */
+    string batteryPresentPath;
+
+
+    /**
+     * batteryCapacityPath - file path to read remaining battery capacity.
+     * (POWER_SUPPLY_PROP_CAPACITY)
+     */
+    string batteryCapacityPath;
+
+    /**
+     * batteryVoltagePath - file path to read battery voltage.
+     * (POWER_SUPPLY_PROP_VOLTAGE_NOW)
+     */
+    string batteryVoltagePath;
+
+    /**
+     * batteryTemperaturePath - file path to read battery temperature in tenths
+     * of degree celcius. (POWER_SUPPLY_PROP_TEMP)
+     */
+    string batteryTemperaturePath;
+
+    /**
+     * batteryTechnologyPath - file path to read battery technology.
+     * (POWER_SUPPLY_PROP_TECHNOLOGY)
+     */
+    string batteryTechnologyPath;
+
+    /**
+     * batteryCurrentNowPath - file path to read battery instantaneous current.
+     * (POWER_SUPPLY_PROP_CURRENT_NOW)
+     */
+    string batteryCurrentNowPath;
+
+    /**
+     * batteryCurrentAvgPath - file path to read battery average current.
+     * (POWER_SUPPLY_PROP_CURRENT_AVG)
+     */
+    string batteryCurrentAvgPath;
+
+    /**
+     * batteryChargeCounterPath - file path to read battery accumulated charge.
+     * (POWER_SUPPLY_PROP_CHARGE_COUNTER)
+     */
+    string batteryChargeCounterPath;
+
+    /**
+     * batteryFullChargerPath - file path to read battery charge value when it
+     * is considered to be full. (POWER_SUPPLY_PROP_CHARGE_FULL)
+     */
+    string batteryFullChargePath;
+
+    /**
+     * batteryCycleCountPath - file path to read battery charge cycle count.
+     * (POWER_SUPPLY_PROP_CYCLE_COUNT)
+     */
+    string batteryCycleCountPath;
+};
+
+/**
+ * The parameter to healthd mainloop update calls
+ */
+struct HealthInfo {
+    /** AC charger state - 'true' if online */
+    bool chargerAcOnline;
+
+    /** USB charger state - 'true' if online */
+    bool chargerUsbOnline;
+
+    /** Wireless charger state - 'true' if online */
+    bool chargerWirelessOnline;
+
+    /** Maximum charging current supported by charger in uA */
+    int32_t maxChargingCurrent;
+
+    /** Maximum charging voltage supported by charger in uV */
+    int32_t maxChargingVoltage;
+
+    BatteryStatus batteryStatus;
+
+    BatteryHealth batteryHealth;
+
+    /** 'true' if battery is present */
+    bool batteryPresent;
+
+    /** Remaining battery capacity in percent */
+    int32_t batteryLevel;
+
+    /** Instantaneous battery voltage in uV */
+    int32_t batteryVoltage;
+
+    /** Instantaneous battery temperature in tenths of degree celcius */
+    int32_t batteryTemperature;
+
+    /** Instantaneous battery current in uA */
+    int32_t batteryCurrent;
+
+    /** Battery charge cycle count */
+    int32_t batteryCycleCount;
+
+    /** Battery charge value when it is considered to be "full" in uA-h */
+    int32_t batteryFullCharge;
+
+    /** Instantaneous battery capacity in uA-h */
+    int32_t batteryChargeCounter;
+
+    /** Battery technology, e.g. "Li-ion, Li-Poly" etc. */
+    string batteryTechnology;
+};

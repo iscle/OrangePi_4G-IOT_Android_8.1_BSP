@@ -1,0 +1,136 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.thermal@1.0;
+
+/** Device temperature types */
+@export
+enum TemperatureType : int32_t {
+    UNKNOWN = -1,
+    CPU = 0,
+    GPU = 1,
+    BATTERY = 2,
+    SKIN = 3,
+};
+
+enum CoolingType : uint32_t {
+    /** Fan cooling device speed in RPM. */
+    FAN_RPM = 0,
+};
+
+struct Temperature {
+    /**
+     * This temperature's type.
+     */
+    TemperatureType type;
+
+    /**
+     * Name of this temperature.
+     * All temperatures of the same "type" must have a different "name",
+     * e.g., cpu0, battery.
+     */
+    string name;
+
+    /**
+     * Current temperature in Celsius. If not available set by HAL to NAN.
+     * Current temperature can be in any units if type=UNKNOWN.
+     */
+    float currentValue;
+
+    /**
+     * Throttling temperature constant for this temperature.
+     * If not available, set by HAL to NAN.
+     */
+    float throttlingThreshold;
+
+    /**
+     * Shutdown temperature constant for this temperature.
+     * If not available, set by HAL to NAN.
+     */
+    float shutdownThreshold;
+
+    /**
+     * Threshold temperature above which the VR mode clockrate minimums cannot
+     * be maintained for this device.
+     * If not available, set by HAL to NAN.
+     */
+    float vrThrottlingThreshold;
+
+};
+
+struct CoolingDevice {
+    /**
+     * This cooling device type.
+     */
+    CoolingType type;
+
+    /**
+     * Name of this cooling device.
+     * All cooling devices of the same "type" must have a different "name".
+     */
+    string name;
+
+    /**
+     * Current cooling device value. Units depend on cooling device "type".
+     */
+    float currentValue;
+
+};
+
+struct CpuUsage {
+    /**
+     * Name of this CPU.
+     * All CPUs must have a different "name".
+     */
+    string name;
+
+    /**
+     * Active time since the last boot in ms.
+     */
+    uint64_t active;
+
+    /**
+     * Total time since the last boot in ms.
+     */
+    uint64_t total;
+
+    /**
+     * Is set to true when a core is online.
+     * If the core is offline, all other members except |name| should be ignored.
+     */
+    bool isOnline;
+
+};
+
+enum ThermalStatusCode : uint32_t {
+    /** No errors. */
+    SUCCESS = 0,
+    /** Unknown failure occured. */
+    FAILURE = 1
+};
+
+/**
+ * Generic structure to return the status of any thermal operation.
+ */
+struct ThermalStatus {
+    ThermalStatusCode code;
+
+    /**
+     * A specific error message to provide more information.
+     * This can be used for debugging purposes only.
+     */
+    string debugMessage;
+};

@@ -1,0 +1,247 @@
+/*
+ * Copyright 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.soundtrigger@2.0;
+
+import android.hardware.audio.common@2.0;
+
+import ISoundTriggerHwCallback;
+
+interface ISoundTriggerHw {
+
+    /**
+     * Sound trigger implementation descriptor read by the framework via
+     * getProperties(). Used by SoundTrigger service to report to applications
+     * and manage concurrency and policy.
+     */
+    struct Properties {
+        /** Implementor name */
+        string   implementor;
+        /** Implementation description */
+        string   description;
+        /** Implementation version */
+        uint32_t version;
+        /**
+         * Unique implementation ID. The UUID must change with each version of
+           the engine implementation */
+        Uuid     uuid;
+        /** Maximum number of concurrent sound models loaded */
+        uint32_t maxSoundModels;
+        /** Maximum number of key phrases */
+        uint32_t maxKeyPhrases;
+        /** Maximum number of concurrent users detected */
+        uint32_t maxUsers;
+        /** All supported modes. e.g RecognitionMode.VOICE_TRIGGER */
+        uint32_t recognitionModes;
+        /** Supports seamless transition from detection to capture */
+        bool     captureTransition;
+        /** Maximum buffering capacity in ms if captureTransition is true */
+        uint32_t maxBufferMs;
+        /** Supports capture by other use cases while detection is active */
+        bool     concurrentCapture;
+        /** Returns the trigger capture in event */
+        bool     triggerInEvent;
+        /**
+         * Rated power consumption when detection is active with TDB
+         * silence/sound/speech ratio */
+        uint32_t powerConsumptionMw;
+    };
+
+
+    /**
+     * Base sound model descriptor. This struct is the header of a larger block
+     * passed to loadSoundModel() and contains the binary data of the
+     * sound model.
+     */
+    struct SoundModel {
+        /** Model type. e.g. SoundModelType.KEYPHRASE */
+        SoundModelType type;
+        /** Unique sound model ID. */
+        Uuid           uuid;
+        /**
+         * Unique vendor ID. Identifies the engine the sound model
+         * was build for */
+        Uuid           vendorUuid;
+        /** Opaque data transparent to Android framework */
+        vec<uint8_t>   data;
+    };
+
+    /** Key phrase descriptor */
+    struct Phrase {
+        /** Unique keyphrase ID assigned at enrollment time */
+        uint32_t      id;
+        /** Recognition modes supported by this key phrase */
+        uint32_t      recognitionModes;
+        /** List of users IDs associated with this key phrase */
+        vec<uint32_t> users;
+        /** Locale - Java Locale style (e.g. en_US) */
+        string        locale;
+        /** Phrase text in UTF-8 format. */
+        string        text;
+    };
+
+    /**
+     * Specialized sound model for key phrase detection.
+     * Proprietary representation of key phrases in binary data must match
+     * information indicated by phrases field
+     */
+    struct PhraseSoundModel {
+        /** Common part of sound model descriptor */
+        SoundModel  common;
+        /** List of descriptors for key phrases supported by this sound model */
+        vec<Phrase> phrases;
+    };
+
+    /**
+     * Configuration for sound trigger capture session passed to
+     * startRecognition() method
+     */
+    struct RecognitionConfig {
+        /**
+         * IO handle that will be used for capture. N/A if captureRequested
+         * is false */
+        AudioIoHandle   captureHandle;
+        /** Input device requested for detection capture */
+        AudioDevice     captureDevice;
+        /** Capture and buffer audio for this recognition instance */
+        bool            captureRequested;
+        /** Configuration for each key phrase */
+        vec<PhraseRecognitionExtra> phrases;
+        /** Opaque capture configuration data transparent to the framework */
+        vec<uint8_t>    data;
+    };
+
+
+    /**
+     * Retrieve implementation properties.
+     * @return retval Operation completion status: 0 in case of success,
+     *                -ENODEV in case of initialization error.
+     * @return properties A Properties structure containing implementation
+     *                    description and capabilities.
+     */
+    getProperties() generates (int32_t retval, Properties properties);
+
+    /**
+     * Load a sound model. Once loaded, recognition of this model can be
+     * started and stopped. Only one active recognition per model at a time.
+     * The SoundTrigger service must handle concurrent recognition requests by
+     * different users/applications on the same model.
+     * The implementation returns a unique handle used by other functions
+     * (unloadSoundModel(), startRecognition(), etc...
+     * @param soundModel A SoundModel structure describing the sound model to
+     *                   load.
+     * @param callback The callback interface on which the soundmodelCallback()
+     *                 method will be called upon completion.
+     * @param cookie The value of the cookie argument passed to the completion
+     *               callback. This unique context information is assigned and
+     *               used only by the framework.
+     * @return retval Operation completion status: 0 in case of success,
+     *                -EINVAL in case of invalid sound model (e.g 0 data size),
+     *                -ENOSYS in case of invalid operation (e.g max number of
+     *                models exceeded),
+     *                -ENOMEM in case of memory allocation failure,
+     *                -ENODEV in case of initialization error.
+     * @return modelHandle A unique handle assigned by the HAL for use by the
+     *                framework when controlling activity for this sound model.
+     */
+    loadSoundModel(SoundModel soundModel,
+                   ISoundTriggerHwCallback callback,
+                   CallbackCookie cookie)
+            generates (int32_t retval, SoundModelHandle modelHandle);
+
+    /**
+     * Load a key phrase sound model. Once loaded, recognition of this model can
+     * be started and stopped. Only one active recognition per model at a time.
+     * The SoundTrigger service must handle concurrent recognition requests by
+     * different users/applications on the same model.
+     * The implementation returns a unique handle used by other functions
+     * (unloadSoundModel(), startRecognition(), etc...
+     * @param soundModel A PhraseSoundModel structure describing the sound model
+     *                   to load.
+     * @param callback The callback interface on which the soundmodelCallback()
+     *                 method will be called upon completion.
+     * @param cookie The value of the cookie argument passed to the completion
+     *               callback. This unique context information is assigned and
+     *               used only by the framework.
+     * @return retval Operation completion status: 0 in case of success,
+     *                -EINVAL in case of invalid sound model (e.g 0 data size),
+     *                -ENOSYS in case of invalid operation (e.g max number of
+     *                models exceeded),
+     *                -ENOMEM in case of memory allocation failure,
+     *                -ENODEV in case of initialization error.
+     * @return modelHandle A unique handle assigned by the HAL for use by the
+     *                framework when controlling activity for this sound model.
+     */
+    loadPhraseSoundModel(PhraseSoundModel soundModel,
+                   ISoundTriggerHwCallback callback,
+                   CallbackCookie cookie)
+            generates (int32_t retval, SoundModelHandle modelHandle);
+
+    /**
+     * Unload a sound model. A sound model may be unloaded to make room for a
+     * new one to overcome implementation limitations.
+     * @param modelHandle the handle of the sound model to unload
+     * @return retval Operation completion status: 0 in case of success,
+     *                -ENOSYS if the model is not loaded,
+     *                -ENODEV in case of initialization error.
+     */
+    unloadSoundModel(SoundModelHandle modelHandle)
+            generates (int32_t retval);
+
+    /**
+     * Start recognition on a given model. Only one recognition active
+     * at a time per model. Once recognition succeeds of fails, the callback
+     * is called.
+     * @param modelHandle the handle of the sound model to use for recognition
+     * @param config A RecognitionConfig structure containing attributes of the
+     *               recognition to perform
+     * @param callback The callback interface on which the recognitionCallback()
+     *                 method must be called upon recognition.
+     * @param cookie The value of the cookie argument passed to the recognition
+     *               callback. This unique context information is assigned and
+     *               used only by the framework.
+     * @return retval Operation completion status: 0 in case of success,
+     *                -EINVAL in case of invalid recognition attributes,
+     *                -ENOSYS in case of invalid model handle,
+     *                -ENOMEM in case of memory allocation failure,
+     *                -ENODEV in case of initialization error.
+     */
+    startRecognition(SoundModelHandle modelHandle,
+                     RecognitionConfig config,
+                     ISoundTriggerHwCallback callback,
+                     CallbackCookie cookie)
+            generates (int32_t retval);
+
+    /**
+     * Stop recognition on a given model.
+     * The implementation must not call the recognition callback when stopped
+     * via this method.
+     * @param modelHandle The handle of the sound model to use for recognition
+     * @return retval Operation completion status: 0 in case of success,
+     *                -ENOSYS in case of invalid model handle,
+     *                -ENODEV in case of initialization error.
+     */
+    stopRecognition(SoundModelHandle modelHandle)
+            generates (int32_t retval);
+
+    /**
+     * Stop recognition on all models.
+     * @return retval Operation completion status: 0 in case of success,
+     *                -ENODEV in case of initialization error.
+     */
+    stopAllRecognitions()
+            generates (int32_t retval);
+};

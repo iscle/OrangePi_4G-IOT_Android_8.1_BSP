@@ -1,0 +1,236 @@
+/*
+ * Copyright 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.wifi.supplicant@1.0;
+
+/**
+ * Callback Interface exposed by the supplicant service
+ * for each P2P mode interface (ISupplicantP2pIface).
+ *
+ * Clients need to host an instance of this HIDL interface object and
+ * pass a reference of the object to the supplicant via the
+ * corresponding |ISupplicantP2pIface.registerCallback| method.
+ */
+interface ISupplicantP2pIfaceCallback {
+  /**
+   * WPS Device Password ID
+   */
+  enum WpsDevPasswordId : uint16_t {
+    DEFAULT = 0x0000,
+    USER_SPECIFIED = 0x0001,
+    MACHINE_SPECIFIED = 0x0002,
+    REKEY = 0x0003,
+    PUSHBUTTON = 0x0004,
+    REGISTRAR_SPECIFIED = 0x0005,
+    NFC_CONNECTION_HANDOVER = 0x0007,
+    P2PS_DEFAULT = 0x0008
+  };
+
+  /**
+   * Status codes for P2P operations.
+   */
+  enum P2pStatusCode : uint32_t {
+    SUCCESS = 0,
+    FAIL_INFO_CURRENTLY_UNAVAILABLE = 1,
+    FAIL_INCOMPATIBLE_PARAMS = 2,
+    FAIL_LIMIT_REACHED = 3,
+    FAIL_INVALID_PARAMS = 4,
+    FAIL_UNABLE_TO_ACCOMMODATE = 5,
+    FAIL_PREV_PROTOCOL_ERROR = 6,
+    FAIL_NO_COMMON_CHANNELS = 7,
+    FAIL_UNKNOWN_GROUP = 8,
+    FAIL_BOTH_GO_INTENT_15 = 9,
+    FAIL_INCOMPATIBLE_PROV_METHOD = 10,
+    FAIL_REJECTED_BY_USER = 11,
+    SUCCESS_DEFERRED = 12,
+  };
+
+  /**
+   * Status codes for P2P discovery.
+   */
+  enum P2pProvDiscStatusCode : uint8_t {
+    SUCCESS = 0,
+    TIMEOUT = 1,
+    REJECTED = 2,
+    TIMEOUT_JOIN = 3,
+    INFO_UNAVAILABLE = 4
+  };
+
+  /**
+   * Used to indicate that a new network has been added.
+   *
+   * @param id Network ID allocated to the corresponding network.
+   */
+  oneway onNetworkAdded(SupplicantNetworkId id);
+
+  /**
+   * Used to indicate that a network has been removed.
+   *
+   * @param id Network ID allocated to the corresponding network.
+   */
+  oneway onNetworkRemoved(SupplicantNetworkId id);
+
+  /**
+   * Used to indicate that a P2P device has been found.
+   *
+   * @param srcAddress MAC address of the device found. This must either
+   *        be the P2P device address or the P2P interface address.
+   * @param p2pDeviceAddress P2P device address.
+   * @param primaryDeviceType Type of device. Refer to section B.1 of Wifi P2P
+   *        Technical specification v1.2.
+   * @param deviceName Name of the device.
+   * @param configMethods Mask of WPS configuration methods supported by the
+   *        device.
+   * @param deviceCapabilities Refer to section 4.1.4 of Wifi P2P Technical
+   *        specification v1.2.
+   * @param groupCapabilites Refer to section 4.1.4 of Wifi P2P Technical
+   *        specification v1.2.
+   * @param wfdDeviceInfo WFD device info as described in section 5.1.2 of WFD
+   *        technical specification v1.0.0.
+   */
+  oneway onDeviceFound(
+      MacAddress srcAddress, MacAddress p2pDeviceAddress,
+      uint8_t[8] primaryDeviceType, string deviceName,
+      bitfield<WpsConfigMethods> configMethods, uint8_t deviceCapabilities,
+      bitfield<P2pGroupCapabilityMask> groupCapabilities, uint8_t[6] wfdDeviceInfo);
+
+  /**
+   * Used to indicate that a P2P device has been lost.
+   *
+   * @param p2pDeviceAddress P2P device address.
+   */
+  oneway onDeviceLost(MacAddress p2pDeviceAddress);
+
+  /**
+   * Used to indicate the termination of P2P find operation.
+   */
+  oneway onFindStopped();
+
+  /**
+   * Used to indicate the reception of a P2P Group Owner negotiation request.
+   *
+   * @param srcAddress MAC address of the device that initiated the GO
+   *        negotiation request.
+   * @param passwordId Type of password.
+   */
+  oneway onGoNegotiationRequest(
+      MacAddress srcAddress, WpsDevPasswordId passwordId);
+
+  /**
+   * Used to indicate the completion of a P2P Group Owner negotiation request.
+   *
+   * @param status Status of the GO negotiation.
+   */
+  oneway onGoNegotiationCompleted(P2pStatusCode status);
+
+  /**
+   * Used to indicate a successful formation of a P2P group.
+   */
+  oneway onGroupFormationSuccess();
+
+  /**
+   * Used to indicate a failure to form a P2P group.
+   *
+   * @param failureReason Failure reason string for debug purposes.
+   */
+  oneway onGroupFormationFailure(string failureReason);
+
+  /**
+   * Used to indicate the start of a P2P group.
+   *
+   * @param groupIfName Interface name of the group. (For ex: p2p-p2p0-1)
+   * @param isGo Whether this device is owner of the group.
+   * @param ssid SSID of the group.
+   * @param frequency Frequency on which this group is created.
+   * @param psk PSK used to secure the group.
+   * @param passphrase PSK passphrase used to secure the group.
+   * @param goDeviceAddress MAC Address of the owner of this group.
+   * @param isPersistent Whether this group is persisted or not.
+   */
+  oneway onGroupStarted(
+      string groupIfname, bool isGo, Ssid ssid, uint32_t frequency,
+      uint8_t[32] psk, string passphrase, MacAddress goDeviceAddress,
+      bool isPersistent);
+
+  /**
+   * Used to indicate the removal of a P2P group.
+   *
+   * @param groupIfName Interface name of the group. (For ex: p2p-p2p0-1)
+   * @param isGo Whether this device is owner of the group.
+   */
+  oneway onGroupRemoved(string groupIfname, bool isGo);
+
+  /**
+   * Used to indicate the reception of a P2P invitation.
+   *
+   * @param srcAddress MAC address of the device that sent the invitation.
+   * @param goDeviceAddress MAC Address of the owner of this group.
+   * @param Bssid Bssid of the group.
+   * @param persistentNetworkId Persistent network Id of the group.
+   * @param operatingFrequency Frequency on which the invitation was received.
+   */
+  oneway onInvitationReceived(
+      MacAddress srcAddress, MacAddress goDeviceAddress, Bssid bssid,
+      SupplicantNetworkId persistentNetworkId, uint32_t operatingFrequency);
+
+  /**
+   * Used to indicate the result of the P2P invitation request.
+   *
+   * @param Bssid Bssid of the group.
+   * @param status Status of the invitation.
+   */
+  oneway onInvitationResult(Bssid bssid, P2pStatusCode status);
+
+  /**
+   * Used to indicate the completion of a P2P provision discovery request.
+   *
+   * @param p2pDeviceAddress P2P device address.
+   * @param isRequest Whether we received or sent the provision discovery.
+   * @param status Status of the provision discovery.
+   * @param configMethods Mask of WPS configuration methods supported.
+   * @param generatedPin 8 digit pin generated.
+   */
+  oneway onProvisionDiscoveryCompleted(
+      MacAddress p2pDeviceAddress, bool isRequest, P2pProvDiscStatusCode status,
+      bitfield<WpsConfigMethods> configMethods, string generatedPin);
+
+  /**
+   * Used to indicate the reception of a P2P service discovery response.
+   *
+   * @param srcAddress MAC address of the device that sent the service discovery.
+   * @param updateIndicator Service update indicator. Refer to section 3.1.3 of
+   *        Wifi P2P Technical specification v1.2.
+   * @parm tlvs Refer to section 3.1.3.1 of Wifi P2P Technical specification v1.2.
+   */
+  oneway onServiceDiscoveryResponse(
+      MacAddress srcAddress, uint16_t updateIndicator, vec<uint8_t> tlvs);
+
+  /**
+   * Used to indicate when a STA device is connected to this device.
+   *
+   * @param srcAddress MAC address of the device that was authorized.
+   * @param p2pDeviceAddress P2P device address.
+   */
+  oneway onStaAuthorized(MacAddress srcAddress, MacAddress p2pDeviceAddress);
+
+  /**
+   * Used to indicate when a STA device is disconnected from this device.
+   *
+   * @param srcAddress MAC address of the device that was deauthorized.
+   * @param p2pDeviceAddress P2P device address.
+   */
+  oneway onStaDeauthorized(MacAddress srcAddress, MacAddress p2pDeviceAddress);
+};

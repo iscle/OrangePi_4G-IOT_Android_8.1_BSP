@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright (C) 2017 The Android Open Source Project
+
+     Licensed under the Apache License, Version 2.0 (the "License");
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License.
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="http://schemas.android.com/audio/audio_effects_conf/v2_0"
+           xmlns:aec="http://schemas.android.com/audio/audio_effects_conf/v2_0"
+           elementFormDefault="qualified">
+
+  <!-- Simple types -->
+  <xs:simpleType name="versionType">
+    <xs:restriction base="xs:decimal">
+      <xs:enumeration value="2.0"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="uuidType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="streamInputType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="mic"/>
+      <xs:enumeration value="voice_uplink"/>
+      <xs:enumeration value="voice_downlink"/>
+      <xs:enumeration value="voice_call"/>
+      <xs:enumeration value="camcorder"/>
+      <xs:enumeration value="voice_recognition"/>
+      <xs:enumeration value="voice_communication"/>
+      <xs:enumeration value="unprocessed"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="streamOutputType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="voice_call"/>
+      <xs:enumeration value="system"/>
+      <xs:enumeration value="ring"/>
+      <xs:enumeration value="music"/>
+      <xs:enumeration value="alarm"/>
+      <xs:enumeration value="notification"/>
+      <xs:enumeration value="bluetooth_sco"/>
+      <xs:enumeration value="enforced_audible"/>
+      <xs:enumeration value="dtmf"/>
+      <xs:enumeration value="tts"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="relativePathType">
+    <xs:restriction base="xs:string">
+      <xs:pattern value="[^/].*"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- Complex types -->
+  <xs:complexType name="librariesType">
+    <xs:annotation>
+      <xs:documentation xml:lang="en">
+        List of effect libraries to load. Each library element must have "name" and
+        "path" attributes. The latter is giving the path of the library .so file
+        relative to the standard effect folders: /(vendor|odm|system)/lib(64)?/soundfx/
+
+        Example for a library in "/vendor/lib/soundfx/lib.so":
+        <library name="name" path="lib.so"/>
+
+      </xs:documentation>
+    </xs:annotation>
+    <xs:sequence>
+      <xs:element name="library" minOccurs="0" maxOccurs="unbounded">
+        <xs:complexType>
+          <xs:attribute name="name" type="xs:string" use="required"/>
+          <xs:attribute name="path" type="aec:relativePathType" use="required"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="effectImplType">
+    <xs:attribute name="library" type="xs:string" use="required"/>
+    <xs:attribute name="uuid" type="aec:uuidType" use="required"/>
+  </xs:complexType>
+  <xs:complexType name="effectType">
+    <xs:complexContent>
+      <xs:extension base="aec:effectImplType">
+        <xs:attribute name="name" type="xs:string" use="required"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="effectProxyType">
+    <xs:complexContent>
+      <xs:extension base="aec:effectType">
+        <xs:sequence>
+          <xs:element name="libsw" type="aec:effectImplType"/>
+          <xs:element name="libhw" type="aec:effectImplType"/>
+        </xs:sequence>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="effectsType">
+    <xs:annotation>
+      <xs:documentation xml:lang="en">
+        List of effects to load. Each effect element must contain "name",
+        "library", and "uuid" attrs. The value of the "library" attr must
+        correspond to the name of a "library" element. The name of the effect
+        element is indicative, only the value of the "uuid" element designates
+        the effect for the audio framework.  The uuid is the implementation
+        specific UUID as specified by the effect vendor. This is not the generic
+        effect type UUID.
+
+        For effect proxy implementations, SW and HW implemetations of the effect
+        can be specified.
+
+        Example:
+
+        <effect name="name" library="lib" uuid="uuuu"/>
+        <effectProxy name="proxied" library="proxy" uuid="xxxx">
+            <libsw library="sw_bundle" uuid="yyyy"/>
+            <libhw library="offload_bundle" uuid="zzzz"/>
+        </effectProxy>
+
+      </xs:documentation>
+    </xs:annotation>
+    <xs:choice maxOccurs="unbounded">
+      <xs:element name="effect" type="aec:effectType" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="effectProxy" type="aec:effectProxyType" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:choice>
+  </xs:complexType>
+  <xs:complexType name="streamProcessingType">
+    <xs:sequence>
+      <xs:element name="apply" minOccurs="0" maxOccurs="unbounded">
+        <xs:complexType>
+          <xs:attribute name="effect" type="xs:string" use="required"/>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="streamPreprocessType">
+    <xs:annotation>
+      <xs:documentation xml:lang="en">
+        Audio preprocessing configuration. The processing configuration consists
+        of a list of elements each describing processing settings for a given
+        input stream. Valid input stream types are listed in "streamInputType".
+
+        Each stream element contains a list of "apply" elements. The value of the
+        "effect" attr must correspond to the name of an "effect" element.
+
+        Example:
+
+        <stream type="voice_communication">
+            <apply effect="effect1"/>
+            <apply effect="effect2"/>
+        </stream>
+
+      </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent>
+      <xs:extension base="aec:streamProcessingType">
+        <xs:attribute name="type" type="aec:streamInputType" use="required"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+  <xs:complexType name="streamPostprocessType">
+    <xs:annotation>
+      <xs:documentation xml:lang="en">
+        Audio postprocessing configuration. The processing configuration consists
+        of a list of elements each describing processing settings for a given
+        output stream. Valid output stream types are listed in "streamOutputType".
+
+        Each stream element contains a list of "apply" elements. The value of the
+        "effect" attr must correspond to the name of an "effect" element.
+
+        Example:
+
+        <stream type="music">
+            <apply effect="effect1"/>
+        </stream>
+
+      </xs:documentation>
+    </xs:annotation>
+    <xs:complexContent>
+      <xs:extension base="aec:streamProcessingType">
+        <xs:attribute name="type" type="aec:streamOutputType" use="required"/>
+      </xs:extension>
+    </xs:complexContent>
+  </xs:complexType>
+
+  <!-- Root element -->
+  <xs:element name="audio_effects_conf">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="libraries" type="aec:librariesType"/>
+        <xs:element name="effects" type="aec:effectsType"/>
+        <xs:element name="postprocess" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="stream" type="aec:streamPostprocessType" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="preprocess" minOccurs="0" maxOccurs="1">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="stream" type="aec:streamPreprocessType" minOccurs="0" maxOccurs="unbounded"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+      <xs:attribute name="version" type="aec:versionType" use="required"/>
+    </xs:complexType>
+
+    <!-- Keys and references -->
+    <xs:key name="libraryName">
+      <xs:selector xpath="aec:libraries/aec:library"/>
+      <xs:field xpath="@name"/>
+    </xs:key>
+    <xs:keyref name="libraryNameRef1" refer="aec:libraryName">
+      <xs:selector xpath="aec:effects/aec:effect"/>
+      <xs:field xpath="@library"/>
+    </xs:keyref>
+    <xs:keyref name="libraryNameRef2" refer="aec:libraryName">
+      <xs:selector xpath="aec:effects/aec:effect/aec:libsw"/>
+      <xs:field xpath="@library"/>
+    </xs:keyref>
+    <xs:keyref name="libraryNameRef3" refer="aec:libraryName">
+      <xs:selector xpath="aec:effects/aec:effect/aec:libhw"/>
+      <xs:field xpath="@library"/>
+    </xs:keyref>
+    <xs:key name="effectName">
+      <xs:selector xpath="aec:effects/aec:effect"/>
+      <xs:field xpath="@name"/>
+    </xs:key>
+    <xs:keyref name="effectNamePreRef" refer="aec:effectName">
+      <xs:selector xpath="aec:preprocess/aec:stream/aec:apply"/>
+      <xs:field xpath="@effect"/>
+    </xs:keyref>
+    <xs:keyref name="effectNamePostRef" refer="aec:effectName">
+      <xs:selector xpath="aec:postprocess/aec:stream/aec:apply"/>
+      <xs:field xpath="@effect"/>
+    </xs:keyref>
+  </xs:element>
+</xs:schema>

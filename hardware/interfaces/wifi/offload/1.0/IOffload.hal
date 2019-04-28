@@ -1,0 +1,87 @@
+/*
+ * Copyright 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.wifi.offload@1.0;
+
+import IOffloadCallback;
+
+interface IOffload {
+    /**
+     * Configure the offload module to perform scans and filter results
+     * Scans must not be triggered due to configuration of the module.
+     *
+     * @param ScanParam paramters for scanning
+     * @param ScanFilter settings to filter scan result
+     * @return OffloadStatus indicating status of operation provided by this API
+     * If OffloadStatusCode::OK is returned, the operation was successful
+     * If OffloadStatusCode::NO_CONNECTION is returned, connection to the hardware is lost
+     * If OffloadStatusCode::ERROR is returned, requested operation could not be completed
+     */
+    @entry
+    @callflow(next={"setEventCallback", "subscribeScanResults"})
+    configureScans(ScanParam param, ScanFilter filter) generates (OffloadStatus status);
+
+    /**
+     * Get scan statistics
+     *
+     * @return OffloadStatus indicating status of operation provided by this API
+     * @return ScanStats statistics of scans performed
+     * If OffloadStatusCode::OK is returned, the operation was successful
+     * If OffloadStatusCode::NO_CONNECTION is returned, connection to the hardware is lost
+     * If OffloadStatusCode::ERROR is returned, requested operation could not be completed
+     * If OffloadStatusCode::TIMEOUT is returned, time out waiting for the requested data
+     */
+    @exit
+    @callflow(next={"subscribeScanResults", "unsubscribeScanResults", "getScanStats"})
+    getScanStats() generates (OffloadStatus status, ScanStats scanStats);
+
+    /**
+     * Subscribe to asynchronous scan events sent by offload module. This enables
+     * offload scans to be performed as per scan parameters, filtering the scan
+     * results based on configured scan filter and delivering the results after
+     * at least delayMs milliseconds from this call. If the client is already
+     * subscribed to the scan results, a call to this API must be a no-op.
+     *
+     * @param delayMs an integer expressing the minimum delay in mS after
+     *        subscribing when scan results must be delivered to the client
+     * @return OffloadStatus indicating status of operation provided by this API
+     * If OffloadStatusCode::OK is returned, the operation was successful
+     * If OffloadStatusCode::NO_CONNECTION is returned, connection to the hardware is lost
+     * If OffloadStatusCode::ERROR is returned, requested operation could not be completed
+     */
+    @callflow(next={"unsubscribeScanResults", "getScanStats"})
+    subscribeScanResults(uint32_t delayMs) generates (OffloadStatus status);
+
+    /**
+     * Unsubscribe to scan events sent by the offload module, hence disabling scans.
+     * If the client is already unsubscribed, a call to this API will be a no-op.
+     */
+    @exit
+    @callflow(next={"*"})
+    unsubscribeScanResults();
+
+    /**
+     * Setup the HIDL interface for reporting asynchronous scan events. A maximum
+     * of one callback interface is supported. Only one callback must be registered
+     * at any given time. If two consecutive calls are made with different callback
+     * interface objects, the latest one must be used to deliver events to client.
+     *
+     * @param cb An instance of the |IOffloadCallback| HIDL interface object
+     */
+    @entry
+    @callflow(next={"subscribeScanStats", "configureScans"})
+    setEventCallback(IOffloadCallback cb);
+};

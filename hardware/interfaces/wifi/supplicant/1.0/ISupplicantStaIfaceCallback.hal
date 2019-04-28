@@ -1,0 +1,530 @@
+/*
+ * Copyright 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.wifi.supplicant@1.0;
+
+/**
+ * Callback Interface exposed by the supplicant service
+ * for each station mode interface (ISupplicantStaIface).
+ *
+ * Clients need to host an instance of this HIDL interface object and
+ * pass a reference of the object to the supplicant via the
+ * corresponding |ISupplicantStaIface.registerCallback| method.
+ */
+interface ISupplicantStaIfaceCallback {
+  /** Various states of the interface reported by |onStateChanged|.*/
+  enum State : uint32_t {
+    /**
+     * This state indicates that client is not associated, but is likely to
+     * start looking for an access point. This state is entered when a
+     * connection is lost.
+     */
+    DISCONNECTED = 0,
+    /**
+     * This state is entered if the network interface is disabled, e.g.,
+     * due to rfkill. the supplicant refuses any new operations that would
+     * use the radio until the interface has been enabled.
+     */
+    IFACE_DISABLED = 1,
+    /**
+     * This state is entered if there are no enabled networks in the
+     * configuration. the supplicant is not trying to associate with a new
+     * network and external interaction (e.g., ctrl_iface call to add or
+     * enable a network) is needed to start association.
+     */
+    INACTIVE = 2,
+    /**
+     * This state is entered when the supplicant starts scanning for a
+     * network.
+     */
+    SCANNING = 3,
+    /**
+     * This state is entered when the supplicant has found a suitable BSS
+     * to authenticate with and the driver is configured to try to
+     * authenticate with this BSS. This state is used only with drivers
+     * that use the supplicant as the SME.
+     */
+    AUTHENTICATING = 4,
+    /**
+     * This state is entered when the supplicant has found a suitable BSS
+     * to associate with and the driver is configured to try to associate
+     * with this BSS in ap_scan=1 mode. When using ap_scan=2 mode, this
+     * state is entered when the driver is configured to try to associate
+     * with a network using the configured SSID and security policy.
+     */
+    ASSOCIATING = 5,
+    /**
+     * This state is entered when the driver reports that association has
+     * been successfully completed with an AP. If IEEE 802.1X is used
+     * (with or without WPA/WPA2), the supplicant remains in this state
+     * until the IEEE 802.1X/EAPOL authentication has been completed.
+     */
+    ASSOCIATED = 6,
+    /**
+     * This state is entered when WPA/WPA2 4-Way Handshake is started. In
+     * case of WPA-PSK, this happens when receiving the first EAPOL-Key
+     * frame after association. In case of WPA-EAP, this state is entered
+     * when the IEEE 802.1X/EAPOL authentication has been completed.
+     */
+    FOURWAY_HANDSHAKE = 7,
+    /**
+     * This state is entered when 4-Way Key Handshake has been completed
+     * (i.e., when the supplicant sends out message 4/4) and when Group
+     * Key rekeying is started by the AP (i.e., when supplicant receives
+     * message 1/2).
+     */
+    GROUP_HANDSHAKE = 8,
+    /**
+     * This state is entered when the full authentication process is
+     * completed. In case of WPA2, this happens when the 4-Way Handshake is
+     * successfully completed. With WPA, this state is entered after the
+     * Group Key Handshake; with IEEE 802.1X (non-WPA) connection is
+     * completed after dynamic keys are received (or if not used, after
+     * the EAP authentication has been completed). With static WEP keys and
+     * plaintext connections, this state is entered when an association
+     * has been completed.
+     *
+     * This state indicates that the supplicant has completed its
+     * processing for the association phase and that data connection is
+     * fully configured.
+     */
+    COMPLETED = 9
+  };
+
+  /**
+   * OSU Method. Refer to section 4.8.1.3 of the Hotspot 2.0 spec.
+   */
+  enum OsuMethod : uint8_t {
+    OMA_DM = 0,
+    SOAP_XML_SPP = 1
+  };
+
+  /**
+   * ANQP data for IEEE Std 802.11u-2011.
+   * The format of the data within these elements follows the IEEE
+   * Std 802.11u-2011 standard.
+   */
+  struct AnqpData {
+    vec<uint8_t> venueName;
+    vec<uint8_t> roamingConsortium;
+    vec<uint8_t> ipAddrTypeAvailability;
+    vec<uint8_t> naiRealm;
+    vec<uint8_t> anqp3gppCellularNetwork;
+    vec<uint8_t> domainName;
+  };
+
+  /**
+   * ANQP data for Hotspot 2.0.
+   * The format of the data within these elements follows the Hotspot 2.0
+   * standard.
+   */
+  struct Hs20AnqpData {
+    vec<uint8_t> operatorFriendlyName;
+    vec<uint8_t> wanMetrics;
+    vec<uint8_t> connectionCapability;
+    vec<uint8_t> osuProvidersList;
+  };
+
+  /**
+   * WPS Configuration Error.
+   */
+  enum WpsConfigError : uint16_t {
+    NO_ERROR = 0,
+    OOB_IFACE_READ_ERROR = 1,
+    DECRYPTION_CRC_FAILURE = 2,
+    CHAN_24_NOT_SUPPORTED = 3,
+    CHAN_50_NOT_SUPPORTED = 4,
+    SIGNAL_TOO_WEAK = 5,
+    NETWORK_AUTH_FAILURE = 6,
+    NETWORK_ASSOC_FAILURE = 7,
+    NO_DHCP_RESPONSE = 8,
+    FAILED_DHCP_CONFIG = 9,
+    IP_ADDR_CONFLICT = 10,
+    NO_CONN_TO_REGISTRAR = 11,
+    MULTIPLE_PBC_DETECTED = 12,
+    ROGUE_SUSPECTED = 13,
+    DEVICE_BUSY = 14,
+    SETUP_LOCKED = 15,
+    MSG_TIMEOUT = 16,
+    REG_SESS_TIMEOUT = 17,
+    DEV_PASSWORD_AUTH_FAILURE = 18,
+    CHAN_60G_NOT_SUPPORTED = 19,
+    PUBLIC_KEY_HASH_MISMATCH = 20
+  };
+
+  /**
+   * Vendor specific Error Indication for WPS event messages.
+   */
+  enum WpsErrorIndication : uint16_t {
+    NO_ERROR = 0,
+    SECURITY_TKIP_ONLY_PROHIBITED = 1,
+    SECURITY_WEP_PROHIBITED = 2,
+    AUTH_FAILURE = 3
+  };
+
+  /**
+   * Status codes (IEEE Std 802.11-2016, 9.4.1.9, Table 9-46).
+   */
+  enum StatusCode : uint32_t {
+    SUCCESS = 0,
+    UNSPECIFIED_FAILURE = 1,
+    TDLS_WAKEUP_ALTERNATE = 2,
+    TDLS_WAKEUP_REJECT = 3,
+    SECURITY_DISABLED = 5,
+    UNACCEPTABLE_LIFETIME = 6,
+    NOT_IN_SAME_BSS = 7,
+    CAPS_UNSUPPORTED = 10,
+    REASSOC_NO_ASSOC = 11,
+    ASSOC_DENIED_UNSPEC = 12,
+    NOT_SUPPORTED_AUTH_ALG = 13,
+    UNKNOWN_AUTH_TRANSACTION = 14,
+    CHALLENGE_FAIL = 15,
+    AUTH_TIMEOUT = 16,
+    AP_UNABLE_TO_HANDLE_NEW_STA = 17,
+    ASSOC_DENIED_RATES = 18,
+    ASSOC_DENIED_NOSHORT = 19,
+    SPEC_MGMT_REQUIRED = 22,
+    PWR_CAPABILITY_NOT_VALID = 23,
+    SUPPORTED_CHANNEL_NOT_VALID = 24,
+    ASSOC_DENIED_NO_SHORT_SLOT_TIME = 25,
+    ASSOC_DENIED_NO_HT = 27,
+    R0KH_UNREACHABLE = 28,
+    ASSOC_DENIED_NO_PCO = 29,
+    ASSOC_REJECTED_TEMPORARILY = 30,
+    ROBUST_MGMT_FRAME_POLICY_VIOLATION = 31,
+    UNSPECIFIED_QOS_FAILURE = 32,
+    DENIED_INSUFFICIENT_BANDWIDTH = 33,
+    DENIED_POOR_CHANNEL_CONDITIONS = 34,
+    DENIED_QOS_NOT_SUPPORTED = 35,
+    REQUEST_DECLINED = 37,
+    INVALID_PARAMETERS = 38,
+    REJECTED_WITH_SUGGESTED_CHANGES = 39,
+    INVALID_IE = 40,
+    GROUP_CIPHER_NOT_VALID = 41,
+    PAIRWISE_CIPHER_NOT_VALID = 42,
+    AKMP_NOT_VALID = 43,
+    UNSUPPORTED_RSN_IE_VERSION = 44,
+    INVALID_RSN_IE_CAPAB = 45,
+    CIPHER_REJECTED_PER_POLICY = 46,
+    TS_NOT_CREATED = 47,
+    DIRECT_LINK_NOT_ALLOWED = 48,
+    DEST_STA_NOT_PRESENT = 49,
+    DEST_STA_NOT_QOS_STA = 50,
+    ASSOC_DENIED_LISTEN_INT_TOO_LARGE = 51,
+    INVALID_FT_ACTION_FRAME_COUNT = 52,
+    INVALID_PMKID = 53,
+    INVALID_MDIE = 54,
+    INVALID_FTIE = 55,
+    REQUESTED_TCLAS_NOT_SUPPORTED = 56,
+    INSUFFICIENT_TCLAS_PROCESSING_RESOURCES = 57,
+    TRY_ANOTHER_BSS = 58,
+    GAS_ADV_PROTO_NOT_SUPPORTED = 59,
+    NO_OUTSTANDING_GAS_REQ = 60,
+    GAS_RESP_NOT_RECEIVED = 61,
+    STA_TIMED_OUT_WAITING_FOR_GAS_RESP = 62,
+    GAS_RESP_LARGER_THAN_LIMIT = 63,
+    REQ_REFUSED_HOME = 64,
+    ADV_SRV_UNREACHABLE = 65,
+    REQ_REFUSED_SSPN = 67,
+    REQ_REFUSED_UNAUTH_ACCESS = 68,
+    INVALID_RSNIE = 72,
+    U_APSD_COEX_NOT_SUPPORTED = 73,
+    U_APSD_COEX_MODE_NOT_SUPPORTED = 74,
+    BAD_INTERVAL_WITH_U_APSD_COEX = 75,
+    ANTI_CLOGGING_TOKEN_REQ = 76,
+    FINITE_CYCLIC_GROUP_NOT_SUPPORTED = 77,
+    CANNOT_FIND_ALT_TBTT = 78,
+    TRANSMISSION_FAILURE = 79,
+    REQ_TCLAS_NOT_SUPPORTED = 80,
+    TCLAS_RESOURCES_EXCHAUSTED = 81,
+    REJECTED_WITH_SUGGESTED_BSS_TRANSITION = 82,
+    REJECT_WITH_SCHEDULE = 83,
+    REJECT_NO_WAKEUP_SPECIFIED = 84,
+    SUCCESS_POWER_SAVE_MODE = 85,
+    PENDING_ADMITTING_FST_SESSION = 86,
+    PERFORMING_FST_NOW = 87,
+    PENDING_GAP_IN_BA_WINDOW = 88,
+    REJECT_U_PID_SETTING = 89,
+    REFUSED_EXTERNAL_REASON = 92,
+    REFUSED_AP_OUT_OF_MEMORY = 93,
+    REJECTED_EMERGENCY_SERVICE_NOT_SUPPORTED = 94,
+    QUERY_RESP_OUTSTANDING = 95,
+    REJECT_DSE_BAND = 96,
+    TCLAS_PROCESSING_TERMINATED = 97,
+    TS_SCHEDULE_CONFLICT = 98,
+    DENIED_WITH_SUGGESTED_BAND_AND_CHANNEL = 99,
+    MCCAOP_RESERVATION_CONFLICT = 100,
+    MAF_LIMIT_EXCEEDED = 101,
+    MCCA_TRACK_LIMIT_EXCEEDED = 102,
+    DENIED_DUE_TO_SPECTRUM_MANAGEMENT = 103,
+    ASSOC_DENIED_NO_VHT = 104,
+    ENABLEMENT_DENIED = 105,
+    RESTRICTION_FROM_AUTHORIZED_GDB = 106,
+    AUTHORIZATION_DEENABLED = 107,
+    FILS_AUTHENTICATION_FAILURE = 112,
+    UNKNOWN_AUTHENTICATION_SERVER = 113
+  };
+
+  /**
+   * Reason codes (IEEE Std 802.11-2016, 9.4.1.7, Table 9-45).
+   */
+  enum ReasonCode : uint32_t {
+    UNSPECIFIED = 1,
+    PREV_AUTH_NOT_VALID = 2,
+    DEAUTH_LEAVING = 3,
+    DISASSOC_DUE_TO_INACTIVITY = 4,
+    DISASSOC_AP_BUSY = 5,
+    CLASS2_FRAME_FROM_NONAUTH_STA = 6,
+    CLASS3_FRAME_FROM_NONASSOC_STA = 7,
+    DISASSOC_STA_HAS_LEFT = 8,
+    STA_REQ_ASSOC_WITHOUT_AUTH = 9,
+    PWR_CAPABILITY_NOT_VALID = 10,
+    SUPPORTED_CHANNEL_NOT_VALID = 11,
+    BSS_TRANSITION_DISASSOC = 12,
+    INVALID_IE = 13,
+    MICHAEL_MIC_FAILURE = 14,
+    FOURWAY_HANDSHAKE_TIMEOUT = 15,
+    GROUP_KEY_UPDATE_TIMEOUT = 16,
+    IE_IN_4WAY_DIFFERS = 17,
+    GROUP_CIPHER_NOT_VALID = 18,
+    PAIRWISE_CIPHER_NOT_VALID = 19,
+    AKMP_NOT_VALID = 20,
+    UNSUPPORTED_RSN_IE_VERSION = 21,
+    INVALID_RSN_IE_CAPAB = 22,
+    IEEE_802_1X_AUTH_FAILED = 23,
+    CIPHER_SUITE_REJECTED = 24,
+    TDLS_TEARDOWN_UNREACHABLE = 25,
+    TDLS_TEARDOWN_UNSPECIFIED = 26,
+    SSP_REQUESTED_DISASSOC = 27,
+    NO_SSP_ROAMING_AGREEMENT = 28,
+    BAD_CIPHER_OR_AKM = 29,
+    NOT_AUTHORIZED_THIS_LOCATION = 30,
+    SERVICE_CHANGE_PRECLUDES_TS = 31,
+    UNSPECIFIED_QOS_REASON = 32,
+    NOT_ENOUGH_BANDWIDTH = 33,
+    DISASSOC_LOW_ACK = 34,
+    EXCEEDED_TXOP = 35,
+    STA_LEAVING = 36,
+    END_TS_BA_DLS = 37,
+    UNKNOWN_TS_BA = 38,
+    TIMEOUT = 39,
+    PEERKEY_MISMATCH = 45,
+    AUTHORIZED_ACCESS_LIMIT_REACHED = 46,
+    EXTERNAL_SERVICE_REQUIREMENTS = 47,
+    INVALID_FT_ACTION_FRAME_COUNT = 48,
+    INVALID_PMKID = 49,
+    INVALID_MDE = 50,
+    INVALID_FTE = 51,
+    MESH_PEERING_CANCELLED = 52,
+    MESH_MAX_PEERS = 53,
+    MESH_CONFIG_POLICY_VIOLATION = 54,
+    MESH_CLOSE_RCVD = 55,
+    MESH_MAX_RETRIES = 56,
+    MESH_CONFIRM_TIMEOUT = 57,
+    MESH_INVALID_GTK = 58,
+    MESH_INCONSISTENT_PARAMS = 59,
+    MESH_INVALID_SECURITY_CAP = 60,
+    MESH_PATH_ERROR_NO_PROXY_INFO = 61,
+    MESH_PATH_ERROR_NO_FORWARDING_INFO = 62,
+    MESH_PATH_ERROR_DEST_UNREACHABLE = 63,
+    MAC_ADDRESS_ALREADY_EXISTS_IN_MBSS = 64,
+    MESH_CHANNEL_SWITCH_REGULATORY_REQ = 65,
+    MESH_CHANNEL_SWITCH_UNSPECIFIED = 66
+  };
+
+  /**
+   * BSSID change Reasons.
+   */
+  enum BssidChangeReason : uint8_t {
+    /**
+     * Started association with new bssid.
+     */
+    ASSOC_START = 0,
+    /**
+     * Completed association with new bssid.
+     */
+    ASSOC_COMPLETE = 1,
+    /**
+     * Dis-association with current bssid.
+     */
+    DISASSOC = 2
+  };
+
+  /**
+   * Used to indicate that a new network has been added.
+   *
+   * @param id Network ID allocated to the corresponding network.
+   */
+  oneway onNetworkAdded(SupplicantNetworkId id);
+
+  /**
+   * Used to indicate that a network has been removed.
+   *
+   * @param id Network ID allocated to the corresponding network.
+   */
+  oneway onNetworkRemoved(SupplicantNetworkId id);
+
+  /**
+   * Used to indicate a state change event on this particular iface. If this
+   * event is triggered by a particular network, the |SupplicantNetworkId|,
+   * |ssid|, |bssid| parameters must indicate the parameters of the network/AP
+   * which cased this state transition.
+   *
+   * @param newState New State of the interface. This must be one of the |State|
+   *        values above.
+   * @param bssid BSSID of the corresponding AP which caused this state
+   *        change event. This must be zero'ed if this event is not
+   *        specific to a particular network.
+   * @param id ID of the corresponding network which caused this
+   *        state change event. This must be invalid (UINT32_MAX) if this
+   *        event is not specific to a particular network.
+   * @param ssid SSID of the corresponding network which caused this state
+   *        change event. This must be empty if this event is not specific
+   *        to a particular network.
+   */
+  oneway onStateChanged(
+      State newState, Bssid bssid, SupplicantNetworkId id, Ssid ssid);
+
+  /**
+   * Used to indicate the result of ANQP (either for IEEE 802.11u Interworking
+   * or Hotspot 2.0) query.
+   *
+   * @param bssid BSSID of the access point.
+   * @param data ANQP data fetched from the access point.
+   *        All the fields in this struct must be empty if the query failed.
+   * @param hs20Data ANQP data fetched from the Hotspot 2.0 access point.
+   *        All the fields in this struct must be empty if the query failed.
+   */
+  oneway onAnqpQueryDone(Bssid bssid, AnqpData data, Hs20AnqpData hs20Data);
+
+  /**
+   * Used to indicate the result of Hotspot 2.0 Icon query.
+   *
+   * @param bssid BSSID of the access point.
+   * @param fileName Name of the file that was requested.
+   * @param data Icon data fetched from the access point.
+   *        Must be empty if the query failed.
+   */
+  oneway onHs20IconQueryDone(Bssid bssid, string fileName, vec<uint8_t> data);
+
+  /**
+   * Used to indicate a Hotspot 2.0 subscription remediation event.
+   *
+   * @param bssid BSSID of the access point.
+   * @param osuMethod OSU method.
+   * @param url URL of the server.
+   */
+  oneway onHs20SubscriptionRemediation(Bssid bssid,
+                                       OsuMethod osuMethod,
+                                       string url);
+
+  /**
+   * Used to indicate a Hotspot 2.0 imminent deauth notice.
+   *
+   * @param bssid BSSID of the access point.
+   * @param reasonCode Code to indicate the deauth reason.
+   *        Refer to section 3.2.1.2 of the Hotspot 2.0 spec.
+   * @param reAuthDelayInSec Delay before reauthenticating.
+   * @param url URL of the server.
+   */
+  oneway onHs20DeauthImminentNotice(Bssid bssid,
+                                    uint32_t reasonCode,
+                                    uint32_t reAuthDelayInSec,
+                                    string url);
+
+  /**
+   * Used to indicate the disconnection from the currently connected
+   * network on this iface.
+   *
+   * @param bssid BSSID of the AP from which we disconnected.
+   * @param locallyGenerated If the disconnect was triggered by
+   *        wpa_supplicant.
+   * @param reasonCode 802.11 code to indicate the disconnect reason
+   *        from access point. Refer to section 8.4.1.7 of IEEE802.11 spec.
+   */
+  oneway onDisconnected(
+          Bssid bssid, bool locallyGenerated, ReasonCode reasonCode);
+
+  /**
+   * Used to indicate an association rejection recieved from the AP
+   * to which the connection is being attempted.
+   *
+   * @param bssid BSSID of the corresponding AP which sent this
+   *        reject.
+   * @param statusCode 802.11 code to indicate the reject reason.
+   *        Refer to section 8.4.1.9 of IEEE 802.11 spec.
+   * @param timedOut Whether failure is due to timeout rather
+   *        than explicit rejection response from the AP.
+   */
+  oneway onAssociationRejected(Bssid bssid, StatusCode statusCode, bool timedOut);
+
+  /**
+   * Used to indicate the timeout of authentication to an AP.
+   *
+   * @param bssid BSSID of the corresponding AP.
+   */
+  oneway onAuthenticationTimeout(Bssid bssid);
+
+  /**
+   * Used to indicate an EAP authentication failure.
+   */
+  oneway onEapFailure();
+
+  /**
+   * Used to indicate the change of active bssid.
+   * This is useful to figure out when the driver/firmware roams to a bssid
+   * on its own.
+   *
+   * @param reason Reason why the bssid changed.
+   * @param bssid BSSID of the corresponding AP.
+   */
+  oneway onBssidChanged(BssidChangeReason reason, Bssid bssid);
+
+  /**
+   * Used to indicate the success of a WPS connection attempt.
+   */
+  oneway onWpsEventSuccess();
+
+  /**
+   * Used to indicate the failure of a WPS connection attempt.
+   *
+   * @param bssid BSSID of the AP to which we initiated WPS
+   *        connection.
+   * @param configError Configuration error code.
+   * @param errorInd Error indication code.
+   */
+  oneway onWpsEventFail(
+      Bssid bssid, WpsConfigError configError, WpsErrorIndication errorInd);
+
+  /**
+   * Used to indicate the overlap of a WPS PBC connection attempt.
+   */
+  oneway onWpsEventPbcOverlap();
+
+  /**
+   * Used to indicate that the external radio work can start now.
+   *
+   * @return id Identifier generated for the radio work request.
+   */
+  oneway onExtRadioWorkStart(uint32_t id);
+
+  /**
+   * Used to indicate that the external radio work request has timed out.
+   *
+   * @return id Identifier generated for the radio work request.
+   */
+  oneway onExtRadioWorkTimeout(uint32_t id);
+};

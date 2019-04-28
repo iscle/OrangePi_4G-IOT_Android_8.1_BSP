@@ -1,0 +1,99 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.automotive.evs@1.0;
+
+import types;
+import IEvsCameraStream;
+
+
+/**
+ * Represents a single camera and is the primary interface for capturing images.
+ */
+interface IEvsCamera {
+
+    /**
+     * Returns the ID of this camera.
+     *
+     * Returns the description of this camera. This must be the same value as reported
+     * by EvsEnumerator::getCamerList().
+     */
+    getCameraInfo() generates (CameraDesc info);
+
+    /**
+     * Specifies the depth of the buffer chain the camera is asked to support.
+     *
+     * Up to this many frames may be held concurrently by the client of IEvsCamera.
+     * If this many frames have been delivered to the receiver without being returned
+     * by doneWithFrame, the stream must skip frames until a buffer is returned for reuse.
+     * It is legal for this call to come at any time, even while streams are already running,
+     * in which case buffers should be added or removed from the chain as appropriate.
+     * If no call is made to this entry point, the IEvsCamera must support at least one
+     * frame by default. More is acceptable.
+     * BUFFER_NOT_AVAILABLE is returned if the implementation cannot support the
+     * requested number of concurrent frames.
+     */
+    setMaxFramesInFlight(uint32_t bufferCount) generates (EvsResult result);
+
+    /**
+     * Request delivery of EVS camera frames from this camera.
+     *
+     * The IEvsCameraStream must begin receiving periodic calls with new image
+     * frames until stopVideoStream() is called.
+     */
+    startVideoStream(IEvsCameraStream receiver) generates (EvsResult result);
+
+    /**
+     * Return a frame that was delivered by to the IEvsCameraStream.
+     *
+     * When done consuming a frame delivered to the IEvsCameraStream
+     * interface, it must be returned to the IEvsCamera for reuse.
+     * A small, finite number of buffers are available (possibly as small
+     * as one), and if the supply is exhausted, no further frames may be
+     * delivered until a buffer is returned.
+     */
+    oneway doneWithFrame(BufferDesc buffer);
+
+    /**
+     * Stop the delivery of EVS camera frames.
+     *
+     * Because delivery is asynchronous, frames may continue to arrive for
+     * some time after this call returns. Each must be returned until the
+     * closure of the stream is signaled to the IEvsCameraStream.
+     * This function cannot fail and is simply ignored if the stream isn't running.
+     */
+    stopVideoStream();
+
+    /**
+     * Request driver specific information from the HAL implementation.
+     *
+     * The values allowed for opaqueIdentifier are driver specific,
+     * but no value passed in may crash the driver. The driver should
+     * return 0 for any unrecognized opaqueIdentifier.
+     */
+    getExtendedInfo(uint32_t opaqueIdentifier) generates (int32_t value);
+
+    /**
+     * Send a driver specific value to the HAL implementation.
+     *
+     * This extension is provided to facilitate car specific
+     * extensions, but no HAL implementation may require this call
+     * in order to function in a default state.
+     * INVALID_ARG is returned if the opaqueValue is not meaningful to
+     * the driver implementation.
+     */
+    setExtendedInfo(uint32_t opaqueIdentifier, int32_t opaqueValue) generates (EvsResult result);
+};

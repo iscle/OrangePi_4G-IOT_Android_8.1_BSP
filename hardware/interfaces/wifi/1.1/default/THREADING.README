@@ -1,0 +1,35 @@
+Vendor HAL Threading Model
+==========================
+The vendor HAL service has two threads:
+1. HIDL thread: This is the main thread which processes all the incoming HIDL
+RPC's.
+2. Legacy HAL event loop thread: This is the thread forked off for processing
+the legacy HAL event loop (wifi_event_loop()). This thread is used to process
+any asynchronous netlink events posted by the driver. Any asynchronous
+callbacks passed to the legacy HAL API's are invoked on this thread.
+
+Synchronization Concerns
+========================
+wifi_legacy_hal.cpp has a bunch of global "C" style functions to handle the
+legacy callbacks. Each of these "C" style function invokes a corresponding
+"std::function" version of the callback which does the actual processing.
+The variables holding these "std::function" callbacks are reset from the HIDL
+thread when they are no longer used. For example: stopGscan() will reset the
+corresponding "on_gscan_*" callback variables which were set when startGscan()
+was invoked. This is not thread safe since these callback variables are
+accesed from the legacy hal event loop thread as well.
+
+Synchronization Solution
+========================
+Adding a global lock seems to be the most trivial solution to the problem.
+a) All of the asynchronous "C" style callbacks will acquire the global lock
+before invoking the corresponding "std::function" callback variables.
+b) All of the HIDL methods will also acquire the global lock before processing
+(in hidl_return_util::validateAndCall()).
+
+Note: It's important that we only acquire the global lock for asynchronous
+callbacks, because there is no guarantee (or documentation to clarify) that the
+synchronous callbacks are invoked on the same invocation thread. If that is not
+the case in some implementation, we will end up deadlocking the system since the
+HIDL thread would have acquired the global lock which is needed by the
+synchronous callback executed on the legacy hal event loop thread.

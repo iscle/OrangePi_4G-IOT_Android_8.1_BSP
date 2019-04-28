@@ -1,0 +1,32 @@
+LOCAL_PATH := $(call my-dir)
+
+ifneq ($(filter moorefield merrifield, $(TARGET_BOARD_PLATFORM)),)
+
+include $(CLEAR_VARS)
+# bootstub.bin
+BOOTSTUB_BINARY := bootstub
+BOOTSTUB_AOSP_HEADER_ADDRESS := 0x10007800
+BOOTSTUB_CFLAGS :=
+BOOTSTUB_STACK_OFFSET := 0x10F00000
+BOOTSTUB_ENTRY := 0x1101000
+include $(LOCAL_PATH)/bootstub.mk
+
+include $(CLEAR_VARS)
+# 2ndbootloader.bin
+BOOTSTUB_BINARY := 2ndbootloader
+BOOTSTUB_AOSP_HEADER_ADDRESS := 0x10007800
+BOOTSTUB_CFLAGS :=
+BOOTSTUB_STACK_OFFSET := 0x10F00000
+BOOTSTUB_ENTRY := 0x10F00000
+include $(LOCAL_PATH)/bootstub.mk
+
+include $(CLEAR_VARS)
+# bootstub_ramdump.bin
+BOOTSTUB_BINARY := bootstub_ramdump
+BOOTSTUB_AOSP_HEADER_ADDRESS := 0x79000000
+BOOTSTUB_CFLAGS := -DBUILD_RAMDUMP
+BOOTSTUB_STACK_OFFSET := 0x78F00000
+BOOTSTUB_ENTRY := 0x78F00000
+include $(LOCAL_PATH)/bootstub.mk
+
+endif #($(filter moorefield merrifield, $(TARGET_BOARD_PLATFORM)),)

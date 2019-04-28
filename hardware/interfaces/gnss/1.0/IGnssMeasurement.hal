@@ -1,0 +1,58 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.gnss@1.0;
+
+import IGnssMeasurementCallback;
+
+/**
+ * Extended interface for GNSS Measurements support.
+ */
+interface IGnssMeasurement {
+    @export(name="", value_prefix="GPS_MEASUREMENT_")
+    enum GnssMeasurementStatus : int32_t {
+        SUCCESS = 0,
+        ERROR_ALREADY_INIT = -100,
+        ERROR_GENERIC = -101
+    };
+
+    /**
+     * Initializes the interface and registers the callback routines with the HAL.
+     * After a successful call to 'setCallback' the HAL must begin to provide updates at
+     * an average output rate of 1Hz (occasional
+     * intra-measurement time offsets in the range from 0-2000msec can be
+     * tolerated.)
+     *
+     * @param callback Handle to GnssMeasurement callback interface.
+     *
+     * @return initRet Returns SUCCESS if successful.
+     * Returns ERROR_ALREADY_INIT if a callback has already been
+     * registered without a corresponding call to 'close'.
+     * Returns ERROR_GENERIC for any other error. The HAL must
+     * not generate any other updates upon returning this error code.
+     */
+    setCallback(IGnssMeasurementCallback callback) generates (GnssMeasurementStatus initRet);
+
+    /**
+     * Stops updates from the HAL, and unregisters the callback routines.
+     * After a call to close(), the previously registered callbacks must be
+     * considered invalid by the HAL.
+     * If close() is invoked without a previous setCallback, this function must perform
+     * no work.
+     */
+    close();
+
+};

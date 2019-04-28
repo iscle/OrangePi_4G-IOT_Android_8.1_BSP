@@ -1,0 +1,299 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.audio.effect@2.0;
+
+import android.hardware.audio.common@2.0;
+
+enum Result : int32_t {
+    OK,
+    NOT_INITIALIZED,
+    INVALID_ARGUMENTS,
+    INVALID_STATE,
+    NOT_SUPPORTED,
+    RESULT_TOO_BIG
+};
+
+/**
+ * Effect engine capabilities/requirements flags.
+ *
+ * Definitions for flags field of effect descriptor.
+ *
+ * +----------------+--------+--------------------------------------------------
+ * | description    | bits   | values
+ * +----------------+--------+--------------------------------------------------
+ * | connection     | 0..2   | 0 insert: after track process
+ * | mode           |        | 1 auxiliary: connect to track auxiliary
+ * |                |        |  output and use send level
+ * |                |        | 2 replace: replaces track process function;
+ * |                |        |   must implement SRC, volume and mono to stereo.
+ * |                |        | 3 pre processing: applied below audio HAL on in
+ * |                |        | 4 post processing: applied below audio HAL on out
+ * |                |        | 5 - 7 reserved
+ * +----------------+--------+--------------------------------------------------
+ * | insertion      | 3..5   | 0 none
+ * | preference     |        | 1 first of the chain
+ * |                |        | 2 last of the chain
+ * |                |        | 3 exclusive (only effect in the insert chain)
+ * |                |        | 4..7 reserved
+ * +----------------+--------+--------------------------------------------------
+ * | Volume         | 6..8   | 0 none
+ * | management     |        | 1 implements volume control
+ * |                |        | 2 requires volume indication
+ * |                |        | 4 reserved
+ * +----------------+--------+--------------------------------------------------
+ * | Device         | 9..11  | 0 none
+ * | indication     |        | 1 requires device updates
+ * |                |        | 2, 4 reserved
+ * +----------------+--------+--------------------------------------------------
+ * | Sample input   | 12..13 | 1 direct: process() function or
+ * | mode           |        |   EFFECT_CMD_SET_CONFIG command must specify
+ * |                |        |   a buffer descriptor
+ * |                |        | 2 provider: process() function uses the
+ * |                |        |   bufferProvider indicated by the
+ * |                |        |   EFFECT_CMD_SET_CONFIG command to request input.
+ * |                |        |   buffers.
+ * |                |        | 3 both: both input modes are supported
+ * +----------------+--------+--------------------------------------------------
+ * | Sample output  | 14..15 | 1 direct: process() function or
+ * | mode           |        |   EFFECT_CMD_SET_CONFIG command must specify
+ * |                |        |   a buffer descriptor
+ * |                |        | 2 provider: process() function uses the
+ * |                |        |   bufferProvider indicated by the
+ * |                |        |   EFFECT_CMD_SET_CONFIG command to request output
+ * |                |        |   buffers.
+ * |                |        | 3 both: both output modes are supported
+ * +----------------+--------+--------------------------------------------------
+ * | Hardware       | 16..17 | 0 No hardware acceleration
+ * | acceleration   |        | 1 non tunneled hw acceleration: the process()
+ * |                |        |   function reads the samples, send them to HW
+ * |                |        |   accelerated effect processor, reads back
+ * |                |        |   the processed samples and returns them
+ * |                |        |   to the output buffer.
+ * |                |        | 2 tunneled hw acceleration: the process()
+ * |                |        |   function is transparent. The effect interface
+ * |                |        |   is only used to control the effect engine.
+ * |                |        |   This mode is relevant for global effects
+ * |                |        |   actually applied by the audio hardware on
+ * |                |        |   the output stream.
+ * +----------------+--------+--------------------------------------------------
+ * | Audio Mode     | 18..19 | 0 none
+ * | indication     |        | 1 requires audio mode updates
+ * |                |        | 2..3 reserved
+ * +----------------+--------+--------------------------------------------------
+ * | Audio source   | 20..21 | 0 none
+ * | indication     |        | 1 requires audio source updates
+ * |                |        | 2..3 reserved
+ * +----------------+--------+--------------------------------------------------
+ * | Effect offload | 22     | 0 The effect cannot be offloaded to an audio DSP
+ * | supported      |        | 1 The effect can be offloaded to an audio DSP
+ * +----------------+--------+--------------------------------------------------
+ * | Process        | 23     | 0 The effect implements a process function.
+ * | function       |        | 1 The effect does not implement a process
+ * | not            |        |   function: enabling the effect has no impact
+ * | implemented    |        |   on latency or CPU load.
+ * |                |        |   Effect implementations setting this flag do not
+ * |                |        |   have to implement a process function.
+ * +----------------+--------+--------------------------------------------------
+ */
+@export(name="", value_prefix="EFFECT_FLAG_")
+enum EffectFlags : int32_t {
+    // Insert mode
+    TYPE_SHIFT = 0,
+    TYPE_SIZE = 3,
+    TYPE_MASK = ((1 << TYPE_SIZE) -1) << TYPE_SHIFT,
+    TYPE_INSERT = 0 << TYPE_SHIFT,
+    TYPE_AUXILIARY = 1 << TYPE_SHIFT,
+    TYPE_REPLACE = 2 << TYPE_SHIFT,
+    TYPE_PRE_PROC = 3 << TYPE_SHIFT,
+    TYPE_POST_PROC = 4 << TYPE_SHIFT,
+
+    // Insert preference
+    INSERT_SHIFT = TYPE_SHIFT + TYPE_SIZE,
+    INSERT_SIZE = 3,
+    INSERT_MASK = ((1 << INSERT_SIZE) -1) << INSERT_SHIFT,
+    INSERT_ANY = 0 << INSERT_SHIFT,
+    INSERT_FIRST = 1 << INSERT_SHIFT,
+    INSERT_LAST = 2 << INSERT_SHIFT,
+    INSERT_EXCLUSIVE = 3 << INSERT_SHIFT,
+
+    // Volume control
+    VOLUME_SHIFT = INSERT_SHIFT + INSERT_SIZE,
+    VOLUME_SIZE = 3,
+    VOLUME_MASK = ((1 << VOLUME_SIZE) -1) << VOLUME_SHIFT,
+    VOLUME_CTRL = 1 << VOLUME_SHIFT,
+    VOLUME_IND = 2 << VOLUME_SHIFT,
+    VOLUME_NONE = 0 << VOLUME_SHIFT,
+
+    // Device indication
+    DEVICE_SHIFT = VOLUME_SHIFT + VOLUME_SIZE,
+    DEVICE_SIZE = 3,
+    DEVICE_MASK = ((1 << DEVICE_SIZE) -1) << DEVICE_SHIFT,
+    DEVICE_IND = 1 << DEVICE_SHIFT,
+    DEVICE_NONE = 0 << DEVICE_SHIFT,
+
+    // Sample input modes
+    INPUT_SHIFT = DEVICE_SHIFT + DEVICE_SIZE,
+    INPUT_SIZE = 2,
+    INPUT_MASK = ((1 << INPUT_SIZE) -1) << INPUT_SHIFT,
+    INPUT_DIRECT = 1 << INPUT_SHIFT,
+    INPUT_PROVIDER = 2 << INPUT_SHIFT,
+    INPUT_BOTH = 3 << INPUT_SHIFT,
+
+    // Sample output modes
+    OUTPUT_SHIFT = INPUT_SHIFT + INPUT_SIZE,
+    OUTPUT_SIZE = 2,
+    OUTPUT_MASK = ((1 << OUTPUT_SIZE) -1) << OUTPUT_SHIFT,
+    OUTPUT_DIRECT = 1 << OUTPUT_SHIFT,
+    OUTPUT_PROVIDER = 2 << OUTPUT_SHIFT,
+    OUTPUT_BOTH = 3 << OUTPUT_SHIFT,
+
+    // Hardware acceleration mode
+    HW_ACC_SHIFT = OUTPUT_SHIFT + OUTPUT_SIZE,
+    HW_ACC_SIZE = 2,
+    HW_ACC_MASK = ((1 << HW_ACC_SIZE) -1) << HW_ACC_SHIFT,
+    HW_ACC_SIMPLE = 1 << HW_ACC_SHIFT,
+    HW_ACC_TUNNEL = 2 << HW_ACC_SHIFT,
+
+    // Audio mode indication
+    AUDIO_MODE_SHIFT = HW_ACC_SHIFT + HW_ACC_SIZE,
+    AUDIO_MODE_SIZE = 2,
+    AUDIO_MODE_MASK = ((1 << AUDIO_MODE_SIZE) -1) << AUDIO_MODE_SHIFT,
+    AUDIO_MODE_IND = 1 << AUDIO_MODE_SHIFT,
+    AUDIO_MODE_NONE = 0 << AUDIO_MODE_SHIFT,
+
+    // Audio source indication
+    AUDIO_SOURCE_SHIFT = AUDIO_MODE_SHIFT + AUDIO_MODE_SIZE,
+    AUDIO_SOURCE_SIZE = 2,
+    AUDIO_SOURCE_MASK = ((1 << AUDIO_SOURCE_SIZE) -1) << AUDIO_SOURCE_SHIFT,
+    AUDIO_SOURCE_IND = 1 << AUDIO_SOURCE_SHIFT,
+    AUDIO_SOURCE_NONE = 0 << AUDIO_SOURCE_SHIFT,
+
+    // Effect offload indication
+    OFFLOAD_SHIFT = AUDIO_SOURCE_SHIFT + AUDIO_SOURCE_SIZE,
+    OFFLOAD_SIZE = 1,
+    OFFLOAD_MASK = ((1 << OFFLOAD_SIZE) -1) << OFFLOAD_SHIFT,
+    OFFLOAD_SUPPORTED = 1 << OFFLOAD_SHIFT,
+
+    // Effect has no process indication
+    NO_PROCESS_SHIFT = OFFLOAD_SHIFT + OFFLOAD_SIZE,
+    NO_PROCESS_SIZE = 1,
+    NO_PROCESS_MASK = ((1 << NO_PROCESS_SIZE) -1) << NO_PROCESS_SHIFT,
+    NO_PROCESS = 1 << NO_PROCESS_SHIFT
+};
+
+/**
+ * The effect descriptor contains necessary information to facilitate the
+ * enumeration of the effect engines present in a library.
+ */
+struct EffectDescriptor {
+    Uuid type;             // UUID of to the OpenSL ES interface implemented
+                           // by this effect
+    Uuid uuid;             // UUID for this particular implementation
+    EffectFlags flags;     // effect engine capabilities/requirements flags
+    uint16_t cpuLoad;      // CPU load indication expressed in 0.1 MIPS units
+                           // as estimated on an ARM9E core (ARMv5TE) with 0 WS
+    uint16_t memoryUsage;  // data memory usage expressed in KB and includes
+                           // only dynamically allocated memory
+    uint8_t[64] name;      // human readable effect name
+    uint8_t[64] implementor;  // human readable effect implementor name
+};
+
+/**
+ * A buffer is a chunk of audio data for processing.  Multi-channel audio is
+ * always interleaved. The channel order is from LSB to MSB with regard to the
+ * channel mask definition in audio.h, audio_channel_mask_t, e.g.:
+ * Stereo: L, R; 5.1: FL, FR, FC, LFE, BL, BR.
+ *
+ * The buffer size is expressed in frame count, a frame being composed of
+ * samples for all channels at a given time. Frame size for unspecified format
+ * (AUDIO_FORMAT_OTHER) is 8 bit by definition.
+ */
+struct AudioBuffer {
+    uint64_t id;
+    uint32_t frameCount;
+    memory data;
+};
+
+@export(name="effect_buffer_access_e", value_prefix="EFFECT_BUFFER_")
+enum EffectBufferAccess : int32_t {
+    ACCESS_WRITE,
+    ACCESS_READ,
+    ACCESS_ACCUMULATE
+};
+
+/**
+ * Determines what fields of EffectBufferConfig need to be considered.
+ */
+@export(name="", value_prefix="EFFECT_CONFIG_")
+enum EffectConfigParameters : int32_t {
+    BUFFER = 0x0001,    // buffer field
+    SMP_RATE = 0x0002,  // samplingRate
+    CHANNELS = 0x0004,  // channels
+    FORMAT = 0x0008,    // format
+    ACC_MODE = 0x0010,  // accessMode
+    ALL = BUFFER | SMP_RATE | CHANNELS | FORMAT | ACC_MODE
+};
+
+/**
+ * The buffer config structure specifies the input or output audio format
+ * to be used by the effect engine.
+ */
+struct EffectBufferConfig {
+    AudioBuffer buffer;
+    uint32_t samplingRateHz;
+    AudioChannelMask channels;
+    AudioFormat format;
+    EffectBufferAccess accessMode;
+    EffectConfigParameters mask;
+};
+
+struct EffectConfig {
+    EffectBufferConfig inputCfg;
+    EffectBufferConfig outputCfg;
+};
+
+@export(name="effect_feature_e", value_prefix="EFFECT_FEATURE_")
+enum EffectFeature : int32_t {
+    AUX_CHANNELS, // supports auxiliary channels
+                  // (e.g. dual mic noise suppressor)
+    CNT
+};
+
+struct EffectAuxChannelsConfig {
+    AudioChannelMask mainChannels;  // channel mask for main channels
+    AudioChannelMask auxChannels;   // channel mask for auxiliary channels
+};
+
+struct EffectOffloadParameter {
+    bool isOffload;          // true if the playback thread the effect
+                             // is attached to is offloaded
+    AudioIoHandle ioHandle;  // io handle of the playback thread
+                             // the effect is attached to
+};
+
+/**
+ * The message queue flags used to synchronize reads and writes from
+ * the status message queue used by effects.
+ */
+enum MessageQueueFlagBits : uint32_t {
+    DONE_PROCESSING = 1 << 0,
+    REQUEST_PROCESS = 1 << 1,
+    REQUEST_PROCESS_REVERSE = 1 << 2,
+    REQUEST_QUIT = 1 << 3,
+    REQUEST_PROCESS_ALL =
+        REQUEST_PROCESS | REQUEST_PROCESS_REVERSE | REQUEST_QUIT
+};

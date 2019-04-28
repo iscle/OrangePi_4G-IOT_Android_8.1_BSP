@@ -1,0 +1,234 @@
+/*
+ * Copyright 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.broadcastradio@1.0;
+
+enum Result : int32_t {
+    OK,
+    NOT_INITIALIZED,
+    INVALID_ARGUMENTS,
+    INVALID_STATE,
+    TIMEOUT,
+};
+
+/**
+ * Radio hardware module class. A given radio hardware module HAL is of one
+ * class only. The platform can not have more than one hardware module of
+ * each class. Current version of the framework only supports RADIO_CLASS_AM_FM.
+ */
+enum Class : uint32_t {
+    /** FM (including HD radio) and AM */
+    AM_FM = 0,
+    /** Satellite Radio */
+    SAT   = 1,
+    /** Digital Radio (DAB) */
+    DT    = 2,
+};
+
+/** value for field "type" of radio band described in struct radio_hal_band_config */
+enum Band : uint32_t {
+    /** Amplitude Modulation band: LW, MW, SW */
+    AM     = 0,
+    /** Frequency Modulation band: FM */
+    FM     = 1,
+    /** FM HD Radio / DRM (IBOC) */
+    FM_HD  = 2,
+    /** AM HD Radio / DRM (IBOC) */
+    AM_HD  = 3,
+};
+
+/** RDS variant implemented. A struct FmBandConfig can list none or several. */
+enum Rds : uint32_t {
+    NONE   = 0,
+    WORLD  = (1<<0),
+    US = (1<<1),
+};
+
+
+/* FM deemphasis variant implemented.
+ * A struct FmBandConfig can list one or more. */
+enum Deemphasis : uint32_t {
+    D50   = (1<<0),
+    D75   = (1<<1),
+};
+
+/** Scanning direction for scan() and step() tuner APIs */
+enum Direction : uint32_t {
+    UP,
+    DOWN
+};
+
+/** Unique handle allocated to a radio module */
+typedef uint32_t Handle;
+
+
+/** Additional attributes for an FM band configuration */
+struct FmBandConfig {
+    /** deemphasis variant */
+    Deemphasis deemphasis;
+    /** stereo supported */
+    bool       stereo;
+    /** RDS variants supported */
+    Rds        rds;
+    /** Traffic Announcement supported */
+    bool       ta;
+    /** Alternate Frequency supported */
+    bool       af;
+    /** Emergency announcements supported */
+    bool       ea;
+};
+
+/** Additional attributes for an AM band configuration */
+struct AmBandConfig {
+    /** Stereo supported */
+    bool       stereo;
+};
+
+/* Radio band configuration. Describes a given band supported by the radio
+ * module. The HAL can expose only one band per type with the the maximum range
+ * supported and all options. The framework will derive the actual regions were
+ * this module can operate and expose separate band configurations for
+ * applications to chose from. */
+struct BandConfig {
+    Band type;
+    bool antennaConnected;
+    uint32_t lowerLimit;
+    uint32_t upperLimit;
+    vec<uint32_t> spacings;
+    union Ext {
+        FmBandConfig fm;
+        AmBandConfig am;
+    } ext;
+};
+
+/* Exposes properties of a given hardware radio module.
+ * NOTE: current framework implementation supports only one audio source
+ * (num_audio_sources = 1). The source corresponds to AUDIO_DEVICE_IN_FM_TUNER.
+ * If more than one tuner is supported (num_tuners > 1), only one can be
+ * connected to the audio source. */
+struct Properties {
+    /** Class of this module. E.g AM_FM */
+    Class           classId;
+    /** implementor name */
+    string          implementor;
+    /** product name */
+    string          product;
+    /** product version */
+    string          version;
+    /** serial number (for subscription services) */
+    string          serial;
+    /** number of tuners controllable independently */
+    uint32_t        numTuners;
+    /** number of audio sources driven simultaneously */
+    uint32_t        numAudioSources;
+    /** the hardware supports capture of audio source from audio HAL */
+    bool            supportsCapture;
+    vec<BandConfig> bands; /** band descriptors */
+};
+
+enum MetadataType : int32_t {
+    INVALID    = -1,
+    /** Signed 32 bit integer  */
+    INT        = 0,
+    /** String */
+    TEXT       = 1,
+    /**
+     * Raw binary data (icon or art).
+     *
+     * The data should be a valid PNG, JPEG, GIF or BMP file.
+     * Invalid format must be handled gracefully as if the field was missing.
+     */
+    RAW        = 2,
+    /** clock data, see MetaDataClock */
+    CLOCK      = 3,
+};
+
+enum MetadataKey : int32_t {
+    INVALID      = -1,
+    /** RDS PI                 - int32_t  */
+    RDS_PI       = 0,
+    /** RDS PS                 - string */
+    RDS_PS       = 1,
+    /** RDS PTY                - int32_t  */
+    RDS_PTY      = 2,
+    /** RBDS PTY               - int32_t  */
+    RBDS_PTY     = 3,
+    /** RDS RT                 - string  */
+    RDS_RT       = 4,
+    /** Song title             - string  */
+    TITLE        = 5,
+    /** Artist name            - string  */
+    ARTIST       = 6,
+    /** Album name             - string  */
+    ALBUM        = 7,
+    /** Musical genre          - string  */
+    GENRE        = 8,
+    /** Station icon           - raw (int32_t for HAL 1.1) */
+    ICON         = 9,
+    /** Album art              - raw (int32_t for HAL 1.1) */
+    ART          = 10,
+    /** Clock                  - MetaDataClock */
+    CLOCK        = 11,
+};
+
+struct MetaDataClock {
+     /** Seconds since epoch at GMT + 0. */
+    uint64_t utcSecondsSinceEpoch;
+    /** Minutes offset from the GMT. */
+    int32_t timezoneOffsetInMinutes;
+};
+
+struct MetaData {
+    MetadataType type;
+    MetadataKey key;
+    /** Value used for type MetadataType.INT */
+    int32_t intValue;
+    /** Value used for type MetadataType.CLOCK */
+    MetaDataClock  clockValue;
+    /** Value used for type MetadataType.TEXT */
+    string  stringValue;
+    /** Value used for type MetadataType.RAW */
+    vec<uint8_t> rawValue;
+};
+
+
+/* Radio program information. Returned by the HAL with event RADIO_EVENT_TUNED.
+ * Contains information on currently tuned channel.
+ */
+struct ProgramInfo {
+    uint32_t     channel;   /** current channel. (e.g kHz for band type AM_FM) */
+    uint32_t     subChannel; /** current sub channel. (FM_HD) */
+
+    /**
+     * Tuned to a program (not a noise). It's the same condition that would
+     * stop scan operation.
+     */
+    bool         tuned;
+
+    bool         stereo;    /** program is stereo or not */
+    bool         digital;   /** digital program or not (e.g HD Radio program) */
+
+    /**
+     * Signal quality measured in 0% to 100% range.
+     *
+     * Despite the name, this is not a signal strength.
+     * The purpose of this field is primarily informative.
+     */
+    uint32_t signalStrength;
+
+    vec<MetaData> metadata; /** Metadata: PTY, song title etc. */
+};
+

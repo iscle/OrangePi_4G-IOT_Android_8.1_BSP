@@ -1,0 +1,79 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.tv.input@1.0;
+
+import ITvInputCallback;
+
+interface ITvInput {
+    /**
+     * Sets a callback for events.
+     *
+     * Note that initially no device is available in the client side, so the
+     * implementation must notify all the currently available devices including
+     * static devices via callback once callback is set.
+     *
+     * @param callback Callback object to pass events.
+     */
+    @entry
+    @exit
+    @callflow(next={"getStreamConfigurations"})
+    setCallback(ITvInputCallback callback);
+
+    /**
+     * Gets stream configurations for a specific device.
+     *
+     * The configs object is valid only until the next
+     * STREAM_CONFIGURATIONS_CHANGED event.
+     *
+     * @param deviceId Device ID for the configurations.
+     * @return result OK upon success. Otherwise,
+     *         INVALID_ARGUMENTS if the given device ID is not valid.
+     * @return configurations An array of available configurations.
+     */
+    @callflow(next={"openStream", "getStreamConfigurations", "closeStream"})
+    getStreamConfigurations(int32_t deviceId)
+            generates (Result result, vec<TvStreamConfig> configurations);
+
+    /**
+     * Opens a specific stream in a device.
+     *
+     * @param deviceId Device ID for the steam to open.
+     * @param streamId Steam ID for the steam to open. Must be one of the
+     *         stream IDs returned from getStreamConfigurations().
+     * @return result OK upon success. Otherwise,
+     *         INVALID_ARGUMENTS if any of given IDs are not valid;
+     *         INVALID_STATE if the stream with the given ID is already open;
+     *         NO_RESOURCE if the client must close other streams to open the
+     *                 stream.
+     * @return sidebandStream handle for sideband stream.
+     */
+    @callflow(next={"closeStream", "getStreamConfigurations", "openStream"})
+    openStream(int32_t deviceId, int32_t streamId)
+            generates (Result result, handle sidebandStream);
+
+    /**
+     * Closes a specific stream in a device.
+     *
+     * @param deviceId Device ID for the steam to open.
+     * @param streamId Steam ID for the steam to open.
+     * @return result OK upon success. Otherwise,
+     *         INVALID_ARGUMENTS if any of given IDs are not valid;
+     *         INVALID_STATE if the stream with the given ID is not open.
+     */
+    @callflow(next={"getStreamConfigurations", "openStream", "closeStream"})
+    closeStream(int32_t deviceId, int32_t streamId) generates (Result result);
+};

@@ -1,0 +1,117 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.tests.msgq@1.0;
+
+interface ITestMsgQ {
+    enum EventFlagBits : uint32_t {
+        FMQ_NOT_EMPTY = 1 << 0,
+        FMQ_NOT_FULL  = 1 << 1,
+    };
+
+    /**
+     * This method requests the service to set up a synchronous read/write
+     * wait-free FMQ with the client as reader.
+     *
+     * @return ret True if the setup is successful.
+     * @return mqDesc This structure describes the FMQ that was
+     * set up by the service. Client can use it to set up the FMQ at its end.
+     */
+    configureFmqSyncReadWrite()
+        generates(bool ret, fmq_sync<uint16_t> mqDesc);
+
+    /**
+     * This method requests the service to return an MQDescriptor to
+     * an unsynchronized FMQ set up by the server. If 'configureFmq' is
+     * true, then the server sets up a new unsynchronized FMQ. This
+     * method is to be used to test multiple reader processes.
+     *
+     * @param configureFmq The server sets up a new unsynchronized FMQ if
+     * this parameter is true.
+     *
+     * @return ret True if successful.
+     * @return mqDesc This structure describes the unsynchronized FMQ that was
+     * set up by the service. Client can use it to set up the FMQ at its end.
+     */
+    getFmqUnsyncWrite(bool configureFmq) generates(bool ret, fmq_unsync<uint16_t> mqDesc);
+
+    /**
+     * This method request the service to write into the synchronized read/write
+     * flavor of the FMQ.
+     *
+     * @param count Number to messages to write.
+     *
+     * @return ret True if the write operation was successful.
+     */
+    requestWriteFmqSync(int32_t count) generates(bool ret);
+
+    /**
+     * This method request the service to read from the synchronized read/write
+     * FMQ.
+     *
+     * @param count Number to messages to read.
+     *
+     * @return ret True if the read operation was successful.
+     */
+    requestReadFmqSync(int32_t count) generates(bool ret);
+
+    /**
+     * This method request the service to write into the unsynchronized flavor
+     * of FMQ.
+     *
+     * @param count Number to messages to write.
+     *
+     * @return ret True if the write operation was successful.
+     */
+    requestWriteFmqUnsync(int32_t count) generates(bool ret);
+
+    /**
+     * This method request the service to read from the unsynchronized flavor of
+     * FMQ.
+     *
+     * @param count Number to messages to read.
+     *
+     * @return ret Will be True if the read operation was successful.
+     */
+    requestReadFmqUnsync(int32_t count) generates(bool ret);
+
+    /**
+     * This method requests the service to trigger a blocking read.
+     *
+     * @param count Number of messages to read.
+     *
+     */
+    oneway requestBlockingRead(int32_t count);
+
+    /**
+     * This method requests the service to trigger a blocking read using
+     * default Event Flag notification bits defined by the MessageQueue class.
+     *
+     * @param count Number of messages to read.
+     *
+     */
+    oneway requestBlockingReadDefaultEventFlagBits(int32_t count);
+
+    /**
+     * This method requests the service to repeatedly trigger blocking reads.
+     *
+     * @param count Number of messages to read in a single blocking read.
+     * @param numIter Number of blocking reads to trigger.
+     *
+     */
+    oneway requestBlockingReadRepeat(int32_t count, int32_t numIter);
+
+};

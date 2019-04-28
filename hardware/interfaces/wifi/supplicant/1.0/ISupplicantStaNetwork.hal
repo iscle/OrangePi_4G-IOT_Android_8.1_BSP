@@ -1,0 +1,1071 @@
+/*
+ * Copyright 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.wifi.supplicant@1.0;
+
+import ISupplicantNetwork;
+import ISupplicantStaNetworkCallback;
+
+/**
+ * Interface exposed by the supplicant for each station mode network
+ * configuration it controls.
+ */
+interface ISupplicantStaNetwork extends ISupplicantNetwork {
+  /**
+   * Size limits for some of the params used in this interface.
+   */
+  enum ParamSizeLimits : uint32_t {
+    /** Max length of SSID param. */
+    SSID_MAX_LEN_IN_BYTES = 32,
+
+    /** Min length of PSK passphrase param. */
+    PSK_PASSPHRASE_MIN_LEN_IN_BYTES = 8,
+
+    /** Max length of PSK passphrase param. */
+    PSK_PASSPHRASE_MAX_LEN_IN_BYTES = 63,
+
+    /** Max number of WEP keys param. */
+    WEP_KEYS_MAX_NUM = 4,
+
+    /** Length of each WEP40 keys param. */
+    WEP40_KEY_LEN_IN_BYTES = 5,
+    /** Length of each WEP104 keys param. */
+    WEP104_KEY_LEN_IN_BYTES = 13,
+  };
+
+  /** Possble mask of values for KeyMgmt param. */
+  enum KeyMgmtMask : uint32_t {
+    WPA_EAP = 1 << 0,
+    WPA_PSK = 1 << 1,
+    NONE = 1 << 2,
+    IEEE8021X = 1 << 3,
+    FT_EAP = 1 << 5,
+    FT_PSK = 1 << 6,
+    OSEN = 1 << 15
+  };
+
+  /** Possble mask of values for Proto param. */
+  enum ProtoMask : uint32_t {
+    WPA = 1 << 0,
+    RSN = 1 << 1,
+    /** Unused 1 << 2 */
+    OSEN = 1 << 3
+  };
+
+  /** Possble mask of values for AuthAlg param. */
+  enum AuthAlgMask : uint32_t {
+    OPEN = 1 << 0,
+    SHARED = 1 << 1,
+    LEAP = 1 << 2
+  };
+
+  /** Possble mask of values for GroupCipher param. */
+  enum GroupCipherMask : uint32_t {
+    WEP40 = 1 << 1,
+    WEP104 = 1 << 2,
+    TKIP = 1 << 3,
+    CCMP = 1 << 4,
+    GTK_NOT_USED = 1 << 14
+  };
+
+  /** Possble mask of values for PairwiseCipher param. */
+  enum PairwiseCipherMask : uint32_t {
+    NONE = 1 << 0,
+    TKIP = 1 << 3,
+    CCMP = 1 << 4
+  };
+
+  /** Possble values for EapMethod param. */
+  enum EapMethod : uint32_t {
+    PEAP = 0,
+    TLS = 1,
+    TTLS = 2,
+    PWD = 3,
+    SIM = 4,
+    AKA = 5,
+    AKA_PRIME = 6,
+    WFA_UNAUTH_TLS = 7
+  };
+
+  /** Possble values for Phase2Method param. */
+  enum EapPhase2Method : uint32_t {
+    NONE = 0,
+    PAP = 1,
+    MSPAP = 2,
+    MSPAPV2 = 3,
+    GTC = 4,
+    SIM = 5,
+    AKA = 6,
+    AKA_PRIME = 7
+  };
+
+  /** Params of |sendNetworkEapSimGsmAuthResponse| request. (Refer RFC 4186) */
+  struct NetworkResponseEapSimGsmAuthParams {
+    uint8_t[8] kc;
+    uint8_t[4] sres;
+  };
+
+  /** Params of |sendNetworkEapSimUmtsAuthResponse| request. (Refer RFC 4187) */
+  struct NetworkResponseEapSimUmtsAuthParams {
+    vec<uint8_t> res;
+    uint8_t[16] ik;
+    uint8_t[16] ck;
+  };
+
+  /**
+   * Register for callbacks from this network.
+   *
+   * These callbacks are invoked for events that are specific to this network.
+   * Registration of multiple callback objects is supported. These objects must
+   * be automatically deleted when the corresponding client process is dead or
+   * if this network is removed.
+   *
+   * @param callback An instance of the |ISupplicantStaNetworkCallback| HIDL
+   *        interface object.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   */
+  registerCallback(ISupplicantStaNetworkCallback callback)
+      generates (SupplicantStatus status);
+
+  /**
+   * Setters for the various network params.
+   * These correspond to elements of |wpa_sssid| struct used internally by
+   * the supplicant to represent each network.
+   */
+  /**
+   * Set SSID for this network.
+   *
+   * @param ssid value to set.
+   *        Max length of |ParamSizeLimits.SSID_MAX_LEN_IN_BYTES|.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_ARGS_INVALID|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   */
+  setSsid(Ssid ssid) generates (SupplicantStatus status);
+
+  /**
+   * Set the network to only connect to an AP with provided BSSID.
+   *
+   * @param bssid value to set.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_ARGS_INVALID|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   */
+  setBssid(Bssid bssid) generates (SupplicantStatus status);
+
+  /**
+   * Set whether to send probe requests for this network (hidden).
+   *
+   * @param enable true to set, false otherwise.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   */
+  setScanSsid(bool enable) generates (SupplicantStatus status);
+
+  /**
+   * Set key management mask for the network.
+   *
+   * @param keyMgmtMask value to set.
+   *        Combination of |KeyMgmtMask| values.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_ARGS_INVALID|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   */
+  setKeyMgmt(bitfield<KeyMgmtMask> keyMgmtMask) generates (SupplicantStatus status);
+
+  /**
+   * Set proto mask for the network.
+   *
+   * @param protoMask value to set.
+   *        Combination of |ProtoMask| values.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_ARGS_INVALID|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   */
+  setProto(bitfield<ProtoMask> protoMask) generates (SupplicantStatus status);
+
+  /**
+   * Set auth alg mask for the network.
+   *
+   * @param authAlgMask value to set.
+   *        Combination of |ProtoMask| values.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_ARGS_INVALID|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   */
+  setAuthAlg(bitfield<AuthAlgMask> authAlgMask) generates (SupplicantStatus status);
+
+  /**
+   * Set group cipher mask for the network.
+   *
+   * @param groupCipherMask value to set.
+   *        Combination of |ProtoMask| values.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_ARGS_INVALID|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   */
+  setGroupCipher(bitfield<GroupCipherMask> groupCipherMask)
+      generates (SupplicantStatus status);
+
+  /**
+   * Set pairwise cipher mask for the network.
+   *
+   * @param pairwiseCipherMask value to set.
+   *        Combination of |ProtoMask| values.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_ARGS_INVALID|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   */
+  setPairwiseCipher(bitfield<PairwiseCipherMask> pairwiseCipherMask)
+      generates (SupplicantStatus status);
+
+  /**
+   * Set passphrase for WPA_PSK network.
+   *
+   * @param psk value to set.
+   *        Length of value must be between
+   *        |ParamSizeLimits.PSK_PASSPHRASE_MIN_LEN_IN_BYTES| and
+   *        |ParamSizeLimits.PSK_PASSPHRASE_MAX_LEN_IN_BYTES|.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.FAILURE_ARGS_INVALID|,
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   */
+  setPskPassphrase(string psk) generates (SupplicantStatus status);
+
+  /**
+   * Set raw psk for WPA_PSK network.
+   *
+   * @param psk value to set as specified in IEEE 802.11i-2004 standard.
+   *        This is the calculated using 'wpa_passphrase <ssid> [passphrase]'
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.FAILURE_ARGS_INVALID|,
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   */
+  setPsk(uint8_t[32] psk) generates (SupplicantStatus status);
+
+  /**
+   * Set WEP key for WEP network.
+   *
+   * @param keyIdx Index of wep key to set.
+   *        Max of |ParamSizeLimits.WEP_KEYS_MAX_NUM|.
+   * @param wepKey value to set.
+   *        Length of each key must be either
+   *        |ParamSizeLimits.WEP40_KEY_LEN_IN_BYTES| or
+   *        |ParamSizeLimits.WEP104_KEY_LEN_IN_BYTES|.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_ARGS_INVALID|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   */
+  setWepKey(uint32_t keyIdx, vec<uint8_t> wepKey)
+      generates (SupplicantStatus status);
+
+  /**
+   * Set default Tx key index for WEP network.
+   *
+   * @param KeyIdx value to set.
+   *        Max of |ParamSizeLimits.WEP_KEYS_MAX_NUM|.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_ARGS_INVALID|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   */
+  setWepTxKeyIdx(uint32_t keyIdx)
+      generates (SupplicantStatus status);
+
+  /**
+   * Set whether RequirePmf is enabled for this network.
+   *
+   * @param enable true to set, false otherwise.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   */
+  setRequirePmf(bool enable) generates (SupplicantStatus status);
+
+  /**
+   * Set EAP Method for this network.
+   *
+   * @param method value to be set.
+   *        Must be one of |EapMethod| values.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_ARGS_INVALID|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   */
+  setEapMethod(EapMethod method)
+      generates (SupplicantStatus status);
+
+  /**
+   * Set EAP Phase2 Method for this network.
+   *
+   * EAP method needs to be set for this to work.
+   *
+   * @param method value to set.
+   *        Must be one of |EapPhase2Method| values.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_ARGS_INVALID|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   */
+  setEapPhase2Method(EapPhase2Method method)
+      generates (SupplicantStatus status);
+
+  /**
+   * Set EAP Identity for this network.
+   *
+   * @param identity value to set.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_ARGS_INVALID|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   */
+  setEapIdentity(vec<uint8_t> identity)
+      generates (SupplicantStatus status);
+
+  /**
+   * Set EAP Anonymous Identity for this network.
+   *
+   * @param identity value to set.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_ARGS_INVALID|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   */
+  setEapAnonymousIdentity(vec<uint8_t> identity)
+      generates (SupplicantStatus status);
+
+  /**
+   * Set EAP Password for this network.
+   *
+   * @param password value to set.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_ARGS_INVALID|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   */
+  setEapPassword(vec<uint8_t> password)
+      generates (SupplicantStatus status);
+
+  /**
+   * Set EAP CA certificate file path for this network.
+   *
+   * @param path value to set.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_ARGS_INVALID|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   */
+  setEapCACert(string path) generates (SupplicantStatus status);
+
+  /**
+   * Set EAP CA certificate directory path for this network.
+   *
+   * @param path value to set.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_ARGS_INVALID|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   */
+  setEapCAPath(string path) generates (SupplicantStatus status);
+
+  /**
+   * Set EAP Client certificate file path for this network.
+   *
+   * @param path value to set.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_ARGS_INVALID|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   */
+  setEapClientCert(string path) generates (SupplicantStatus status);
+
+  /**
+   * Set EAP private key Id for this network.
+   * This is used if private key operations for EAP-TLS are performed
+   * using a smartcard.
+   *
+   * @param id value to set.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_ARGS_INVALID|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   */
+  setEapPrivateKeyId(string id) generates (SupplicantStatus status);
+
+  /**
+   * Set EAP subject match for this network.
+   *
+   * @param match value to set.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_ARGS_INVALID|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   */
+  setEapSubjectMatch(string match) generates (SupplicantStatus status);
+
+  /**
+   * Set EAP Alt subject match for this network.
+   *
+   * @param match value to set.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_ARGS_INVALID|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   */
+  setEapAltSubjectMatch(string match)
+      generates (SupplicantStatus status);
+
+  /**
+   * Enable EAP Open SSL Engine for this network.
+   *
+   * @param enable true to set, false otherwise.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   */
+  setEapEngine(bool enable) generates (SupplicantStatus status);
+
+  /**
+   * Set EAP Open SSL Engine ID for this network.
+   *
+   * @param id value to set.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_ARGS_INVALID|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   */
+  setEapEngineID(string id) generates (SupplicantStatus status);
+
+  /**
+   * Set EAP Domain suffix match for this network.
+   *
+   * @param match value to set.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_ARGS_INVALID|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   */
+  setEapDomainSuffixMatch(string match)
+      generates (SupplicantStatus status);
+
+  /**
+   * This field can be used to enable proactive key caching which is also
+   * known as opportunistic PMKSA caching for WPA2. This is disabled (0)
+   * by default unless default value is changed with the global okc=1
+   * parameter.
+   *
+   * Proactive key caching is used to make supplicant assume that the APs
+   * are using the same PMK and generate PMKSA cache entries without
+   * doing RSN pre-authentication. This requires support from the AP side
+   * and is normally used with wireless switches that co-locate the
+   * authenticator.
+   *
+   * @param enable true to set, false otherwise.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   */
+  setProactiveKeyCaching(bool enable) generates (SupplicantStatus status);
+
+  /**
+   * Set ID string for this network.
+   * Network identifier string for external scripts.
+   *
+   * @return idStr ID string value to set.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_ARGS_INVALID|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   */
+  setIdStr(string idStr) generates (SupplicantStatus status);
+
+  /**
+   * Set PPS MO ID for this network.
+   * (Hotspot 2.0 PerProviderSubscription/UpdateIdentifier)
+   *
+   * @return id ID value to set.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_ARGS_INVALID|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   */
+  setUpdateIdentifier(uint32_t id) generates (SupplicantStatus status);
+
+  /**
+   * Getters for the various network params.
+   */
+  /**
+   * Get SSID for this network.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   * @return ssid value set.
+   */
+  getSsid() generates (SupplicantStatus status, Ssid ssid);
+
+  /**
+   * Get the BSSID set for this network.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   * @return bssid value set.
+   */
+  getBssid() generates (SupplicantStatus status, Bssid bssid);
+
+  /**
+   * Get whether Probe Requests are being sent for this network (hidden).
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   * @return enabled true if set, false otherwise.
+   */
+  getScanSsid() generates (SupplicantStatus status, bool enabled);
+
+  /**
+   * Get the key mgmt mask set for the network.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   * @return keyMgmtMask Combination of |KeyMgmtMask| values.
+   */
+  getKeyMgmt()
+      generates (SupplicantStatus status, bitfield<KeyMgmtMask> keyMgmtMask);
+
+  /**
+   * Get the proto mask set for the network.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   * @return protoMask Combination of |ProtoMask| values.
+   */
+  getProto() generates (SupplicantStatus status, bitfield<ProtoMask> protoMask);
+
+  /**
+   * Get the auth alg mask set for the network.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   * @return authAlgMask Combination of |AuthAlgMask| values.
+   */
+  getAuthAlg()
+      generates (SupplicantStatus status, bitfield<AuthAlgMask> authAlgMask);
+
+  /**
+   * Get the group cipher mask set for the network.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   * @return groupCipherMask Combination of |GroupCipherMask| values.
+   */
+  getGroupCipher()
+      generates (SupplicantStatus status,
+                 bitfield<GroupCipherMask> groupCipherMask);
+
+  /**
+   * Get the pairwise cipher mask set for the network.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   * @return pairwiseCipherMask Combination of |PairwiseCipherMask| values.
+   */
+  getPairwiseCipher()
+      generates (SupplicantStatus status,
+                 bitfield<PairwiseCipherMask> pairwiseCipherMask);
+
+  /**
+   * Get passphrase for WPA_PSK network.
+   * Must return a failure if network has no passphrase set (use |getPsk| if
+   * network was configured with raw psk instead).
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   * @return psk value set.
+   */
+  getPskPassphrase() generates (SupplicantStatus status, string psk);
+
+  /**
+   * Get raw psk for WPA_PSK network.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.FAILURE_ARGS_INVALID|,
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   * @param psk value set.
+   */
+  getPsk() generates (SupplicantStatus status, uint8_t[32] psk);
+
+  /**
+   * Get WEP key for WEP network.
+   *
+   * @param keyIdx Index of wep key to be fetched.
+   *        Max of |WEP_KEYS_MAX_NUM|.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   * @return wepKey value set.
+   */
+  getWepKey(uint32_t keyIdx)
+      generates (SupplicantStatus status, vec<uint8_t> wepKey);
+
+  /**
+   * Get default Tx key index for WEP network.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   * @return keyIdx value set.
+   */
+  getWepTxKeyIdx()
+      generates (SupplicantStatus status, uint32_t keyIdx);
+
+  /**
+   * Get whether RequirePmf is enabled for this network.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   * @return enabled true if set, false otherwise.
+   */
+  getRequirePmf() generates (SupplicantStatus status, bool enabled);
+
+  /**
+   * Get EAP Method set for this network.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   * @return method value set.
+   *        Must be one of |EapMethod| values.
+   */
+  getEapMethod()
+      generates (SupplicantStatus status, EapMethod method);
+
+  /**
+   * Get EAP Phase2 Method set for this network.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   * @return method value set.
+   *        Must be one of |EapPhase2Method| values.
+   */
+  getEapPhase2Method()
+      generates (SupplicantStatus status, EapPhase2Method method);
+
+  /**
+   * Get EAP Identity set for this network.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   * @return identity value set.
+   */
+  getEapIdentity()
+      generates (SupplicantStatus status, vec<uint8_t> identity);
+
+  /**
+   * Get EAP Anonymous Identity set for this network.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   * @return identity value set.
+   */
+  getEapAnonymousIdentity()
+      generates (SupplicantStatus status, vec<uint8_t> identity);
+
+  /**
+   * Get EAP Password set for this network.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   * @return password value set.
+   */
+  getEapPassword()
+      generates (SupplicantStatus status, vec<uint8_t> password);
+
+  /**
+   * Get EAP CA certificate file path set for this network.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   * @return path value set.
+   */
+  getEapCACert() generates (SupplicantStatus status, string path);
+
+  /**
+   * Get EAP CA certificate directory path set for this network.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   * @return path value set.
+   */
+  getEapCAPath() generates (SupplicantStatus status, string path);
+
+  /**
+   * Get EAP Client certificate file path set for this network.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   * @return path value set.
+   */
+  getEapClientCert() generates (SupplicantStatus status, string path);
+
+  /**
+   * Get EAP private key Id set for this network.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   * @return id value set.
+   */
+  getEapPrivateKeyId() generates (SupplicantStatus status, string id);
+
+  /**
+   * Get EAP subject match set for this network.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   * @return match value set.
+   */
+  getEapSubjectMatch() generates (SupplicantStatus status, string match);
+
+  /**
+   * Get EAP Alt subject match set for this network.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   * @return match value set.
+   */
+  getEapAltSubjectMatch()
+      generates (SupplicantStatus status, string match);
+
+  /**
+   * Get if EAP Open SSL Engine is enabled for this network.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   * @return enabled true if set, false otherwise.
+   */
+  getEapEngine() generates (SupplicantStatus status, bool enabled);
+
+  /**
+   * Get EAP Open SSL Engine ID set for this network.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   * @return id value set.
+   */
+  getEapEngineID() generates (SupplicantStatus status, string id);
+
+  /**
+   * Get EAP Domain suffix match set for this network.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_ARGS_INVALID|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   * @return match value set.
+   */
+  getEapDomainSuffixMatch()
+      generates (SupplicantStatus status, string match);
+
+  /**
+   * Get ID string set for this network.
+   * Network identifier string for external scripts.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_ARGS_INVALID|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   * @return idStr ID string set.
+   */
+  getIdStr() generates (SupplicantStatus status, string idStr);
+
+  /**
+   * Retrieves a WPS-NFC configuration token for this network.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_ARGS_INVALID|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   * @return token Bytes representing WPS-NFC configuration token.
+   *         This is a dump of all the WPS atrributes of the AP configuration
+   *         as specified in the Wi-Fi Protected Setup Specification.
+   */
+  getWpsNfcConfigurationToken()
+      generates (SupplicantStatus status, vec<uint8_t> token);
+
+  /**
+   * Enable the network for connection purposes.
+   *
+   * This must trigger a connection to the network if:
+   * a) |noConnect| is false, and
+   * b) This is the only network configured, and
+   * c) Is visible in the current scan results.
+   *
+   * @param noConnect Only enable the network, dont trigger a connect.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   */
+  enable(bool noConnect) generates (SupplicantStatus status);
+
+  /**
+   * Disable the network for connection purposes.
+   *
+   * This must trigger a disconnection from the network, if currently
+   * connected to this one.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   */
+  disable() generates (SupplicantStatus status);
+
+  /**
+   * Initiate connection to this network.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   */
+  select() generates (SupplicantStatus status);
+
+  /**
+   * Used to send a response to the
+   * |ISupplicantNetworkCallback.onNetworkEapSimGsmAuthRequest| request.
+   *
+   * @param params Params to be used for EAP GSM authentication.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   */
+  sendNetworkEapSimGsmAuthResponse(vec<NetworkResponseEapSimGsmAuthParams> params)
+      generates (SupplicantStatus status);
+
+  /**
+   * Used to send a response to the
+   * |ISupplicantNetworkCallback.onNetworkEapSimGsmAuthRequest| request.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   */
+  sendNetworkEapSimGsmAuthFailure() generates (SupplicantStatus status);
+
+  /**
+   * Used to send a response to the
+   * |ISupplicantNetworkCallback.onNetworkEapSimUmtsAuthRequest| request.
+   *
+   * @param params Params to be used for EAP UMTS authentication.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   */
+  sendNetworkEapSimUmtsAuthResponse(NetworkResponseEapSimUmtsAuthParams params)
+      generates (SupplicantStatus status);
+
+  /**
+   * Used to send a response to the
+   * |ISupplicantNetworkCallback.onNetworkEapSimUmtsAuthRequest| request.
+   *
+   * @param auts Params to be used for EAP UMTS authentication.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   */
+  sendNetworkEapSimUmtsAutsResponse(uint8_t[14] auts)
+      generates (SupplicantStatus status);
+
+  /**
+   * Used to send a response to the
+   * |ISupplicantNetworkCallback.onNetworkEapSimUmtsAuthRequest| request.
+   *
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   */
+  sendNetworkEapSimUmtsAuthFailure() generates (SupplicantStatus status);
+
+  /**
+   * Used to send a response to the
+   * |ISupplicantNetworkCallback.onNetworkEapIdentityRequest| request.
+   *
+   * @param identity Identity to be used for the network.
+   * @return status Status of the operation.
+   *         Possible status codes:
+   *         |SupplicantStatusCode.SUCCESS|,
+   *         |SupplicantStatusCode.FAILURE_UNKNOWN|,
+   *         |SupplicantStatusCode.FAILURE_NETWORK_INVALID|
+   */
+  sendNetworkEapIdentityResponse(vec<uint8_t> identity)
+      generates (SupplicantStatus status);
+};

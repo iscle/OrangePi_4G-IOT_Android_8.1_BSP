@@ -1,0 +1,51 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.broadcastradio@1.0;
+
+import ITunerCallback;
+import ITuner;
+
+interface IBroadcastRadio {
+
+    /**
+     * Retrieve implementation properties.
+     * @return result Operation completion status: OK in case of success,
+     *                NOT_INITIALIZED in case of initialization error.
+     * @return properties A Properties structure containing implementation
+     *                    description and capabilities.
+     */
+    getProperties() generates (Result result, Properties properties);
+
+    /**
+     * Open a tuner interface for the requested configuration.
+     * If no other tuner is opened, this will power on the radio hardware.
+     * The hardware must be powered down when all tuner interface are released.
+     * @param config A BandConfig struct containing the band configuration to apply
+     * @param audio True if this tuner must be used for live radio listening and
+     *              should be connected to the radio audio source.
+     * @param callback the callback interface
+     * @return result Operation completion status: OK in case of success,
+     *                INVALID_ARGUMENTS if configuration requested is invalid,
+     *                INVALID_STATE if called out of sequence
+     * @return tuner The interface to control the tuner
+     *
+     * Callback ITunerCallback.ConfigChanged MUST be called once the
+     * configuration is applied or a failure occurs or after a time out.
+     */
+    openTuner(BandConfig config, bool audio, ITunerCallback callback)
+                generates (Result result, ITuner tuner);
+};

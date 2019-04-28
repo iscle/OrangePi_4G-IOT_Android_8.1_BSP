@@ -1,0 +1,79 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.tests.msgq@1.0;
+
+interface IBenchmarkMsgQ {
+    /**
+     * This method requests the service to set up Synchronous read/write
+     * wait-free FMQ with the client as reader.
+     * @return ret Will be true if the setup was successful, false otherwise.
+     * @return mqDescIn This structure describes the FMQ that was set up
+     * by the service. Client can use it to set up the FMQ at its end.
+     */
+    configureClientInboxSyncReadWrite()
+        generates(bool ret, fmq_sync<uint8_t> mqDescIn);
+
+    /**
+     * This method requests the service to set up Synchronous read/write
+     * wait-free FMQ with the client as writer.
+     * @return ret Will be true if the setup was successful, false otherwise.
+     * @return mqDescOut This structure describes the FMQ that was set up
+     * by the service. Client can use it to set up the FMQ at its end.
+     */
+    configureClientOutboxSyncReadWrite()
+        generates(bool ret, fmq_sync<uint8_t> mqDescOut);
+
+    /**
+     * This method request the service to write into the FMQ.
+     * @param count Number to messages to write.
+     * @return ret Will be true if the write operation was successful,
+     * false otherwise.
+     */
+    requestWrite(int32_t count) generates (bool ret);
+
+    /**
+     * This method request the service to read from the FMQ.
+     * @param count Number to messages to read.
+     * @ret Will be true if the read operation was successful, false otherwise.
+     */
+    requestRead(int32_t count) generates (bool ret);
+
+    /**
+     * This method kicks off a benchmarking experiment where
+     * the client writes a message into its outbox FMQ,
+     * the service reads it and writes it into the client's
+     * inbox FMQ and the client reads the message.
+     * The average time taken for the experiment is measured.
+     * @param numIter The number of iterations to run the experiment.
+     */
+    benchmarkPingPong(uint32_t numIter);
+
+    /**
+     * This method kicks off a benchmarking experiment where
+     * the service writes into an FMQ and the client reads the same.
+     * @param numIter The number of iterations to run the experiment.
+     */
+    benchmarkServiceWriteClientRead(uint32_t numIter);
+
+    /**
+     * This method sends a vector of time duration(in ns).
+     * @param timeData vector of time instants measured by client.
+     * Each entry is the number of ns between the epoch and a
+     * std::chrono::time_point.
+     */
+    sendTimeData(vec<int64_t> timeData);
+};

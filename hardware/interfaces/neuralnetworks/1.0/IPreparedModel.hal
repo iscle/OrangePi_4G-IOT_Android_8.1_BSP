@@ -1,0 +1,65 @@
+/*
+ * Copyright (C) 2017 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.neuralnetworks@1.0;
+
+import IExecutionCallback;
+
+/**
+ * IPreparedModel describes a model that has been prepared for execution and
+ * is used to launch executions.
+ */
+interface IPreparedModel {
+    /**
+     * Launches an asynchronous execution on a prepared model.
+     *
+     * The execution is performed asynchronously with respect to the caller.
+     * execute must verify the inputs to the function are correct. If there is
+     * an error, execute must immediately invoke the callback with the
+     * appropriate ErrorStatus value, then return with the same ErrorStatus. If
+     * the inputs to the function are valid and there is no error, execute must
+     * launch an asynchronous task to perform the execution in the background,
+     * and immediately return with ErrorStatus::NONE. If the asynchronous task
+     * fails to launch, execute must immediately invoke the callback with
+     * ErrorStatus::GENERAL_FAILURE, then return with
+     * ErrorStatus::GENERAL_FAILURE.
+     *
+     * When the asynchronous task has finished its execution, it must
+     * immediately invoke the callback object provided as an input to the
+     * execute function. This callback must be provided with the ErrorStatus of
+     * the execution.
+     *
+     * Multiple threads can call the execute function on the same IPreparedModel
+     * object concurrently with different requests.
+     *
+     * @param request The input and output information on which the prepared
+     *                model is to be executed.
+     * @param callback A callback object used to return the error status of
+     *                 the execution. The callback object's notify function must
+     *                 be called exactly once, even if the execution was
+     *                 unsuccessful.
+     * @return status Error status of the call, must be:
+     *                - NONE if task is successfully launched
+     *                - DEVICE_UNAVAILABLE if driver is offline or busy
+     *                - GENERAL_FAILURE if there is an unspecified error
+     *                - OUTPUT_INSUFFICIENT_SIZE if provided output buffer is
+     *                  not large enough to store the resultant values
+     *                - INVALID_ARGUMENT if one of the input arguments is
+     *                  invalid
+     */
+    execute(Request request, IExecutionCallback callback)
+        generates (ErrorStatus status);
+};

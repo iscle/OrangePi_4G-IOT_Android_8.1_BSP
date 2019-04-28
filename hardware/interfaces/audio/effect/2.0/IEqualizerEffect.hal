@@ -1,0 +1,93 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.hardware.audio.effect@2.0;
+
+import android.hardware.audio.common@2.0;
+import IEffect;
+
+interface IEqualizerEffect extends IEffect {
+    /**
+     * Gets the number of frequency bands that the equalizer supports.
+     */
+    getNumBands() generates (Result retval, uint16_t numBands);
+
+    /**
+     * Returns the minimum and maximum band levels supported.
+     */
+    getLevelRange()
+            generates (Result retval, int16_t minLevel, int16_t maxLevel);
+
+    /**
+     * Sets the gain for the given equalizer band.
+     */
+    setBandLevel(uint16_t band, int16_t level) generates (Result retval);
+
+    /**
+     * Gets the gain for the given equalizer band.
+     */
+    getBandLevel(uint16_t band) generates (Result retval, int16_t level);
+
+    /**
+     * Gets the center frequency of the given band, in milliHertz.
+     */
+    getBandCenterFrequency(uint16_t band)
+            generates (Result retval, uint32_t centerFreqmHz);
+
+    /**
+     * Gets the frequency range of the given frequency band, in milliHertz.
+     */
+    getBandFrequencyRange(uint16_t band)
+            generates (Result retval, uint32_t minFreqmHz, uint32_t maxFreqmHz);
+
+    /**
+     * Gets the band that has the most effect on the given frequency
+     * in milliHertz.
+     */
+    getBandForFrequency(uint32_t freqmHz)
+            generates (Result retval, uint16_t band);
+
+    /**
+     * Gets the names of all presets the equalizer supports.
+     */
+    getPresetNames() generates (Result retval, vec<string> names);
+
+    /**
+     * Sets the current preset using the index of the preset in the names
+     * vector returned via 'getPresetNames'.
+     */
+    setCurrentPreset(uint16_t preset) generates (Result retval);
+
+    /**
+     * Gets the current preset.
+     */
+    getCurrentPreset() generates (Result retval, uint16_t preset);
+
+    struct AllProperties {
+        uint16_t curPreset;
+        vec<int16_t> bandLevels;
+    };
+
+    /**
+     * Sets all properties at once.
+     */
+    setAllProperties(AllProperties properties) generates (Result retval);
+
+    /**
+     * Gets all properties at once.
+     */
+    getAllProperties() generates (Result retval, AllProperties properties);
+};
