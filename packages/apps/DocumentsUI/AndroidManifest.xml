@@ -1,0 +1,157 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+        package="com.android.documentsui">
+
+    <uses-permission android:name="android.permission.GET_APP_GRANTED_URI_PERMISSIONS" />
+    <uses-permission android:name="android.permission.MANAGE_DOCUMENTS" />
+    <uses-permission android:name="android.permission.REMOVE_TASKS" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.CACHE_CONTENT" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.SET_PREFERRED_APPLICATIONS" />
+
+    <application
+        android:name=".DocumentsApplication"
+        android:label="@string/app_label"
+        android:icon="@drawable/app_icon"
+        android:supportsRtl="true"
+        android:allowBackup="true"
+        android:backupAgent=".prefs.BackupAgent"
+        android:fullBackupOnly="false">
+
+        <meta-data
+            android:name="com.google.android.backup.api_key"
+            android:value="AEdPqrEAAAAInBA8ued0O_ZyYUsVhwinUF-x50NIe9K0GzBW4A" />
+
+        <activity
+            android:name=".picker.PickActivity"
+            android:theme="@style/DocumentsTheme"
+            android:visibleToInstantApps="true">
+            <intent-filter>
+                <action android:name="android.intent.action.OPEN_DOCUMENT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.OPENABLE" />
+                <data android:mimeType="*/*" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.CREATE_DOCUMENT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.OPENABLE" />
+                <data android:mimeType="*/*" />
+            </intent-filter>
+            <intent-filter android:priority="100">
+                <action android:name="android.intent.action.GET_CONTENT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.OPENABLE" />
+                <data android:mimeType="*/*" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.OPEN_DOCUMENT_TREE" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".files.LauncherActivity"
+            android:label="@string/launcher_label"
+            android:icon="@drawable/launcher_icon"
+            android:theme="@android:style/Theme.NoDisplay">
+        </activity>
+
+        <activity
+            android:name=".inspector.InspectorActivity"
+            android:label="@string/menu_inspector"
+            android:icon="@drawable/launcher_icon"
+            android:theme="@style/DocumentsTheme">
+        </activity>
+
+        <!--  Preserve original launcher activity from Nougat. -->
+        <activity-alias
+            android:name=".LauncherActivity"
+            android:targetActivity=".files.LauncherActivity"
+            android:enabled="@bool/is_launcher_enabled"
+            android:label="@string/launcher_label"
+            android:icon="@drawable/launcher_icon" >
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
+        </activity-alias>
+
+        <activity
+            android:name=".files.FilesActivity"
+            android:documentLaunchMode="intoExisting"
+            android:theme="@style/DocumentsTheme">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="vnd.android.document/root" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="vnd.android.document/directory" />
+            </intent-filter>
+        </activity>
+
+        <activity-alias android:name="ViewDownloadsActivity"
+                        android:targetActivity=".files.FilesActivity"
+                        android:enabled="@bool/handle_view_downloads_intent">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW_DOWNLOADS" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity
+            android:name=".OpenExternalDirectoryActivity"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.os.storage.action.OPEN_EXTERNAL_DIRECTORY" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <provider
+            android:name=".picker.LastAccessedProvider"
+            android:authorities="com.android.documentsui.lastAccessed"
+            android:exported="false"/>
+
+        <provider
+            android:name=".archives.ArchivesProvider"
+            android:authorities="com.android.documentsui.archives"
+            android:grantUriPermissions="true"
+            android:permission="android.permission.MANAGE_DOCUMENTS"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.content.action.DOCUMENTS_PROVIDER" />
+            </intent-filter>
+        </provider>
+
+        <receiver android:name=".PackageReceiver">
+            <intent-filter>
+                <action android:name="android.intent.action.PACKAGE_FULLY_REMOVED" />
+                <action android:name="android.intent.action.PACKAGE_DATA_CLEARED" />
+                <data android:scheme="package" />
+            </intent-filter>
+        </receiver>
+
+        <receiver android:name=".roots.BootReceiver" android:enabled="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Run FileOperationService in a separate process so that we can use FileLock class to
+            wait until jumbo clip is done writing to disk before reading it. See ClipStorage for
+            details. -->
+        <service
+            android:name=".services.FileOperationService"
+            android:exported="false"
+            android:process=":com.android.documentsui.services">
+        </service>
+    </application>
+</manifest>

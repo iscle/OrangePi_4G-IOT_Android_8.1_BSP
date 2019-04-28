@@ -1,0 +1,271 @@
+<!doctype html>
+<html>
+<head>
+<title>Calculator Arithmetic Overview</title>
+<meta charset="UTF-8">
+<style>
+#toc {
+  width:300px;
+  border:1px solid #ccc;
+  background-color:#efefef;
+  float:right;
+}
+.display {
+  color:#666666;
+  background-color:#f3f3f3;
+}
+</style>
+</head>
+<body onload="init();">
+<div id="toc"></div>
+<h1>Arithmetic in the Android M Calculator</h1>
+<p>Most conventional calculators, both the specialized hardware and software varieties, represent
+numbers using fairly conventional machine floating point arithmetic. Each number is stored as an
+exponent, identifying the position of the decimal point, together with the first 10 to 20
+significant digits of the number. For example, 1/300 might be stored as
+0.333333333333x10<sup>-2</sup>, i.e. as an exponent of -2, together with the 12 most significant
+digits. This is similar, and sometimes identical to, computer arithmetic used to solve large
+scale scientific problems.</p> <p>This kind of arithmetic works well most of the time, but can
+sometimes produce completely incorrect results. For example, the trigonometric tangent (tan) and
+arctangent (tan<sup>-1</sup>) functions are defined so that tan(tan<sup>-1</sup>(<i>x</i>)) should
+always be <i>x</i>. But on most calculators we have tried, tan(tan<sup>-1</sup>(10<sup>20</sup>))
+is off by at least a factor of 1000. A value around 10<sup>16</sup> or 10<sup>17</sup> is quite
+popular, which unfortunately doesn't make it correct. The underlying problem is that
+tan<sup>-1</sup>(10<sup>17</sup>) and tan<sup>-1</sup>(10<sup>20</sup>) are so close that
+conventional representations don't distinguish them. (They're both 89.9999… degrees with at least
+fifteen 9s beyond the decimal point.) But the tiny difference between them results in a huge
+difference when the tangent function is applied to the result.</p>
+
+<p>Similarly, it may be puzzling to a high school student that while the textbook claims that for
+any <i>x</i>, sin(<i>x</i>) + sin(<i>x</i>+π) = 0, their calculator says that sin(10<sup>15</sup>)
++ sin(10<sup>15</sup>+π) = <span class="display">-0.00839670971</span>. (Thanks to floating point
+standardization, multiple on-line calculators agree on that entirely bogus value!)</p>
+
+<p>We know that the instantaneous rate of change of a function f, its derivative, can be
+approximated at a point <i>x</i> by computing (<i>f</i>(<i>x</i> + <i>h</i>) - <i>f</i>(<i>x</i>))
+/ <i>h</i>, for very small <i>h</i>. Yet, if you try this in a conventional calculator with
+<i>h</i> = 10<sup>-20</sup> or smaller, you are unlikely to get a useful answer.</p>
+
+<p>In general these problems occur when computations amplify tiny errors, a problem referred to as
+numerical instability. This doesn't happen very often, but as in the above examples, it may
+require some insight to understand when it can and can't happen.</p>
+
+<p>In large scale scientific computations, hardware floating point computations are essential
+since they are the only reasonable way modern computer hardware can produce answers with
+sufficient speed. Experts must be careful to structure computations to avoid such problems. But
+for "computing in the small" problems, like those solved on desk calculators, we can do much
+better!</p>
+
+<h2>Producing accurate answers</h2>
+<p>The Android M Calculator uses a different kind of computer arithmetic. Rather than computing a
+fixed number of digits for each intermediate result, the computation is much more goal directed.
+The user would like to see only correct digits on the display, which we take to mean that the
+displayed answer should always be off by less than one in the last displayed digit. The
+computation is thus performed to whatever precision is required to achieve that.</p>
+
+<p>Let's say we want to compute π+⅓, and the calculator display has 10 digits. We'd compute both π
+and ⅓ to 11 digits each, add them, and round the result to 10 digits. Since π and ⅓ were accurate
+to within 1 in the 11<sup>th</sup> digit, and rounding adds an error of at most 5 in the
+11<sup>th</sup> digit, the result is guaranteed accurate to less than 1 in the 10<sup>th</sup>
+digit, which was our goal.</p>
+
+<p>This is of course an oversimplification of the real implementation. Operations other than
+addition do get appreciably more complicated. Multiplication, for example, requires that we
+approximate one argument in order to determine how much precision we need for the other argument.
+The tangent function requires very high precision for arguments near 90 degrees to produce
+meaningful answers. And so on. And we really use binary rather than decimal arithmetic.
+Nonetheless the above addition method is a good illustration of the approach.</p>
+
+<p>Since we have to be able to produce answers to arbitrary precision, we can also let the user
+specify how much precision she wants, and use that as our goal. In the Android M Calculator, the
+user specifies the requested precision by scrolling the result. As the result is being scrolled,
+the calculator reevaluates it to the newly requested precision. In some cases, the algorithm for
+computing the new higher precision result takes advantage of the old, less accurate result. In
+other cases, it basically starts from scratch. Fortunately modern devices and the Android runtime
+are fast enough that the recomputation delay rarely becomes visible.</p>
+
+<h2>Design Decisions and challenges</h2>
+<p>This form of evaluate-on-demand arithmetic has occasionally been used before, and we use a
+refinement of a previously developed open source package in our implementation. However, the
+scrolling interface, together with the practicailities of a usable general purpose calculator,
+presented some new challenges. These drove a number of not-always-obvious design decisions which
+briefly describe here.</p>
+
+<h3>Indicating position</h3>
+<p>We would like the user to be able to see at a glance which part of the result is currently
+being displayed.</p>
+
+<p>Conventional calculators solve the vaguely similar problem of displaying very large or very
+small numbers by using scientific notation: They display an exponent in addition to the most
+significant digits, analogously to the internal representation they use. We solve that problem in
+exactly the same way, in spite of our different internal representation. If the user enters
+"1÷3⨉10^20", computing ⅓ times 10 to the 20th power, the result may be displayed as <span
+class="display">3.3333333333E19</span>, indicating that the result is approximately 3.3333333333
+times 10<sup>19</sup>. In this version of scientific notation, the decimal point is always
+displayed immediately to the right of the most significant digit, and the exponent indicates where
+it really belongs.</p>
+
+<p>Once the decimal point is scrolled off the display, this style of scientific notation is not
+helpful; it essentially tells us where the decimal point is relative to the most significant
+digit, but the most significant digit is no longer visible. We address this by switching to a
+different variant of scientific notation, in which we interpret the displayed digits as a whole
+number, with an implied decimal point on the right. Instead of displaying <span
+class="display">3.3333333333E19</span>, we hypothetically could display <span
+class="display">33333333333E9</span> or 33333333333 times 10<sup>9</sup>. In fact, we use this
+format only when the normal scientific notation decimal point would not be visible. If we had
+scrolled the above result 2 digits to the left, we would in fact be seeing <span
+ass="display">...33333333333E7</span>. This tells us that the displayed result is very close to a
+whole number ending in 33333333333 times 10<sup>7</sup>. Effectively the <span
+class="display">E7</span> is telling us that the last displayed digit corresponds to the ten
+millions position. In this form, the exponent does tell us the current position in the result.
+The two forms are easily distinguishable by the presence or absence of a decimal point, and the
+ellipsis character at the beginning.</p>
+
+<h3>Rounding vs. scrolling</h3>
+<p>Normally we expect calculators to try to round to the nearest displayable result. If the
+actual computed result were 0.66666666666667, and we could only display 10 digits, we would expect
+a result display of, for example <span class="display">0.666666667</span>, rather than <span
+class="display">0.666666666</span>. For us, this would have the disadvantage that when we
+scrolled the result left to see more digits, the "7" on the right would change to a "6". That
+would be mildly unfortunate. It would be somewhat worse that if the actual result were exactly
+0.99999999999, and we could only display 10 characters at a time, we would see an initial display
+of <span class="display">1.00000000</span>. As we scroll to see more digits, we would
+successively see <span class="display">...000000E-6</span>, then <span
+class="display">...000000E-7</span>, and so on until we get to <span
+class="display">...00000E-10</span>, but then suddenly <span class="display">...99999E-11</span>.
+If we scroll back, the screen would again show zeroes. We decided this would be excessively
+confusing, and thus do not round.</p>
+
+<p>It is still possible for previously displayed digits to change as we're scrolling. But we
+always compute a number of digits more than we actually need, so this is exceedingly unlikely.</p>
+
+<p>Since our goal is an error of strictly less than one in the last displayed digit, we will
+never, for example, display an answer of exactly 2 as <span class="display">1.9999999999</span>.
+That would involve an error of exactly one in the last place, which is too much for us.</p> <p>It
+turns out that there is exactly one case in which the display switches between 9s and 0s: A long
+but finite sequence of 9s (more than 20) in the true result can initially be displayed as a larger
+number ending in 0s. As we scroll, the 0s turn into 9s. When we immediately scroll back, the
+number remains displayed as 9s, since the calculator caches the best known result (though not
+currently across restarts or screen rotations).</p>
+
+<p>We prevent 9s from turning into 0s during scrolling. If we generate a result ending in 9s, our
+error bound implies that the true result is strictly less (in absolute value) than the value
+(ending in 0s) we would get by incrementing the last displayed digit. Thus we can never be forced
+back to generating zeros and will always continue to generate 9s.</p>
+
+<h3>Coping with mathematical limits</h3>
+<p>Internally the calculator essentially represents a number as a program for computing however
+many digits we happen to need. This representation has many nice properties, like never resulting
+in the display of incorrect results. It has one inherent weakness: We provably cannot compute
+precisely whether two numbers are equal. We can compute more and more digits of both numbers, and
+if they ever differ by more than one in the last computed digit, we know they are <i>not</i>
+equal. But if the two numbers were in fact the same, this process will go on forever.</p>
+
+<p>This is still better than machine floating point arithmetic, though machine floating point
+better obscures the problem. With machine floating point arithmetic, two computations that should
+mathematically have given the same answer, may give us substantially different answers, and two
+computations that should have given us different answers may easily produce the same one. We
+can indeed determine whether the floating representations are equal, but this tells us little
+about equality of the true mathematical answers.</p>
+
+<p>The undecidability of equality creates some interesting issues. If we divide a number by
+<i>x</i>, the calculator will compute more and more digits of <i>x</i> until it finds some nonzero
+ones. If <i>x</i> was in fact exactly zero, this process will continue forever.</p> <p>We deal
+with this problem using two complementary techniques:</p>
+
+<ol>
+<li>We always run numeric computations in the background, where they won't interfere with user
+interactions, just in case they take a long time. If they do take a really long time, we time
+them out and inform the user that the computation has been aborted. This is unlikely to happen by
+accident, unless the user entered an ill-defined mathematical expression, like a division by
+zero.</li>
+<li>As we will see below, in many cases we use an additional number representation that does allow
+us to determine that a number is exactly zero. Although this easily handles most cases, it is not
+foolproof. If the user enters "1÷0" we immediately detect the division by zero. If the user
+enters "1÷(π−π)" we time out. (We might choose to explicitly recognize such simple cases in the
+future. But this would always remain a heuristic.)</li>
+</ol>
+
+<h3>Zeros further than the eye can see</h3>
+<p>Prototypes of the M calculator, like mathematicians, treated all real numbers as infinite
+objects, with infinitely many digits to scroll through. If the actual computation happened to be
+2−1, the result was initially displayed as <span class="display">1.00000000</span>, and the user
+could keep scrolling through as many thousands of zeroes to the right of that as he desired.
+Although mathematically sound, this proved unpopular for several good reasons, the first one
+probably more serious than the others:</p>
+
+<ol>
+<li>If we computed $1.23 + $7.89, the result would show up as <span
+class="display">9.1200000000</span> or the like, which is unexpected and harder to read quickly
+than <span class="display">9.12</span>.</li>
+<li>Many users consider the result of 2-1 to be a finite number, and find it confusing to be able
+to scroll through lots of zeros on the right.</li>
+<li>Since the calculator couldn't ever tell that a number wasn't going to be scrolled, it couldn't
+treat any result as short enough to allow the use of a larger font.</li>
+</ol>
+
+<p>As a result, the calculator now also tries to compute the result as an exact fraction whenever
+that is easily possible. It is then easy to tell from the fraction whether a number has a finite
+decimal expansion. If it does, we prevent scrolling past that point, and may use the fact that
+the result has a short representation to increase the font size. Results displayed in a larger
+font are not scrollable. We no longer display any zeros for non-zero results unless there is
+either a nonzero or a displayed decimal point to the right. The fact that a result is not
+scrollable tells the user that the result, as displayed, is exact. This is fallible in the other
+direction. For example, we do not compute a rational representation for π−π, and hence it is
+still possible to scroll through as many zeros of that result as you like.</p>
+
+<p>This underlying fractional representation of the result is also used to detect, for example,
+division by zero without a timeout.</p>
+
+<p>Since we calculate the fractional result when we can in any case, it is also now available to
+the user through the overflow menu.</p>
+
+<h2>More details</h2>
+<p>The underlying evaluate-on-demand arithmetic package is described in H. Boehm, "The
+Constructive Reals as a Java Library'', Special issue on practical development of exact real
+number computation, <i>Journal of Logic and Algebraic Programming 64</i>, 1, July 2005, pp. 3-11.
+(Also at <a href="http://www.hpl.hp.com/techreports/2004/HPL-2004-70.html">http://www.hpl.hp.com/techreports/2004/HPL-2004-70.html</a>)</p>
+
+<p>Our version has been slightly refined. Notably it calculates inverse trigonometric functions
+directly instead of using a generic "inverse" function. This is less elegant, but significantly
+improves performance.</p>
+
+</body>
+</html>
+<script type="text/javascript">
+function generateTOC (rootNode, startLevel) {
+  var lastLevel = 0;
+  startLevel = startLevel || 2;
+  var html = "<ul>";
+
+  for (var i = 0; i < rootNode.childNodes.length; ++i) {
+    var node = rootNode.childNodes[i];
+    if (!node.tagName || !/H[1-6]/.test(node.tagName)) {
+      continue;
+    }
+    var level = +node.tagName.substr(1);
+    if (level < startLevel) { continue; }
+    var name = node.innerText;
+    if (node.children.length) { name = node.childNodes[0].innerText; }
+    if (!name) { continue; }
+    var hashable = name.replace(/[.\s\']/g, "-");
+    node.id = hashable;
+    if (level > lastLevel) {
+      html += "";
+    } else if (level < lastLevel) {
+      html += (new Array(lastLevel - level + 2)).join("</ul></li>");
+    } else {
+      html += "</ul></li>";
+    }
+    html += "<li><a class='lvl"+level+"' href='#" + hashable + "'>" + name + "</a><ul>";
+    lastLevel = level;
+  }
+
+  html += "</ul>";
+  return html;
+}
+
+function init() {
+  document.getElementById("toc").innerHTML = generateTOC(document.body);
+}
+</script>

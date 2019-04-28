@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright (C) 2013 The Android Open Source Project
+
+     Licensed under the Apache License, Version 2.0 (the "License");
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License.
+-->
+
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          coreApp="true"
+          package="com.android.server.telecom.testapps">
+
+    <uses-sdk
+        android:minSdkVersion="23"
+        android:targetSdkVersion="23" />
+
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.CALL_PHONE" />
+    <uses-permission android:name="android.permission.CONTROL_INCALL_EXPERIENCE" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.MANAGE_OWN_CALLS" />
+    <uses-permission android:name="android.permission.READ_CALL_LOG" />
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="android.permission.REGISTER_CALL_PROVIDER" />
+    <uses-permission android:name="android.permission.REGISTER_CONNECTION_MANAGER" />
+    <uses-permission android:name="android.permission.REGISTER_SIM_SUBSCRIPTION" />
+    <uses-permission android:name="android.permission.WRITE_CALL_LOG" />
+
+    <application android:label="@string/app_name">
+        <uses-library android:name="android.test.runner" />
+
+        <!-- Miscellaneous telecom app-related test activities. -->
+
+        <service android:name="com.android.server.telecom.testapps.TestConnectionService"
+                 android:permission="android.permission.BIND_TELECOM_CONNECTION_SERVICE" >
+            <intent-filter>
+                <action android:name="android.telecom.ConnectionService" />
+            </intent-filter>
+        </service>
+
+        <service android:name="com.android.server.telecom.testapps.TestConnectionManager"
+                 android:permission="android.permission.BIND_TELECOM_CONNECTION_SERVICE" >
+            <intent-filter>
+                <action android:name="android.telecom.ConnectionService" />
+            </intent-filter>
+        </service>
+
+        <service android:name="com.android.server.telecom.testapps.TestInCallServiceImpl"
+                 android:process="com.android.server.telecom.testapps.TestInCallService"
+                 android:permission="android.permission.BIND_INCALL_SERVICE" >
+            <meta-data android:name="android.telecom.IN_CALL_SERVICE_UI" android:value="true"/>
+            <intent-filter>
+                <action android:name="android.telecom.InCallService"/>
+            </intent-filter>
+        </service>
+
+        <receiver android:name="com.android.server.telecom.testapps.TestInCallServiceBroadcastReceiver"
+                 android:process="com.android.server.telecom.testapps.TestInCallService" >
+            <intent-filter>
+                <action android:name="android.server.telecom.testapps.ACTION_SEND_UPDATE_REQUEST_FROM_TEST_INCALL_SERVICE"/>
+                <action android:name="android.server.telecom.testapps.ACTION_SEND_UPGRADE_RESPONSE"/>
+                <action android:name="android.telecom.action.PHONE_ACCOUNT_REGISTERED"/>
+                <action android:name="android.telecom.action.PHONE_ACCOUNT_UNREGISTERED"/>
+            </intent-filter>
+        </receiver>
+
+        <activity android:name="com.android.server.telecom.testapps.TestInCallUI"
+                android:process="com.android.server.telecom.testapps.TestInCallService"
+                android:label="@string/inCallUiAppLabel"
+                android:launchMode="singleInstance">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity android:name="com.android.server.telecom.testapps.TestRttActivity"
+                  android:process="com.android.server.telecom.testapps.TestInCallService"
+                  android:label="@string/rttUiLabel"
+                  android:launchMode="singleInstance">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <activity android:name="com.android.server.telecom.testapps.TestCallActivity"
+                  android:theme="@android:style/Theme.NoDisplay"
+                  android:label="@string/testCallActivityLabel">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.telecom.testapps.ACTION_START_INCOMING_CALL" />
+                <action android:name="android.telecom.testapps.ACTION_NEW_UNKNOWN_CALL" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="tel" />
+                <data android:scheme="sip" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.telecom.testapps.ACTION_HANGUP_CALLS" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.telecom.testapps.ACTION_SEND_UPGRADE_REQUEST" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="int" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.telecom.testapps.ACTION_RTT_CALL" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="tel" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.telecom.testapps.ACTION_REMOTE_RTT_UPGRADE" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <receiver android:name="com.android.server.telecom.testapps.CallNotificationReceiver"
+                  android:exported="false">
+            <intent-filter>
+                <action android:name="com.android.server.telecom.testapps.ACTION_CALL_SERVICE_EXIT" />
+            </intent-filter>
+        </receiver>
+
+        <activity android:name="com.android.server.telecom.testapps.TestDialerActivity"
+                  android:label="@string/testDialerActivityLabel"
+                  android:process="com.android.server.telecom.testapps.TestInCallService">
+            <intent-filter>
+                <action android:name="android.intent.action.DIAL" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:mimeType="vnd.android.cursor.item/phone" />
+                <data android:mimeType="vnd.android.cursor.item/person" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.DIAL" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="voicemail" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.DIAL" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <action android:name="android.intent.action.DIAL" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="tel" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity android:name="com.android.server.telecom.testapps.TestUssdActivity"
+                android:label="@string/UssdUiAppLabel"
+                android:launchMode="singleInstance">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+          </activity>
+
+        <activity android:name="com.android.server.telecom.testapps.TestCertActivity"
+                android:label="@string/KeyUiAppLabel"
+                android:launchMode="singleInstance">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+          </activity>
+
+        <activity android:name="com.android.server.telecom.testapps.SelfManagedCallingActivity"
+                  android:label="@string/selfManagedCallingActivityLabel"
+                  android:process="com.android.server.telecom.testapps.SelfMangingCallingApp"
+                  android:theme="@android:style/Theme.Material.Light">
+          <intent-filter>
+              <action android:name="android.intent.action.MAIN" />
+              <category android:name="android.intent.category.DEFAULT" />
+              <category android:name="android.intent.category.LAUNCHER" />
+          </intent-filter>
+        </activity>
+
+        <activity android:name="com.android.server.telecom.testapps.IncomingSelfManagedCallActivity"
+                  android:label="@string/selfManagedCallingActivityLabel"
+                  android:process="com.android.server.telecom.testapps.SelfMangingCallingApp">
+          <intent-filter>
+              <action android:name="android.intent.action.MAIN" />
+          </intent-filter>
+        </activity>
+
+        <activity android:name="com.android.server.telecom.testapps.HandoverActivity"
+                  android:label="@string/selfManagedCallingActivityLabel"
+                  android:process="com.android.server.telecom.testapps.SelfMangingCallingApp">
+          <intent-filter>
+              <action android:name="android.intent.action.MAIN" />
+          </intent-filter>
+        </activity>
+
+        <service android:name="com.android.server.telecom.testapps.SelfManagedConnectionService"
+                 android:permission="android.permission.BIND_TELECOM_CONNECTION_SERVICE"
+                 android:process="com.android.server.telecom.testapps.SelfMangingCallingApp">
+          <intent-filter>
+              <action android:name="android.telecom.ConnectionService" />
+          </intent-filter>
+        </service>
+
+        <receiver android:exported="false"
+            android:process="com.android.server.telecom.testapps.SelfMangingCallingApp"
+            android:name="com.android.server.telecom.testapps.SelfManagedCallNotificationReceiver" />
+    </application>
+</manifest>

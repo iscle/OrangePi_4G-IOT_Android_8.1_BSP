@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright (C) 2017 The Android Open Source Project
+
+     Licensed under the Apache License, Version 2.0 (the "License");
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License.
+-->
+
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          package="com.android.phone.testapps.embmsdownload">
+    <application android:label="EmbmsTestDownloadApp">
+        <activity
+            android:name=".EmbmsTestDownloadApp"
+            android:label="EmbmsDownloadFrontend">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- This is the receiver defined by the MBMS api. -->
+        <receiver
+            android:name="android.telephony.mbms.MbmsDownloadReceiver"
+            android:permission="android.permission.SEND_EMBMS_INTENTS"
+            android:enabled="true"
+            android:exported="true">
+        </receiver>
+
+        <!-- This is the receiver defined by app to receive the download-done intent that was
+         passed into DownloadRequest. -->
+        <receiver
+            android:name="com.android.phone.testapps.embmsdownload.DownloadCompletionReceiver"
+            android:enabled="true">
+        </receiver>
+
+        <!-- This is the provider that apps must declare in their manifest. It allows the
+        middleware to obtain file descriptors to temp files in the app's file space -->
+        <!-- grantUriPermissions must be set to true -->
+        <provider
+            android:name="android.telephony.mbms.MbmsTempFileProvider"
+            android:authorities="com.android.phone.testapps.embmsdownload"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <!-- This is a mandatory piece of metadata that contains the directory where temp
+            files should be put. It should be a relative path from Context.getFilesDir() or from
+            Context.getExternalStorageDir(null), depending on the value of the
+            use-external-storage metadata. -->
+            <meta-data android:name="temp-file-path" android:value="/mbms-temp/"/>
+
+            <!-- This tells the provider whether to use the sdcard partition for the temp files or
+            not. -->
+            <meta-data android:name="use-external-storage" android:value="false"/>
+        </provider>
+
+        <!-- This is a mandatory piece of metadata that contains the authority string for the
+        provider declared above -->
+        <meta-data
+            android:name="mbms-file-provider-authority"
+            android:value="com.android.phone.testapps.embmsdownload"/>
+    </application>
+</manifest>
+

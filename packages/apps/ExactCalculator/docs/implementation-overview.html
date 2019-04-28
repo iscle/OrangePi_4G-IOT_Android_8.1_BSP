@@ -1,0 +1,51 @@
+<!doctype html>
+<html>
+<head>
+<title>Calculator Implementation Overview</title>
+<meta charset="UTF-8">
+</head>
+<h1>M Calculator Implementation Overview</h1>
+<p>Although the appearance of the calculator has changed little from Lollipop, and some of the UI
+code is indeed the same, the rest of the code has changed substantially. Unsurprisingly,
+<b>Calculator.java</b> implements the main UI. The other major parts of the implementation
+are:</p>
+
+<p><b>CR.java</b> in <b>external/crcalc</b> provides the underlying demand-driven ("constructive
+real") arithmetic implementation. Numbers are represented primarily as objects with a method that
+can compute arbitrarily precise approximations. The actual arithmetic performed by these methods
+is based on Java's <tt>java.util.BigInteger</tt> arithmetic, with appropriate implicit
+scaling.</p>
+
+<p><b>BoundedRational.java</b> is a rational arithmetic package that is used to provide finite
+exact answers in "easy" cases. It is used primarily to determine when an approximation provided
+by CR.java is actually exact. This is used in turn both to limit the length of displayed results
+and scrolling, as well as to identify errors such as division by zero, that would otherwise result
+in timeouts during computations. It is in some sense not needed to produce correct results, but
+it significantly improves the usability of the calculator. It is also used for the "display as
+fraction" option in the overflow menu.</p>
+
+<p><b>CalculatorExpr.java</b> implements calculator arithmetic expressions. It supports editing,
+saving, restoring, and evaluation of expressions. Evaluation produces a constructive real (CR)
+and possibly a BoundedRational result. Unlike the "arity" library used in earlier versions, the
+underlying expression is represented as a sequence of "tokens", many of which are represented by
+Button ids, not as a character string.</p>
+
+<p><b>Evaluator.java</b> implements much of the actual calculator logic, particularly background
+expression evaluation. Expression evaluation here includes both using CalculatorExpr.java to
+evaluate the expression, and then invoking the resulting CR value to actually produce finite
+approximations and convert them to decimal. Two types of expression evaluation are supported:
+(1) Initial evaluation of the expression and producing an initial decimal approximation, and (2)
+reevaluation to higher precision. (1) is invoked directly from the Calculator UI, while (2) is
+invoked from the calculator display, commonly in response to scrolling. When the display requests
+a result, a "result" is immediately returned, though it may contains blank placeholders. The
+display is then notified when the real result becomes available.</p>
+
+<p><b>CalculatorText.java</b> is the TextView subclass used to display the formula.</p>
+
+<p><b>CalculatorResult.java</b> is the TextView subclass used to display the result. It handles
+result formatting, scrolling, etc. After the user hits "=", the CalculatorResult widget moves
+into the top position, replacing the formula display. Currently it remains in that position until
+the formula is again modified.</p>
+</body>
+</html>
+

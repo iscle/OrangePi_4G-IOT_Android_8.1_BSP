@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     Copyright (C) 2016 The Android Open Source Project
+
+     Licensed under the Apache License, Version 2.0 (the "License");
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License.
+-->
+
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.android.storagemanager">
+
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"/>
+    <uses-permission android:name="android.permission.GET_PACKAGE_SIZE"/>
+    <uses-permission android:name="android.permission.DELETE_PACKAGES"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.MANAGE_USERS"/>
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS"/>
+    <uses-permission android:name="android.permission.INTERACT_ACROSS_USERS"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+
+    <uses-sdk android:minSdkVersion="24" />
+
+    <application android:label="@string/app_name"
+        android:icon="@mipmap/ic_storage_manager_48px"
+        android:theme="@style/StorageManager"
+        android:allowBackup="false"
+        android:supportsRtl="true">
+        <!--  Initial Page -->
+        <activity android:name=".deletionhelper.DeletionHelperActivity"
+                  android:label="@string/deletion_helper_title"
+                  android:launchMode="singleTask">
+            <intent-filter>
+                <action android:name="android.os.storage.action.MANAGE_STORAGE" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!-- Warning for activating the storage manager. -->
+        <activity android:name=".automatic.WarningDialogActivity"
+                  android:excludeFromRecents="true"
+                  android:label=""
+                  android:noHistory="true"
+                  android:taskAffinity=".WarningDialogActivity"
+                  android:theme="@style/TransparentDialog">
+        </activity>
+
+        <!-- Automatic storage management tasks. -->
+        <service
+            android:name=".automatic.AutomaticStorageManagementJobService"
+            android:label="@string/automatic_storage_manager_service_label"
+            android:permission="android.permission.BIND_JOB_SERVICE"
+            android:enabled="@bool/enable_automatic_storage_management"
+            android:exported="false"/>
+
+        <receiver android:name=".automatic.AutomaticStorageBroadcastReceiver"
+                  android:enabled="@bool/enable_automatic_storage_management">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
+        <receiver android:name=".automatic.NotificationController"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.android.storagemanager.automatic.DISMISS" />
+                <action android:name="com.android.storagemanager.automatic.ACTIVATE" />
+                <action android:name="com.android.storagemanager.automatic.NO_THANKS" />
+                <action android:name="com.android.storagemanager.automatic.SHOW_NOTIFICATION" />
+                <action android:name="com.android.storagemanager.automatic.DEBUG_SHOW_NOTIFICATION" />
+                <action android:name="com.android.storagemanager.automatic.SHOW_SETTINGS" />
+            </intent-filter>
+        </receiver>
+
+    </application>
+
+</manifest>

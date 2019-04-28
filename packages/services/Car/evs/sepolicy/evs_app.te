@@ -1,0 +1,22 @@
+# evs app
+type evs_app, domain;
+hal_client_domain(evs_app, hal_evs)
+hal_client_domain(evs_app, hal_vehicle)
+
+# allow init to launch processes in this context
+type evs_app_exec, exec_type, file_type;
+init_daemon_domain(evs_app)
+
+# gets access to its own files on disk
+type evs_app_files, file_type;
+allow evs_app evs_app_files:file { getattr open read };
+allow evs_app evs_app_files:dir search;
+
+# Allow use of gralloc buffers and EGL
+allow evs_app hal_graphics_allocator_default:fd use;
+allow evs_app gpu_device:chr_file ioctl;
+allow evs_app gpu_device:chr_file { getattr open read write };
+
+# Permit communication with the vehicle HAL
+# (Communcations with the rest of the EVS stack is allowed via hal_evs)
+binder_call(evs_app, hal_vehicle);

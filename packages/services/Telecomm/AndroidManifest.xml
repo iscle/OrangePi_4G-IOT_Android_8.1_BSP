@@ -1,0 +1,303 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright (C) 2007 The Android Open Source Project
+
+     Licensed under the Apache License, Version 2.0 (the "License");
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at
+
+          http://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License.
+-->
+
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:androidprv="http://schemas.android.com/apk/prv/res/android"
+        package="com.android.server.telecom"
+        coreApp="true"
+        android:sharedUserId="android.uid.system">
+
+    <protected-broadcast android:name="android.intent.action.SHOW_MISSED_CALLS_NOTIFICATION" />
+
+    <!-- Prevents the activity manager from delaying any activity-start
+         requests by this package, including requests immediately after
+         the user presses "home". -->
+    <uses-permission android:name="android.permission.BIND_CONNECTION_SERVICE" />
+    <uses-permission android:name="android.permission.BIND_INCALL_SERVICE" />
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.BROADCAST_CALLLOG_INFO" />
+    <uses-permission android:name="android.permission.BROADCAST_PHONE_ACCOUNT_REGISTRATION" />
+    <uses-permission android:name="android.permission.CALL_PRIVILEGED" />
+    <uses-permission android:name="android.permission.INTERACT_ACROSS_USERS" />
+    <uses-permission android:name="android.permission.INTERACT_ACROSS_USERS_FULL" />
+    <uses-permission android:name="android.permission.MANAGE_USERS" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.MODIFY_PHONE_STATE" />
+    <uses-permission android:name="android.permission.READ_CALL_LOG" />
+    <uses-permission android:name="android.permission.STOP_APP_SWITCHES" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.WRITE_CALL_LOG" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.READ_BLOCKED_NUMBERS" />
+    <uses-permission android:name="android.permission.WRITE_BLOCKED_NUMBERS" />
+    <uses-permission android:name="android.permission.SUBSTITUTE_NOTIFICATION_APP_NAME" />
+
+    <permission
+            android:name="android.permission.BROADCAST_CALLLOG_INFO"
+            android:label="Broadcast the call type/duration information"
+            android:protectionLevel="signature|system"/>
+
+    <permission
+            android:name="android.permission.PROCESS_CALLLOG_INFO"
+            android:label="Register to handle the broadcasted call type/duration information"
+            android:protectionLevel="signature|system"/>
+
+    <permission
+            android:name="android.permission.BROADCAST_PHONE_ACCOUNT_REGISTRATION"
+            android:label="Broadcast phone account registration"
+            android:protectionLevel="signature|system"/>
+
+    <permission
+            android:name="android.permission.PROCESS_PHONE_ACCOUNT_REGISTRATION"
+            android:label="Process phone account registration"
+            android:protectionLevel="signature|system"/>
+
+    <application android:label="@string/telecommAppLabel"
+            android:icon="@mipmap/ic_launcher_phone"
+            android:allowBackup="false"
+            android:supportsRtl="true"
+            android:process="system"
+            android:usesCleartextTraffic="false"
+            android:defaultToDeviceProtectedStorage="true"
+            android:directBootAware="true">
+
+        <!-- CALL vs CALL_PRIVILEGED vs CALL_EMERGENCY
+             We have three different intents through which a call can be initiated each with its
+             own behavior.
+             1) CALL - Expected from any third party app with CALL_PHONE permission. Through this
+             intent, an app can call any number except emergency numbers.
+             2) CALL_PRIVILEGED - Expected from the dialer app and requires CALL_PRIVILEGED
+             permission, which is only held by the system dialer and the emergency dialer at the
+             time of this writing. Through this intent, an app can call any number including
+             emergency numbers.
+             3) CALL_EMERGENCY - Expected from the emergency dialer app and requires CALL_PRIVILEGED
+             permission. Through this intent, an app can call *only* emergency numbers. -->
+
+        <!-- Activity that displays UI for managing blocked numbers. -->
+        <activity android:name=".settings.BlockedNumbersActivity"
+                  android:label="@string/blocked_numbers"
+                  android:configChanges="orientation|screenSize|keyboardHidden"
+                  android:theme="@style/Theme.Telecom.BlockedNumbers"
+                  android:process=":ui"
+                  android:exported="true">
+            <intent-filter>
+                <action android:name="android.telecom.action.MANAGE_BLOCKED_NUMBERS" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+        <!-- Activity that starts the outgoing call process by listening to CALL intent which
+             contain contact information in the intent's data. CallActivity handles any data
+             URL with the schemes "tel", "sip", and "voicemail". It also handles URLs linked to
+             contacts provider entries. Any data not fitting the schema described is ignored. -->
+        <activity android:name=".components.UserCallActivity"
+                android:label="@string/userCallActivityLabel"
+                android:theme="@style/Theme.Telecomm.Transparent"
+                android:permission="android.permission.CALL_PHONE"
+                android:excludeFromRecents="true"
+                android:process=":ui">
+            <!-- CALL action intent filters for the various ways of initiating an outgoing call. -->
+            <intent-filter>
+                <action android:name="android.intent.action.CALL" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="tel" />
+            </intent-filter>
+            <!-- Specify an icon for SIP calls so that quick contacts widget shows a special SIP
+                 icon for calls to SIP addresses. -->
+            <intent-filter android:icon="@drawable/ic_launcher_sip_call">
+                <action android:name="android.intent.action.CALL" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="sip" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.CALL" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="voicemail" />
+            </intent-filter>
+            <!-- Omit default category below so that all Intents sent to this filter must be
+                 explicit. -->
+            <intent-filter>
+                <action android:name="android.intent.action.CALL" />
+                <data android:mimeType="vnd.android.cursor.item/phone" />
+                <data android:mimeType="vnd.android.cursor.item/phone_v2" />
+                <data android:mimeType="vnd.android.cursor.item/person" />
+            </intent-filter>
+        </activity>
+
+        <!-- Works like CallActivity with CALL_PRIVILEGED instead of CALL intent.
+             CALL_PRIVILEGED allows calls to emergency numbers unlike CALL which disallows it.
+             Intent-sender must have the CALL_PRIVILEGED permission or the broadcast will not be
+             processed. High priority of 1000 is used in all intent filters to prevent anything but
+             the system from processing this intent (b/8871505). -->
+        <activity-alias android:name="PrivilegedCallActivity"
+                android:targetActivity=".components.UserCallActivity"
+                android:permission="android.permission.CALL_PRIVILEGED"
+                android:process=":ui">
+            <intent-filter android:priority="1000">
+                <action android:name="android.intent.action.CALL_PRIVILEGED" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="tel" />
+            </intent-filter>
+            <intent-filter android:priority="1000"
+                    android:icon="@drawable/ic_launcher_sip_call">
+                <action android:name="android.intent.action.CALL_PRIVILEGED" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="sip" />
+            </intent-filter>
+            <intent-filter android:priority="1000">
+                <action android:name="android.intent.action.CALL_PRIVILEGED" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="voicemail" />
+            </intent-filter>
+            <intent-filter android:priority="1000">
+                <action android:name="android.intent.action.CALL_PRIVILEGED" />
+                <data android:mimeType="vnd.android.cursor.item/phone" />
+                <data android:mimeType="vnd.android.cursor.item/phone_v2" />
+                <data android:mimeType="vnd.android.cursor.item/person" />
+            </intent-filter>
+        </activity-alias>
+
+        <!-- Works like CallActivity with CALL_EMERGENCY instead of CALL intent.
+             CALL_EMERGENCY allows calls *only* to emergency numbers. Intent-sender must have the
+             CALL_PRIVILEGED permission or the broadcast will not be processed. High priority of
+             1000 is used in all intent filters to prevent anything but the system from processing
+             this intent (b/8871505). -->
+        <!-- TODO: Is there really a notion of an emergency SIP number? If not, can
+             that scheme be removed from this activity? -->
+        <activity-alias android:name="EmergencyCallActivity"
+                android:targetActivity=".components.UserCallActivity"
+                android:permission="android.permission.CALL_PRIVILEGED"
+                android:process=":ui">
+            <intent-filter android:priority="1000">
+                <action android:name="android.intent.action.CALL_EMERGENCY" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="tel" />
+            </intent-filter>
+            <intent-filter android:priority="1000"
+                    android:icon="@drawable/ic_launcher_sip_call">
+                <action android:name="android.intent.action.CALL_EMERGENCY" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="sip" />
+            </intent-filter>
+            <intent-filter android:priority="1000">
+                <action android:name="android.intent.action.CALL_EMERGENCY" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="voicemail" />
+            </intent-filter>
+            <intent-filter android:priority="1000">
+                <action android:name="android.intent.action.CALL_EMERGENCY" />
+                <data android:mimeType="vnd.android.cursor.item/phone" />
+                <data android:mimeType="vnd.android.cursor.item/phone_v2" />
+                <data android:mimeType="vnd.android.cursor.item/person" />
+            </intent-filter>
+        </activity-alias>
+
+        <receiver android:name=".components.TelecomBroadcastReceiver" android:exported="false"
+                android:process="system">
+            <intent-filter>
+                <action android:name="com.android.server.telecom.ACTION_CLEAR_MISSED_CALLS" />
+                <action android:name="com.android.server.telecom.ACTION_CALL_BACK_FROM_NOTIFICATION" />
+                <action android:name="com.android.server.telecom.ACTION_SEND_SMS_FROM_NOTIFICATION" />
+                <action android:name="com.android.server.telecom.ACTION_ANSWER_FROM_NOTIFICATION" />
+                <action android:name="com.android.server.telecom.ACTION_REJECT_FROM_NOTIFICATION" />
+                <action android:name="com.android.server.telecom.PROCEED_WITH_CALL" />
+                <action android:name="com.android.server.telecom.CANCEL_CALL" />
+            </intent-filter>
+        </receiver>
+
+        <receiver android:name=".components.PhoneAccountBroadcastReceiver"
+                android:process="system">
+            <intent-filter>
+                <action android:name="android.intent.action.PACKAGE_FULLY_REMOVED" />
+                <data android:scheme="package" />
+            </intent-filter>
+        </receiver>
+
+        <activity android:name=".RespondViaSmsSettings"
+                  android:label="@string/respond_via_sms_setting_title"
+                  android:configChanges="orientation|screenSize|keyboardHidden"
+                  android:theme="@style/Theme.Telecom.DialerSettings"
+                  android:process=":ui">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <action android:name="android.telecom.action.SHOW_RESPOND_VIA_SMS_SETTINGS" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <activity android:name=".settings.EnableAccountPreferenceActivity"
+                  android:label="@string/enable_account_preference_title"
+                  android:configChanges="orientation|screenSize|keyboardHidden"
+                  android:theme="@style/Theme.Telecom.DialerSettings"
+                  android:process=":ui">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <activity android:name=".components.ErrorDialogActivity"
+                android:configChanges="orientation|screenSize|keyboardHidden"
+                android:excludeFromRecents="true"
+                android:launchMode="singleInstance"
+                android:theme="@style/Theme.Telecomm.Transparent"
+                android:process=":ui">
+        </activity>
+
+        <activity android:name=".ui.ConfirmCallDialogActivity"
+                android:configChanges="orientation|screenSize|keyboardHidden"
+                android:excludeFromRecents="true"
+                android:launchMode="singleInstance"
+                android:theme="@style/Theme.Telecomm.Transparent"
+                android:process=":ui">
+        </activity>
+
+        <activity android:name=".components.ChangeDefaultDialerDialog"
+                  android:label="@string/change_default_dialer_dialog_title"
+                  android:excludeFromRecents="true"
+                  android:theme="@*android:style/Theme.Material.Light.Dialog.Alert"
+                  android:priority="1000"
+                  android:process=":ui" >
+            <intent-filter>
+                <action android:name="android.telecom.action.CHANGE_DEFAULT_DIALER" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <receiver android:name=".components.PrimaryCallReceiver"
+                android:exported="true"
+                android:permission="android.permission.MODIFY_PHONE_STATE"
+                android:process="system">
+        </receiver>
+
+        <service android:name=".components.BluetoothPhoneService"
+                android:singleUser="true"
+                android:process="system">
+            <intent-filter>
+                <action android:name="android.bluetooth.IBluetoothHeadsetPhone" />
+            </intent-filter>
+        </service>
+
+        <service android:name=".components.TelecomService"
+                android:singleUser="true"
+                android:process="system">
+            <intent-filter>
+                <action android:name="android.telecom.ITelecomService" />
+            </intent-filter>
+        </service>
+
+    </application>
+</manifest>

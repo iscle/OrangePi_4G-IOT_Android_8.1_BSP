@@ -1,0 +1,286 @@
+syntax = "proto2";
+
+package com.android.server.telecom;
+
+option java_package = "com.android.server.telecom";
+option java_outer_classname = "TelecomLogClass";
+
+// The information about the telecom events.
+message TelecomLog {
+
+  // Information about each call.
+  repeated CallLog call_logs = 1;
+
+  // Timing information for the logging sessions
+  repeated LogSessionTiming session_timings = 2;
+}
+
+message LogSessionTiming {
+  enum SessionEntryPoint {
+    ENTRY_POINT_UNSPECIFIED = 0;
+    ICA_ANSWER_CALL = 1;
+    ICA_REJECT_CALL = 2;
+    ICA_DISCONNECT_CALL = 3;
+    ICA_HOLD_CALL = 4;
+    ICA_UNHOLD_CALL = 5;
+    ICA_MUTE = 6;
+    ICA_SET_AUDIO_ROUTE = 7;
+    ICA_CONFERENCE = 8;
+
+    CSW_HANDLE_CREATE_CONNECTION_COMPLETE = 100;
+    CSW_SET_ACTIVE = 101;
+    CSW_SET_RINGING = 102;
+    CSW_SET_DIALING = 103;
+    CSW_SET_DISCONNECTED = 104;
+    CSW_SET_ON_HOLD = 105;
+    CSW_REMOVE_CALL = 106;
+    CSW_SET_IS_CONFERENCED = 107;
+    CSW_ADD_CONFERENCE_CALL = 108;
+  }
+
+  // The entry point into Telecom code that this session tracks.
+  optional SessionEntryPoint sessionEntryPoint = 1;
+  // The time it took for this session to finish.
+  optional int64 time_millis = 2;
+}
+
+message Event {
+  // From android.telecom.ParcelableAnalytics
+  enum EventName {
+    EVENT_NAME_UNSPECIFIED = 9999;
+    SET_SELECT_PHONE_ACCOUNT = 0;
+    SET_ACTIVE = 1;
+    SET_DISCONNECTED = 2;
+    START_CONNECTION = 3;
+    SET_DIALING = 4;
+    BIND_CS = 5;
+    CS_BOUND = 6;
+    REQUEST_ACCEPT = 7;
+    REQUEST_REJECT = 8;
+
+    SCREENING_SENT = 100;
+    SCREENING_COMPLETED = 101;
+    DIRECT_TO_VM_INITIATED = 102;
+    DIRECT_TO_VM_FINISHED = 103;
+    BLOCK_CHECK_INITIATED = 104;
+    BLOCK_CHECK_FINISHED = 105;
+    FILTERING_INITIATED = 106;
+    FILTERING_COMPLETED = 107;
+    FILTERING_TIMED_OUT = 108;
+
+    SKIP_RINGING = 200;
+    SILENCE = 201;
+    MUTE = 202;
+    UNMUTE = 203;
+    AUDIO_ROUTE_BT = 204;
+    AUDIO_ROUTE_EARPIECE = 205;
+    AUDIO_ROUTE_HEADSET = 206;
+    AUDIO_ROUTE_SPEAKER = 207;
+
+    CONFERENCE_WITH = 300;
+    SPLIT_CONFERENCE = 301;
+    SET_PARENT = 302;
+
+    REQUEST_HOLD = 400;
+    REQUEST_UNHOLD = 401;
+    REMOTELY_HELD = 402;
+    REMOTELY_UNHELD = 403;
+    SET_HOLD = 404;
+    SWAP = 405;
+
+    REQUEST_PULL = 500;
+  }
+
+  // The ID of the event.
+  optional EventName event_name = 1;
+
+  // The elapsed time since the last event, rounded to one significant digit.
+  // If the event is the first, this will be negative.
+  optional int64 time_since_last_event_millis = 2;
+}
+
+message VideoEvent {
+  // From android.telecom.ParcelableCallAnalytics
+  enum VideoEventName {
+    VIDEO_EVENT_NAME_UNSPECIFIED = 9999;
+    SEND_LOCAL_SESSION_MODIFY_REQUEST = 0;
+    SEND_LOCAL_SESSION_MODIFY_RESPONSE = 1;
+    RECEIVE_REMOTE_SESSION_MODIFY_REQUEST = 2;
+    RECEIVE_REMOTE_SESSION_MODIFY_RESPONSE = 3;
+  }
+
+  // From android.telecom.VideoProfile
+  enum VideoState {
+    // No unspecified field to define. This enum to be used only as values for a bitmask.
+    STATE_AUDIO_ONLY = 0;
+    STATE_TX_ENABLED = 1;
+    STATE_RX_ENABLED = 2;
+    STATE_BIDIRECTIONAL = 3;
+    STATE_PAUSED = 4;
+  }
+
+  // The ID of the event.
+  optional VideoEventName event_name = 1;
+
+  // The elapsed time since the last event, rounded to one significant digit.
+  // If the event is the first, this will be negative.
+  optional int64 time_since_last_event_millis = 2;
+
+  // The video state
+  optional int32 video_state = 3;
+}
+
+message EventTimingEntry {
+  enum EventTimingName {
+    EVENT_TIMING_NAME_UNSPECIFIED = 9999;
+    ACCEPT_TIMING = 0;
+    REJECT_TIMING = 1;
+    DISCONNECT_TIMING = 2;
+    HOLD_TIMING = 3;
+    UNHOLD_TIMING = 4;
+    OUTGOING_TIME_TO_DIALING_TIMING = 5;
+    BIND_CS_TIMING = 6;
+    SCREENING_COMPLETED_TIMING = 7;
+    DIRECT_TO_VM_FINISHED_TIMING = 8;
+    BLOCK_CHECK_FINISHED_TIMING = 9;
+    FILTERING_COMPLETED_TIMING = 10;
+    FILTERING_TIMED_OUT_TIMING = 11;
+  }
+
+  // The name of the event timing.
+  optional EventTimingName timing_name = 1;
+
+  // The number of milliseconds that this event pair took.
+  optional int64 time_millis = 2;
+}
+
+message InCallServiceInfo {
+  // Keep this up-to-date with com.android.server.telecom.InCallController.
+  enum InCallServiceType {
+    IN_CALL_SERVICE_TYPE_UNSPECIFIED = 9999;
+    IN_CALL_SERVICE_TYPE_INVALID = 0;
+    IN_CALL_SERVICE_TYPE_DIALER_UI = 1;
+    IN_CALL_SERVICE_TYPE_SYSTEM_UI = 2;
+    IN_CALL_SERVICE_TYPE_CAR_MODE_UI = 3;
+    IN_CALL_SERVICE_TYPE_NON_UI = 4;
+  }
+
+  // The shortened component name of the in-call service.
+  optional string in_call_service_name = 1;
+
+  // The type of the in-call service
+  optional InCallServiceType in_call_service_type = 2;
+}
+
+// Information about each call.
+message CallLog {
+
+  // Information on call-types.
+  enum CallType {
+
+    // Call type is not known.
+    CALLTYPE_UNKNOWN = 0;
+
+    // Incoming call.
+    CALLTYPE_INCOMING = 1;
+
+    // Outgoing call.
+    CALLTYPE_OUTGOING = 2;
+  }
+
+  // Termination code.
+  enum CallTerminationCode {
+
+    // Disconnected because of an unknown or unspecified reason.
+    CALL_TERMINATION_CODE_UNKNOWN = 0;
+
+    // Disconnected because there was an error, such as a problem
+    // with the network.
+    CALL_TERMINATION_CODE_ERROR = 1;
+
+    // Disconnected because of a local user-initiated action,
+    // such as hanging up.
+    CALL_TERMINATION_CODE_LOCAL = 2;
+
+    // Disconnected because of a remote user-initiated action,
+    // such as the other party hanging up.
+    CALL_TERMINATION_CODE_REMOTE = 3;
+
+    // Disconnected because it has been canceled.
+    CALL_TERMINATION_CODE_CANCELED = 4;
+
+    // Disconnected because there was no response to an incoming call.
+    CALL_TERMINATION_CODE_MISSED = 5;
+
+    // Disconnected because the user rejected an incoming call.
+    CALL_TERMINATION_CODE_REJECTED = 6;
+
+    // Disconnected because the other party was busy.
+    CALL_TERMINATION_CODE_BUSY = 7;
+
+    // Disconnected because of a restriction on placing the call,
+    // such as dialing in airplane mode.
+    CALL_TERMINATION_CODE_RESTRICTED = 8;
+
+    // Disconnected for reason not described by other disconnect codes.
+    CALL_TERMINATION_CODE_OTHER = 9;
+
+    // Disconnected because the connection manager did not support the call.
+    // The call will be tried again without a connection manager.
+    CONNECTION_MANAGER_NOT_SUPPORTED = 10;
+  }
+
+  // Start time of the connection.
+  // Rounded to the nearest 5 minute interval.
+  optional int64 start_time_5min = 1;
+
+  // Duration in millis.
+  optional int64 call_duration_millis = 2;
+
+  // Call type.
+  optional CallType type  = 3;
+
+  // True if the call interrupted an in-progress call, whether it was the
+  // user dialing out during a call or an incoming call during another call.
+  optional bool is_additional_call = 4 [default = false];
+
+  // True if the call was interrupted by another call.
+  optional bool is_interrupted = 5 [default = false];
+
+  // A bitmask with bits corresponding to call technologies that were used
+  // during the call. The ones that we will record are CDMA, GSM, IMS, SIP,
+  // and third-party.
+  // See the com.android.server.telecom.Analytics.*_PHONE constants.
+  optional int32 call_technologies = 6;
+
+  // Indicates the call termination code.
+  optional CallTerminationCode call_termination_code = 7;
+
+  // A list of the package names of connection services used.
+  repeated string connection_service = 9;
+
+  // Set to true if the call was created from createCallForExistingConnection.
+  optional bool is_created_from_existing_connection = 10 [default = false];
+
+  // Set to true if its an emergency call.
+  optional bool is_emergency_call = 11 [default = false];
+
+  // A list of the events that occur during the call.
+  repeated Event call_events = 12;
+
+  // A map from the names of latency timings to the timings.
+  repeated EventTimingEntry call_timings = 13;
+
+  // Whether this call has ever been a video call
+  optional bool is_video_call = 14 [default = false];
+
+  // A list of the video events during the call.
+  repeated VideoEvent video_events = 15;
+
+  // A list of the in-call services bound during the call.
+  repeated InCallServiceInfo in_call_services = 16;
+
+  // A bitmask of the properties that were set at any point during the call.
+  // Bits are defined by android.telecom.Connection.PROPERTY_* constants.
+  optional int32 connection_properties = 17;
+}
