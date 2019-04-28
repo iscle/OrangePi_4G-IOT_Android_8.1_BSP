@@ -1,0 +1,232 @@
+/*
+ * Copyright (C) 2015 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package android.text.format;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+
+import android.content.Context;
+import android.content.res.Configuration;
+import android.content.res.Resources;
+import android.icu.util.MeasureUnit;
+import android.support.test.InstrumentationRegistry;
+import android.support.test.filters.SmallTest;
+import android.support.test.runner.AndroidJUnit4;
+import android.text.format.Formatter.BytesResult;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+
+import java.util.Locale;
+import java.util.Set;
+
+
+@SmallTest
+@RunWith(AndroidJUnit4.class)
+public class FormatterTest {
+    private Locale mOriginalLocale;
+    private Context mContext;
+
+    @Before
+    public void setup() {
+        mContext = InstrumentationRegistry.getContext();
+        mOriginalLocale = mContext.getResources()
+            .getConfiguration().locale;
+    }
+
+    @After
+    public void tearDown() {
+        if (mOriginalLocale != null) {
+            setLocale(mOriginalLocale);
+        }
+    }
+
+    @Test
+    public void testFormatBytes() {
+        setLocale(Locale.US);
+
+        checkFormatBytes(0, true, "0", 0);
+        checkFormatBytes(0, false, "0", 0);
+
+        checkFormatBytes(1, true, "1", 1);
+        checkFormatBytes(1, false, "1", 1);
+
+        checkFormatBytes(12, true, "12", 12);
+        checkFormatBytes(12, false, "12", 12);
+
+        checkFormatBytes(123, true, "123", 123);
+        checkFormatBytes(123, false, "123", 123);
+
+        checkFormatBytes(900, true, "900", 900);
+        checkFormatBytes(900, false, "900", 900);
+
+        checkFormatBytes(901, true, "0.90", 900);
+        checkFormatBytes(901, false, "0.90", 900);
+
+        checkFormatBytes(912, true, "0.91", 910);
+        checkFormatBytes(912, false, "0.91", 910);
+
+        checkFormatBytes(9123, true, "9.1", 9100);
+        checkFormatBytes(9123, false, "9.12", 9120);
+
+        checkFormatBytes(9123456, true, "9.1", 9100000);
+        checkFormatBytes(9123456, false, "9.12", 9120000);
+
+        checkFormatBytes(-1, true, "-1", -1);
+        checkFormatBytes(-1, false, "-1", -1);
+
+        checkFormatBytes(-914, true, "-0.91", -910);
+        checkFormatBytes(-914, false, "-0.91", -910);
+
+        // Missing FLAG_CALCULATE_ROUNDED case.
+        BytesResult r = Formatter.formatBytes(mContext.getResources(), 1, 0);
+        assertEquals("1", r.value);
+        assertEquals(0, r.roundedBytes); // Didn't pass FLAG_CALCULATE_ROUNDED
+
+        // Make sure it works on different locales.
+        setLocale(new Locale("es", "ES"));
+        checkFormatBytes(9123000, false, "9,12", 9120000);
+    }
+
+    private static final long SECOND = 1000;
+    private static final long MINUTE = 60 * SECOND;
+    private static final long HOUR = 60 * MINUTE;
+    private static final long DAY = 24 * HOUR;
+
+    @Test
+    public void testFormatShortElapsedTime() {
+        setLocale(Locale.US);
+        assertEquals("3 days", Formatter.formatShortElapsedTime(mContext, 2 * DAY + 12 * HOUR));
+        assertEquals("2 days", Formatter.formatShortElapsedTime(mContext, 2 * DAY + 11 * HOUR));
+        assertEquals("2 days", Formatter.formatShortElapsedTime(mContext, 2 * DAY));
+        assertEquals("1 day, 23 hr",
+                Formatter.formatShortElapsedTime(mContext, 1 * DAY + 23 * HOUR + 59 * MINUTE));
+        assertEquals("1 day, 0 hr",
+                Formatter.formatShortElapsedTime(mContext, 1 * DAY + 59 * MINUTE));
+        assertEquals("1 day, 0 hr", Formatter.formatShortElapsedTime(mContext, 1 * DAY));
+        assertEquals("24 hr", Formatter.formatShortElapsedTime(mContext, 23 * HOUR + 30 * MINUTE));
+        assertEquals("3 hr", Formatter.formatShortElapsedTime(mContext, 2 * HOUR + 30 * MINUTE));
+        assertEquals("2 hr", Formatter.formatShortElapsedTime(mContext, 2 * HOUR));
+        assertEquals("1 hr, 0 min", Formatter.formatShortElapsedTime(mContext, 1 * HOUR));
+        assertEquals("60 min",
+                Formatter.formatShortElapsedTime(mContext, 59 * MINUTE + 30 * SECOND));
+        assertEquals("59 min",
+                Formatter.formatShortElapsedTime(mContext, 59 * MINUTE));
+        assertEquals("3 min", Formatter.formatShortElapsedTime(mContext, 2 * MINUTE + 30 * SECOND));
+        assertEquals("2 min", Formatter.formatShortElapsedTime(mContext, 2 * MINUTE));
+        assertEquals("1 min, 59 sec",
+                Formatter.formatShortElapsedTime(mContext, 1 * MINUTE + 59 * SECOND + 999));
+        assertEquals("1 min, 0 sec", Formatter.formatShortElapsedTime(mContext, 1 * MINUTE));
+        assertEquals("59 sec", Formatter.formatShortElapsedTime(mContext, 59 * SECOND + 999));
+        assertEquals("1 sec", Formatter.formatShortElapsedTime(mContext, 1 * SECOND));
+        assertEquals("0 sec", Formatter.formatShortElapsedTime(mContext, 1));
+        assertEquals("0 sec", Formatter.formatShortElapsedTime(mContext, 0));
+
+        // Make sure it works on different locales.
+        setLocale(Locale.FRANCE);
+        assertEquals("2 j", Formatter.formatShortElapsedTime(mContext, 2 * DAY));
+    }
+
+    @Test
+    public void testFormatShortElapsedTimeRoundingUpToMinutes() {
+        setLocale(Locale.US);
+        assertEquals("3 days", Formatter.formatShortElapsedTimeRoundingUpToMinutes(
+                mContext, 2 * DAY + 12 * HOUR));
+        assertEquals("2 days", Formatter.formatShortElapsedTimeRoundingUpToMinutes(
+                mContext, 2 * DAY + 11 * HOUR));
+        assertEquals("2 days", Formatter.formatShortElapsedTimeRoundingUpToMinutes(
+                mContext, 2 * DAY));
+        assertEquals("1 day, 23 hr", Formatter.formatShortElapsedTimeRoundingUpToMinutes(
+                mContext, 1 * DAY + 23 * HOUR + 59 * MINUTE));
+        assertEquals("1 day, 0 hr", Formatter.formatShortElapsedTimeRoundingUpToMinutes(
+                mContext, 1 * DAY + 59 * MINUTE));
+        assertEquals("1 day, 0 hr", Formatter.formatShortElapsedTimeRoundingUpToMinutes(
+                mContext, 1 * DAY));
+        assertEquals("24 hr", Formatter.formatShortElapsedTimeRoundingUpToMinutes(
+                mContext, 23 * HOUR + 30 * MINUTE));
+        assertEquals("3 hr", Formatter.formatShortElapsedTimeRoundingUpToMinutes(
+                mContext, 2 * HOUR + 30 * MINUTE));
+        assertEquals("2 hr", Formatter.formatShortElapsedTimeRoundingUpToMinutes(
+                mContext, 2 * HOUR));
+        assertEquals("1 hr, 0 min", Formatter.formatShortElapsedTimeRoundingUpToMinutes(
+                mContext, 1 * HOUR));
+        assertEquals("1 hr, 0 min", Formatter.formatShortElapsedTimeRoundingUpToMinutes(
+                mContext, 59 * MINUTE + 30 * SECOND));
+        assertEquals("59 min", Formatter.formatShortElapsedTimeRoundingUpToMinutes(
+                mContext, 59 * MINUTE));
+        assertEquals("3 min", Formatter.formatShortElapsedTimeRoundingUpToMinutes(
+                mContext, 2 * MINUTE + 30 * SECOND));
+        assertEquals("2 min", Formatter.formatShortElapsedTimeRoundingUpToMinutes(
+                mContext, 2 * MINUTE));
+        assertEquals("2 min", Formatter.formatShortElapsedTimeRoundingUpToMinutes(
+                mContext, 1 * MINUTE + 59 * SECOND + 999));
+        assertEquals("1 min", Formatter.formatShortElapsedTimeRoundingUpToMinutes(
+                mContext, 1 * MINUTE));
+        assertEquals("1 min", Formatter.formatShortElapsedTimeRoundingUpToMinutes(
+                mContext, 59 * SECOND + 999));
+        assertEquals("1 min", Formatter.formatShortElapsedTimeRoundingUpToMinutes(
+                mContext, 1 * SECOND));
+        assertEquals("1 min", Formatter.formatShortElapsedTimeRoundingUpToMinutes(
+                mContext, 1));
+        assertEquals("0 min", Formatter.formatShortElapsedTimeRoundingUpToMinutes(
+                mContext, 0));
+
+        // Make sure it works on different locales.
+        setLocale(new Locale("ru", "RU"));
+        assertEquals("1 мин", Formatter.formatShortElapsedTimeRoundingUpToMinutes(
+                mContext, 1 * SECOND));
+    }
+
+    private void checkFormatBytes(long bytes, boolean useShort,
+            String expectedString, long expectedRounded) {
+        BytesResult r = Formatter.formatBytes(mContext.getResources(), bytes,
+                Formatter.FLAG_CALCULATE_ROUNDED | (useShort ? Formatter.FLAG_SHORTER : 0));
+        assertEquals(expectedString, r.value);
+        assertEquals(expectedRounded, r.roundedBytes);
+    }
+
+    private void setLocale(Locale locale) {
+        Resources res = mContext.getResources();
+        Configuration config = res.getConfiguration();
+        config.locale = locale;
+        res.updateConfiguration(config, res.getDisplayMetrics());
+
+        Locale.setDefault(locale);
+    }
+
+    /**
+     * Verifies that Formatter doesn't "leak" the locally defined petabyte unit into ICU via the
+     * {@link MeasureUnit} registry. This test can fail for two reasons:
+     * 1. we regressed and started leaking again. In this case the code needs to be fixed.
+     * 2. ICU started supporting petabyte as a unit, in which case change one needs to revert this
+     * change (I494fb59a3b3742f35cbdf6b8705817f404a2c6b0), remove Formatter.PETABYTE and replace any
+     * usages of that field with just MeasureUnit.PETABYTE.
+     */
+    // http://b/65632959
+    @Test
+    public void doesNotLeakPetabyte() {
+        // Ensure that the Formatter class is loaded when we call .getAvailable().
+        Formatter.formatFileSize(mContext, Long.MAX_VALUE);
+        Set<MeasureUnit> digitalUnits = MeasureUnit.getAvailable("digital");
+        for (MeasureUnit unit : digitalUnits) {
+            // This assert can fail if we don't leak PETABYTE, but ICU has added it, see #2 above.
+            assertNotEquals("petabyte", unit.getSubtype());
+        }
+    }
+}

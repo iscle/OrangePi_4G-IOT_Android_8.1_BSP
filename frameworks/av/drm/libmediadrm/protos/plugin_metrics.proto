@@ -1,0 +1,50 @@
+/*
+ * Copyright (C) 2017 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto2";
+
+package android.drm_metrics;
+
+// need this if we are using libprotobuf-cpp-2.3.0-lite
+option optimize_for = LITE_RUNTIME;
+
+// The MetricsGroup is a collection of metric name/value pair instances
+// that can be serialized and provided to a caller.
+message MetricsGroup {
+  message Metric {
+    message MetricValue {
+      // Exactly one of the following values must be set.
+      optional int64 int_value = 1;
+      optional double double_value = 2;
+      optional string string_value = 3;
+    }
+
+    // The name of the metric. Must be valid UTF-8. Required.
+    optional string name = 1;
+
+    // The value of the metric. Required.
+    optional MetricValue value = 2;
+  }
+
+  // The list of name/value pairs of metrics.
+  repeated Metric metric = 1;
+
+  // Allow multiple sub groups of metrics.
+  repeated MetricsGroup metric_sub_group = 2;
+
+  // Name of the application package associated with the metrics.
+  optional string app_package_name = 3;
+}

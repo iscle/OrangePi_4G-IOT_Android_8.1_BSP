@@ -1,0 +1,128 @@
+cc_library_static {
+    name: "libstagefright_m4vh263enc",
+    vendor_available: true,
+
+    srcs: [
+        "src/bitstream_io.cpp",
+        "src/combined_encode.cpp",
+        "src/datapart_encode.cpp",
+        "src/dct.cpp",
+        "src/findhalfpel.cpp",
+        "src/fastcodemb.cpp",
+        "src/fastidct.cpp",
+        "src/fastquant.cpp",
+        "src/me_utils.cpp",
+        "src/mp4enc_api.cpp",
+        "src/rate_control.cpp",
+        "src/motion_est.cpp",
+        "src/motion_comp.cpp",
+        "src/sad.cpp",
+        "src/sad_halfpel.cpp",
+        "src/vlc_encode.cpp",
+        "src/vop.cpp",
+    ],
+
+    cflags: [
+        "-DBX_RC",
+        "-DOSCL_IMPORT_REF=",
+        "-DOSCL_UNUSED_ARG(x)=(void)(x)",
+        "-DOSCL_EXPORT_REF=",
+
+        "-Werror",
+    ],
+
+    include_dirs: [
+        "frameworks/av/media/libstagefright/include",
+        "frameworks/native/include/media/openmax",
+    ],
+    local_include_dirs: ["src"],
+    export_include_dirs: ["include"],
+
+    sanitize: {
+        misc_undefined: [
+            "signed-integer-overflow",
+        ],
+        cfi: true,
+        diag: {
+            cfi: true,
+        },
+    },
+}
+
+//###############################################################################
+
+cc_library_shared {
+    name: "libstagefright_soft_mpeg4enc",
+    vendor_available: true,
+    vndk: {
+        enabled: true,
+    },
+
+    srcs: ["SoftMPEG4Encoder.cpp"],
+
+    include_dirs: [
+        "frameworks/av/media/libstagefright/include",
+        "frameworks/native/include/media/openmax",
+        "frameworks/native/include/media/hardware",
+    ],
+    local_include_dirs: ["src"],
+    export_include_dirs: ["include"],
+
+    cflags: [
+        "-DBX_RC",
+        "-DOSCL_IMPORT_REF=",
+        "-DOSCL_UNUSED_ARG(x)=(void)(x)",
+        "-DOSCL_EXPORT_REF=",
+
+        "-Werror",
+    ],
+
+    static_libs: ["libstagefright_m4vh263enc"],
+
+    shared_libs: [
+        "libmedia_omx",
+        "libstagefright_omx",
+        "libutils",
+        "liblog",
+    ],
+
+    sanitize: {
+        misc_undefined: [
+            "signed-integer-overflow",
+        ],
+        cfi: true,
+        diag: {
+            cfi: true,
+        },
+    },
+    compile_multilib: "32",
+}
+
+//###############################################################################
+
+cc_test {
+    name: "libstagefright_m4vh263enc_test",
+    gtest: false,
+
+    srcs: ["test/m4v_h263_enc_test.cpp"],
+
+    local_include_dirs: ["src"],
+
+    cflags: [
+        "-DOSCL_EXPORT_REF=",
+        "-DOSCL_IMPORT_REF=",
+        "-DBX_RC",
+    ],
+
+    sanitize: {
+        misc_undefined: [
+            "signed-integer-overflow",
+        ],
+        cfi: true,
+        diag: {
+            cfi: true,
+        },
+    },
+
+    static_libs: ["libstagefright_m4vh263enc"],
+}

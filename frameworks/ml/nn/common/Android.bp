@@ -1,0 +1,181 @@
+/*
+ * Copyright 2017 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+cc_library_headers {
+    name: "libneuralnetworks_common_headers",
+    host_supported: false,
+    export_include_dirs: ["include"],
+}
+
+cc_library_static {
+    name: "libneuralnetworks_common",
+    defaults: ["neuralnetworks_defaults"],
+    host_supported: false,
+    vendor_available: true,
+    export_include_dirs: ["include"],
+
+    srcs: [
+        "CpuExecutor.cpp",
+        "OperationsUtils.cpp",
+        "Utils.cpp",
+        "operations/Activation.cpp",
+        "operations/Concatenation.cpp",
+        "operations/Conv2D.cpp",
+        "operations/DepthwiseConv2D.cpp",
+        "operations/EmbeddingLookup.cpp",
+        "operations/FullyConnected.cpp",
+        "operations/HashtableLookup.cpp",
+        "operations/LSHProjection.cpp",
+        "operations/LSTM.cpp",
+        "operations/Normalization.cpp",
+        "operations/Pooling.cpp",
+        "operations/Reshape.cpp",
+        "operations/RNN.cpp",
+        "operations/SimpleMath.cpp",
+        "operations/SVDF.cpp",
+        "operations/internal/optimized/neon_tensor_utils.cc",
+        "operations/internal/reference/portable_tensor_utils.cc",
+        "operations/internal/tensor_utils.cc",
+    ],
+    shared_libs: [
+        "libbase",
+        "libhidlbase",
+        "libhidltransport",
+        "libhidlmemory",
+        "libtextclassifier_hash",
+        "liblog",
+        "libutils",
+        "android.hardware.neuralnetworks@1.0",
+        "android.hidl.allocator@1.0",
+        "android.hidl.memory@1.0",
+    ],
+    header_libs: [
+        "libneuralnetworks_headers",
+        "libgemmlowp",
+        "libfixedpoint",
+        "libtextclassifier_hash_headers",
+        "libeigen",
+    ],
+
+    cflags: [
+        "-DNAMESPACE_FOR_HASH_FUNCTIONS=farmhash",
+        "-Werror",
+        "-Wall",
+        "-Wextra",
+        "-Wno-unused-parameter",
+        "-Wno-unused-variable",
+    ],
+
+}
+
+cc_test {
+    name: "tensor_utils_test",
+    srcs: [
+        "operations/internal/tensor_utils_test.cc",
+    ],
+    shared_libs: [
+        "libneuralnetworks",
+    ],
+    local_include_dirs: [ "include" ],
+    header_libs: [
+        "libneuralnetworks_headers",
+    ],
+    static_libs: [
+        "libgmock",
+    ],
+}
+
+cc_test {
+    name: "embedding_lookup_test",
+    srcs: [
+        "operations/EmbeddingLookupTest.cpp",
+    ],
+    shared_libs: [
+        "libneuralnetworks",
+    ],
+    static_libs: [
+        "libgmock",
+    ],
+}
+
+cc_test {
+    name: "hashtable_lookup_test",
+    srcs: [
+        "operations/HashtableLookupTest.cpp",
+    ],
+    shared_libs: [
+        "libneuralnetworks",
+    ],
+    static_libs: [
+        "libgmock",
+    ],
+}
+
+cc_test {
+    name: "lsh_projection_test",
+    srcs: [
+        "operations/LSHProjectionTest.cpp",
+    ],
+    local_include_dirs: [ "include" ],
+    shared_libs: [
+        "libneuralnetworks",
+    ],
+    static_libs: [
+        "libgmock",
+    ],
+}
+
+cc_test {
+    name: "lstm_test",
+    srcs: [
+        "operations/LSTMTest.cpp",
+    ],
+    local_include_dirs: [ "include" ],
+    shared_libs: [
+        "libneuralnetworks",
+    ],
+    static_libs: [
+        "libgmock",
+    ],
+}
+
+cc_test {
+    name: "rnn_test",
+    srcs: [
+        "operations/RNNTest.cpp",
+    ],
+    local_include_dirs: [ "include" ],
+    shared_libs: [
+        "libneuralnetworks",
+    ],
+    static_libs: [
+        "libgmock",
+    ],
+}
+
+cc_test {
+    name: "svdf_test",
+    srcs: [
+        "operations/SVDFTest.cpp",
+    ],
+    local_include_dirs: [ "include" ],
+    shared_libs: [
+        "libneuralnetworks",
+    ],
+    static_libs: [
+        "libgmock",
+    ],
+}

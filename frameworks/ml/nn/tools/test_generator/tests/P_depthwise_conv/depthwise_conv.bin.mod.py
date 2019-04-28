@@ -1,0 +1,11 @@
+model = Model()
+i4 = Int32Scalar("b4", 1)
+i5 = Int32Scalar("b5", 1)
+i6 = Int32Scalar("b6", 1)
+i7 = Int32Scalar("b7", 1)
+i8 = Int32Scalar("b8", 0)
+i2 = Input("op2", "TENSOR_FLOAT32", "{1, 8, 8, 3}") # input 0
+i3 = Output("op3", "TENSOR_FLOAT32", "{1, 8, 8, 3}") # output 0
+i0 = Parameter("op0", "TENSOR_FLOAT32", "{1, 1, 1, 3}", [-0.966213, -0.467474, -0.82203]) # parameters
+i1 = Parameter("op1", "TENSOR_FLOAT32", "{3}", [0, 0, 0]) # parameters
+model = model.DepthWiseConv(i2, i0, i1, i4, i5, i6, i7, i8).To(i3)

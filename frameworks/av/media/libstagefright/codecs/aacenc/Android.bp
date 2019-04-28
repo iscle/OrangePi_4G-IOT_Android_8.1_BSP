@@ -1,0 +1,182 @@
+cc_library_static {
+    name: "libstagefright_aacenc",
+    vendor_available: true,
+
+    srcs: [
+        "basic_op/basicop2.c",
+        "basic_op/oper_32b.c",
+
+        "AACEncoder.cpp",
+        "src/aac_rom.c",
+        "src/aacenc.c",
+        "src/aacenc_core.c",
+        "src/adj_thr.c",
+        "src/band_nrg.c",
+        "src/bit_cnt.c",
+        "src/bitbuffer.c",
+        "src/bitenc.c",
+        "src/block_switch.c",
+        "src/channel_map.c",
+        "src/dyn_bits.c",
+        "src/grp_data.c",
+        "src/interface.c",
+        "src/line_pe.c",
+        "src/ms_stereo.c",
+        "src/pre_echo_control.c",
+        "src/psy_configuration.c",
+        "src/psy_main.c",
+        "src/qc_main.c",
+        "src/quantize.c",
+        "src/sf_estim.c",
+        "src/spreading.c",
+        "src/stat_bits.c",
+        "src/tns.c",
+        "src/transform.c",
+        "src/memalign.c",
+    ],
+
+    arch: {
+        arm: {
+            srcs: [
+                "src/asm/ARMV5E/AutoCorrelation_v5.s",
+                "src/asm/ARMV5E/band_nrg_v5.s",
+                "src/asm/ARMV5E/CalcWindowEnergy_v5.s",
+                "src/asm/ARMV5E/PrePostMDCT_v5.s",
+                "src/asm/ARMV5E/R4R8First_v5.s",
+                "src/asm/ARMV5E/Radix4FFT_v5.s",
+            ],
+
+            cflags: [
+                "-DARMV5E",
+                "-DARM_INASM",
+                "-DARMV5_INASM",
+            ],
+
+            local_include_dirs: ["src/asm/ARMV5E"],
+
+            instruction_set: "arm",
+
+            armv7_a_neon: {
+                exclude_srcs: [
+                    "src/asm/ARMV5E/PrePostMDCT_v5.s",
+                    "src/asm/ARMV5E/R4R8First_v5.s",
+                    "src/asm/ARMV5E/Radix4FFT_v5.s",
+                ],
+                srcs: [
+                    "src/asm/ARMV7/PrePostMDCT_v7.s",
+                    "src/asm/ARMV7/R4R8First_v7.s",
+                    "src/asm/ARMV7/Radix4FFT_v7.s",
+                ],
+
+                cflags: [
+                    "-DARMV7Neon",
+                    "-DARMV6_INASM",
+                ],
+
+                local_include_dirs: ["src/asm/ARMV7"],
+            },
+        },
+    },
+
+    // libstagefright links this static library, so it probably isn't appropriate to
+    // link libstagefright.  However, this library includes libstagefright headers,
+    // and needs libbinder to be able to do so correctly.
+    shared_libs: [
+        "libbinder",
+        "libstagefright_enc_common",
+    ],
+
+    include_dirs: [
+        "frameworks/av/include",
+        "frameworks/av/media/libstagefright/include",
+    ],
+
+    local_include_dirs: [
+        "src",
+        "inc",
+        "basic_op",
+    ],
+
+    cflags: ["-Werror"],
+
+    sanitize: {
+        misc_undefined: [
+            "signed-integer-overflow",
+            "unsigned-integer-overflow",
+        ],
+    },
+
+}
+
+//###############################################################################
+
+cc_library_shared {
+    name: "libstagefright_soft_aacenc",
+    vendor_available: true,
+    vndk: {
+        enabled: true,
+    },
+
+    srcs: ["SoftAACEncoder2.cpp"],
+
+    include_dirs: [
+        "frameworks/av/media/libstagefright/include",
+        "frameworks/native/include/media/openmax",
+    ],
+
+    cflags: ["-Werror"],
+
+    sanitize: {
+        misc_undefined: [
+            "signed-integer-overflow",
+            "unsigned-integer-overflow",
+        ],
+        cfi: true,
+        diag: {
+            cfi: true,
+        },
+    },
+
+    static_libs: ["libFraunhoferAAC"],
+
+    shared_libs: [
+        "libstagefright_omx",
+        "libstagefright_foundation",
+        "libutils",
+        "liblog",
+    ],
+    compile_multilib: "32",
+}
+
+cc_library_shared {
+    name: "libstagefright_soft_aacenc_visualon",
+
+    srcs: ["SoftAACEncoder.cpp"],
+
+    include_dirs: [
+        "frameworks/av/media/libstagefright/include",
+        "frameworks/native/include/media/openmax",
+    ],
+
+    cflags: [
+        "-DOSCL_IMPORT_REF=",
+        "-Werror",
+    ],
+
+    sanitize: {
+        misc_undefined: [
+            "signed-integer-overflow",
+            "unsigned-integer-overflow",
+        ],
+    },
+
+    static_libs: ["libstagefright_aacenc"],
+
+    shared_libs: [
+        "libstagefright_omx",
+        "libstagefright_foundation",
+        "libutils",
+        "liblog",
+        "libstagefright_enc_common",
+    ],
+}

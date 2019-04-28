@@ -1,0 +1,93 @@
+cc_library_headers {
+    name: "libstagefright_foundation_headers",
+    export_include_dirs: ["include"],
+    vendor_available: true,
+}
+
+cc_library_shared {
+    name: "libstagefright_foundation",
+    vendor_available: true,
+    vndk: {
+        enabled: true,
+    },
+    include_dirs: [
+        "frameworks/av/include",
+        "frameworks/native/include",
+    ],
+
+    local_include_dirs: [
+        "include/media/stagefright/foundation",
+    ],
+
+    header_libs: [
+        "libhardware_headers",
+        "libstagefright_foundation_headers",
+    ],
+
+    export_header_lib_headers: [
+        "libstagefright_foundation_headers",
+    ],
+
+    export_shared_lib_headers: [
+        "libbinder",
+        "libui",
+    ],
+
+    cflags: [
+        "-Wno-multichar",
+        "-Werror",
+        "-Wall",
+    ],
+
+    shared_libs: [
+        "libbinder",
+        "libutils",
+        "libui",
+        "libcutils",
+        "liblog",
+        "libpowermanager",
+    ],
+
+    srcs: [
+        "AAtomizer.cpp",
+        "ABitReader.cpp",
+        "ABuffer.cpp",
+        "ADebug.cpp",
+        "AHandler.cpp",
+        "AHierarchicalStateMachine.cpp",
+        "ALooper.cpp",
+        "ALooperRoster.cpp",
+        "AMessage.cpp",
+        "ANetworkSession.cpp",
+        "AString.cpp",
+        "AStringUtils.cpp",
+        "AWakeLock.cpp",
+        "ColorUtils.cpp",
+        "MediaBuffer.cpp",
+        "MediaBufferGroup.cpp",
+        "MetaData.cpp",
+        "ParsedMessage.cpp",
+        "base64.cpp",
+        "hexdump.cpp",
+    ],
+
+    target: {
+        vendor: {
+            exclude_shared_libs: ["libpowermanager"],
+            exclude_srcs: ["AWakeLock.cpp"],
+        },
+    },
+
+    clang: true,
+
+    sanitize: {
+        misc_undefined: [
+            "unsigned-integer-overflow",
+            "signed-integer-overflow",
+        ],
+        cfi: true,
+        diag: {
+            cfi: true,
+        },
+    },
+}

@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ~ Copyright (C) 2015 The Android Open Source Project
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~      http://www.apache.org/licenses/LICENSE-2.0
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto">
+    <data>
+        <import type="android.databinding.testapp.vo.NotBindableVo"/>
+        <variable name="otherObj" type="android.databinding.testapp.vo.NotBindableVo"/>
+        <variable name="obj" type="android.databinding.testapp.vo.CallbackBindingObject"/>
+        <variable name="obj2" type="android.databinding.testapp.vo.CallbackBindingObject"/>
+        <variable name="objArr" type="android.databinding.testapp.vo.CallbackBindingObject[]"/>
+    </data>
+    <LinearLayout
+            android:orientation="vertical"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+        <View
+                android:id="@+id/view1"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:onClick="@{() -> obj.onClick()}"
+                android:onLongClick="@{() -> obj.onLongClick()}"
+                />
+        <View
+                android:id="@+id/view2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:onClick="@{(v) -> obj.onClick(v)}"
+                android:onLongClick="@{(view) -> obj.onLongClick(view)}"
+        />
+
+        <View
+                android:id="@+id/view3"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:onClick="@{(v) -> obj.onClickWithParam(otherObj)}"
+                android:onLongClick="@{(view) -> obj.onLongClickWithParam(otherObj)}"
+        />
+
+        <View
+                android:id="@+id/view4"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:onClick="@{(v) -> obj.onClickWithParam(v, otherObj)}"
+                android:onLongClick="@{(view) -> obj.onLongClickWithParam(view, otherObj)}"
+        />
+
+        <!-- via adapter and also multiple params -->
+        <ListView
+                android:id="@+id/listView"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:onScroll="@{() -> obj2.onScrolled()}"/>
+
+        <SeekBar
+                 android:id="@+id/seekBar"
+                 android:layout_width="wrap_content"
+                 android:layout_height="wrap_content"
+                 android:onProgressChanged="@{(seekBar, progress, fromUser) -> obj.onProgressChanged(seekBar, progress, fromUser)}"
+        />
+        <View
+                android:id="@+id/view5"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:onClick="@{(v) -> NotBindableVo.incStaticCounter()}"
+                android:onLongClick="@{(v) -> NotBindableVo.incStaticCounter()}"
+        />
+        <View
+                android:id="@+id/view6"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:onClick="@{(v) -> otherObj.incStaticCounter()}"
+                android:onLongClick="@{(v) -> otherObj.incStaticCounter()}"
+        />
+        <View android:layout_width="wrap_content" android:layout_height="wrap_content"
+              android:id="@+id/view7"
+              android:onClick="@{(v) -> objArr[1].onClick(v)}"
+              android:onLongClick="@{(view) -> objArr[2].onLongClick(view)}"/>
+
+        <!--variable override-->
+        <View android:layout_width="wrap_content" android:layout_height="match_parent"
+              android:id="@+id/view8"
+              android:onClick="@{(objArr) -> obj.onClick(objArr)}"/>
+
+        <View android:layout_width="wrap_content" android:layout_height="match_parent"
+              android:id="@+id/view9"
+              android:onClick="@{(v) -> obj.setVisible(android.view.View.VISIBLE)}"/>
+
+        <View android:layout_width="wrap_content" android:layout_height="match_parent"
+              android:id="@+id/view10"
+              android:onClick="@{(v) -> obj.setVisible(NotBindableVo.STATIC_VAL)}"/>
+
+        <View android:layout_width="wrap_content" android:layout_height="match_parent"
+              android:id="@+id/view11"
+              android:onClick="@{(v) -> v.focusable ? obj.onFocusable() : obj.onNotFocusable()}"
+              android:onLongClick="@{(v) -> v.focusable ? obj.onFocusable() : obj.onNotFocusable()}"/>
+    </LinearLayout>
+</layout>

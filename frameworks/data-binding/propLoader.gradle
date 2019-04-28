@@ -1,0 +1,81 @@
+/**
+ * Helper build script that reads data binding variables and sets up the projects.
+ */
+def root = ext.dataBindingRootFolder
+Properties databindingProperties = new Properties()
+databindingProperties.load(new FileInputStream("${root}/databinding.properties"))
+
+// load android gradle plugin's version file
+apply from: "${root}/../buildSrc/base/version.gradle"
+
+databindingProperties.version = ext.buildVersion
+databindingProperties.compileSdkVersion = Integer.parseInt(databindingProperties.compileSdkVersionStr)
+def repoBase = databindingProperties.mavenRepoAbsolutePath == "." ? root : databindingProperties.mavenRepoAbsolutePath
+databindingProperties.androidGradlePluginRepoDir = "${root}/../../${databindingProperties.androidGradlePluginOutRepo}"
+databindingProperties.mavenRepoDir = "${databindingProperties.androidGradlePluginRepoDir}"
+databindingProperties.internalPrebuiltsRepoDir = "${root}/${databindingProperties.internalPrebuiltsRepoName}"
+
+databindingProperties.inReleaseBuild = project.hasProperty('release') && project.ext.release == "true"
+
+databindingProperties.runProguard = (project.hasProperty('runProguard') && project.getProperty('runProguard').equals("true"))
+// load version from gradle build file
+apply from: "$root/../buildSrc/base/version.gradle"
+databindingProperties.androidPluginVersion=ext.buildVersion
+databindingProperties.isIndependent = rootProject.name.equals("data-binding")
+databindingProperties.eapOutDir = "${root}/${databindingProperties.eapOutFolderName}"
+databindingProperties.prebuildFolder = "${root}/${databindingProperties.prebuildFolderName}" +
+        "/${databindingProperties.releaseVersion}"
+
+ext.dataBindingConfig = databindingProperties
+ext.dataBindingConfig.externalPrebuiltsBase = "${root}/../../prebuilts"
+databindingProperties.megaRepoDir = "${databindingProperties.externalPrebuiltsBase}/tools/common/m2/repository"
+
+new File(ext.dataBindingConfig.mavenRepoDir).mkdir()
+new File(ext.dataBindingConfig.prebuildFolder).mkdir()
+
+def addRemoteRepos = project.hasProperty('addRemoteRepos') && project.getProperty('addRemoteRepos').equals("true")
+ext.dataBindingConfig.addRemoteRepos = addRemoteRepos
+ext.dataBindingConfig.sharedSupportRepoDir = "${ext.dataBindingConfig.externalPrebuiltsBase}/maven_repo/android"
+ext.dataBindingConfig.forGradlePlugin = project.hasProperty('forGradlePlugin') && project.getProperty('forGradlePlugin').equals("true")
+def dataBindingConfig = ext.dataBindingConfig
+def localRepositories = ["${dataBindingConfig.internalPrebuiltsRepoDir}",
+                         "${dataBindingConfig.megaRepoDir}",
+                         "${dataBindingConfig.mavenRepoDir}",
+                         "${dataBindingConfig.externalPrebuiltsBase}/tools/common/offline-m2",
+                         dataBindingConfig.sharedSupportRepoDir,
+                         "${dataBindingConfig.externalPrebuiltsBase}/gradle-plugin",
+                         "${dataBindingConfig.externalPrebuiltsBase}/tools/common/m2/repository",
+                         "${databindingProperties.androidGradlePluginRepoDir}"]
+ext.dataBindingConfig.localRepositories = localRepositories
+def addRepos(RepositoryHandler handler) {
+    dataBindingConfig.localRepositories.each { repo ->
+        handler.maven {
+            url repo
+        }
+    }
+    if (dataBindingConfig.addRemoteRepos) {
+        handler.jcenter()
+        handler.mavenCentral()
+    }
+}
+ext.addRepos = this.&addRepos
+subprojects {
+    buildscript {
+        addRepos(repositories)
+    }
+    repositories {
+        addRepos(repositories)
+    }
+}
+
+def enablePublishing(p, addJavadoc) {
+    if (!ext.dataBindingConfig.isIndependent) {
+        p.apply from: "$dataBindingRootFolder/../buildSrc/base/publish.gradle"
+        p.apply from: "$dataBindingRootFolder/../buildSrc/base/bintray.gradle"
+        if (addJavadoc) {
+            p.apply from: "$dataBindingRootFolder/../buildSrc/base/javadoc.gradle"
+        }
+        rootProject.project(":base:gradle-core").publishLocal.dependsOn p.publishLocal
+    }
+}
+ext.enablePublishing = this.&enablePublishing

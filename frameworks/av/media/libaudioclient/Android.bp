@@ -1,0 +1,122 @@
+cc_library_headers {
+    name: "libaudioclient_headers",
+    vendor_available: true,
+    export_include_dirs: ["include"],
+}
+
+cc_library_shared {
+    name: "libaudioclient",
+    srcs: [
+        "AudioEffect.cpp",
+        "AudioPolicy.cpp",
+        "AudioRecord.cpp",
+        "AudioSystem.cpp",
+        "AudioTrack.cpp",
+        "AudioTrackShared.cpp",
+        "IAudioFlinger.cpp",
+        "IAudioFlingerClient.cpp",
+        "IAudioPolicyService.cpp",
+        "IAudioPolicyServiceClient.cpp",
+        "IAudioRecord.cpp",
+        "IAudioTrack.cpp",
+        "IEffect.cpp",
+        "IEffectClient.cpp",
+        "ToneGenerator.cpp",
+        "PlayerBase.cpp",
+        "TrackPlayerBase.cpp",
+    ],
+    shared_libs: [
+        "liblog",
+        "libcutils",
+        "libutils",
+        "libbinder",
+        "libdl",
+        "libaudioutils",
+        "libaudiomanager",
+    ],
+    export_shared_lib_headers: ["libbinder"],
+
+    local_include_dirs: ["include/media"],
+    header_libs: ["libaudioclient_headers"],
+    export_header_lib_headers: ["libaudioclient_headers"],
+
+    // for memory heap analysis
+    static_libs: [
+        "libc_malloc_debug_backtrace",
+    ],
+    cflags: [
+        "-Wall",
+        "-Werror",
+        "-Wno-error=deprecated-declarations",
+    ],
+    sanitize: {
+        misc_undefined : [
+            "unsigned-integer-overflow",
+            "signed-integer-overflow",
+        ],
+    },
+    defaults: [
+        "mtk_libaudioclient_defaults",
+    ],
+}
+
+// <MTK_AUDIO
+mtk_cc_defaults {
+    name: "mtk_libaudioclient_defaults",
+    shared_libs: [
+        "libmedia_helper",
+    ],
+    mediatek_variables: {
+        mtk_audio: {
+            cflags: [
+                "-DMTK_AUDIO",
+                "-DMTK_AUDIO_DEBUG",
+                "-DMTK_AUDIO_FIX_DEFAULT_DEFECT",
+                "-DMTK_LOW_LATENCY",
+                "-DMTK_AUDIO_GAIN",
+            ],
+        },
+        mtk_fm_support: {
+            cflags: [
+                "-DMTK_FM_SUPPORT",
+            ],
+        },
+        mtk_tty_support: {
+            cflags: [
+                "-DMTK_TTY_SUPPORT",
+            ],
+        },
+        mtk_hac_support: {
+            cflags: [
+                "-DMTK_HAC_SUPPORT",
+            ],
+        },
+        mtk_besloudness_support: {
+            cflags: [
+                "-DMTK_AUDIOMIXER_ENABLE_DRC",
+            ],
+        },
+        mtk_hifiaudio_support: {
+        cflags: [
+            "-DMTK_HIFIAUDIO_SUPPORT",
+            ],
+        },
+    },
+    product_variables: {
+        debuggable: {
+            cflags: [
+                "-DCONFIG_MT_USERDEBUG_BUILD",
+            ],
+        },
+        eng: {
+            cflags: [
+                "-UCONFIG_MT_USERDEBUG_BUILD",
+                "-DCONFIG_MT_ENG_BUILD",
+            ],
+        },
+    },
+    include_dirs: [
+        "vendor/mediatek/proprietary/hardware/audio/common/include"
+    ],
+}
+// MTK_AUDIO>

@@ -1,0 +1,130 @@
+//
+// Copyright (C) 2017 The Android Open Source Project
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+cc_defaults {
+    name: "dumpstate_defaults",
+    cflags: [
+        "-Wall",
+        "-Werror",
+        "-Wno-missing-field-initializers",
+        "-Wno-unused-variable",
+        "-Wunused-parameter",
+    ],
+}
+
+cc_library_headers {
+    name: "dumpstate_headers",
+    vendor_available: true,
+    export_include_dirs: ["."],
+    header_libs: [
+        "libbase_headers",
+        "libutils_headers",
+    ],
+    export_header_lib_headers: [
+        "libbase_headers",
+        "libutils_headers",
+    ],
+}
+
+cc_library_shared {
+    name: "libdumpstateutil",
+    defaults: ["dumpstate_defaults"],
+    vendor_available: true,
+    vndk: {
+        enabled: true,
+    },
+    header_libs: ["dumpstate_headers"],
+    export_header_lib_headers: ["dumpstate_headers"],
+    srcs: [
+        "DumpstateInternal.cpp",
+        "DumpstateUtil.cpp",
+    ],
+    shared_libs: [
+        "libbase",
+        "liblog",
+    ],
+}
+
+cc_library_shared {
+    name: "libdumpstateaidl",
+    defaults: ["dumpstate_defaults"],
+    shared_libs: [
+        "libbinder",
+        "libutils",
+    ],
+    aidl: {
+        local_include_dirs: ["binder"],
+        export_aidl_headers: true,
+    },
+    srcs: [
+        "binder/android/os/IDumpstate.aidl",
+        "binder/android/os/IDumpstateListener.aidl",
+        "binder/android/os/IDumpstateToken.aidl",
+    ],
+}
+
+cc_binary {
+    name: "dumpstate",
+    defaults: ["dumpstate_defaults"],
+    header_libs: ["dumpstate_headers"],
+    shared_libs: [
+        "android.hardware.dumpstate@1.0",
+        "libziparchive",
+        "libbase",
+        "libbinder",
+        "libcrypto",
+        "libcutils",
+        "libdebuggerd_client",
+        "libdumpstateaidl",
+        "libdumpstateutil",
+        "libhidlbase",
+        "libhidltransport",
+        "liblog",
+        "libutils",
+    ],
+    srcs: [
+        "DumpstateInternal.cpp",
+        "DumpstateService.cpp",
+        "utils.cpp",
+        "dumpstate.cpp",
+    ],
+    init_rc: ["dumpstate.rc"],
+}
+
+cc_test {
+    name: "dumpstate_test",
+    defaults: ["dumpstate_defaults"],
+    header_libs: ["dumpstate_headers"],
+    shared_libs: [
+        "libziparchive",
+        "libbase",
+        "libbinder",
+        "libcutils",
+        "libdebuggerd_client",
+        "libdumpstateaidl",
+        "libdumpstateutil",
+        "libhidlbase",
+        "libhidltransport",
+        "liblog",
+        "libutils",
+    ],
+    srcs: [
+        "DumpstateInternal.cpp",
+        "DumpstateService.cpp",
+        "utils.cpp",
+        "tests/dumpstate_test.cpp",
+    ],
+    static_libs: ["libgmock"],
+}

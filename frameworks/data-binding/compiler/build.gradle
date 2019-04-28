@@ -1,0 +1,71 @@
+/*
+ * Copyright (C) 2014 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+apply plugin: 'java'
+apply plugin: 'kotlin'
+
+sourceCompatibility = dataBindingConfig.compilerJavaTargetCompatibility
+targetCompatibility = dataBindingConfig.compilerJavaSourceCompatibility
+
+sourceSets {
+    main.java.srcDirs += 'src/main/kotlin'
+}
+
+buildscript {
+    // to make IJ happy
+    ext.kotlin_version = dataBindingConfig.kotlinVersion
+    dependencies {
+        classpath 'commons-io:commons-io:2.4'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+dependencies {
+    compile project(':dataBinding:compilerCommon')
+    compile project(':dataBinding:baseLibrary')
+    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+    compile 'commons-io:commons-io:2.4'
+    compile 'commons-codec:commons-codec:1.10'
+    compile 'org.antlr:antlr4:4.5.3'
+    compile 'com.googlecode.juniversalchardet:juniversalchardet:1.0.3'
+    testCompile 'junit:junit:4.12'
+}
+
+uploadArchives {
+    repositories {
+        mavenDeployer {
+            pom.artifactId = 'compiler'
+            pom.project {
+                licenses {
+                    license {
+                        name dataBindingConfig.licenseName
+                        url dataBindingConfig.licenseUrl
+                        distribution dataBindingConfig.licenseDistribution
+                    }
+                }
+            }
+        }
+    }
+}
+
+javadoc {
+   options.addStringOption('Xdoclint:none', '-quiet')
+}
+
+project.ext.pomName = 'Data Binding Annotation Processor'
+project.ext.pomDesc = 'The annotation processor for Data Binding. Generates binding classes for runtime.'
+enablePublishing(this, true)
+fullJar(project)
+test.enabled = !System.getProperty("java.version").startsWith("1.6")

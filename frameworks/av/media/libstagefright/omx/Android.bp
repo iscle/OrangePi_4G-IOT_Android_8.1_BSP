@@ -1,0 +1,181 @@
+cc_library_shared {
+    name: "libstagefright_omx",
+    vendor_available: true,
+    vndk: {
+        enabled: true,
+    },
+
+    srcs: [
+        "FrameDropper.cpp",
+        "GraphicBufferSource.cpp",
+        "BWGraphicBufferSource.cpp",
+        "OMX.cpp",
+        "OMXStore.cpp",
+        "OMXMaster.cpp",
+        "OMXNodeInstance.cpp",
+        "OMXUtils.cpp",
+        "SimpleSoftOMXComponent.cpp",
+        "SoftOMXComponent.cpp",
+        "SoftOMXPlugin.cpp",
+        "SoftVideoDecoderOMXComponent.cpp",
+        "SoftVideoEncoderOMXComponent.cpp",
+        "1.0/Omx.cpp",
+        "1.0/OmxStore.cpp",
+        "1.0/WGraphicBufferProducer.cpp",
+        "1.0/WProducerListener.cpp",
+        "1.0/WGraphicBufferSource.cpp",
+        "1.0/WOmxNode.cpp",
+        "1.0/WOmxObserver.cpp",
+        "1.0/WOmxBufferSource.cpp",
+    ],
+
+    export_include_dirs: [
+        "include",
+    ],
+
+    header_libs: [
+        "media_plugin_headers",
+    ],
+
+    export_header_lib_headers: [
+        "media_plugin_headers",
+    ],
+
+    shared_libs: [
+        "libbase",
+        "libbinder",
+        "libmedia_omx",
+        "libutils",
+        "liblog",
+        "libui",
+        "libgui",
+        "libcutils",
+        "libstagefright_foundation",
+        "libstagefright_xmlparser",
+        "libdl",
+        "libhidlbase",
+        "libhidlmemory",
+        "libhidltransport",
+        "libnativewindow", // TODO(b/62923479): use header library
+        "android.hidl.memory@1.0",
+        "android.hidl.token@1.0-utils",
+        "android.hardware.media@1.0",
+        "android.hardware.media.omx@1.0",
+        "android.hardware.graphics.common@1.0",
+        "android.hardware.graphics.bufferqueue@1.0",
+    ],
+
+    export_shared_lib_headers: [
+        "android.hidl.memory@1.0",
+        "libmedia_omx",
+        "libstagefright_foundation",
+        "libstagefright_xmlparser",
+    ],
+
+    cflags: [
+        "-Werror",
+        "-Wall",
+        "-Wno-unused-parameter",
+        "-Wno-documentation",
+    ],
+
+    sanitize: {
+        misc_undefined: [
+            "signed-integer-overflow",
+            "unsigned-integer-overflow",
+        ],
+        cfi: true,
+        diag: {
+            cfi: true,
+        },
+    },
+
+    defaults: [
+        "mtk_libstagefright_omx_defaults",
+    ],
+}
+
+cc_library_shared {
+    name: "libstagefright_omx_utils",
+    vendor_available: true,
+    vndk: {
+        enabled: true,
+    },
+    srcs: ["OMXUtils.cpp"],
+    export_include_dirs: [
+        "include",
+    ],
+    header_libs: [
+        "media_plugin_headers",
+    ],
+    export_header_lib_headers: [
+        "media_plugin_headers",
+    ],
+    shared_libs: [
+        "libmedia_omx",
+        "liblog",
+    ],
+    export_shared_lib_headers: [
+        "libmedia_omx",
+    ],
+    sanitize: {
+        misc_undefined: [
+            "signed-integer-overflow",
+            "unsigned-integer-overflow",
+        ],
+        cfi: true,
+        diag: {
+            cfi: true,
+        },
+    },
+    defaults: [
+        "mtk_libstagefright_omx_defaults",
+    ],
+}
+
+mtk_cc_defaults {
+    name: "mtk_libstagefright_omx_defaults",
+    cflags: [
+        "-DMTK_AOSP_ENHANCEMENT",
+    ],
+
+    static_libs: [
+        "libavextensions",
+    ],
+
+    mediatek_variables: {
+        mtk_wma_playback_support: {
+            cflags: [
+                "-DMTK_WMA_PLAYBACK_SUPPORT",
+            ],
+        },
+
+        mtk_swip_wmapro: {
+            cflags: [
+                "-DMTK_SWIP_WMAPRO",
+            ],
+        },
+
+        mtk_audio_ape_support: {
+            cflags: [
+                "-DMTK_AUDIO_APE_SUPPORT",
+            ],
+        },
+
+        mtk_audio_alac_support: {
+            cflags: [
+                "-DMTK_AUDIO_ALAC_SUPPORT",
+            ],
+        },
+
+        mtk_audio_adpcm_support: {
+            cflags: [
+                "-DMTK_AUDIO_ADPCM_SUPPORT",
+            ],
+        },
+    },
+}
+
+//###############################################################################
+
+subdirs = ["tests"]

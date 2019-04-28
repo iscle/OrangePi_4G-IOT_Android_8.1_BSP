@@ -1,0 +1,193 @@
+// Copyright 2010 The Android Open Source Project
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+cc_library_headers {
+    name: "libgui_headers",
+    vendor_available: true,
+    export_include_dirs: ["include"],
+}
+
+cc_library_shared {
+    name: "libgui",
+    vendor_available: true,
+    vndk: {
+        enabled: true,
+    },
+
+    clang: true,
+    cppflags: [
+        "-Weverything",
+        "-Werror",
+
+        // The static constructors and destructors in this library have not been noted to
+        // introduce significant overheads
+        "-Wno-exit-time-destructors",
+        "-Wno-global-constructors",
+
+        // We only care about compiling as C++14
+        "-Wno-c++98-compat-pedantic",
+
+        // We don't need to enumerate every case in a switch as long as a default case
+        // is present
+        "-Wno-switch-enum",
+
+        // Allow calling variadic macros without a __VA_ARGS__ list
+        "-Wno-gnu-zero-variadic-macro-arguments",
+
+        // Don't warn about struct padding
+        "-Wno-padded",
+
+        // We are aware of the risks inherent in comparing floats for equality
+        "-Wno-float-equal",
+
+        // Pure abstract classes trigger this warning
+        "-Wno-weak-vtables",
+
+        // Allow four-character integer literals
+	"-Wno-four-char-constants",
+
+        // Allow documentation warnings
+        "-Wno-documentation",
+
+        "-DDEBUG_ONLY_CODE=0",
+
+        // MTK AOSP enhancement required
+        "-DMTK_LIBGUI_DEBUG_SUPPORT",
+        "-Wno-old-style-cast",
+        "-Wno-sign-conversion",
+        "-Wno-packed",
+        "-DMTK_AFPSGO_FBT_GAME",
+        "-DMTK_DISPLAY_DEJITTER",
+        "-DMTK_AOSP_DISPLAY_BUGFIX",
+        "-DMTK_LIBGUI_LOG_REDUCE",
+    ],
+
+    product_variables: {
+        brillo: {
+            cflags: ["-DHAVE_NO_SURFACE_FLINGER"],
+        },
+        eng: {
+            cppflags: [
+                "-UDEBUG_ONLY_CODE",
+                "-DDEBUG_ONLY_CODE=1",
+            ],
+        },
+    },
+
+    srcs: [
+        "BitTube.cpp",
+        "BufferItem.cpp",
+        "BufferItemConsumer.cpp",
+        "BufferQueue.cpp",
+        "BufferQueueConsumer.cpp",
+        "BufferQueueCore.cpp",
+        "BufferQueueProducer.cpp",
+        "BufferSlot.cpp",
+        "ConsumerBase.cpp",
+        "CpuConsumer.cpp",
+        "DisplayEventReceiver.cpp",
+        "FrameTimestamps.cpp",
+        "GLConsumer.cpp",
+        "GuiConfig.cpp",
+        "IDisplayEventConnection.cpp",
+        "IConsumerListener.cpp",
+        "IGraphicBufferConsumer.cpp",
+        "IGraphicBufferProducer.cpp",
+        "IProducerListener.cpp",
+        "ISurfaceComposer.cpp",
+        "ISurfaceComposerClient.cpp",
+        "LayerState.cpp",
+        "OccupancyTracker.cpp",
+        "StreamSplitter.cpp",
+        "Surface.cpp",
+        "SurfaceControl.cpp",
+        "SurfaceComposerClient.cpp",
+        "SyncFeatures.cpp",
+        "view/Surface.cpp",
+        "bufferqueue/1.0/B2HProducerListener.cpp",
+        "bufferqueue/1.0/H2BGraphicBufferProducer.cpp",
+
+        // MTK AOSP enhancement required
+        "mediatek/BufferQueueDebug.cpp",
+        "mediatek/BufferQueueMonitor.cpp",
+        "mediatek/IDumpTunnel.cpp",
+        "mediatek/MTKFrameBudgetIndicator.cpp",
+        "mediatek/DispDeJitterHelper.cpp",
+    ],
+
+    shared_libs: [
+        "libsync",
+        "libbinder",
+        "libcutils",
+        "libEGL",
+        "libGLESv2",
+        "libui",
+        "libutils",
+        "libnativewindow",
+        "liblog",
+        "libhidlbase",
+        "libhidltransport",
+        "android.hidl.token@1.0-utils",
+        "android.hardware.graphics.bufferqueue@1.0",
+        "android.hardware.configstore@1.0",
+        "android.hardware.configstore-utils",
+
+        // MTK AOSP enhancement required
+        "libdl",
+        "libhardware",
+    ],
+
+    header_libs: [
+        "libnativebase_headers",
+        "libgui_headers",
+    ],
+
+    export_shared_lib_headers: [
+        "libbinder",
+        "libEGL",
+        "libnativewindow",
+        "libui",
+        "android.hidl.token@1.0-utils",
+        "android.hardware.graphics.bufferqueue@1.0",
+    ],
+
+    export_header_lib_headers: [
+        "libgui_headers",
+    ],
+
+    export_include_dirs: [
+        "include",
+    ],
+
+    // MTK AOSP enhancement required
+    include_dirs: [
+        "vendor/mediatek/proprietary/hardware/libgem/inc",
+    ],
+
+    defaults: [
+        "mtk_libgui_defaults",
+    ],
+}
+
+mtk_cc_defaults {
+    name: "mtk_libgui_defaults",
+    mediatek_variables: {
+        mtk_afpsgo_fbt_game: {
+            cflags: [
+                "-DMTK_AFPSGO_FBT_GAME"
+            ],
+        },
+    },
+}
+
+subdirs = ["tests"]

@@ -1,0 +1,61 @@
+subdirs = [
+    "libthermalcallback"
+]
+
+cc_library {
+    name: "libthermalservice",
+
+    srcs: [
+        "aidl/android/os/IThermalEventListener.aidl",
+        "aidl/android/os/IThermalService.aidl",
+        "aidl/android/os/Temperature.cpp",
+    ],
+    aidl: {
+      include_dirs: ["frameworks/native/services/thermalservice/aidl"],
+      export_aidl_headers: true,
+    },
+    export_include_dirs: ["aidl"],
+
+    shared_libs: [
+        "libbinder",
+        "libutils",
+    ],
+
+    cflags: [
+        "-Wall",
+        "-Werror",
+        "-Wunused",
+        "-Wunreachable-code",
+    ],
+}
+
+cc_binary {
+    name: "thermalserviced",
+
+    srcs: [
+        "ThermalService.cpp",
+        "thermalserviced.cpp",
+    ],
+
+    include_dirs: ["frameworks/native"],
+
+    shared_libs: [
+        "libthermalservice",
+        "libbinder",
+        "libutils",
+        "libthermalcallback",
+        "android.hardware.thermal@1.1",
+        "libhidlbase",
+        "libhidltransport",
+        "liblog",
+    ],
+
+    cflags: [
+        "-Wall",
+        "-Werror",
+        "-Wunused",
+        "-Wunreachable-code",
+    ],
+
+    init_rc: ["thermalservice.rc"],
+}

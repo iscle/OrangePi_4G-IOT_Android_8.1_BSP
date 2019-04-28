@@ -1,0 +1,53 @@
+cc_library_shared {
+    name: "libmediametrics",
+
+    srcs: [
+        "IMediaAnalyticsService.cpp",
+        "MediaAnalyticsItem.cpp",
+    ],
+
+    shared_libs: [
+        "liblog",
+        "libcutils",
+        "libutils",
+        "libbinder",
+        "libstagefright_foundation",
+        "libbase",
+    ],
+
+    export_include_dirs: ["include"],
+
+    cflags: [
+        "-Werror",
+        "-Wno-error=deprecated-declarations",
+        "-Wall",
+    ],
+
+    sanitize: {
+        misc_undefined: [
+            "unsigned-integer-overflow",
+            "signed-integer-overflow",
+        ],
+        cfi: true,
+        diag: {
+            cfi: true,
+        },
+    },
+
+    // to disable mediametrics
+    defaults: [
+        "mtk_libmediametrics_defaults",
+    ],
+}
+
+mtk_cc_defaults {
+    name: "mtk_libmediametrics_defaults",
+
+    mediatek_variables: {
+        mtk_gmo_ram_optimize: {
+            cflags: [
+                "-DMTK_DISABLE_METRICS",
+            ],
+        },
+    },
+}

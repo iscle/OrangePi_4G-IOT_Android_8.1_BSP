@@ -1,0 +1,26 @@
+apply plugin: 'java'
+
+sourceCompatibility = 1.6
+version = '1.0'
+
+dependencies {
+    testCompile 'junit:junit:4.12'
+    testCompile 'org.apache.commons:commons-lang3:3.3.2'
+    testCompile 'commons-io:commons-io:2.4'
+    testCompile 'commons-codec:commons-codec:1.10'
+    testCompile project(':dataBinding:compilerCommon')
+    testCompile project(':dataBinding:compiler')
+}
+
+afterEvaluate {
+    tasks['test'].systemProperties['useReleaseVersion'] = dataBindingConfig.inReleaseBuild ? 'true' : 'false'
+    tasks['test'].systemProperties['addRemoteRepos'] = dataBindingConfig.addRemoteRepos ? 'true' : 'false'
+}
+
+sourceSets {
+    test {
+        java {
+            srcDirs += "${project.rootProject.getProjectDir().getAbsolutePath()}/compiler/src/test/java/android/databinding/tool/reflection/java"
+        }
+    }
+}

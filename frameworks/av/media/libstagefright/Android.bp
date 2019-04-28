@@ -1,0 +1,290 @@
+cc_library_headers {
+    name: "libstagefright_headers",
+    export_include_dirs: ["include"],
+    vendor_available: true,
+}
+
+cc_library_shared {
+    name: "libstagefright",
+
+    srcs: [
+        "ACodec.cpp",
+        "ACodecBufferChannel.cpp",
+        "AACExtractor.cpp",
+        "AACWriter.cpp",
+        "AMRExtractor.cpp",
+        "AMRWriter.cpp",
+        "AudioPlayer.cpp",
+        "AudioSource.cpp",
+        "BufferImpl.cpp",
+        "CodecBase.cpp",
+        "CallbackDataSource.cpp",
+        "CameraSource.cpp",
+        "CameraSourceTimeLapse.cpp",
+        "DataConverter.cpp",
+        "DataSource.cpp",
+        "DataURISource.cpp",
+        "ESDS.cpp",
+        "FileSource.cpp",
+        "FLACExtractor.cpp",
+        "FrameRenderTracker.cpp",
+        "HTTPBase.cpp",
+        "HevcUtils.cpp",
+        "ItemTable.cpp",
+        "JPEGSource.cpp",
+        "MP3Extractor.cpp",
+        "MPEG2TSWriter.cpp",
+        "MPEG4Extractor.cpp",
+        "MPEG4Writer.cpp",
+        "MediaAdapter.cpp",
+        "MediaClock.cpp",
+        "MediaCodec.cpp",
+        "MediaCodecList.cpp",
+        "MediaCodecListOverrides.cpp",
+        "MediaCodecSource.cpp",
+        "MediaExtractor.cpp",
+        "MediaSync.cpp",
+        "MidiExtractor.cpp",
+        "http/MediaHTTP.cpp",
+        "MediaMuxer.cpp",
+        "MediaSource.cpp",
+        "NuCachedSource2.cpp",
+        "NuMediaExtractor.cpp",
+        "OMXClient.cpp",
+        "OmxInfoBuilder.cpp",
+        "OggExtractor.cpp",
+        "SampleIterator.cpp",
+        "SampleTable.cpp",
+        "SimpleDecodingSource.cpp",
+        "SkipCutBuffer.cpp",
+        "StagefrightMediaScanner.cpp",
+        "StagefrightMetadataRetriever.cpp",
+        "SurfaceMediaSource.cpp",
+        "SurfaceUtils.cpp",
+        "ThrottledSource.cpp",
+        "Utils.cpp",
+        "VBRISeeker.cpp",
+        "VideoFrameScheduler.cpp",
+        "WAVExtractor.cpp",
+        "XINGSeeker.cpp",
+        "avc_utils.cpp",
+        "Acodec_vilte.cpp",
+        "Utils_MTK.cpp",
+    ],
+
+    header_libs: [
+        "mtk_openmax_headers",
+    ],
+
+    shared_libs: [
+        "libaudioutils",
+        "libbinder",
+        "libcamera_client",
+        "libcrypto",
+        "libcutils",
+        "libdl",
+        "libdrmframework",
+        "libexpat",
+        "libgui",
+        "liblog",
+        "libmedia",
+        "libaudioclient",
+        "libmediametrics",
+        "libmediautils",
+        "libnetd_client",
+        "libsonivox",
+        "libui",
+        "libutils",
+        "libvorbisidec",
+        "libmediadrm",
+        "libnativewindow",
+
+        "libmedia_helper",
+        "libstagefright_omx_utils",
+        "libstagefright_flacdec",
+        "libstagefright_foundation",
+        "libstagefright_xmlparser",
+        "libdl",
+        "libRScpp",
+        "libhidlbase",
+        "libhidlmemory",
+        "android.hidl.allocator@1.0",
+        "android.hidl.memory@1.0",
+        "android.hidl.token@1.0-utils",
+        "android.hardware.cas@1.0",
+        "android.hardware.cas.native@1.0",
+        "android.hardware.media.omx@1.0",
+    ],
+
+    static_libs: [
+        "libstagefright_color_conversion",
+        "libyuv_static",
+        "libstagefright_aacenc",
+        "libstagefright_matroska",
+        "libstagefright_mediafilter",
+        "libstagefright_webm",
+        "libstagefright_timedtext",
+        "libvpx",
+        "libwebm",
+        "libstagefright_mpeg2ts",
+        "libstagefright_id3",
+        "libFLAC",
+    ],
+
+    export_shared_lib_headers: [
+        "libmedia",
+        "android.hidl.allocator@1.0",
+    ],
+
+    export_include_dirs: [
+        "include",
+    ],
+
+    cflags: [
+        "-Wno-multichar",
+        "-Werror",
+        "-Wno-error=deprecated-declarations",
+        "-Wall",
+    ],
+
+    product_variables: {
+        debuggable: {
+            // enable experiments only in userdebug and eng builds
+            cflags: ["-DENABLE_STAGEFRIGHT_EXPERIMENTS"],
+        },
+        eng: {
+            cflags: [
+                "-DALOGV_DEBUG",
+                "-DMMLOG_DEBUG",
+            ],
+        },
+    },
+
+    sanitize: {
+        cfi: true,
+        misc_undefined: [
+            "unsigned-integer-overflow",
+            "signed-integer-overflow",
+        ],
+        diag: {
+            cfi: true,
+        },
+    },
+
+    // MTK_USE_ANDROID_MM_DEFAULT_CODE
+    defaults: [
+        "mtk_libstagefright_defaults",
+        "mtk_libaed_defaults",
+    ],
+}
+
+mtk_cc_defaults {
+    name: "mtk_libstagefright_defaults",
+
+    mediatek_variables: {
+        mtk_vilte_support: {
+            cflags: [
+                "-DMTK_VILTE_SUPPORT",
+            ],
+        },
+
+        mtk_thumbnail_optimization: {
+            cflags: [
+                "-DMTK_THUMBNAIL_OPTIMIZATION",
+            ]
+        },
+
+        mtk_drm_app :{
+            cflags: [
+                "-DMTK_DRM_APP",
+            ],
+            include_dirs: [
+                "frameworks/av/media/libmtkavenhancements",
+            ],
+            legacy_shared_libs: [
+                "libfw_drmutils",
+            ],
+        },
+
+        mtk_audio_ape_support: {
+            cflags: [
+                "-DMTK_AUDIO_APE_SUPPORT",
+            ],
+        },
+
+        mtk_audio_raw_support: {
+            cflags: [
+                "-DMTK_AUDIO_RAW_SUPPORT",
+            ],
+        },
+
+        mtk_audio_alac_support: {
+            cflags: [
+                "-DMTK_AUDIO_ALAC_SUPPORT",
+            ],
+        },
+
+        mtk_audio_adpcm_support: {
+            cflags: [
+                "-DMTK_AUDIO_ADPCM_SUPPORT",
+            ],
+        },
+        mtk_high_quality_thumbnail: {
+            cflags: [
+                "-DMTK_HIGH_QUALITY_THUMBNAIL",
+            ],
+        },
+        mtk_slow_motion_video_support: {
+            cflags: [
+                "-DMTK_SLOW_MOTION_VIDEO_SUPPORT",
+            ],
+        },
+        mtk_high_resolution_audio_support: {
+            cflags: [
+                "-DMTK_HIGH_RESOLUTION_AUDIO_SUPPORT",
+            ],
+        },
+    },
+
+    srcs: [
+        "mtkext/MtkMPEG4ExtractorExt.cpp",
+        "mtkext/MtkMP3ExtractorExt.cpp",
+        "mtkext/AcodecMtkMp3.cpp",
+    ],
+
+    include_dirs: [
+        "frameworks/av/media/libavextensions"
+    ],
+
+    cflags: [
+        "-DMTK_AOSP_ENHANCEMENT",
+    ],
+
+    static_libs: [
+        "libavextensions",
+    ],
+
+    legacy_shared_libs: [
+        "libgralloc_extra_sys",
+    ],
+}
+
+subdirs = [
+    "codecs/*",
+    "colorconversion",
+    "filters",
+    "flac/dec",
+    "foundation",
+    "http",
+    "httplive",
+    "id3",
+    "matroska",
+    "mpeg2ts",
+    "omx",
+    "rtsp",
+    "tests",
+    "timedtext",
+    "webm",
+    "wifi-display",
+    "xmlparser",
+]

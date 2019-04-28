@@ -1,0 +1,17 @@
+#ifndef ANDROID_DVR_SENSOR_IPC_H_
+#define ANDROID_DVR_SENSOR_IPC_H_
+
+#define DVR_SENSOR_SERVICE_BASE "system/vr/sensors"
+
+#define DVR_SENSOR_SERVICE_CLIENT (DVR_SENSOR_SERVICE_BASE "/client")
+
+/*
+ * Endpoint ops
+ */
+enum {
+  DVR_SENSOR_START = 0,
+  DVR_SENSOR_STOP,
+  DVR_SENSOR_POLL,
+};
+
+#endif  // ANDROID_DVR_SENSOR_IPC_H_

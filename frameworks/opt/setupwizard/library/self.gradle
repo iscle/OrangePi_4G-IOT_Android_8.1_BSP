@@ -1,0 +1,77 @@
+/**
+ * This self.gradle build file is only run when built in ub-setupwizard-* branches.
+ */
+apply from: 'standalone-rules.gradle'
+apply from: '../tools/gradle/dist-library-instrumentation-tests.gradle'
+apply from: '../tools/gradle/dist-unit-tests.gradle'
+
+// Add targets for tests
+android.sourceSets {
+    androidTest {
+        manifest.srcFile 'test/instrumentation/AndroidManifest.xml'
+        java.srcDirs = ['test/instrumentation/src']
+        res.srcDirs = ['test/instrumentation/res']
+
+        dependencies {
+            androidTestCompile 'com.android.support.test:rules:0.5'
+            androidTestCompile 'com.android.support.test:runner:0.5'
+            androidTestCompile 'com.google.dexmaker:dexmaker:1.2'
+            androidTestCompile 'com.google.dexmaker:dexmaker-mockito:1.2'
+            androidTestCompile 'junit:junit:4.+'
+            androidTestCompile 'org.mockito:mockito-core:1.9.5'
+        }
+    }
+
+    androidTestPlatform {
+        java.srcDirs = ['platform/test/src']
+    }
+
+    androidTestGingerbreadCompat {
+        java.srcDirs = [
+            'gingerbread/test/instrumentation/src',
+            'recyclerview/test/instrumentation/src'
+        ]
+        res.srcDirs = ['recyclerview/test/instrumentation/res']
+    }
+
+    test {
+        java.srcDirs = ['test/robotest/src']
+
+        dependencies {
+            testCompile 'org.robolectric:robolectric:3.+'
+            testCompile 'org.robolectric:shadows-core:3.+'
+            testCompile 'junit:junit:4.+'
+            testCompile 'org.mockito:mockito-core:1.9.5'
+            // Workaround for https://github.com/robolectric/robolectric/issues/2566
+            testCompile 'org.khronos:opengl-api:gl1.1-android-2.1_r1'
+        }
+    }
+
+    testGingerbreadCompat {
+        java.srcDirs = ['gingerbread/test/robotest/src', 'recyclerview/test/robotest/src']
+    }
+}
+android.defaultConfig.testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+android.lintOptions {
+    abortOnError true
+    htmlReport true
+    textOutput 'stderr'
+    textReport true
+    warningsAsErrors true
+    xmlReport false
+}
+// Run lint for all variants
+android.libraryVariants.all { variant ->
+    variant.assemble.dependsOn(tasks.findByName('lint'))
+}
+
+// For compatibility with existing continuous test configurations, copy the file to
+// setup-wizard-libTest.apk
+// TODO: Remove this once continuous test configurations are updated to handle the new file name
+task createLegacyTestApk(type: Copy) {
+    from "${project.ext.distDir}/setup-wizard-lib-gingerbreadCompat-debug-androidTest.apk"
+    into "${project.ext.distDir}"
+    rename ('setup-wizard-lib-gingerbreadCompat-debug-androidTest.apk', 'setup-wizard-libTest.apk')
+}
+
+tasks.dist.finalizedBy createLegacyTestApk

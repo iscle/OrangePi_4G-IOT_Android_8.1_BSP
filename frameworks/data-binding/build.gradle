@@ -1,0 +1,302 @@
+import groovy.xml.QName
+
+buildscript {
+    ext.dataBindingRootFolder = project.projectDir
+    apply from: 'propLoader.gradle'
+    ext.addRepos(repositories)
+    if (ext.dataBindingConfig.addRemoteRepos) {
+        dependencies {
+            classpath "com.android.databinding:localizemaven:${dataBindingConfig.extraPluginsVersion}"
+        }
+    }
+    dependencies {
+        classpath 'net.sf.proguard:proguard-gradle:5.2.1'
+    }
+}
+
+subprojects {
+    if (dataBindingConfig.isIndependent) {
+        apply plugin: 'maven'
+        if (dataBindingConfig.addRemoteRepos && !dataBindingConfig.forGradlePlugin) {
+            apply plugin: 'com.android.databinding.localizemaven'
+        }
+    } else {
+        apply from: "${project.projectDir}/../../buildSrc/base/baseJava.gradle"
+    }
+
+    if (it.name != "compilationTests") {
+        group = dataBindingConfig.group
+        version = dataBindingConfig.version
+        uploadArchives {
+            repositories {
+                mavenDeployer {
+                    repository(url: "file://${dataBindingConfig.mavenRepoDir}")
+                }
+            }
+        }
+    }
+
+    buildscript {
+        addRepos(repositories)
+    }
+
+}
+
+if (dataBindingConfig.addRemoteRepos && !dataBindingConfig.forGradlePlugin) {
+    rootProject.localizeMaven {
+        localRepoDir = file(dataBindingConfig.megaRepoDir)
+        otherRepoDirs = dataBindingConfig.localRepositories
+    }
+}
+
+task deleteRepo(type: Delete) {
+    delete "${dataBindingConfig.mavenRepoDir}/${dataBindingConfig.group.replace('.', '/')}"
+}
+
+task deletePrebuildFolder(type: Delete) {
+    delete "${dataBindingConfig.prebuildFolder}"
+}
+
+task deleteEap(type: Delete) {
+    delete "${dataBindingConfig.eapOutDir}"
+}
+
+
+def buildExtensionsTask = project.tasks.create "buildExtensionsTask", Exec
+buildExtensionsTask.workingDir file('extensions').getAbsolutePath()
+buildExtensionsTask.commandLine './gradlew'
+buildExtensionsTask.args 'clean', 'uploadArchives', '--info', '--stacktrace',
+        "-PuseReleaseVersion=${dataBindingConfig.inReleaseBuild ? 'true' : 'false'}",
+        "-PaddRemoteRepos=${dataBindingConfig.addRemoteRepos ? 'true' : 'false'}",
+        "-PforGradlePlugin=${dataBindingConfig.forGradlePlugin ? 'true' : 'false'}"
+buildExtensionsTask.dependsOn subprojects.uploadArchives
+
+def prepareExtensionPrebuilds = project.tasks.create "prepareExtensionPrebuilds", Exec
+prepareExtensionPrebuilds.workingDir file('extensions').getAbsolutePath()
+prepareExtensionPrebuilds.commandLine './gradlew'
+prepareExtensionPrebuilds.args 'clean', 'preparePrebuilds', '--info', '--stacktrace',
+        "-PuseReleaseVersion=${dataBindingConfig.inReleaseBuild ? 'true' : 'false'}",
+        "-PaddRemoteRepos=${dataBindingConfig.addRemoteRepos ? 'true' : 'false'}",
+        "-PforGradlePlugin=${dataBindingConfig.forGradlePlugin ? 'true' : 'false'}"
+prepareExtensionPrebuilds.dependsOn subprojects.uploadArchives
+
+file('integration-tests').listFiles().findAll { it.isDirectory() }.each {
+    println("Creating run test task for  ${it.getAbsolutePath()}.")
+    def testTask = project.tasks.create "runTestsOf${it.getName().capitalize()}", Exec
+    testTask.workingDir it.getAbsolutePath()
+    //on linux
+    testTask.commandLine './gradlew'
+    testTask.args 'clean', 'connectedCheck', '--info', '--stacktrace',
+            "-PuseReleaseVersion=${dataBindingConfig.inReleaseBuild ? 'true' : 'false'}",
+            "-PaddRemoteRepos=${dataBindingConfig.addRemoteRepos ? 'true' : 'false'}",
+            "-PforGradlePlugin=${dataBindingConfig.forGradlePlugin ? 'true' : 'false'}"
+    testTask.dependsOn subprojects.uploadArchives
+}
+
+task runIntegrationTests {
+    dependsOn tasks.findAll { task -> task.name.startsWith('runTestsOf') }
+}
+
+task runAllTests {
+    dependsOn runIntegrationTests
+}
+
+task preparePrebuilds() {
+    dependsOn deletePrebuildFolder
+    dependsOn prepareExtensionPrebuilds
+}
+
+allprojects {
+    afterEvaluate { project ->
+        runAllTests.dependsOn project.tasks.findAll {task -> task.name.equals('test')}
+        runAllTests.dependsOn project.tasks.findAll {task -> task.name.equals('connectedCheck')}
+        preparePrebuilds.dependsOn project.tasks.findAll {task -> task.name.startsWith('prebuild')}
+    }
+}
+
+subprojects.uploadArchives.each { it.shouldRunAfter deleteRepo  }
+subprojects.uploadArchives.each { it.shouldRunAfter deletePrebuildFolder  }
+
+buildExtensionsTask.shouldRunAfter deleteRepo
+tasks['runTestsOfMultiModuleTestApp'].dependsOn tasks['runTestsOfIndependentLibrary']
+
+
+task rebuildRepo() {
+    dependsOn deleteRepo
+    dependsOn subprojects.uploadArchives
+}
+
+task copySamplesToEap(type : Copy) {
+    mustRunAfter deleteEap
+    from ("$projectDir/samples") {
+        exclude "**/build"
+        exclude "**/local.properties"
+    }
+    into "${dataBindingConfig.eapOutDir}/samples"
+}
+
+
+task copyMavenRepoToEap(type : Copy) {
+    mustRunAfter deleteEap
+    dependsOn rebuildRepo
+    from(dataBindingConfig.mavenRepoDir)
+    into "${dataBindingConfig.eapOutDir}/${dataBindingConfig.mavenRepoName}"
+}
+
+tasks.create(name : 'createEapdataBindingConfigFile') << {
+    def propsFile = new File("${dataBindingConfig.eapOutDir}/databinding.properties")
+    Properties props = new Properties()
+    props.setProperty('version', dataBindingConfig.version)
+    props.setProperty('mavenRepoName', dataBindingConfig.mavenRepoName)
+    props.store(propsFile.newWriter(), null)
+}
+
+task batchEAP() {
+    dependsOn deleteEap
+    dependsOn copyMavenRepoToEap
+    dependsOn copySamplesToEap
+    dependsOn createEapdataBindingConfigFile
+}
+
+def findChildByTag(node, tag) {
+    return node.children().find {
+        it.name().getLocalPart().equals(tag)
+    }
+}
+
+def fullJar(project) {
+    def localizeTask = project.parent.tasks.findByName('localizeDependencies')
+    if (localizeTask != null) {
+        localizeTask.dependsOn project.tasks.findByName('buildLicenseNotice')
+    }
+    if (!dataBindingConfig.inReleaseBuild) {
+        return
+    }
+    def jarName = project.uploadArchives.repositories.mavenDeployer.pom.artifactId
+    def workingDir = "${project.buildDir}/intermediates/fullJar"
+    def fatJar = "${workingDir}/${jarName}-fat.jar"
+    def proguardJar = "${workingDir}/${jarName}-proguard.jar"
+    def jarJar = project.jar.archivePath
+    def runProguard = dataBindingConfig.runProguard
+
+    project.configurations {
+        jarJarArchives
+    }
+
+    project.tasks.create(name: 'fatJar', type: Jar) {
+        baseName = jarName + '-fat'
+        doFirst {
+            file(workingDir).mkdirs()
+        }
+        def deps = new HashSet<ResolvedDependency>()
+        project.configurations.compile.resolvedConfiguration.firstLevelModuleDependencies.each {
+            if (!it.moduleGroup.startsWith('com.android.tools')) {
+                deps.addAll(it.allModuleArtifacts)
+            }
+        }
+        from { deps.findAll { !it.name.contains('baseLibrary') && !it.name.contains("juniversalchardet")}.collect {
+            it.file.isDirectory() ? it.file : project.zipTree(it.file)
+        } } {
+            exclude "META-INF/maven/**"
+            exclude "META-INF/MANIFEST.MF"
+            exclude "META-INF/LICENSE.txt"
+            exclude "META-INF/NOTICE.txt"
+            exclude "META-INF/services/javax.annotation.processing.Processor"
+            exclude "**/*.stg"
+        }
+        archiveName "${baseName}.jar"
+        destinationDir = new File(workingDir)
+        with project.jar
+    }
+    /**
+     * not used unless jarJarFile is changed to use proguarded version instead.
+     */
+    project.tasks.create(name: 'proguard', type: proguard.gradle.ProGuardTask) {
+        dependsOn 'fatJar'
+
+        injars  fatJar
+        outjars proguardJar
+
+        configuration '../proguard.cfg'
+    }
+
+    project.tasks.create(name: 'jarJarFile') {
+        dependsOn runProguard ? 'proguard' : 'fatJar'
+        dependsOn project.jar
+        def inputLibrary = runProguard ? proguardJar : fatJar
+        def outputLibrary = jarJar
+        inputs.file(inputLibrary)
+        outputs.file(outputLibrary)
+
+        doLast {
+            def jarJarLibrary = new File(dataBindingConfig.externalPrebuiltsBase,
+                    'tools/common/m2/repository/com/googlecode/jarjar/jarjar/1.4/jarjar-1.4.jar').
+                    getCanonicalPath()
+            // in Ant
+            ant.taskdef(name: "jarjarIt",
+                    classname: 'com.tonicsystems.jarjar.JarJarTask',
+                    classpath: jarJarLibrary)
+            // start jarjar task
+            ant.jarjarIt(jarfile: outputLibrary) {
+                // input is our inputLibrary
+                zipfileset(src: inputLibrary)
+                // rule to repackage antlr to new package
+                rule pattern: 'org.antlr.**', result: 'com.google.repacked.org.antlr.@1'
+                rule pattern: 'org.abego.treelayout.**', result: 'com.google.repacked.treelayout.@1'
+                // rule to repackage commons
+                rule pattern: 'org.apache.**', result: 'com.google.repacked.apache.@1'
+                rule pattern: 'kotlin.**', result: 'com.google.repacked.kotlin.@1'
+            }
+        }
+    }
+
+    def setupUpload = { uploadTask ->
+        uploadTask.dependsOn 'jarJarFile'
+        uploadTask.repositories {
+                mavenDeployer {
+                    pom.whenConfigured { pom ->
+                        pom.dependencies.removeAll { dep ->
+                            def isBaseLibrary = dep.groupId == 'com.android.databinding' &&
+                                    dep.artifactId == 'baseLibrary'
+                            def isGradle = dep.groupId == 'com.android.tools.build' &&
+                                    dep.artifactId == 'gradle'
+                            def isChardet = dep.groupId == 'com.googlecode.juniversalchardet' &&
+                                    dep.artifactId == 'juniversalchardet'
+                            return !isBaseLibrary && !isGradle && !isChardet
+                        }
+                    }
+                }
+            }
+        uploadTask.outputs.upToDateWhen { false } // force it to re-run all the time.
+    }
+
+    if (project.publishLocal != null) {
+        setupUpload(project.publishLocal)
+    }
+    if (project.uploadArchives != null) {
+        setupUpload(project.uploadArchives)
+    }
+
+    project.bintrayUpload.dependsOn 'jarJarFile'
+    project.publishing.publications.mavenJava(MavenPublication) {
+            pom.withXml {
+                def deps = findChildByTag(asNode(), "dependencies")
+                if (deps == null) {
+                    throw new IllegalArgumentException("cannot find dependencies in pom file")
+                }
+                def unwanted = deps.children().findAll {
+                    def groupId = findChildByTag(it, "groupId").localText()[0]
+                    def artifactId = findChildByTag(it, "artifactId").localText()[0]
+                    def isBaseLibrary = groupId == 'com.android.databinding' &&
+                            artifactId == 'baseLibrary'
+                    def isGradle = groupId == 'com.android.tools.build' && artifactId == 'gradle'
+                    def isChardet = groupId == 'com.googlecode.juniversalchardet' &&
+                            artifactId == 'juniversalchardet'
+                    return !isBaseLibrary && !isGradle && !isChardet
+                }
+                unwanted.each {
+                    deps.remove(it)
+                }
+            }
+    }
+}

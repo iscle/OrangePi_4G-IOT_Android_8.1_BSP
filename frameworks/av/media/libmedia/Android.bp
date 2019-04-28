@@ -1,0 +1,252 @@
+cc_library_headers {
+    name: "libmedia_headers",
+    vendor_available: true,
+    export_include_dirs: ["include"],
+    header_libs:[
+        "libstagefright_headers",
+        "media_plugin_headers",
+    ],
+    export_header_lib_headers: [
+        "libstagefright_headers",
+        "media_plugin_headers",
+    ],
+}
+
+cc_library {
+    name: "libmedia_helper",
+    vendor_available: true,
+    vndk: {
+        enabled: true,
+    },
+    srcs: ["AudioParameter.cpp", "TypeConverter.cpp"],
+    cflags: [
+        "-Werror",
+        "-Wno-error=deprecated-declarations",
+        "-Wall",
+    ],
+    shared_libs: ["libutils", "liblog", "libgui"],
+    header_libs: [
+        "libmedia_headers",
+        "libaudioclient_headers",
+        "libaudio_system_headers",
+    ],
+    clang: true,
+}
+
+// TODO(b/35449087): merge back with libmedia when OMX implementatoins
+// no longer use aidl wrappers (or remove OMX component form libmedia)
+cc_defaults {
+    name: "libmedia_omx_defaults",
+
+    srcs: [
+        "aidl/android/IGraphicBufferSource.aidl",
+        "aidl/android/IOMXBufferSource.aidl",
+
+        "IMediaCodecList.cpp",
+        "IMediaCodecService.cpp",
+        "IOMX.cpp",
+        "IOMXStore.cpp",
+        "MediaCodecBuffer.cpp",
+        "MediaCodecInfo.cpp",
+        "MediaDefs.cpp",
+        "OMXBuffer.cpp",
+        "omx/1.0/WGraphicBufferSource.cpp",
+        "omx/1.0/WOmx.cpp",
+        "omx/1.0/WOmxBufferSource.cpp",
+        "omx/1.0/WOmxNode.cpp",
+        "omx/1.0/WOmxObserver.cpp",
+    ],
+
+    aidl: {
+        local_include_dirs: ["aidl"],
+        export_aidl_headers: true,
+    },
+
+    shared_libs: [
+        "android.hidl.memory@1.0",
+        "android.hidl.token@1.0-utils",
+        "android.hardware.media.omx@1.0",
+        "android.hardware.media@1.0",
+        "libbase",
+        "libbinder",
+        "libcutils",
+        "libgui",
+        "libhidlbase",
+        "libhidlmemory",
+        "libhidltransport",
+        "libhwbinder",
+        "liblog",
+        "libstagefright_foundation",
+        "libui",
+        "libutils",
+    ],
+
+    export_shared_lib_headers: [
+        "android.hidl.memory@1.0",
+        "android.hidl.token@1.0-utils",
+        "android.hardware.media.omx@1.0",
+        "android.hardware.media@1.0",
+        "libhidlmemory",
+        "libstagefright_foundation",
+        "libui",
+    ],
+
+    header_libs: [
+        "libmedia_headers",
+    ],
+
+    export_header_lib_headers: [
+        "libmedia_headers",
+    ],
+
+    export_include_dirs: [
+        "aidl",
+    ],
+
+    cflags: [
+        "-Werror",
+        "-Wno-error=deprecated-declarations",
+        "-Wall",
+    ],
+
+    sanitize: {
+        misc_undefined: [
+            "unsigned-integer-overflow",
+            "signed-integer-overflow",
+        ],
+        cfi: true,
+        diag: {
+            cfi: true,
+        },
+    },
+}
+
+cc_library_shared {
+    name: "libmedia_omx",
+    vendor_available: true,
+    vndk: {
+        enabled: true,
+    },
+
+    defaults: ["libmedia_omx_defaults"],
+}
+
+cc_library_shared {
+    name: "libmedia",
+    defaults: [
+        "libmedia_omx_defaults",
+         "mtk_libmedia_defaults",
+    ],
+
+    srcs: [
+        "IDataSource.cpp",
+        "IHDCP.cpp",
+        "BufferingSettings.cpp",
+        "mediaplayer.cpp",
+        "IMediaHTTPConnection.cpp",
+        "IMediaHTTPService.cpp",
+        "IMediaExtractor.cpp",
+        "IMediaExtractorService.cpp",
+        "IMediaPlayerService.cpp",
+        "IMediaPlayerClient.cpp",
+        "IMediaRecorderClient.cpp",
+        "IMediaPlayer.cpp",
+        "IMediaRecorder.cpp",
+        "IMediaSource.cpp",
+        "IRemoteDisplay.cpp",
+        "IRemoteDisplayClient.cpp",
+        "IResourceManagerClient.cpp",
+        "IResourceManagerService.cpp",
+        "IStreamSource.cpp",
+        "MediaUtils.cpp",
+        "Metadata.cpp",
+        "mediarecorder.cpp",
+        "IMediaMetadataRetriever.cpp",
+        "mediametadataretriever.cpp",
+        "MidiDeviceInfo.cpp",
+        "MidiIoWrapper.cpp",
+        "JetPlayer.cpp",
+        "MediaScanner.cpp",
+        "MediaScannerClient.cpp",
+        "CharacterEncodingDetector.cpp",
+        "IMediaDeathNotifier.cpp",
+        "MediaProfiles.cpp",
+        "MediaResource.cpp",
+        "MediaResourcePolicy.cpp",
+        "Visualizer.cpp",
+        "StringArray.cpp",
+    ],
+
+    shared_libs: [
+        "libui",
+        "liblog",
+        "libcutils",
+        "libutils",
+        "libbinder",
+        "libsonivox",
+        "libicuuc",
+        "libicui18n",
+        "libexpat",
+        "libcamera_client",
+        "libstagefright_foundation",
+        "libgui",
+        "libdl",
+        "libaudioutils",
+        "libaudioclient",
+        "libmedia_helper",
+        "libmediadrm",
+        "libmediametrics",
+        "libbase",
+        "libhidlbase",
+        "libhidltransport",
+        "libhwbinder",
+        "libhidlmemory",
+        "android.hidl.memory@1.0",
+        "android.hardware.graphics.common@1.0",
+        "android.hardware.graphics.bufferqueue@1.0",
+    ],
+
+    export_shared_lib_headers: [
+        "libbinder",
+        "libicuuc",
+        "libicui18n",
+        "libsonivox",
+        "libmediadrm",
+        "libmedia_helper",
+        "android.hidl.memory@1.0",
+    ],
+
+    // for memory heap analysis
+    static_libs: [
+        "libc_malloc_debug_backtrace",
+    ],
+
+    export_include_dirs: [
+        "include",
+    ],
+
+    cflags: [
+        "-Werror",
+        "-Wno-error=deprecated-declarations",
+        "-Wall",
+    ],
+
+    sanitize: {
+        misc_undefined: [
+            "unsigned-integer-overflow",
+            "signed-integer-overflow",
+        ],
+        cfi: true,
+        diag: {
+            cfi: true,
+        },
+    },
+}
+
+mtk_cc_defaults {
+    name: "mtk_libmedia_defaults",
+
+    srcs: [
+        "mtkWhiteList.cpp"
+    ],
+}
